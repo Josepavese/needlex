@@ -3,17 +3,24 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
+const (
+	QueryDiscoveryOff      = "off"
+	QueryDiscoverySameSite = "same_site_links"
+)
+
 type QueryRequest struct {
-	Goal      string
-	SeedURL   string
-	Profile   string
-	UserAgent string
-	ForceLane int
+	Goal          string
+	SeedURL       string
+	Profile       string
+	UserAgent     string
+	ForceLane     int
+	DiscoveryMode string
 }
 
 type QueryPlan struct {
@@ -50,6 +57,10 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 	if req.Goal == "" {
 		return QueryResponse{}, fmt.Errorf("query request goal must not be empty")
 	}
+	discoveryMode, err := resolveDiscoveryMode(req.DiscoveryMode)
+	if err != nil {
+		return QueryResponse{}, err
+	}
 
 	plan := QueryPlan{
 		Goal:    req.Goal,
@@ -63,24 +74,30 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 			MaxBytes:     s.cfg.Runtime.MaxBytes,
 		},
 		LaneMax:       s.cfg.Runtime.LaneMax,
-		DiscoveryMode: "same_site_links",
+		DiscoveryMode: discoveryMode,
 	}
 
-	discovery, err := s.Discover(ctx, DiscoverRequest{
-		Goal:          req.Goal,
-		SeedURL:       req.SeedURL,
-		UserAgent:     req.UserAgent,
-		SameDomain:    true,
-		MaxCandidates: min(5, s.cfg.Runtime.MaxPages),
-	})
-	if err != nil {
-		return QueryResponse{}, err
+	selectedURL := req.SeedURL
+	candidateURLs := []string{req.SeedURL}
+	if discoveryMode == QueryDiscoverySameSite {
+		discovery, err := s.Discover(ctx, DiscoverRequest{
+			Goal:          req.Goal,
+			SeedURL:       req.SeedURL,
+			UserAgent:     req.UserAgent,
+			SameDomain:    true,
+			MaxCandidates: min(5, s.cfg.Runtime.MaxPages),
+		})
+		if err != nil {
+			return QueryResponse{}, err
+		}
+		selectedURL = discovery.SelectedURL
+		candidateURLs = discoveryURLs(discovery.Candidates)
 	}
-	plan.SelectedURL = discovery.SelectedURL
-	plan.CandidateURLs = discoveryURLs(discovery.Candidates)
+	plan.SelectedURL = selectedURL
+	plan.CandidateURLs = candidateURLs
 
 	readResp, err := s.Read(ctx, ReadRequest{
-		URL:       discovery.SelectedURL,
+		URL:       selectedURL,
 		Objective: req.Goal,
 		Profile:   profile,
 		UserAgent: req.UserAgent,
@@ -143,4 +160,17 @@ func discoveryURLs(candidates []DiscoverCandidate) []string {
 		out = append(out, candidate.URL)
 	}
 	return out
+}
+
+func resolveDiscoveryMode(mode string) (string, error) {
+	mode = strings.TrimSpace(strings.ToLower(mode))
+	if mode == "" {
+		return QueryDiscoverySameSite, nil
+	}
+	switch mode {
+	case QueryDiscoveryOff, QueryDiscoverySameSite:
+		return mode, nil
+	default:
+		return "", fmt.Errorf("unsupported query discovery mode %q", mode)
+	}
 }

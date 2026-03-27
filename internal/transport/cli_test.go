@@ -69,6 +69,34 @@ func TestRunnerQueryJSON(t *testing.T) {
 	if captured.Goal != "proof replay deterministic" {
 		t.Fatalf("expected goal to be forwarded, got %q", captured.Goal)
 	}
+	if captured.DiscoveryMode != "" {
+		t.Fatalf("expected default discovery mode passthrough to remain empty, got %q", captured.DiscoveryMode)
+	}
+}
+
+func TestRunnerQueryDiscoveryFlag(t *testing.T) {
+	root := t.TempDir()
+	var captured coreservice.QueryRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			captured = req
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "https://example.com", "--goal", "proof replay deterministic", "--discovery", "off", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if captured.DiscoveryMode != "off" {
+		t.Fatalf("expected discovery mode to be forwarded, got %q", captured.DiscoveryMode)
+	}
 }
 
 func TestRunnerCrawlJSON(t *testing.T) {
@@ -378,12 +406,16 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 	read := fakeResponse()
 	read.Trace.TraceID = "trace_query"
 	read.ResultPack.Query = req.Goal
+	discoveryMode := req.DiscoveryMode
+	if discoveryMode == "" {
+		discoveryMode = coreservice.QueryDiscoverySameSite
+	}
 	return coreservice.QueryResponse{
 		Plan: coreservice.QueryPlan{
 			Goal:          req.Goal,
 			SeedURL:       req.SeedURL,
 			Profile:       core.ProfileStandard,
-			DiscoveryMode: "same_site_links",
+			DiscoveryMode: discoveryMode,
 			SelectedURL:   req.SeedURL,
 			CandidateURLs: []string{req.SeedURL},
 			Budget: core.Budget{

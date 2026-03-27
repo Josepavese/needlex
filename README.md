@@ -18,7 +18,7 @@ Current implemented baseline:
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. Local `intel` policy engine with ambiguity scoring, reason codes, lane escalation, domain force-lane hints, deterministic extractor, and constrained formatter
 6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
-7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with same-site discovery and candidate selection in `query`
+7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with query strategies `off|same_site_links` for measurable discovery-vs-seed comparison
 8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query` and `crawl`
 9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`
 10. Versioned schema files in `schemas/`
@@ -33,6 +33,7 @@ Current implemented baseline:
 ```bash
 go run ./cmd/needle crawl https://example.com --max-pages 3 --max-depth 1 --same-domain
 go run ./cmd/needle query https://example.com --goal "proof replay deterministic"
+go run ./cmd/needle query https://example.com --goal "proof replay deterministic" --discovery off
 go run ./cmd/needle read https://example.com
 go run ./cmd/needle read https://example.com --json
 go run ./cmd/needle read https://example.com --profile tiny

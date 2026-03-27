@@ -17,12 +17,14 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	var goal string
 	var profile string
 	var userAgent string
+	var discovery string
 	var jsonOut bool
 
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&goal, "goal", "", "query goal")
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
+	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links or off")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 
 	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
@@ -34,6 +36,8 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 		"-profile":     {},
 		"--user-agent": {},
 		"-user-agent":  {},
+		"--discovery":  {},
+		"-discovery":   {},
 	})); err != nil {
 		return 2
 	}
@@ -49,10 +53,11 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	}
 
 	resp, artifacts, err := r.executeQuery(cfg, coreservice.QueryRequest{
-		Goal:      goal,
-		SeedURL:   fs.Arg(0),
-		Profile:   profile,
-		UserAgent: userAgent,
+		Goal:          goal,
+		SeedURL:       fs.Arg(0),
+		Profile:       profile,
+		UserAgent:     userAgent,
+		DiscoveryMode: discovery,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "query failed: %v\n", err)
@@ -76,6 +81,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts queryArtifacts) {
 	fmt.Fprintf(w, "Goal: %s\n", resp.Plan.Goal)
 	fmt.Fprintf(w, "Seed URL: %s\n", resp.Plan.SeedURL)
+	fmt.Fprintf(w, "Discovery: %s\n", resp.Plan.DiscoveryMode)
 	fmt.Fprintf(w, "Selected URL: %s\n", resp.Plan.SelectedURL)
 	fmt.Fprintf(w, "Profile: %s\n", resp.ResultPack.Profile)
 	fmt.Fprintf(w, "Trace ID: %s\n", resp.TraceID)

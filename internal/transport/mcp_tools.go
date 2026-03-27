@@ -40,10 +40,11 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 			cfg.Runtime.LaneMax = laneMax
 		}
 		resp, artifacts, err := r.executeQuery(cfg, coreservice.QueryRequest{
-			Goal:      stringArg(call.Arguments, "goal"),
-			SeedURL:   stringArg(call.Arguments, "seed_url"),
-			Profile:   stringArg(call.Arguments, "profile"),
-			UserAgent: stringArg(call.Arguments, "user_agent"),
+			Goal:          stringArg(call.Arguments, "goal"),
+			SeedURL:       stringArg(call.Arguments, "seed_url"),
+			Profile:       stringArg(call.Arguments, "profile"),
+			UserAgent:     stringArg(call.Arguments, "user_agent"),
+			DiscoveryMode: stringArg(call.Arguments, "discovery_mode"),
 		})
 		if err != nil {
 			return nil, err
@@ -152,11 +153,12 @@ func mcpTools() []mcpTool {
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"goal":       map[string]any{"type": "string"},
-					"seed_url":   map[string]any{"type": "string"},
-					"profile":    map[string]any{"type": "string"},
-					"user_agent": map[string]any{"type": "string"},
-					"lane_max":   map[string]any{"type": "integer"},
+					"goal":           map[string]any{"type": "string"},
+					"seed_url":       map[string]any{"type": "string"},
+					"profile":        map[string]any{"type": "string"},
+					"user_agent":     map[string]any{"type": "string"},
+					"discovery_mode": map[string]any{"type": "string"},
+					"lane_max":       map[string]any{"type": "integer"},
 				},
 				"required": []string{"goal", "seed_url"},
 			},

@@ -152,6 +152,67 @@ func TestGoldenNFRFidelityScoreStandard(t *testing.T) {
 	}
 }
 
+func TestGoldenQueryDiscoveryImprovesSignal(t *testing.T) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Portal</title></head><body><article><h1>Portal</h1><p>Overview page.</p><a href="%s/docs/replay-proof">Replay Proof Guide</a><a href="%s/blog">Blog</a></article></body></html>`, serverURL, serverURL)
+		case "/docs/replay-proof":
+			_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Replay Proof Guide</h1><p>Proof replay deterministic context for operators.</p><p>Inspect proof records and compare replay traces.</p></article></body></html>`)
+		case "/blog":
+			_, _ = fmt.Fprint(w, `<html><head><title>Blog</title></head><body><article><h1>Blog</h1><p>Company updates.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	seedOnly, err := svc.Query(context.Background(), QueryRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       server.URL,
+		Profile:       core.ProfileTiny,
+		DiscoveryMode: QueryDiscoveryOff,
+	})
+	if err != nil {
+		t.Fatalf("seed-only query failed: %v", err)
+	}
+
+	discoverFirst, err := svc.Query(context.Background(), QueryRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       server.URL,
+		Profile:       core.ProfileTiny,
+		DiscoveryMode: QueryDiscoverySameSite,
+	})
+	if err != nil {
+		t.Fatalf("discover-first query failed: %v", err)
+	}
+
+	expected := []string{
+		"Proof replay deterministic context for operators.",
+		"Inspect proof records and compare replay traces.",
+	}
+	seedScore := fidelityScore(seedOnly.ResultPack.Chunks, expected)
+	discoverScore := fidelityScore(discoverFirst.ResultPack.Chunks, expected)
+
+	if discoverFirst.Plan.SelectedURL == seedOnly.Plan.SelectedURL {
+		t.Fatalf("expected discovery to choose a different page, got %q", discoverFirst.Plan.SelectedURL)
+	}
+	if discoverScore <= seedScore {
+		t.Fatalf("expected discover-first fidelity %.2f to exceed seed-only %.2f", discoverScore, seedScore)
+	}
+}
+
 func BenchmarkReadGoldenArticle(b *testing.B) {
 	html := loadGoldenHTML(b, "article.html")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -207,6 +268,14 @@ func BenchmarkQueryGoldenArticle(b *testing.B) {
 			b.Fatalf("query failed: %v", err)
 		}
 	}
+}
+
+func BenchmarkQuerySeedOnly(b *testing.B) {
+	benchmarkQueryModes(b, QueryDiscoveryOff)
+}
+
+func BenchmarkQueryDiscoverFirst(b *testing.B) {
+	benchmarkQueryModes(b, QueryDiscoverySameSite)
 }
 
 func BenchmarkCrawlGoldenArticle(b *testing.B) {
@@ -272,6 +341,46 @@ func runGoldenRead(t *testing.T, fixture string, req ReadRequest) ReadResponse {
 		t.Fatalf("read failed: %v", err)
 	}
 	return resp
+}
+
+func benchmarkQueryModes(b *testing.B, mode string) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Portal</title></head><body><article><h1>Portal</h1><p>Overview page.</p><a href="%s/docs/replay-proof">Replay Proof Guide</a><a href="%s/blog">Blog</a></article></body></html>`, serverURL, serverURL)
+		case "/docs/replay-proof":
+			_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Replay Proof Guide</h1><p>Proof replay deterministic context for operators.</p><p>Inspect proof records and compare replay traces.</p></article></body></html>`)
+		case "/blog":
+			_, _ = fmt.Fprint(w, `<html><head><title>Blog</title></head><body><article><h1>Blog</h1><p>Company updates.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		b.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := svc.Query(context.Background(), QueryRequest{
+			Goal:          "proof replay deterministic",
+			SeedURL:       server.URL,
+			Profile:       core.ProfileTiny,
+			DiscoveryMode: mode,
+		})
+		if err != nil {
+			b.Fatalf("query failed: %v", err)
+		}
+	}
 }
 
 type testingReader interface {
