@@ -8,8 +8,9 @@ Currently materialized:
 1. `internal/config`
 2. `internal/core`
 3. `internal/pipeline`
-4. `schemas`
-5. `scripts`
+4. `internal/proof`
+5. `schemas`
+6. `scripts`
 
 ## Planned Tree
 

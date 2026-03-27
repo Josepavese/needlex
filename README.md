@@ -16,8 +16,9 @@ Current implemented baseline:
 2. Canonical core contracts in `internal/core`
 3. JSON-first config loading with env overrides in `internal/config`
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
-5. Versioned schema files in `schemas/`
-6. Tests and budget enforcement passing
+5. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
+6. Versioned schema files in `schemas/`
+7. Tests and budget enforcement passing
 
 ## Working Documents
 
