@@ -7,8 +7,9 @@ The tree is designed before code, but directories are created only when real cod
 Currently materialized:
 1. `internal/config`
 2. `internal/core`
-3. `schemas`
-4. `scripts`
+3. `internal/pipeline`
+4. `schemas`
+5. `scripts`
 
 ## Planned Tree
 
