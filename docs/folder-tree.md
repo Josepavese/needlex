@@ -17,6 +17,7 @@ Currently materialized:
 10. `scripts`
 11. `testdata/golden`
 12. `scripts/external_baselines`
+13. `improvements`
 
 ## Planned Tree
 
@@ -33,6 +34,8 @@ needlex/
     development-plan.md
     folder-tree.md
     project-context.md
+  improvements/
+    read-validation-2026-03-28.md
   internal/
     config/
     core/

@@ -53,6 +53,7 @@ go run ./cmd/needle mcp
 - [spec.md](/home/jose/hpdev/Libraries/needlex/spec.md)
 - [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
 - [benchmark-report.md](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
+- [read-validation-2026-03-28.md](/home/jose/hpdev/Libraries/needlex/improvements/read-validation-2026-03-28.md)
 - [architecture.md](/home/jose/hpdev/Libraries/needlex/docs/architecture.md)
 - [folder-tree.md](/home/jose/hpdev/Libraries/needlex/docs/folder-tree.md)
 - [development-plan.md](/home/jose/hpdev/Libraries/needlex/docs/development-plan.md)
