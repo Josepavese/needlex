@@ -41,6 +41,11 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 	if !strings.Contains(string(responses[1]), `"web_crawl"`) {
 		t.Fatalf("expected tools list to include web_crawl, got %s", responses[1])
 	}
+	for _, tool := range []string{"web_query", "web_read", "web_replay", "web_diff", "web_proof", "web_prune"} {
+		if !strings.Contains(string(responses[1]), tool) {
+			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
+		}
+	}
 }
 
 func TestRunnerMCPReadReplayAndProof(t *testing.T) {
@@ -116,6 +121,9 @@ func TestRunnerMCPReadReplayAndProof(t *testing.T) {
 	if !strings.Contains(string(responses[3]), `"proof"`) {
 		t.Fatalf("expected proof payload, got %s", responses[3])
 	}
+	assertMCPStructuredKeys(t, responses[1], "document", "chunks", "proof_refs", "cost_report")
+	assertMCPStructuredKeys(t, responses[2], "replay_report")
+	assertMCPStructuredKeys(t, responses[3], "proof_records")
 }
 
 func TestRunnerMCPQuery(t *testing.T) {
@@ -161,6 +169,7 @@ func TestRunnerMCPQuery(t *testing.T) {
 	if !strings.Contains(string(responses[1]), `"result_pack"`) {
 		t.Fatalf("expected query payload, got %s", responses[1])
 	}
+	assertMCPStructuredKeys(t, responses[1], "plan", "result_pack", "proof_refs", "trace_id")
 }
 
 func TestRunnerMCPCrawl(t *testing.T) {
@@ -207,6 +216,7 @@ func TestRunnerMCPCrawl(t *testing.T) {
 	if !strings.Contains(string(responses[1]), `"summary"`) {
 		t.Fatalf("expected crawl summary, got %s", responses[1])
 	}
+	assertMCPStructuredKeys(t, responses[1], "documents", "summary", "stored_runs")
 }
 
 func framedMessages(t *testing.T, messages ...map[string]any) string {
@@ -247,4 +257,26 @@ func decodeMCPResponses(t *testing.T, data []byte) [][]byte {
 
 func jsonLength(data []byte) string {
 	return strconv.Itoa(len(data))
+}
+
+func assertMCPStructuredKeys(t *testing.T, frame []byte, keys ...string) {
+	t.Helper()
+
+	var payload map[string]any
+	if err := json.Unmarshal(frame, &payload); err != nil {
+		t.Fatalf("decode frame: %v", err)
+	}
+	result, ok := payload["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected result object, got %#v", payload["result"])
+	}
+	structured, ok := result["structuredContent"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected structuredContent object, got %#v", result["structuredContent"])
+	}
+	for _, key := range keys {
+		if _, ok := structured[key]; !ok {
+			t.Fatalf("expected structuredContent key %q, got %#v", key, structured)
+		}
+	}
 }

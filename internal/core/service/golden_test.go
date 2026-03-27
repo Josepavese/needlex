@@ -103,6 +103,74 @@ func BenchmarkReadGoldenArticle(b *testing.B) {
 	}
 }
 
+func BenchmarkQueryGoldenArticle(b *testing.B) {
+	html := loadGoldenHTML(b, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, html)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		b.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := svc.Query(context.Background(), QueryRequest{
+			Goal:    "proof replay deterministic",
+			SeedURL: server.URL,
+			Profile: core.ProfileStandard,
+		})
+		if err != nil {
+			b.Fatalf("query failed: %v", err)
+		}
+	}
+}
+
+func BenchmarkCrawlGoldenArticle(b *testing.B) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Home</title></head><body><article><h1>Home</h1><p>Seed page.</p><a href="%s/docs">Docs</a></article></body></html>`, serverURL)
+		case "/docs":
+			_, _ = fmt.Fprint(w, `<html><head><title>Docs</title></head><body><article><h1>Docs</h1><p>Linked docs page.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		b.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := svc.Crawl(context.Background(), CrawlRequest{
+			SeedURL:    server.URL,
+			Profile:    core.ProfileTiny,
+			MaxPages:   2,
+			MaxDepth:   1,
+			SameDomain: true,
+		})
+		if err != nil {
+			b.Fatalf("crawl failed: %v", err)
+		}
+	}
+}
+
 func runGoldenRead(t *testing.T, fixture string, req ReadRequest) ReadResponse {
 	t.Helper()
 

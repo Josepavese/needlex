@@ -132,6 +132,22 @@ func TestRunnerUnknownCommand(t *testing.T) {
 	}
 }
 
+func TestRunnerHelpListsDayOneCommands(t *testing.T) {
+	runner := NewRunner()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := runner.Run([]string{"help"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+	for _, command := range []string{"needle crawl", "needle query", "needle read", "needle mcp"} {
+		if !strings.Contains(stdout.String(), command) {
+			t.Fatalf("expected help to include %q, got %q", command, stdout.String())
+		}
+	}
+}
+
 func TestRunnerReplayAndDiff(t *testing.T) {
 	root := t.TempDir()
 	runner := Runner{
