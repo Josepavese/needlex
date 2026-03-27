@@ -2,11 +2,14 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +17,8 @@ import (
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 )
+
+var wordPattern = regexp.MustCompile(`\S+`)
 
 func TestReadGoldenArticleStandard(t *testing.T) {
 	resp := runGoldenRead(t, "article.html", ReadRequest{
@@ -72,6 +77,78 @@ func TestReadGoldenForumDeep(t *testing.T) {
 	}
 	if !resp.Replay.Deterministic {
 		t.Fatal("expected replay report to remain deterministic")
+	}
+}
+
+func TestGoldenNFRDeterminismArticle(t *testing.T) {
+	html := loadGoldenHTML(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, html)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	req := ReadRequest{
+		URL:       server.URL,
+		Profile:   core.ProfileStandard,
+		Objective: "proof replay deterministic context",
+	}
+	first, err := svc.Read(context.Background(), req)
+	if err != nil {
+		t.Fatalf("first read failed: %v", err)
+	}
+	second, err := svc.Read(context.Background(), req)
+	if err != nil {
+		t.Fatalf("second read failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(first.ResultPack, second.ResultPack) {
+		t.Fatal("expected identical result packs across repeated runs")
+	}
+	if !reflect.DeepEqual(first.ProofRecords, second.ProofRecords) {
+		t.Fatal("expected identical proof records across repeated runs")
+	}
+	if !first.Replay.Deterministic || !second.Replay.Deterministic {
+		t.Fatal("expected replay reports to remain deterministic")
+	}
+}
+
+func TestGoldenNFRCompressionRatioTiny(t *testing.T) {
+	resp := runGoldenRead(t, "article.html", ReadRequest{
+		Profile:   core.ProfileTiny,
+		Objective: "proof replay deterministic context",
+	})
+	rawHTML := loadGoldenHTML(t, "article.html")
+	packed := joinChunkText(resp.ResultPack.Chunks)
+
+	ratio := compressionRatio(rawHTML, packed)
+	if ratio < 2.0 {
+		t.Fatalf("expected compression ratio baseline >= 2.0, got %.2f", ratio)
+	}
+}
+
+func TestGoldenNFRFidelityScoreStandard(t *testing.T) {
+	resp := runGoldenRead(t, "article.html", ReadRequest{
+		Profile:   core.ProfileStandard,
+		Objective: "proof replay deterministic context",
+	})
+
+	score := fidelityScore(resp.ResultPack.Chunks, []string{
+		"Needle-X compiles noisy public pages into compact proof-carrying context for agents.",
+		"The runtime reduces HTML into a stable intermediate representation before ranking and packing.",
+		"Replay and diff keep every extraction auditable and locally inspectable without a backend.",
+		"Small language models activate only when ambiguity survives deterministic pruning.",
+	})
+	if score < 1.0 {
+		t.Fatalf("expected fidelity score 1.0 on golden article, got %.2f", score)
 	}
 }
 
@@ -229,4 +306,59 @@ func containsLine(lines []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func compressionRatio(rawHTML, packed string) float64 {
+	packedTokens := tokenCount(packed)
+	if packedTokens == 0 {
+		return 0
+	}
+	return float64(tokenCount(rawHTML)) / float64(packedTokens)
+}
+
+func fidelityScore(chunks []core.Chunk, expected []string) float64 {
+	if len(expected) == 0 {
+		return 1
+	}
+	matched := 0
+	for _, needle := range expected {
+		if containsChunkText(chunks, needle) {
+			matched++
+		}
+	}
+	return float64(matched) / float64(len(expected))
+}
+
+func joinChunkText(chunks []core.Chunk) string {
+	lines := make([]string, 0, len(chunks))
+	for _, chunk := range chunks {
+		lines = append(lines, chunk.Text)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func tokenCount(text string) int {
+	return len(wordPattern.FindAllString(text, -1))
+}
+
+func TestGoldenNFRMetricsShape(t *testing.T) {
+	resp := runGoldenRead(t, "forum.html", ReadRequest{
+		Profile:   core.ProfileTiny,
+		Objective: "replay drift troubleshooting",
+	})
+	report := map[string]any{
+		"compression_ratio": compressionRatio(loadGoldenHTML(t, "forum.html"), joinChunkText(resp.ResultPack.Chunks)),
+		"deterministic":     resp.Replay.Deterministic,
+		"fidelity_score": fidelityScore(resp.ResultPack.Chunks, []string{
+			"Compare stage hashes first.",
+			"inspect proof records by chunk id",
+		}),
+	}
+	data, err := json.Marshal(report)
+	if err != nil {
+		t.Fatalf("marshal metrics report: %v", err)
+	}
+	if !strings.Contains(string(data), "compression_ratio") {
+		t.Fatal("expected metrics report to include compression_ratio")
+	}
 }
