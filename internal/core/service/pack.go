@@ -128,7 +128,7 @@ func selectProfile(ranked []rankedSegment, profile string) []rankedSegment {
 	limit := len(ranked)
 	switch profile {
 	case core.ProfileTiny:
-		limit = min(limit, 3)
+		limit = min(limit, 2)
 	case core.ProfileStandard:
 		limit = min(limit, 6)
 	case core.ProfileDeep:
@@ -287,6 +287,13 @@ func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decision
 				decision.ModelInvocations = append(decision.ModelInvocations, formatted.Invocation)
 			}
 			decision.RiskFlags = append(decision.RiskFlags, formatted.AdditionalRisk...)
+		}
+		if req.Profile == core.ProfileTiny {
+			if compacted, changed := compactTinyText(item.chunk.Text, req.Objective); changed {
+				item.chunk.Text = compacted
+				decision.RiskFlags = append(decision.RiskFlags, "tiny_compaction")
+				decision.TransformChain = append(decision.TransformChain, "pack:tiny_compact:v1")
+			}
 		}
 		decisions[item.chunk.Fingerprint] = decision
 		out = append(out, item)

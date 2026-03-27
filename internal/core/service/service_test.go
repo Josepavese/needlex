@@ -57,8 +57,8 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	if resp.Document.FinalURL != server.URL {
 		t.Fatalf("expected final url %q, got %q", server.URL, resp.Document.FinalURL)
 	}
-	if len(resp.ResultPack.Chunks) != 3 {
-		t.Fatalf("expected tiny profile to keep 3 chunks, got %d", len(resp.ResultPack.Chunks))
+	if len(resp.ResultPack.Chunks) != 2 {
+		t.Fatalf("expected tiny profile to keep 2 chunks, got %d", len(resp.ResultPack.Chunks))
 	}
 	if len(resp.ProofRecords) != len(resp.ResultPack.Chunks) {
 		t.Fatalf("expected proof count to match chunks, got %d proofs and %d chunks", len(resp.ProofRecords), len(resp.ResultPack.Chunks))
@@ -173,5 +173,43 @@ func TestReadAppliesExtractorAndFormatterAtHigherLanes(t *testing.T) {
 	}
 	if !strings.HasSuffix(resp.ResultPack.Chunks[0].Text, ".") {
 		t.Fatalf("expected formatter to normalize punctuation, got %q", resp.ResultPack.Chunks[0].Text)
+	}
+}
+
+func TestReadTinyCompactionIsTraced(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Needle Runtime</title></head><body><article><h1>Needle Runtime</h1><p>The runtime reduces HTML into a stable intermediate representation before ranking and packing.</p><p>Replay and diff keep every extraction auditable and locally inspectable without a backend.</p></article></body></html>`)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Profile:   core.ProfileTiny,
+		Objective: "stable ranking packing",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+
+	foundCompactTrace := false
+	for _, record := range resp.ProofRecords {
+		for _, step := range record.Proof.TransformChain {
+			if step == "pack:tiny_compact:v1" {
+				foundCompactTrace = true
+				break
+			}
+		}
+	}
+	if !foundCompactTrace {
+		t.Fatal("expected tiny compaction to be recorded in transform chain")
 	}
 }

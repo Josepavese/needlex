@@ -57,8 +57,8 @@ func TestSelectProfileLimitsChunkCount(t *testing.T) {
 		}
 	}
 
-	if got := len(selectProfile(ranked, core.ProfileTiny)); got != 3 {
-		t.Fatalf("expected tiny profile to keep 3 chunks, got %d", got)
+	if got := len(selectProfile(ranked, core.ProfileTiny)); got != 2 {
+		t.Fatalf("expected tiny profile to keep 2 chunks, got %d", got)
 	}
 	if got := len(selectProfile(ranked, core.ProfileStandard)); got != 6 {
 		t.Fatalf("expected standard profile to keep 6 chunks, got %d", got)

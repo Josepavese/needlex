@@ -24,7 +24,7 @@ Current implemented baseline:
 10. Versioned schema files in `schemas/`
 11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`
 12. Contract tests for CLI and MCP transport shape
-13. Golden NFR gates for determinism, compression, and fidelity
+13. Golden NFR gates for determinism, fidelity, and `tiny` compression >= `3x`
 14. Tests and budget enforcement passing
 15. Lane `2/3` transform chain recorded in proofs and traces through local `extract_slm` and `formatter` policy stages
 

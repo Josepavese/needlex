@@ -130,8 +130,8 @@ func TestGoldenNFRCompressionRatioTiny(t *testing.T) {
 	packed := joinChunkText(resp.ResultPack.Chunks)
 
 	ratio := compressionRatio(rawHTML, packed)
-	if ratio < 2.0 {
-		t.Fatalf("expected compression ratio baseline >= 2.0, got %.2f", ratio)
+	if ratio < 3.0 {
+		t.Fatalf("expected compression ratio baseline >= 3.0, got %.2f", ratio)
 	}
 }
 
