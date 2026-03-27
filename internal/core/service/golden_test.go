@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -310,6 +311,25 @@ func BenchmarkReducedBaselineGoldenArticle(b *testing.B) {
 	}
 }
 
+func BenchmarkExternalBaselineGoldenArticle(b *testing.B) {
+	htmlText := loadGoldenHTML(b, "article.html")
+
+	if _, ok := externalBaselineCommand(); !ok {
+		b.Skip("external baseline command not configured")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		text, err := externalBaselineText(htmlText)
+		if err != nil {
+			b.Fatalf("external baseline failed: %v", err)
+		}
+		if text == "" {
+			b.Fatal("external baseline extract returned empty text")
+		}
+	}
+}
+
 func BenchmarkQueryGoldenArticle(b *testing.B) {
 	html := loadGoldenHTML(b, "article.html")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -563,6 +583,29 @@ func reducedBaselineText(rawHTML string) string {
 		parts = append(parts, segment.Text)
 	}
 	return strings.Join(parts, "\n")
+}
+
+func externalBaselineText(rawHTML string) (string, error) {
+	command, ok := externalBaselineCommand()
+	if !ok {
+		return "", fmt.Errorf("external baseline command not configured")
+	}
+
+	cmd := exec.Command("bash", "-lc", command)
+	cmd.Stdin = strings.NewReader(rawHTML)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+func externalBaselineCommand() (string, bool) {
+	command := strings.TrimSpace(os.Getenv("NEEDLEX_EXTERNAL_BASELINE_CMD"))
+	if command == "" {
+		return "", false
+	}
+	return command, true
 }
 
 func findHTMLNode(node *html.Node, name string) *html.Node {

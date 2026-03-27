@@ -14,8 +14,31 @@ Current benchmark coverage focuses on:
 2. query strategy comparison
 3. Needle-X versus a naive plain-text baseline
 4. Needle-X versus a reduced deterministic baseline
+5. optional external deterministic baseline adapter
 
 This is not yet a full public benchmark suite.
+
+## External Baseline Adapter
+
+The repo now includes an optional external baseline adapter:
+
+- `scripts/external_baselines/trafilatura_stdin.py`
+
+Contract:
+1. set `NEEDLEX_EXTERNAL_BASELINE_CMD`
+2. the command reads HTML from stdin
+3. the command writes extracted text to stdout
+
+Example:
+
+```bash
+export NEEDLEX_EXTERNAL_BASELINE_CMD="python3 scripts/external_baselines/trafilatura_stdin.py"
+```
+
+Important:
+1. this is benchmark-only support
+2. it adds no runtime dependency to Needle-X
+3. it was not executed in the current environment because `trafilatura` is not installed
 
 ## Test Corpus
 
@@ -48,10 +71,10 @@ go test ./internal/core/service -run '^$' -bench 'BenchmarkReadGoldenArticle$' -
 ```
 
 Observed:
-1. `333431 ns/op`
-2. `347356 ns/op`
-3. `351705 ns/op`
-4. memory around `84751-84840 B/op`
+1. `392443 ns/op`
+2. `376720 ns/op`
+3. `360696 ns/op`
+4. memory around `84783-84867 B/op`
 5. `606 allocs/op`
 
 Practical reading:
@@ -95,16 +118,16 @@ go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|Na
 ```
 
 Observed Needle-X:
-1. `333431 ns/op`
-2. `347356 ns/op`
-3. `351705 ns/op`
-4. memory around `84751-84840 B/op`
+1. `392443 ns/op`
+2. `376720 ns/op`
+3. `360696 ns/op`
+4. memory around `84783-84867 B/op`
 5. `606 allocs/op`
 
 Observed naive baseline:
-1. `21632 ns/op`
-2. `20417 ns/op`
-3. `19009 ns/op`
+1. `23367 ns/op`
+2. `22721 ns/op`
+3. `24031 ns/op`
 4. memory `14144 B/op`
 5. `127 allocs/op`
 
@@ -139,8 +162,9 @@ What the benchmarks support today:
 1. Needle-X can produce more concentrated context than a naive baseline
 2. Needle-X can produce more concentrated context than a reduced deterministic baseline
 3. same-site discovery improves query quality in the golden scenario
-4. `tiny` reaches the compression target while remaining traceable
-5. the runtime is still deterministic under replay-oriented checks
+4. the first bootstrap `web_search` path is implemented and test-covered
+5. `tiny` reaches the compression target while remaining traceable
+6. the runtime is still deterministic under replay-oriented checks
 
 What the benchmarks do not support yet:
 1. that Needle-X is faster than simple baselines
@@ -150,11 +174,11 @@ What the benchmarks do not support yet:
 ## Current Gaps In The Benchmark Story
 
 The main missing pieces are:
-1. a stronger external deterministic baseline than the in-repo reduced baseline
+1. actually running the optional external deterministic baseline adapter and capturing numbers
 2. more fixture diversity
 3. a persistent benchmark script or command wrapper
 4. profiling-backed optimization data
-5. open-web search benchmarks after `discover_web` exists
+5. stronger open-web search benchmarks after bootstrap `web_search`
 
 ## Recommended Next Benchmarking Steps
 

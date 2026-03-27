@@ -16,6 +16,7 @@ Currently materialized:
 9. `schemas`
 10. `scripts`
 11. `testdata/golden`
+12. `scripts/external_baselines`
 
 ## Planned Tree
 
@@ -46,6 +47,7 @@ needlex/
     resultpack.schema.json
   scripts/
     check_budget.sh
+    external_baselines/
   testdata/
     benchmark/
     golden/

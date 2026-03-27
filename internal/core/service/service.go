@@ -32,11 +32,12 @@ type ReadResponse struct {
 }
 
 type Service struct {
-	cfg       config.Config
-	acquirer  pipeline.Acquirer
-	reducer   pipeline.Reducer
-	segmenter pipeline.Segmenter
-	now       func() time.Time
+	cfg                config.Config
+	acquirer           pipeline.Acquirer
+	reducer            pipeline.Reducer
+	segmenter          pipeline.Segmenter
+	now                func() time.Time
+	webDiscoverBaseURL string
 }
 
 func New(cfg config.Config, client *http.Client) (*Service, error) {

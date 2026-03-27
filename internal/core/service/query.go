@@ -12,6 +12,7 @@ import (
 const (
 	QueryDiscoveryOff      = "off"
 	QueryDiscoverySameSite = "same_site_links"
+	QueryDiscoveryWeb      = "web_search"
 )
 
 type QueryRequest struct {
@@ -26,15 +27,16 @@ type QueryRequest struct {
 }
 
 type QueryPlan struct {
-	Goal          string      `json:"goal"`
-	SeedURL       string      `json:"seed_url"`
-	Profile       string      `json:"profile"`
-	Budget        core.Budget `json:"budget"`
-	LaneMax       int         `json:"lane_max"`
-	DiscoveryMode string      `json:"discovery_mode,omitempty"`
-	SelectedURL   string      `json:"selected_url,omitempty"`
-	CandidateURLs []string    `json:"candidate_urls,omitempty"`
-	DomainHints   []string    `json:"domain_hints,omitempty"`
+	Goal              string      `json:"goal"`
+	SeedURL           string      `json:"seed_url"`
+	Profile           string      `json:"profile"`
+	Budget            core.Budget `json:"budget"`
+	LaneMax           int         `json:"lane_max"`
+	DiscoveryMode     string      `json:"discovery_mode,omitempty"`
+	DiscoveryProvider string      `json:"discovery_provider,omitempty"`
+	SelectedURL       string      `json:"selected_url,omitempty"`
+	CandidateURLs     []string    `json:"candidate_urls,omitempty"`
+	DomainHints       []string    `json:"domain_hints,omitempty"`
 }
 
 type QueryResponse struct {
@@ -94,6 +96,20 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 		}
 		selectedURL = discovery.SelectedURL
 		candidateURLs = discoveryURLs(discovery.Candidates)
+		plan.DiscoveryProvider = "local_same_site"
+	} else if discoveryMode == QueryDiscoveryWeb {
+		discovery, err := s.DiscoverWeb(ctx, DiscoverWebRequest{
+			Goal:          req.Goal,
+			SeedURL:       req.SeedURL,
+			UserAgent:     req.UserAgent,
+			MaxCandidates: min(5, s.cfg.Runtime.MaxPages),
+		})
+		if err != nil {
+			return QueryResponse{}, err
+		}
+		selectedURL = discovery.SelectedURL
+		candidateURLs = discoveryURLs(discovery.Candidates)
+		plan.DiscoveryProvider = discovery.Provider
 	}
 	plan.SelectedURL = selectedURL
 	plan.CandidateURLs = candidateURLs
@@ -172,7 +188,7 @@ func resolveDiscoveryMode(mode string) (string, error) {
 		return QueryDiscoverySameSite, nil
 	}
 	switch mode {
-	case QueryDiscoveryOff, QueryDiscoverySameSite:
+	case QueryDiscoveryOff, QueryDiscoverySameSite, QueryDiscoveryWeb:
 		return mode, nil
 	default:
 		return "", fmt.Errorf("unsupported query discovery mode %q", mode)

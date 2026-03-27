@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 )
@@ -63,5 +64,63 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 	}
 	if len(resp.Candidates) < 3 {
 		t.Fatalf("expected seed plus links, got %#v", resp.Candidates)
+	}
+}
+
+func TestExtractSearchResultsResolvesRedirectTargets(t *testing.T) {
+	results := extractSearchResults(
+		`<html><body><a class="result__a" href="/l/?uddg=https%3A%2F%2Fdocs.example.com%2Freplay">Replay Docs</a></body></html>`,
+		"https://html.duckduckgo.com/html/?q=replay",
+	)
+	if len(results) != 1 {
+		t.Fatalf("expected one result, got %d", len(results))
+	}
+	if results[0].URL != "https://docs.example.com/replay" {
+		t.Fatalf("unexpected resolved url %q", results[0].URL)
+	}
+	if results[0].Label != "Replay Docs" {
+		t.Fatalf("unexpected label %q", results[0].Label)
+	}
+}
+
+func TestDiscoverWebChoosesBestCrossSiteCandidate(t *testing.T) {
+	docsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Replay Proof Guide</h1></article></body></html>`)
+	}))
+	defer docsServer.Close()
+
+	blogServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Blog</title></head><body><article><h1>Blog</h1></article></body></html>`)
+	}))
+	defer blogServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s">Company Blog</a><a class="result__a" href="%s">Replay Proof Guide</a></body></html>`, blogServer.URL, docsServer.URL)
+	}))
+	defer searchServer.Close()
+
+	svc, err := New(config.Defaults(), searchServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+	svc.webDiscoverBaseURL = searchServer.URL
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       "https://seed.example/root",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != docsServer.URL {
+		t.Fatalf("expected docs candidate to win, got %q", resp.SelectedURL)
+	}
+	if resp.Provider == "" {
+		t.Fatal("expected provider name")
 	}
 }

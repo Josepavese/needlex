@@ -18,11 +18,11 @@ Current implemented baseline:
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. Local `intel` policy engine with ambiguity scoring, reason codes, lane escalation, domain force-lane hints, deterministic extractor, and constrained formatter
 6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
-7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with query strategies `off|same_site_links` for measurable discovery-vs-seed comparison
+7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with query strategies `off|same_site_links|web_search`
 8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query` and `crawl`
 9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`, with genome-driven `force_lane`, `preferred_profile`, `pruning_profile`, and `render_hint`
 10. Versioned schema files in `schemas/`
-11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`, including comparison against naive and reduced deterministic baselines
+11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`, including comparison against naive and reduced deterministic baselines plus an optional external baseline adapter
 12. Contract tests for CLI and MCP transport shape
 13. Golden NFR gates for determinism, fidelity, and `tiny` compression >= `3x`
 14. Tests and budget enforcement passing
@@ -34,6 +34,7 @@ Current implemented baseline:
 go run ./cmd/needle crawl https://example.com --max-pages 3 --max-depth 1 --same-domain
 go run ./cmd/needle query https://example.com --goal "proof replay deterministic"
 go run ./cmd/needle query https://example.com --goal "proof replay deterministic" --discovery off
+go run ./cmd/needle query https://example.com --goal "proof replay deterministic" --discovery web_search
 go run ./cmd/needle read https://example.com
 go run ./cmd/needle read https://example.com --json
 go run ./cmd/needle read https://example.com --profile tiny

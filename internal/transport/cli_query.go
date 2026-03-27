@@ -24,7 +24,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&goal, "goal", "", "query goal")
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
-	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links or off")
+	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, web_search, or off")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 
 	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
@@ -82,6 +82,9 @@ func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts quer
 	fmt.Fprintf(w, "Goal: %s\n", resp.Plan.Goal)
 	fmt.Fprintf(w, "Seed URL: %s\n", resp.Plan.SeedURL)
 	fmt.Fprintf(w, "Discovery: %s\n", resp.Plan.DiscoveryMode)
+	if resp.Plan.DiscoveryProvider != "" {
+		fmt.Fprintf(w, "Provider: %s\n", resp.Plan.DiscoveryProvider)
+	}
 	fmt.Fprintf(w, "Selected URL: %s\n", resp.Plan.SelectedURL)
 	fmt.Fprintf(w, "Profile: %s\n", resp.ResultPack.Profile)
 	fmt.Fprintf(w, "Trace ID: %s\n", resp.TraceID)

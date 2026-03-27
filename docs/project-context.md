@@ -69,8 +69,9 @@ Given a real URL, Needle-X can:
 Given a goal and a seed URL, Needle-X can:
 1. stay on the seed page with `discovery=off`
 2. do same-site candidate discovery with `discovery=same_site_links`
-3. pick the better candidate deterministically
-4. read and pack the selected page
+3. do a first bootstrap web search with `discovery=web_search`
+4. pick the better candidate deterministically
+5. read and pack the selected page
 
 ### `crawl`
 
@@ -149,12 +150,13 @@ Current budget status:
 ## Current Phase
 
 The project is in:
-`runtime foundation complete + comparative validation + pre-search expansion`
+`runtime foundation complete + comparative validation + early web discovery`
 
 In practical terms:
 1. the runtime foundation is mostly in place
 2. validation is already happening against benchmarks and baselines
-3. the next major frontier is true search and discovery beyond seeded retrieval
+3. the first bootstrap web discovery path now exists
+4. the next major frontier is moving from bootstrap web discovery to stronger native search logic
 
 ## What We Have Not Built Yet
 
@@ -165,7 +167,7 @@ These are the main missing pieces.
 We still do not have:
 1. query-only discovery without a seed URL
 2. cross-site candidate expansion
-3. web-scale ranking and reranking
+3. strong web-scale ranking and reranking
 4. a Needle-native search graph or local web index
 
 ### 2. Stronger External Baselines
@@ -173,7 +175,7 @@ We still do not have:
 We currently compare against a naive baseline.
 
 We still need:
-1. a stronger external deterministic reader baseline
+1. to actually run a stronger external deterministic reader baseline through the adapter path
 2. a more realistic retrieval comparison suite
 
 ### 3. Performance Work
@@ -192,16 +194,17 @@ Needle-X is not yet:
 2. a consumer search engine
 3. a finished agent platform
 4. a broad web index
+5. a fully native web search engine
 
 It is the engine that could become the retrieval core of that product.
 
 ## Recommended Next Moves
 
 The best next steps are:
-1. create a persistent benchmark report in the repo
-2. add a stronger external deterministic baseline beyond the in-repo reduced baseline
-3. design the first true `discover_web` path
-4. expand `query` from same-site discovery to multi-source discovery
+1. actually run the external deterministic baseline adapter and capture numbers
+2. expand `query` from bootstrap `web_search` to stronger multi-source discovery
+3. add ranking and reranking logic that is less dependent on provider ordering
+4. design the first Needle-native discovery substrate beyond provider bootstrap
 
 ## How To Use This Document
 

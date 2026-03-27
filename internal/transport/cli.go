@@ -143,7 +143,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  needle crawl <seed-url> [--json] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]")
-	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua]")
+	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
 	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
 	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
@@ -154,7 +154,7 @@ func writeRootUsage(w io.Writer) {
 
 func writeQueryUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua]")
+	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
 }
 
 func writeReadUsage(w io.Writer) {
