@@ -184,7 +184,7 @@ What the benchmarks support today:
 2. Needle-X can produce more concentrated context than a reduced deterministic baseline
 3. the optional external baseline adapter path is real and runnable
 4. same-site discovery improves query quality in the golden scenario
-5. the first bootstrap `web_search` path is implemented and test-covered
+5. the first bootstrap `web_search` path is implemented, multi-provider capable, and test-covered
 6. `tiny` reaches the compression target while remaining traceable
 7. the runtime is still deterministic under replay-oriented checks
 

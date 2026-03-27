@@ -39,27 +39,34 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		req.MaxCandidates = 5
 	}
 
-	baseURL := s.webDiscoverBaseURL
-	if strings.TrimSpace(baseURL) == "" {
-		baseURL = defaultWebDiscoverBaseURL
+	providers := webSearchProviders(s.webDiscoverBaseURL)
+	if len(providers) == 0 {
+		providers = []string{defaultWebDiscoverBaseURL}
 	}
-	searchURL, err := webSearchURL(baseURL, req.Goal)
-	if err != nil {
-		return DiscoverWebResponse{}, err
+	var (
+		discoveryURL   string
+		candidates     []DiscoverCandidate
+		providerNames  []string
+		lastErr        error
+	)
+	for _, providerBaseURL := range providers {
+		bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if discoveryURL == "" {
+			discoveryURL = bootURL
+		}
+		candidates = mergeDiscoverCandidate(candidates, bootstrapped)
+		providerNames = append(providerNames, discoverProviderName(providerBaseURL))
 	}
-
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       searchURL,
-		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: effectiveUserAgent(req.UserAgent, true),
-	})
-	if err != nil {
-		return DiscoverWebResponse{}, err
+	if len(candidates) == 0 {
+		if lastErr != nil {
+			return DiscoverWebResponse{}, lastErr
+		}
+		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
 	}
-
-	results := extractSearchResults(rawPage.HTML, rawPage.FinalURL)
-	candidates := scoreDiscoveryCandidates(req.Goal, req.SeedURL, "", results)
 	candidates = s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, candidates, req.MaxCandidates)
 	filtered := make([]DiscoverCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
@@ -77,11 +84,31 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 
 	return DiscoverWebResponse{
 		SeedURL:      req.SeedURL,
-		Provider:     discoverProviderName(baseURL),
+		Provider:     strings.Join(providerNames, ","),
 		SelectedURL:  filtered[0].URL,
-		DiscoveryURL: rawPage.FinalURL,
+		DiscoveryURL: discoveryURL,
 		Candidates:   filtered,
 	}, nil
+}
+
+func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req DiscoverWebRequest) ([]DiscoverCandidate, string, error) {
+	searchURL, err := webSearchURL(baseURL, req.Goal)
+	if err != nil {
+		return nil, "", err
+	}
+
+	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
+		URL:       searchURL,
+		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:  s.cfg.Runtime.MaxBytes,
+		UserAgent: effectiveUserAgent(req.UserAgent, true),
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
+	results := extractSearchResults(rawPage.HTML, rawPage.FinalURL)
+	return scoreDiscoveryCandidates(req.Goal, req.SeedURL, "", results), rawPage.FinalURL, nil
 }
 
 func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAgent string, candidates []DiscoverCandidate, maxCandidates int) []DiscoverCandidate {
@@ -201,6 +228,29 @@ func webSearchURL(baseURL, goal string) (string, error) {
 	query.Set("q", goal)
 	parsed.RawQuery = query.Encode()
 	return parsed.String(), nil
+}
+
+func webSearchProviders(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n'
+	})
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func discoverProviderName(baseURL string) string {

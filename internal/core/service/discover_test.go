@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -215,6 +216,54 @@ func TestDiscoverWebExpandsLandingPageToBetterChild(t *testing.T) {
 	}
 	if len(resp.Candidates) == 0 || !containsReason(resp.Candidates[0].Reason, "page_expand") {
 		t.Fatalf("expected top candidate to include page_expand reason, got %#v", resp.Candidates)
+	}
+}
+
+func TestDiscoverWebMergesMultipleProviders(t *testing.T) {
+	docsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Replay Proof Guide</h1></article></body></html>`)
+	}))
+	defer docsServer.Close()
+
+	blogServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Blog</title></head><body><article><h1>Blog</h1></article></body></html>`)
+	}))
+	defer blogServer.Close()
+
+	searchOne := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s">Company Blog</a></body></html>`, blogServer.URL)
+	}))
+	defer searchOne.Close()
+
+	searchTwo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s">Replay Proof Guide</a></body></html>`, docsServer.URL)
+	}))
+	defer searchTwo.Close()
+
+	svc, err := New(config.Defaults(), searchOne.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+	svc.webDiscoverBaseURL = searchOne.URL + "," + searchTwo.URL
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       "https://seed.example/root",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != docsServer.URL {
+		t.Fatalf("expected merged providers to surface docs candidate, got %q", resp.SelectedURL)
+	}
+	if !strings.Contains(resp.Provider, discoverProviderName(searchOne.URL)) || !strings.Contains(resp.Provider, discoverProviderName(searchTwo.URL)) {
+		t.Fatalf("expected combined provider names, got %q", resp.Provider)
 	}
 }
 
