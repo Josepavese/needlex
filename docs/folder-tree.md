@@ -28,6 +28,7 @@ needlex/
     needle/
   docs/
     architecture.md
+    benchmark-report.md
     development-plan.md
     folder-tree.md
     project-context.md
