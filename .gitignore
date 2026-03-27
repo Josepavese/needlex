@@ -1,0 +1,9 @@
+.needlex/
+.agent/workflows/
+.agent/skills/*
+!.agent/skills/lean-full-scope-runtime/
+!.agent/skills/lean-full-scope-runtime/**
+.agent/skills/dist/
+dist/
+bin/
+.DS_Store
