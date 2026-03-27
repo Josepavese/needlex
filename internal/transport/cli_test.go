@@ -43,6 +43,34 @@ func TestRunnerReadJSON(t *testing.T) {
 	}
 }
 
+func TestRunnerQueryJSON(t *testing.T) {
+	root := t.TempDir()
+	var captured coreservice.QueryRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			captured = req
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "https://example.com", "--goal", "proof replay deterministic", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"result_pack"`) {
+		t.Fatalf("expected query json payload, got %q", stdout.String())
+	}
+	if captured.Goal != "proof replay deterministic" {
+		t.Fatalf("expected goal to be forwarded, got %q", captured.Goal)
+	}
+}
+
 func TestRunnerReadText(t *testing.T) {
 	root := t.TempDir()
 	runner := Runner{
@@ -304,5 +332,33 @@ func fakeResponse() coreservice.ReadResponse {
 			StageCount: 1,
 			EventCount: 1,
 		},
+	}
+}
+
+func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
+	read := fakeResponse()
+	read.Trace.TraceID = "trace_query"
+	read.ResultPack.Query = req.Goal
+	return coreservice.QueryResponse{
+		Plan: coreservice.QueryPlan{
+			Goal:    req.Goal,
+			SeedURL: req.SeedURL,
+			Profile: core.ProfileStandard,
+			Budget: core.Budget{
+				MaxTokens:    8000,
+				MaxLatencyMS: 1800,
+				MaxPages:     20,
+				MaxDepth:     2,
+				MaxBytes:     4_000_000,
+			},
+			LaneMax: 3,
+		},
+		Document:     read.Document,
+		ResultPack:   read.ResultPack,
+		ProofRefs:    read.ResultPack.ProofRefs,
+		ProofRecords: read.ProofRecords,
+		Trace:        read.Trace,
+		TraceID:      read.Trace.TraceID,
+		CostReport:   read.ResultPack.CostReport,
 	}
 }

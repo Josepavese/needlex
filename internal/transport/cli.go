@@ -17,6 +17,7 @@ import (
 type Runner struct {
 	loadConfig func(path string) (config.Config, error)
 	read       func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error)
+	query      func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error)
 	stdin      io.Reader
 	storeRoot  string
 }
@@ -31,6 +32,13 @@ func NewRunner() Runner {
 			}
 			return svc.Read(ctx, req)
 		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			svc, err := coreservice.New(cfg, nil)
+			if err != nil {
+				return coreservice.QueryResponse{}, err
+			}
+			return svc.Query(ctx, req)
+		},
 		stdin:     os.Stdin,
 		storeRoot: ".needlex",
 	}
@@ -43,6 +51,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	switch args[0] {
+	case "query":
+		return r.runQuery(args[1:], stdout, stderr)
 	case "read":
 		return r.runRead(args[1:], stdout, stderr)
 	case "replay":
@@ -122,12 +132,18 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua]")
 	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
 	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
 	fmt.Fprintln(w, "  needle proof <trace-id|chunk-id> [--json]")
 	fmt.Fprintln(w, "  needle prune (--all | --older-than-hours N) [--json]")
 	fmt.Fprintln(w, "  needle mcp")
+}
+
+func writeQueryUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua]")
 }
 
 func writeReadUsage(w io.Writer) {

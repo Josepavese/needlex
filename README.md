@@ -19,7 +19,7 @@ Current implemented baseline:
 5. Local `intel` policy engine with ambiguity scoring, reason codes, lane escalation, and domain force-lane hints
 6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
 7. End-to-end deterministic `Read` orchestration in `internal/core/service`
-8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`
+8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query`
 9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`
 10. Versioned schema files in `schemas/`
 11. Golden end-to-end fixtures and benchmark coverage for `read`
@@ -28,6 +28,7 @@ Current implemented baseline:
 ## Current CLI
 
 ```bash
+go run ./cmd/needle query https://example.com --goal "proof replay deterministic"
 go run ./cmd/needle read https://example.com
 go run ./cmd/needle read https://example.com --json
 go run ./cmd/needle read https://example.com --profile tiny

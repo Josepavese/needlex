@@ -15,6 +15,12 @@ type readArtifacts struct {
 	FingerprintPath string `json:"fingerprint_path"`
 }
 
+type queryArtifacts struct {
+	TracePath       string `json:"trace_path"`
+	ProofPath       string `json:"proof_path"`
+	FingerprintPath string `json:"fingerprint_path"`
+}
+
 func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, readArtifacts, error) {
 	genomeStore := store.NewGenomeStore(r.storeRoot)
 	if genome, err := genomeStore.LoadByURL(req.URL); err == nil {
@@ -48,6 +54,44 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 	})
 
 	return resp, readArtifacts{
+		TracePath:       tracePath,
+		ProofPath:       proofPath,
+		FingerprintPath: fingerprintPath,
+	}, nil
+}
+
+func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, queryArtifacts, error) {
+	if genome, err := store.NewGenomeStore(r.storeRoot).LoadByURL(req.SeedURL); err == nil {
+		req.ForceLane = genome.ForceLane
+	}
+	resp, err := r.query(context.Background(), cfg, req)
+	if err != nil {
+		return coreservice.QueryResponse{}, queryArtifacts{}, err
+	}
+
+	tracePath, err := store.NewTraceStore(r.storeRoot).SaveTrace(resp.Trace)
+	if err != nil {
+		return coreservice.QueryResponse{}, queryArtifacts{}, err
+	}
+	proofPath, err := store.NewProofStore(r.storeRoot).SaveProofRecords(resp.TraceID, resp.ProofRecords)
+	if err != nil {
+		return coreservice.QueryResponse{}, queryArtifacts{}, err
+	}
+	fingerprintPath, err := store.NewFingerprintStore(r.storeRoot).SaveChunks(resp.TraceID, resp.ResultPack.Chunks)
+	if err != nil {
+		return coreservice.QueryResponse{}, queryArtifacts{}, err
+	}
+
+	_, _, _ = store.NewGenomeStore(r.storeRoot).Observe(store.GenomeObservation{
+		URL:              resp.Document.FinalURL,
+		ObservedLane:     maxLane(resp.CostReport.LanePath),
+		PreferredProfile: resp.ResultPack.Profile,
+		FetchMode:        resp.Document.FetchMode,
+		NoiseLevel:       packMetadata(resp.Trace, "noise_level"),
+		PageType:         packMetadata(resp.Trace, "page_type"),
+	})
+
+	return resp, queryArtifacts{
 		TracePath:       tracePath,
 		ProofPath:       proofPath,
 		FingerprintPath: fingerprintPath,
