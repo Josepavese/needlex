@@ -124,3 +124,105 @@ func TestDiscoverWebChoosesBestCrossSiteCandidate(t *testing.T) {
 		t.Fatal("expected provider name")
 	}
 }
+
+func TestDiscoverWebReranksUsingFetchedPageTitle(t *testing.T) {
+	docsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Guide</h1></article></body></html>`)
+	}))
+	defer docsServer.Close()
+
+	blogServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Company Updates</title></head><body><article><h1>Blog</h1></article></body></html>`)
+	}))
+	defer blogServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s">Official Site</a><a class="result__a" href="%s">Official Site</a></body></html>`, blogServer.URL, docsServer.URL)
+	}))
+	defer searchServer.Close()
+
+	svc, err := New(config.Defaults(), searchServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+	svc.webDiscoverBaseURL = searchServer.URL
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       "https://seed.example/root",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != docsServer.URL {
+		t.Fatalf("expected fetched page title rerank to prefer docs candidate, got %q", resp.SelectedURL)
+	}
+	if len(resp.Candidates) == 0 || !containsReason(resp.Candidates[0].Reason, "page_title_probe") {
+		t.Fatalf("expected top candidate to include page_title_probe reason, got %#v", resp.Candidates)
+	}
+}
+
+func TestDiscoverWebExpandsLandingPageToBetterChild(t *testing.T) {
+	var portalURL string
+	portalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Portal</title></head><body><article><h1>Portal</h1><a href="%s/docs/replay-proof">Replay Proof Guide</a></article></body></html>`, portalURL)
+		case "/docs/replay-proof":
+			_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Replay Proof Guide</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer portalServer.Close()
+	portalURL = portalServer.URL
+
+	blogServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Blog</title></head><body><article><h1>Blog</h1></article></body></html>`)
+	}))
+	defer blogServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s">Official Site</a><a class="result__a" href="%s">News</a></body></html>`, portalServer.URL, blogServer.URL)
+	}))
+	defer searchServer.Close()
+
+	svc, err := New(config.Defaults(), searchServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+	svc.webDiscoverBaseURL = searchServer.URL
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       "https://seed.example/root",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != portalServer.URL+"/docs/replay-proof" {
+		t.Fatalf("expected expansion to choose child docs page, got %q", resp.SelectedURL)
+	}
+	if len(resp.Candidates) == 0 || !containsReason(resp.Candidates[0].Reason, "page_expand") {
+		t.Fatalf("expected top candidate to include page_expand reason, got %#v", resp.Candidates)
+	}
+}
+
+func containsReason(reasons []string, needle string) bool {
+	for _, reason := range reasons {
+		if reason == needle {
+			return true
+		}
+	}
+	return false
+}

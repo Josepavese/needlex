@@ -178,6 +178,54 @@ func TestQueryWebSearchUsesCrossSiteDiscovery(t *testing.T) {
 	}
 }
 
+func TestQueryWebSearchExpandsLandingPageToSelectedChild(t *testing.T) {
+	var portalURL string
+	portalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Portal</title></head><body><article><h1>Portal</h1><p>Overview.</p><a href="%s/docs/replay-proof">Replay Proof Guide</a></article></body></html>`, portalURL)
+		case "/docs/replay-proof":
+			_, _ = fmt.Fprint(w, `<html><head><title>Replay Proof Guide</title></head><body><article><h1>Replay Proof Guide</h1><p>Proof replay deterministic context for operators.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer portalServer.Close()
+	portalURL = portalServer.URL
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s">Official Site</a></body></html>`, portalServer.URL)
+	}))
+	defer searchServer.Close()
+
+	svc, err := New(config.Defaults(), searchServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+	svc.webDiscoverBaseURL = searchServer.URL
+
+	resp, err := svc.Query(context.Background(), QueryRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       "https://seed.example/root",
+		Profile:       core.ProfileTiny,
+		DiscoveryMode: QueryDiscoveryWeb,
+	})
+	if err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if resp.Plan.SelectedURL != portalServer.URL+"/docs/replay-proof" {
+		t.Fatalf("expected expanded docs child to be selected, got %q", resp.Plan.SelectedURL)
+	}
+	if resp.Document.FinalURL != portalServer.URL+"/docs/replay-proof" {
+		t.Fatalf("expected selected child page to be read, got %q", resp.Document.FinalURL)
+	}
+}
+
 func TestQueryRejectsMissingGoal(t *testing.T) {
 	svc, err := New(config.Defaults(), nil)
 	if err != nil {

@@ -200,7 +200,7 @@ The main missing pieces are:
 2. more fixture diversity
 3. a persistent benchmark script or command wrapper
 4. profiling-backed optimization data
-5. stronger open-web search benchmarks after bootstrap `web_search`
+5. stronger open-web search benchmarks after the current two-stage bootstrap `web_search`
 
 ## Recommended Next Benchmarking Steps
 

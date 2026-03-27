@@ -70,8 +70,9 @@ Given a goal and a seed URL, Needle-X can:
 1. stay on the seed page with `discovery=off`
 2. do same-site candidate discovery with `discovery=same_site_links`
 3. do a first bootstrap web search with `discovery=web_search`
-4. pick the better candidate deterministically
-5. read and pack the selected page
+4. probe top web candidates locally and expand the best same-host child links
+5. pick the better candidate deterministically
+6. read and pack the selected page
 
 ### `crawl`
 
@@ -155,7 +156,7 @@ The project is in:
 In practical terms:
 1. the runtime foundation is mostly in place
 2. validation is already happening against benchmarks and baselines
-3. the first bootstrap web discovery path now exists
+3. the first bootstrap web discovery path now includes local reranking and landing-page expansion
 4. the next major frontier is moving from bootstrap web discovery to stronger native search logic
 
 ## What We Have Not Built Yet
@@ -205,8 +206,8 @@ It is the engine that could become the retrieval core of that product.
 
 The best next steps are:
 1. expand `query` from bootstrap `web_search` to stronger multi-source discovery
-2. add ranking and reranking logic that is less dependent on provider ordering
-3. design the first Needle-native discovery substrate beyond provider bootstrap
+2. design the first Needle-native discovery substrate beyond provider bootstrap
+3. add broader multi-source expansion beyond single-provider bootstrap
 4. make the external baseline comparison fairer and more reusable
 
 ## How To Use This Document

@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/html"
-
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
@@ -35,23 +33,6 @@ type DiscoverResponse struct {
 	DiscoveryURL string              `json:"discovery_url"`
 	Candidates   []DiscoverCandidate `json:"candidates"`
 }
-
-type DiscoverWebRequest struct {
-	Goal          string
-	SeedURL       string
-	UserAgent     string
-	MaxCandidates int
-}
-
-type DiscoverWebResponse struct {
-	SeedURL      string              `json:"seed_url"`
-	Provider     string              `json:"provider"`
-	SelectedURL  string              `json:"selected_url"`
-	DiscoveryURL string              `json:"discovery_url"`
-	Candidates   []DiscoverCandidate `json:"candidates"`
-}
-
-const defaultWebDiscoverBaseURL = "https://html.duckduckgo.com/html/"
 
 func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverResponse, error) {
 	if strings.TrimSpace(req.SeedURL) == "" {
@@ -93,58 +74,6 @@ func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverRe
 		SelectedURL:  selectedURL,
 		DiscoveryURL: rawPage.FinalURL,
 		Candidates:   candidates,
-	}, nil
-}
-
-func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, error) {
-	if strings.TrimSpace(req.Goal) == "" {
-		return DiscoverWebResponse{}, fmt.Errorf("discover web request goal must not be empty")
-	}
-	if req.MaxCandidates <= 0 {
-		req.MaxCandidates = 5
-	}
-
-	baseURL := s.webDiscoverBaseURL
-	if strings.TrimSpace(baseURL) == "" {
-		baseURL = defaultWebDiscoverBaseURL
-	}
-	searchURL, err := webSearchURL(baseURL, req.Goal)
-	if err != nil {
-		return DiscoverWebResponse{}, err
-	}
-
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       searchURL,
-		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: effectiveUserAgent(req.UserAgent, true),
-	})
-	if err != nil {
-		return DiscoverWebResponse{}, err
-	}
-
-	results := extractSearchResults(rawPage.HTML, rawPage.FinalURL)
-	candidates := scoreDiscoveryCandidates(req.Goal, req.SeedURL, "", results)
-	filtered := make([]DiscoverCandidate, 0, len(candidates))
-	for _, candidate := range candidates {
-		if candidate.URL == "" {
-			continue
-		}
-		filtered = append(filtered, candidate)
-		if len(filtered) == req.MaxCandidates {
-			break
-		}
-	}
-	if len(filtered) == 0 {
-		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
-	}
-
-	return DiscoverWebResponse{
-		SeedURL:      req.SeedURL,
-		Provider:     discoverProviderName(baseURL),
-		SelectedURL:  filtered[0].URL,
-		DiscoveryURL: rawPage.FinalURL,
-		Candidates:   filtered,
 	}, nil
 }
 
@@ -225,92 +154,43 @@ func discoveryScore(goal, rawURL, label string, isSeed bool) (float64, []string)
 	return score, reasons
 }
 
-func webSearchURL(baseURL, goal string) (string, error) {
-	parsed, err := url.Parse(baseURL)
-	if err != nil {
-		return "", fmt.Errorf("parse web discover base url: %w", err)
+func appendUniqueReason(existing []string, incoming ...string) []string {
+	seen := make(map[string]struct{}, len(existing))
+	out := append([]string{}, existing...)
+	for _, value := range existing {
+		seen[value] = struct{}{}
 	}
-	query := parsed.Query()
-	query.Set("q", goal)
-	parsed.RawQuery = query.Encode()
-	return parsed.String(), nil
-}
-
-func discoverProviderName(baseURL string) string {
-	parsed, err := url.Parse(baseURL)
-	if err != nil || parsed.Hostname() == "" {
-		return "web_search_bootstrap"
-	}
-	return parsed.Hostname()
-}
-
-func extractSearchResults(rawHTML, baseURL string) []linkCandidate {
-	root, err := html.Parse(strings.NewReader(rawHTML))
-	if err != nil {
-		return nil
-	}
-	base, err := url.Parse(baseURL)
-	if err != nil {
-		return nil
-	}
-
-	var out []linkCandidate
-	seen := map[string]struct{}{}
-	var walk func(*html.Node)
-	walk = func(node *html.Node) {
-		if node.Type == html.ElementNode && strings.EqualFold(node.Data, "a") {
-			href := attrValue(node, "href")
-			label := nodeText(node)
-			resolved, ok := resolveSearchResultURL(base, href)
-			if ok && label != "" {
-				if _, exists := seen[resolved]; !exists {
-					seen[resolved] = struct{}{}
-					out = append(out, linkCandidate{URL: resolved, Label: label})
-				}
-			}
+	for _, value := range incoming {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
 		}
-		for child := node.FirstChild; child != nil; child = child.NextSibling {
-			walk(child)
+		if _, ok := seen[value]; ok {
+			continue
 		}
+		seen[value] = struct{}{}
+		out = append(out, value)
 	}
-	walk(root)
 	return out
 }
 
-func resolveSearchResultURL(base *url.URL, href string) (string, bool) {
-	if strings.TrimSpace(href) == "" {
-		return "", false
-	}
-	ref, err := url.Parse(strings.TrimSpace(href))
-	if err != nil {
-		return "", false
-	}
-	resolved := base.ResolveReference(ref)
-	if uddg := resolved.Query().Get("uddg"); uddg != "" {
-		decoded, err := url.QueryUnescape(uddg)
-		if err == nil {
-			resolved, err = url.Parse(decoded)
-			if err != nil {
-				return "", false
-			}
-		}
-	}
-	if resolved.Scheme != "http" && resolved.Scheme != "https" {
-		return "", false
-	}
-	if base.Host != "" && strings.EqualFold(resolved.Host, base.Host) {
-		return "", false
-	}
-	return resolved.String(), true
-}
-
-func attrValue(node *html.Node, key string) string {
-	for _, attr := range node.Attr {
-		if strings.EqualFold(attr.Key, key) {
-			return attr.Val
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
 		}
 	}
 	return ""
+}
+
+func joinNonEmpty(values ...string) string {
+	parts := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	return strings.Join(parts, " ")
 }
 
 func uniqueTokens(text string) []string {

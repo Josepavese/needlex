@@ -18,7 +18,7 @@ Current implemented baseline:
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. Local `intel` policy engine with ambiguity scoring, reason codes, lane escalation, domain force-lane hints, deterministic extractor, and constrained formatter
 6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
-7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with query strategies `off|same_site_links|web_search`
+7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with query strategies `off|same_site_links|web_search` and a two-stage `web_search` path that probes top candidates and expands same-host child pages before final selection
 8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query` and `crawl`
 9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`, with genome-driven `force_lane`, `preferred_profile`, `pruning_profile`, and `render_hint`
 10. Versioned schema files in `schemas/`
