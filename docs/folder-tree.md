@@ -5,12 +5,14 @@
 The tree is designed before code, but directories are created only when real code exists. No empty folders are committed to "reserve" architecture.
 
 Currently materialized:
-1. `internal/config`
-2. `internal/core`
-3. `internal/pipeline`
-4. `internal/proof`
-5. `schemas`
-6. `scripts`
+1. `cmd/needle`
+2. `internal/config`
+3. `internal/core`
+4. `internal/pipeline`
+5. `internal/proof`
+6. `internal/transport`
+7. `schemas`
+8. `scripts`
 
 ## Planned Tree
 

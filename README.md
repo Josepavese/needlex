@@ -18,8 +18,16 @@ Current implemented baseline:
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
 6. End-to-end deterministic `Read` orchestration in `internal/core/service`
-7. Versioned schema files in `schemas/`
-8. Tests and budget enforcement passing
+7. Thin CLI transport with `needle read <url>` in `cmd/needle` and `internal/transport`
+8. Versioned schema files in `schemas/`
+9. Tests and budget enforcement passing
+
+## Current CLI
+
+```bash
+go run ./cmd/needle read https://example.com
+go run ./cmd/needle read https://example.com --json
+```
 
 ## Working Documents
 
