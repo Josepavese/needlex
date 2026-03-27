@@ -21,6 +21,36 @@ type queryArtifacts struct {
 	FingerprintPath string `json:"fingerprint_path"`
 }
 
+func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, crawlArtifacts, error) {
+	if genome, err := store.NewGenomeStore(r.storeRoot).LoadByURL(req.SeedURL); err == nil {
+		req.ForceLane = genome.ForceLane
+	}
+
+	resp, err := r.crawl(context.Background(), cfg, req)
+	if err != nil {
+		return coreservice.CrawlResponse{}, crawlArtifacts{}, err
+	}
+
+	storedRuns := 0
+	for _, page := range resp.Pages {
+		if _, err := store.NewTraceStore(r.storeRoot).SaveTrace(page.Trace); err == nil {
+			storedRuns++
+		}
+		_, _ = store.NewProofStore(r.storeRoot).SaveProofRecords(page.Trace.TraceID, page.ProofRecords)
+		_, _ = store.NewFingerprintStore(r.storeRoot).SaveChunks(page.Trace.TraceID, page.ResultPack.Chunks)
+		_, _, _ = store.NewGenomeStore(r.storeRoot).Observe(store.GenomeObservation{
+			URL:              page.Document.FinalURL,
+			ObservedLane:     maxLane(page.ResultPack.CostReport.LanePath),
+			PreferredProfile: page.ResultPack.Profile,
+			FetchMode:        page.Document.FetchMode,
+			NoiseLevel:       packMetadata(page.Trace, "noise_level"),
+			PageType:         packMetadata(page.Trace, "page_type"),
+		})
+	}
+
+	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
+}
+
 func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, readArtifacts, error) {
 	genomeStore := store.NewGenomeStore(r.storeRoot)
 	if genome, err := genomeStore.LoadByURL(req.URL); err == nil {

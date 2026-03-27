@@ -71,6 +71,29 @@ func TestRunnerQueryJSON(t *testing.T) {
 	}
 }
 
+func TestRunnerCrawlJSON(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		crawl: func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error) {
+			return fakeCrawlResponse(), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"crawl", "https://example.com", "--json", "--max-pages", "2", "--same-domain"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"documents"`) {
+		t.Fatalf("expected crawl json payload, got %q", stdout.String())
+	}
+}
+
 func TestRunnerReadText(t *testing.T) {
 	root := t.TempDir()
 	runner := Runner{
@@ -360,5 +383,20 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 		Trace:        read.Trace,
 		TraceID:      read.Trace.TraceID,
 		CostReport:   read.ResultPack.CostReport,
+	}
+}
+
+func fakeCrawlResponse() coreservice.CrawlResponse {
+	read := fakeResponse()
+	return coreservice.CrawlResponse{
+		Documents: []core.Document{read.Document},
+		Summary: coreservice.CrawlSummary{
+			SeedURL:         "https://example.com",
+			PagesVisited:    1,
+			MaxDepthReached: 0,
+			SameDomain:      true,
+			ChunkCount:      len(read.ResultPack.Chunks),
+		},
+		Pages: []coreservice.ReadResponse{read},
 	}
 }

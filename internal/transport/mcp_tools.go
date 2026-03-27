@@ -10,6 +10,27 @@ import (
 
 func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 	switch call.Name {
+	case "web_crawl":
+		cfg, err := config.Load(stringArg(call.Arguments, "config_path"))
+		if err != nil {
+			return nil, fmt.Errorf("load config: %w", err)
+		}
+		resp, artifacts, err := r.executeCrawl(cfg, coreservice.CrawlRequest{
+			SeedURL:    stringArg(call.Arguments, "seed_url"),
+			Profile:    stringArg(call.Arguments, "profile"),
+			UserAgent:  stringArg(call.Arguments, "user_agent"),
+			MaxPages:   intDefault(call.Arguments, "max_pages", 0),
+			MaxDepth:   intDefault(call.Arguments, "max_depth", 0),
+			SameDomain: boolArg(call.Arguments, "same_domain"),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return mcpToolResult(map[string]any{
+			"documents":   resp.Documents,
+			"summary":     resp.Summary,
+			"stored_runs": artifacts.StoredRuns,
+		}), nil
 	case "web_query":
 		cfg, err := config.Load(stringArg(call.Arguments, "config_path"))
 		if err != nil {
@@ -110,6 +131,22 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 func mcpTools() []mcpTool {
 	return []mcpTool{
 		{
+			Name:        "web_crawl",
+			Description: "Traverse linked pages starting from one seed URL.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"seed_url":    map[string]any{"type": "string"},
+					"profile":     map[string]any{"type": "string"},
+					"user_agent":  map[string]any{"type": "string"},
+					"max_pages":   map[string]any{"type": "integer"},
+					"max_depth":   map[string]any{"type": "integer"},
+					"same_domain": map[string]any{"type": "boolean"},
+				},
+				"required": []string{"seed_url"},
+			},
+		},
+		{
 			Name:        "web_query",
 			Description: "Plan and execute a goal-oriented query starting from one seed URL.",
 			InputSchema: map[string]any{
@@ -185,4 +222,12 @@ func mcpTools() []mcpTool {
 			},
 		},
 	}
+}
+
+func intDefault(args map[string]any, key string, fallback int) int {
+	value, ok := intArg(args, key)
+	if !ok {
+		return fallback
+	}
+	return value
 }
