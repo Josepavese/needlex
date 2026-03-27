@@ -148,7 +148,7 @@ func mcpTools() []mcpTool {
 		},
 		{
 			Name:        "web_query",
-			Description: "Plan and execute a goal-oriented query starting from one seed URL.",
+			Description: "Plan and execute a goal-oriented query with deterministic same-site discovery starting from one seed URL.",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{

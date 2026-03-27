@@ -37,6 +37,11 @@ type CrawlResponse struct {
 	Pages     []ReadResponse  `json:"pages"`
 }
 
+type linkCandidate struct {
+	URL   string
+	Label string
+}
+
 func (s *Service) Crawl(ctx context.Context, req CrawlRequest) (CrawlResponse, error) {
 	profile, err := resolveProfile(req.Profile)
 	if err != nil {
@@ -149,6 +154,15 @@ func (r CrawlResponse) Validate() error {
 }
 
 func extractLinks(rawHTML, baseURL string, sameDomain bool) []string {
+	candidates := extractLinkCandidates(rawHTML, baseURL, sameDomain)
+	out := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		out = append(out, candidate.URL)
+	}
+	return out
+}
+
+func extractLinkCandidates(rawHTML, baseURL string, sameDomain bool) []linkCandidate {
 	root, err := html.Parse(strings.NewReader(rawHTML))
 	if err != nil {
 		return nil
@@ -158,7 +172,7 @@ func extractLinks(rawHTML, baseURL string, sameDomain bool) []string {
 		return nil
 	}
 
-	out := []string{}
+	out := []linkCandidate{}
 	seen := map[string]struct{}{}
 	var walk func(*html.Node)
 	walk = func(node *html.Node) {
@@ -183,7 +197,10 @@ func extractLinks(rawHTML, baseURL string, sameDomain bool) []string {
 					continue
 				}
 				seen[key] = struct{}{}
-				out = append(out, key)
+				out = append(out, linkCandidate{
+					URL:   key,
+					Label: nodeText(node),
+				})
 			}
 		}
 		for child := node.FirstChild; child != nil; child = child.NextSibling {
@@ -196,4 +213,22 @@ func extractLinks(rawHTML, baseURL string, sameDomain bool) []string {
 
 func sameHost(left, right *url.URL) bool {
 	return strings.EqualFold(left.Hostname(), right.Hostname())
+}
+
+func nodeText(node *html.Node) string {
+	var parts []string
+	var walk func(*html.Node)
+	walk = func(current *html.Node) {
+		if current.Type == html.TextNode {
+			text := strings.TrimSpace(current.Data)
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+		for child := current.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(node)
+	return strings.Join(parts, " ")
 }

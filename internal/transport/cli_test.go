@@ -380,9 +380,12 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 	read.ResultPack.Query = req.Goal
 	return coreservice.QueryResponse{
 		Plan: coreservice.QueryPlan{
-			Goal:    req.Goal,
-			SeedURL: req.SeedURL,
-			Profile: core.ProfileStandard,
+			Goal:          req.Goal,
+			SeedURL:       req.SeedURL,
+			Profile:       core.ProfileStandard,
+			DiscoveryMode: "same_site_links",
+			SelectedURL:   req.SeedURL,
+			CandidateURLs: []string{req.SeedURL},
 			Budget: core.Budget{
 				MaxTokens:    8000,
 				MaxLatencyMS: 1800,

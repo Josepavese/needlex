@@ -17,12 +17,15 @@ type QueryRequest struct {
 }
 
 type QueryPlan struct {
-	Goal        string      `json:"goal"`
-	SeedURL     string      `json:"seed_url"`
-	Profile     string      `json:"profile"`
-	Budget      core.Budget `json:"budget"`
-	LaneMax     int         `json:"lane_max"`
-	DomainHints []string    `json:"domain_hints,omitempty"`
+	Goal          string      `json:"goal"`
+	SeedURL       string      `json:"seed_url"`
+	Profile       string      `json:"profile"`
+	Budget        core.Budget `json:"budget"`
+	LaneMax       int         `json:"lane_max"`
+	DiscoveryMode string      `json:"discovery_mode,omitempty"`
+	SelectedURL   string      `json:"selected_url,omitempty"`
+	CandidateURLs []string    `json:"candidate_urls,omitempty"`
+	DomainHints   []string    `json:"domain_hints,omitempty"`
 }
 
 type QueryResponse struct {
@@ -59,11 +62,25 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 			MaxDepth:     s.cfg.Runtime.MaxDepth,
 			MaxBytes:     s.cfg.Runtime.MaxBytes,
 		},
-		LaneMax: s.cfg.Runtime.LaneMax,
+		LaneMax:       s.cfg.Runtime.LaneMax,
+		DiscoveryMode: "same_site_links",
 	}
 
+	discovery, err := s.Discover(ctx, DiscoverRequest{
+		Goal:          req.Goal,
+		SeedURL:       req.SeedURL,
+		UserAgent:     req.UserAgent,
+		SameDomain:    true,
+		MaxCandidates: min(5, s.cfg.Runtime.MaxPages),
+	})
+	if err != nil {
+		return QueryResponse{}, err
+	}
+	plan.SelectedURL = discovery.SelectedURL
+	plan.CandidateURLs = discoveryURLs(discovery.Candidates)
+
 	readResp, err := s.Read(ctx, ReadRequest{
-		URL:       req.SeedURL,
+		URL:       discovery.SelectedURL,
 		Objective: req.Goal,
 		Profile:   profile,
 		UserAgent: req.UserAgent,
@@ -94,6 +111,9 @@ func (r QueryResponse) Validate() error {
 	if r.Plan.SeedURL == "" {
 		return fmt.Errorf("query response plan.seed_url must not be empty")
 	}
+	if r.Plan.SelectedURL == "" {
+		return fmt.Errorf("query response plan.selected_url must not be empty")
+	}
 	if err := r.Document.Validate(); err != nil {
 		return err
 	}
@@ -115,4 +135,12 @@ func (r QueryResponse) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func discoveryURLs(candidates []DiscoverCandidate) []string {
+	out := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		out = append(out, candidate.URL)
+	}
+	return out
 }

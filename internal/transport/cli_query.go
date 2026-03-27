@@ -76,11 +76,13 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts queryArtifacts) {
 	fmt.Fprintf(w, "Goal: %s\n", resp.Plan.Goal)
 	fmt.Fprintf(w, "Seed URL: %s\n", resp.Plan.SeedURL)
+	fmt.Fprintf(w, "Selected URL: %s\n", resp.Plan.SelectedURL)
 	fmt.Fprintf(w, "Profile: %s\n", resp.ResultPack.Profile)
 	fmt.Fprintf(w, "Trace ID: %s\n", resp.TraceID)
 	fmt.Fprintf(w, "Trace Path: %s\n", artifacts.TracePath)
 	fmt.Fprintf(w, "Proof Path: %s\n", artifacts.ProofPath)
 	fmt.Fprintf(w, "Fingerprint Path: %s\n", artifacts.FingerprintPath)
+	fmt.Fprintf(w, "Candidates: %d\n", len(resp.Plan.CandidateURLs))
 	fmt.Fprintf(w, "Chunks: %d\n", len(resp.ResultPack.Chunks))
 	for i, chunk := range resp.ResultPack.Chunks {
 		fmt.Fprintf(w, "\n[%d] %s\n", i+1, chunk.Text)
