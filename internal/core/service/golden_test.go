@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/html"
+
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 )
@@ -213,6 +215,27 @@ func TestGoldenQueryDiscoveryImprovesSignal(t *testing.T) {
 	}
 }
 
+func TestGoldenNeedlexBeatsNaiveBaselineOnSignalDensity(t *testing.T) {
+	rawHTML := loadGoldenHTML(t, "article.html")
+	objective := "proof replay deterministic context"
+	needle := runGoldenRead(t, "article.html", ReadRequest{
+		Profile:   core.ProfileTiny,
+		Objective: objective,
+	})
+	needleText := joinChunkText(needle.ResultPack.Chunks)
+	baselineText := naiveBaselineText(rawHTML)
+
+	needleDensity := objectiveSignalDensity(needleText, objective)
+	baselineDensity := objectiveSignalDensity(baselineText, objective)
+
+	if needleDensity <= baselineDensity {
+		t.Fatalf("expected needle signal density %.4f to exceed baseline %.4f", needleDensity, baselineDensity)
+	}
+	if compressionRatio(rawHTML, needleText) <= compressionRatio(rawHTML, baselineText) {
+		t.Fatal("expected needle compression ratio to exceed naive baseline")
+	}
+}
+
 func BenchmarkReadGoldenArticle(b *testing.B) {
 	html := loadGoldenHTML(b, "article.html")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -237,6 +260,18 @@ func BenchmarkReadGoldenArticle(b *testing.B) {
 		})
 		if err != nil {
 			b.Fatalf("read failed: %v", err)
+		}
+	}
+}
+
+func BenchmarkNaiveBaselineGoldenArticle(b *testing.B) {
+	htmlText := loadGoldenHTML(b, "article.html")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		text := naiveBaselineText(htmlText)
+		if text == "" {
+			b.Fatal("baseline extract returned empty text")
 		}
 	}
 }
@@ -446,8 +481,81 @@ func joinChunkText(chunks []core.Chunk) string {
 	return strings.Join(lines, "\n")
 }
 
+func naiveBaselineText(rawHTML string) string {
+	root, err := html.Parse(strings.NewReader(rawHTML))
+	if err != nil {
+		return ""
+	}
+	body := findHTMLNode(root, "body")
+	if body == nil {
+		body = root
+	}
+	var parts []string
+	var walk func(*html.Node)
+	walk = func(node *html.Node) {
+		if node.Type == html.TextNode {
+			text := normalizeTestWhitespace(node.Data)
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(body)
+	return strings.Join(parts, " ")
+}
+
+func findHTMLNode(node *html.Node, name string) *html.Node {
+	if node.Type == html.ElementNode && strings.EqualFold(node.Data, name) {
+		return node
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		found := findHTMLNode(child, name)
+		if found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+func normalizeTestWhitespace(value string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+}
+
 func tokenCount(text string) int {
 	return len(wordPattern.FindAllString(text, -1))
+}
+
+func signalDensity(text string, expected []string) float64 {
+	tokens := tokenCount(text)
+	if tokens == 0 {
+		return 0
+	}
+	matches := 0
+	lower := strings.ToLower(text)
+	for _, needle := range expected {
+		if strings.Contains(lower, strings.ToLower(needle)) {
+			matches++
+		}
+	}
+	return float64(matches) / float64(tokens)
+}
+
+func objectiveSignalDensity(text, objective string) float64 {
+	tokens := tokenCount(text)
+	if tokens == 0 {
+		return 0
+	}
+	matches := 0
+	lower := strings.ToLower(text)
+	for _, token := range uniqueTokens(objective) {
+		if strings.Contains(lower, token) {
+			matches++
+		}
+	}
+	return float64(matches) / float64(tokens)
 }
 
 func TestGoldenNFRMetricsShape(t *testing.T) {
@@ -456,8 +564,9 @@ func TestGoldenNFRMetricsShape(t *testing.T) {
 		Objective: "replay drift troubleshooting",
 	})
 	report := map[string]any{
-		"compression_ratio": compressionRatio(loadGoldenHTML(t, "forum.html"), joinChunkText(resp.ResultPack.Chunks)),
-		"deterministic":     resp.Replay.Deterministic,
+		"compression_ratio":          compressionRatio(loadGoldenHTML(t, "forum.html"), joinChunkText(resp.ResultPack.Chunks)),
+		"baseline_compression_ratio": compressionRatio(loadGoldenHTML(t, "forum.html"), naiveBaselineText(loadGoldenHTML(t, "forum.html"))),
+		"deterministic":              resp.Replay.Deterministic,
 		"fidelity_score": fidelityScore(resp.ResultPack.Chunks, []string{
 			"Compare stage hashes first.",
 			"inspect proof records by chunk id",

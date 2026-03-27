@@ -22,7 +22,7 @@ Current implemented baseline:
 8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query` and `crawl`
 9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`, with genome-driven `force_lane`, `preferred_profile`, `pruning_profile`, and `render_hint`
 10. Versioned schema files in `schemas/`
-11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`
+11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`, including comparison against a naive plain-text baseline
 12. Contract tests for CLI and MCP transport shape
 13. Golden NFR gates for determinism, fidelity, and `tiny` compression >= `3x`
 14. Tests and budget enforcement passing
