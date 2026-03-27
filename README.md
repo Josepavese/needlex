@@ -27,6 +27,8 @@ Current implemented baseline:
 ```bash
 go run ./cmd/needle read https://example.com
 go run ./cmd/needle read https://example.com --json
+go run ./cmd/needle read https://example.com --profile tiny
+go run ./cmd/needle read https://example.com --profile deep --json
 ```
 
 ## Working Documents

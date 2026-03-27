@@ -7,7 +7,8 @@ import (
 
 func TestResultPackValidateAcceptsCanonicalShape(t *testing.T) {
 	pack := ResultPack{
-		Query: "needle x architecture",
+		Query:   "needle x architecture",
+		Profile: ProfileStandard,
 		Chunks: []Chunk{
 			{
 				ID:          "chk_1",
@@ -37,6 +38,37 @@ func TestResultPackValidateAcceptsCanonicalShape(t *testing.T) {
 
 	if err := pack.Validate(); err != nil {
 		t.Fatalf("expected valid result pack, got %v", err)
+	}
+}
+
+func TestResultPackValidateRejectsUnknownProfile(t *testing.T) {
+	pack := ResultPack{
+		Query:   "needle x architecture",
+		Profile: "weird",
+		Chunks: []Chunk{
+			{
+				ID:          "chk_1",
+				DocID:       "doc_1",
+				Text:        "High signal context.",
+				Score:       0.92,
+				Fingerprint: "fp_1",
+				Confidence:  0.95,
+			},
+		},
+		Sources: []SourceRef{
+			{
+				DocumentID: "doc_1",
+				URL:        "https://example.com",
+			},
+		},
+		CostReport: CostReport{
+			LatencyMS: 42,
+			LanePath:  []int{0},
+		},
+	}
+
+	if err := pack.Validate(); err == nil {
+		t.Fatal("expected invalid profile to fail validation")
 	}
 }
 

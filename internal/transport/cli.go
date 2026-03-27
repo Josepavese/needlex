@@ -55,11 +55,13 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 	var configPath string
 	var objective string
+	var profile string
 	var userAgent string
 	var jsonOut bool
 
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&objective, "objective", "", "optional read objective")
+	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 
@@ -80,6 +82,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	resp, err := r.read(context.Background(), cfg, coreservice.ReadRequest{
 		URL:       fs.Arg(0),
 		Objective: objective,
+		Profile:   profile,
 		UserAgent: userAgent,
 	})
 	if err != nil {
@@ -103,12 +106,12 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--user-agent ua]")
+	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 }
 
 func writeReadUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--user-agent ua]")
+	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 }
 
 func normalizeReadArgs(args []string) []string {
@@ -117,6 +120,8 @@ func normalizeReadArgs(args []string) []string {
 		"-config":      {},
 		"--objective":  {},
 		"-objective":   {},
+		"--profile":    {},
+		"-profile":     {},
 		"--user-agent": {},
 		"-user-agent":  {},
 	}
@@ -150,6 +155,9 @@ func renderReadText(w io.Writer, resp coreservice.ReadResponse) {
 	fmt.Fprintf(w, "Title: %s\n", title)
 	fmt.Fprintf(w, "URL: %s\n", resp.Document.FinalURL)
 	fmt.Fprintf(w, "Chunks: %d\n", len(resp.ResultPack.Chunks))
+	if resp.ResultPack.Profile != "" {
+		fmt.Fprintf(w, "Profile: %s\n", resp.ResultPack.Profile)
+	}
 	fmt.Fprintf(w, "Proof Records: %d\n", len(resp.ProofRecords))
 	fmt.Fprintf(w, "Stages: %d\n", resp.Replay.StageCount)
 	fmt.Fprintf(w, "Latency: %dms\n", resp.ResultPack.CostReport.LatencyMS)

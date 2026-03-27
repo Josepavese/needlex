@@ -224,8 +224,11 @@ Ritorno a lane inferiore quando:
 {
   "query": "...",
   "objective": "...",
+  "profile": "standard",
   "chunks": [],
   "sources": [],
+  "outline": [],
+  "links": [],
   "proof_refs": [],
   "cost_report": {
     "latency_ms": 0,
@@ -238,7 +241,7 @@ Ritorno a lane inferiore quando:
 
 ## 9. CLI Specification
 ## 9.1 `needle read`
-`needle read <url> [--profile tiny|standard|deep] [--lane-max N] [--json]`
+`needle read <url> [--profile tiny|standard|deep] [--json]`
 
 Output:
 - documento estratto

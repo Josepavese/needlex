@@ -14,11 +14,13 @@ import (
 )
 
 func TestRunnerReadJSON(t *testing.T) {
+	var captured coreservice.ReadRequest
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			return config.Defaults(), nil
 		},
 		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			captured = req
 			return fakeResponse(), nil
 		},
 	}
@@ -26,12 +28,15 @@ func TestRunnerReadJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	code := runner.Run([]string{"read", "https://example.com", "--json"}, &stdout, &stderr)
+	code := runner.Run([]string{"read", "https://example.com", "--json", "--profile", "tiny"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
 	if !strings.Contains(stdout.String(), `"document"`) {
 		t.Fatalf("expected json document payload, got %q", stdout.String())
+	}
+	if captured.Profile != "tiny" {
+		t.Fatalf("expected profile to be forwarded, got %q", captured.Profile)
 	}
 }
 
@@ -84,6 +89,7 @@ func fakeResponse() coreservice.ReadResponse {
 		},
 		ResultPack: core.ResultPack{
 			Objective: "read",
+			Profile:   core.ProfileStandard,
 			Chunks: []core.Chunk{
 				{
 					ID:          "chk_1",

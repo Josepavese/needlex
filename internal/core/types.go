@@ -12,6 +12,9 @@ const (
 	FetchModeHTTP   = "http"
 	FetchModeRender = "render"
 	MaxLane         = 4
+	ProfileTiny     = "tiny"
+	ProfileStandard = "standard"
+	ProfileDeep     = "deep"
 )
 
 type Document struct {
@@ -74,8 +77,11 @@ type CostReport struct {
 type ResultPack struct {
 	Query      string      `json:"query,omitempty"`
 	Objective  string      `json:"objective,omitempty"`
+	Profile    string      `json:"profile,omitempty"`
 	Chunks     []Chunk     `json:"chunks"`
 	Sources    []SourceRef `json:"sources"`
+	Outline    []string    `json:"outline,omitempty"`
+	Links      []string    `json:"links,omitempty"`
 	ProofRefs  []string    `json:"proof_refs,omitempty"`
 	CostReport CostReport  `json:"cost_report"`
 }
@@ -228,6 +234,11 @@ func (r ResultPack) Validate() error {
 	if strings.TrimSpace(r.Query) == "" && strings.TrimSpace(r.Objective) == "" {
 		errs = append(errs, fmt.Errorf("result_pack requires query or objective"))
 	}
+	if r.Profile != "" {
+		if err := validateProfile("result_pack.profile", r.Profile); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	if len(r.Chunks) == 0 {
 		errs = append(errs, fmt.Errorf("result_pack.chunks must not be empty"))
 	}
@@ -247,6 +258,16 @@ func (r ResultPack) Validate() error {
 	for i, ref := range r.ProofRefs {
 		if strings.TrimSpace(ref) == "" {
 			errs = append(errs, fmt.Errorf("result_pack.proof_refs[%d] must not be empty", i))
+		}
+	}
+	for i, item := range r.Outline {
+		if strings.TrimSpace(item) == "" {
+			errs = append(errs, fmt.Errorf("result_pack.outline[%d] must not be empty", i))
+		}
+	}
+	for i, link := range r.Links {
+		if strings.TrimSpace(link) == "" {
+			errs = append(errs, fmt.Errorf("result_pack.links[%d] must not be empty", i))
 		}
 	}
 	return joinErrors(errs...)
@@ -313,6 +334,15 @@ func validateLane(field string, lane int) error {
 		return fmt.Errorf("%s must be between 0 and %d", field, MaxLane)
 	}
 	return nil
+}
+
+func validateProfile(field, profile string) error {
+	switch profile {
+	case ProfileTiny, ProfileStandard, ProfileDeep:
+		return nil
+	default:
+		return fmt.Errorf("%s must be one of %q, %q, or %q", field, ProfileTiny, ProfileStandard, ProfileDeep)
+	}
 }
 
 func validateUnitInterval(field string, value float64) error {

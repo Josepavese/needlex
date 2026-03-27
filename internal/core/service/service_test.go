@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/core"
 )
 
 const testHTML = `
@@ -44,7 +45,8 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	}
 
 	resp, err := svc.Read(context.Background(), ReadRequest{
-		URL: server.URL,
+		URL:     server.URL,
+		Profile: core.ProfileTiny,
 	})
 	if err != nil {
 		t.Fatalf("read failed: %v", err)
@@ -53,8 +55,8 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	if resp.Document.FinalURL != server.URL {
 		t.Fatalf("expected final url %q, got %q", server.URL, resp.Document.FinalURL)
 	}
-	if len(resp.ResultPack.Chunks) == 0 {
-		t.Fatal("expected chunks to be produced")
+	if len(resp.ResultPack.Chunks) != 3 {
+		t.Fatalf("expected tiny profile to keep 3 chunks, got %d", len(resp.ResultPack.Chunks))
 	}
 	if len(resp.ProofRecords) != len(resp.ResultPack.Chunks) {
 		t.Fatalf("expected proof count to match chunks, got %d proofs and %d chunks", len(resp.ProofRecords), len(resp.ResultPack.Chunks))
@@ -67,6 +69,12 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	}
 	if resp.ResultPack.CostReport.LanePath[0] != 0 {
 		t.Fatalf("expected deterministic lane path, got %#v", resp.ResultPack.CostReport.LanePath)
+	}
+	if resp.ResultPack.Profile != core.ProfileTiny {
+		t.Fatalf("expected response profile tiny, got %q", resp.ResultPack.Profile)
+	}
+	if len(resp.ResultPack.Outline) == 0 {
+		t.Fatal("expected outline to be populated")
 	}
 }
 
