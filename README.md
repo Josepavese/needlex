@@ -21,7 +21,8 @@ Current implemented baseline:
 7. Thin CLI transport with `needle read`, `needle replay`, and `needle diff` in `cmd/needle` and `internal/transport`
 8. Local trace persistence in `.needlex/traces` via `internal/store`
 9. Versioned schema files in `schemas/`
-10. Tests and budget enforcement passing
+10. Golden end-to-end fixtures and benchmark coverage for `read`
+11. Tests and budget enforcement passing
 
 ## Current CLI
 

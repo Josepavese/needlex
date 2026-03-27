@@ -14,6 +14,7 @@ Currently materialized:
 7. `internal/transport`
 8. `schemas`
 9. `scripts`
+10. `testdata/golden`
 
 ## Planned Tree
 

@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <title>Forum Thread: Replay Drift</title>
+  </head>
+  <body>
+    <header>
+      Community Forum Search
+    </header>
+    <main>
+      <section>
+        <h1>Replay Drift After HTML Change</h1>
+        <p>
+          A user reports that the replay stage changed after a docs site updated its hero block.
+        </p>
+      </section>
+      <section>
+        <h2>Troubleshooting</h2>
+        <p>
+          Compare stage hashes first. If only reduce changed, the issue is usually harmless layout churn.
+        </p>
+        <p>
+          If pack changed too, inspect proof records by chunk id and confirm selector stability.
+        </p>
+      </section>
+      <section>
+        <h2>Resolution</h2>
+        <p>
+          The team pinned a new reduce rule and replay became deterministic again on the next run.
+        </p>
+      </section>
+    </main>
+    <aside>
+      Trending posts and ads.
+    </aside>
+  </body>
+</html>
