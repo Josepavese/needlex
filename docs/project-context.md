@@ -172,10 +172,13 @@ We still do not have:
 
 ### 2. Stronger External Baselines
 
-We currently compare against a naive baseline.
+We currently compare against:
+1. a naive baseline
+2. a reduced deterministic baseline
+3. an optional external `trafilatura` adapter path
 
 We still need:
-1. to actually run a stronger external deterministic reader baseline through the adapter path
+1. a fairer external deterministic reader comparison that is not dominated by process-spawn overhead
 2. a more realistic retrieval comparison suite
 
 ### 3. Performance Work
@@ -201,10 +204,10 @@ It is the engine that could become the retrieval core of that product.
 ## Recommended Next Moves
 
 The best next steps are:
-1. actually run the external deterministic baseline adapter and capture numbers
-2. expand `query` from bootstrap `web_search` to stronger multi-source discovery
-3. add ranking and reranking logic that is less dependent on provider ordering
-4. design the first Needle-native discovery substrate beyond provider bootstrap
+1. expand `query` from bootstrap `web_search` to stronger multi-source discovery
+2. add ranking and reranking logic that is less dependent on provider ordering
+3. design the first Needle-native discovery substrate beyond provider bootstrap
+4. make the external baseline comparison fairer and more reusable
 
 ## How To Use This Document
 

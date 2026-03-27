@@ -480,7 +480,7 @@ type testingReader interface {
 func loadGoldenHTML(t testingReader, fixture string) string {
 	t.Helper()
 
-	path := filepath.Join("..", "..", "..", "testdata", "golden", fixture)
+	path := repoRootPath("testdata", "golden", fixture)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read fixture %s: %v", fixture, err)
@@ -592,6 +592,7 @@ func externalBaselineText(rawHTML string) (string, error) {
 	}
 
 	cmd := exec.Command("bash", "-lc", command)
+	cmd.Dir = repoRootPath()
 	cmd.Stdin = strings.NewReader(rawHTML)
 	output, err := cmd.Output()
 	if err != nil {
@@ -606,6 +607,15 @@ func externalBaselineCommand() (string, bool) {
 		return "", false
 	}
 	return command, true
+}
+
+func repoRootPath(parts ...string) string {
+	base := filepath.Join("..", "..", "..")
+	if len(parts) == 0 {
+		return base
+	}
+	all := append([]string{base}, parts...)
+	return filepath.Join(all...)
 }
 
 func findHTMLNode(node *html.Node, name string) *html.Node {

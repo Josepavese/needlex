@@ -38,7 +38,7 @@ export NEEDLEX_EXTERNAL_BASELINE_CMD="python3 scripts/external_baselines/trafila
 Important:
 1. this is benchmark-only support
 2. it adds no runtime dependency to Needle-X
-3. it was not executed in the current environment because `trafilatura` is not installed
+3. it is currently exercised through a local repo-scoped `.venv` and measured in the benchmark suite
 
 ## Test Corpus
 
@@ -71,10 +71,10 @@ go test ./internal/core/service -run '^$' -bench 'BenchmarkReadGoldenArticle$' -
 ```
 
 Observed:
-1. `392443 ns/op`
-2. `376720 ns/op`
-3. `360696 ns/op`
-4. memory around `84783-84867 B/op`
+1. `337089 ns/op`
+2. `427261 ns/op`
+3. `326834 ns/op`
+4. memory around `84656-84837 B/op`
 5. `606 allocs/op`
 
 Practical reading:
@@ -125,9 +125,9 @@ Observed Needle-X:
 5. `606 allocs/op`
 
 Observed naive baseline:
-1. `23367 ns/op`
-2. `22721 ns/op`
-3. `24031 ns/op`
+1. `23100 ns/op`
+2. `19190 ns/op`
+3. `21231 ns/op`
 4. memory `14144 B/op`
 5. `127 allocs/op`
 
@@ -145,10 +145,10 @@ go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|Na
 ```
 
 Observed reduced deterministic baseline:
-1. `36696 ns/op`
-2. `35724 ns/op`
-3. `34122 ns/op`
-4. memory `21531 B/op`
+1. `32035 ns/op`
+2. `32426 ns/op`
+3. `32031 ns/op`
+4. memory `21530-21531 B/op`
 5. `263 allocs/op`
 
 Reading:
@@ -156,25 +156,47 @@ Reading:
 2. it is a more serious comparison than naive plain-text extraction
 3. Needle-X still wins on objective signal density and compression under the current golden article test
 
+### 5. Needle-X Versus External `trafilatura` Baseline
+
+Command used:
+
+```bash
+export NEEDLEX_EXTERNAL_BASELINE_CMD=".venv/bin/python scripts/external_baselines/trafilatura_stdin.py"
+go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|NaiveBaselineGoldenArticle|ReducedBaselineGoldenArticle|ExternalBaselineGoldenArticle)$' -benchmem -count=3
+```
+
+Observed external baseline:
+1. `396708940 ns/op`
+2. `393493016 ns/op`
+3. `397309425 ns/op`
+4. memory around `65850-65856 B/op`
+5. `115 allocs/op`
+
+Reading:
+1. this adapter path is far slower than Needle-X in the current local setup because each benchmark iteration spawns a Python process
+2. the result is useful for end-to-end reproducibility of the adapter path, not for a fair in-process extractor comparison
+3. the next stronger comparison should embed or isolate parser cost separately from process-launch overhead
+
 ## Current Quality Conclusions
 
 What the benchmarks support today:
 1. Needle-X can produce more concentrated context than a naive baseline
 2. Needle-X can produce more concentrated context than a reduced deterministic baseline
-3. same-site discovery improves query quality in the golden scenario
-4. the first bootstrap `web_search` path is implemented and test-covered
-5. `tiny` reaches the compression target while remaining traceable
-6. the runtime is still deterministic under replay-oriented checks
+3. the optional external baseline adapter path is real and runnable
+4. same-site discovery improves query quality in the golden scenario
+5. the first bootstrap `web_search` path is implemented and test-covered
+6. `tiny` reaches the compression target while remaining traceable
+7. the runtime is still deterministic under replay-oriented checks
 
 What the benchmarks do not support yet:
 1. that Needle-X is faster than simple baselines
-2. that Needle-X beats established external deterministic readers
+2. that Needle-X beats established external deterministic readers in a fair like-for-like in-process comparison
 3. that Needle-X is ready for web-scale discovery claims
 
 ## Current Gaps In The Benchmark Story
 
 The main missing pieces are:
-1. actually running the optional external deterministic baseline adapter and capturing numbers
+1. a fairer external baseline comparison without process-spawn overhead dominating results
 2. more fixture diversity
 3. a persistent benchmark script or command wrapper
 4. profiling-backed optimization data

@@ -6,4 +6,5 @@
 .agent/skills/dist/
 dist/
 bin/
+.venv/
 .DS_Store
