@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/josepavese/needlex/internal/proof"
-	"github.com/josepavese/needlex/internal/store"
 )
 
 type proofLookupResult struct {
@@ -36,21 +35,10 @@ func (r Runner) runProof(args []string, stdout, stderr io.Writer) int {
 	}
 
 	lookup := strings.TrimSpace(fs.Arg(0))
-	proofStore := store.NewProofStore(r.storeRoot)
-	result := proofLookupResult{Lookup: lookup}
-
-	records, err := proofStore.LoadProofRecords(lookup)
-	if err == nil {
-		result.TraceID = lookup
-		result.Records = records
-	} else {
-		record, traceID, findErr := proofStore.FindProofByChunkID(lookup)
-		if findErr != nil {
-			fmt.Fprintf(stderr, "load proof: %v\n", findErr)
-			return 1
-		}
-		result.TraceID = traceID
-		result.Records = []proof.ProofRecord{record}
+	result, err := r.loadProof(lookup)
+	if err != nil {
+		fmt.Fprintf(stderr, "load proof: %v\n", err)
+		return 1
 	}
 
 	if jsonOut {

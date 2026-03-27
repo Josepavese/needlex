@@ -6,17 +6,18 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/proof"
-	"github.com/josepavese/needlex/internal/store"
 )
 
 type Runner struct {
 	loadConfig func(path string) (config.Config, error)
 	read       func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error)
+	stdin      io.Reader
 	storeRoot  string
 }
 
@@ -30,6 +31,7 @@ func NewRunner() Runner {
 			}
 			return svc.Read(ctx, req)
 		},
+		stdin:     os.Stdin,
 		storeRoot: ".needlex",
 	}
 }
@@ -51,6 +53,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runProof(args[1:], stdout, stderr)
 	case "prune":
 		return r.runPrune(args[1:], stdout, stderr)
+	case "mcp":
+		return r.runMCP(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return 0
@@ -91,7 +95,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	resp, err := r.read(context.Background(), cfg, coreservice.ReadRequest{
+	resp, artifacts, err := r.executeRead(cfg, coreservice.ReadRequest{
 		URL:       fs.Arg(0),
 		Objective: objective,
 		Profile:   profile,
@@ -99,22 +103,6 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "read failed: %v\n", err)
-		return 1
-	}
-
-	tracePath, err := store.NewTraceStore(r.storeRoot).SaveTrace(resp.Trace)
-	if err != nil {
-		fmt.Fprintf(stderr, "save trace: %v\n", err)
-		return 1
-	}
-	proofPath, err := store.NewProofStore(r.storeRoot).SaveProofRecords(resp.Trace.TraceID, resp.ProofRecords)
-	if err != nil {
-		fmt.Fprintf(stderr, "save proofs: %v\n", err)
-		return 1
-	}
-	fingerprintPath, err := store.NewFingerprintStore(r.storeRoot).SaveChunks(resp.Trace.TraceID, resp.ResultPack.Chunks)
-	if err != nil {
-		fmt.Fprintf(stderr, "save fingerprints: %v\n", err)
 		return 1
 	}
 
@@ -128,7 +116,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	renderReadText(stdout, resp, tracePath, proofPath, fingerprintPath)
+	renderReadText(stdout, resp, artifacts.TracePath, artifacts.ProofPath, artifacts.FingerprintPath)
 	return 0
 }
 
@@ -139,6 +127,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
 	fmt.Fprintln(w, "  needle proof <trace-id|chunk-id> [--json]")
 	fmt.Fprintln(w, "  needle prune (--all | --older-than-hours N) [--json]")
+	fmt.Fprintln(w, "  needle mcp")
 }
 
 func writeReadUsage(w io.Writer) {
@@ -202,12 +191,7 @@ func (r Runner) runReplay(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	trace, err := store.NewTraceStore(r.storeRoot).LoadTrace(fs.Arg(0))
-	if err != nil {
-		fmt.Fprintf(stderr, "load trace: %v\n", err)
-		return 1
-	}
-	report, err := trace.ReplayReport()
+	report, err := r.loadReplay(fs.Arg(0))
 	if err != nil {
 		fmt.Fprintf(stderr, "replay failed: %v\n", err)
 		return 1
@@ -235,17 +219,7 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	traceA, err := store.NewTraceStore(r.storeRoot).LoadTrace(fs.Arg(0))
-	if err != nil {
-		fmt.Fprintf(stderr, "load trace a: %v\n", err)
-		return 1
-	}
-	traceB, err := store.NewTraceStore(r.storeRoot).LoadTrace(fs.Arg(1))
-	if err != nil {
-		fmt.Fprintf(stderr, "load trace b: %v\n", err)
-		return 1
-	}
-	report, err := proof.Diff(traceA, traceB)
+	report, err := r.loadDiff(fs.Arg(0), fs.Arg(1))
 	if err != nil {
 		fmt.Fprintf(stderr, "diff failed: %v\n", err)
 		return 1
