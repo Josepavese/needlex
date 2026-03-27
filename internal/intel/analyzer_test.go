@@ -71,3 +71,28 @@ func TestAnalyzeRespectsDomainForceLane(t *testing.T) {
 		t.Fatalf("expected force lane reason, got %q", decision.ReasonCode)
 	}
 }
+
+func TestAnalyzeEscalatesToExtractorAndFormatter(t *testing.T) {
+	cfg := config.Defaults()
+	analyzer := New(cfg)
+	summary := analyzer.Analyze("proof replay deterministic context", []Input{
+		{
+			Fingerprint: "fp_1",
+			Text:        "Short proof. Replay deterministic context.",
+			HeadingPath: []string{"Overview"},
+			Score:       0.60,
+			Confidence:  0.60,
+		},
+	}, Hints{ForceLane: 3, Profile: "tiny"})
+
+	decision := summary.Decisions["fp_1"]
+	if decision.Lane != 3 {
+		t.Fatalf("expected lane 3, got %d", decision.Lane)
+	}
+	if decision.ReasonCode != ReasonDomainForceLane {
+		t.Fatalf("expected domain force lane reason code, got %q", decision.ReasonCode)
+	}
+	if len(decision.TransformChain) < 4 {
+		t.Fatalf("expected extended transform chain, got %#v", decision.TransformChain)
+	}
+}

@@ -12,6 +12,8 @@ const (
 	ReasonAmbiguityTriggered = "NX_AMBIGUITY_TRIGGERED"
 	ReasonCoverageTriggered  = "NX_COVERAGE_TRIGGERED"
 	ReasonDomainForceLane    = "NX_DOMAIN_FORCE_LANE"
+	ReasonExtractorTriggered = "NX_EXTRACTOR_TRIGGERED"
+	ReasonFormatterTriggered = "NX_FORMATTER_TRIGGERED"
 )
 
 type Input struct {
@@ -30,10 +32,12 @@ type Decision struct {
 	CoverageLoss     float64
 	RiskFlags        []string
 	ModelInvocations []core.ModelInvocation
+	TransformChain   []string
 }
 
 type Hints struct {
 	ForceLane int
+	Profile   string
 }
 
 type Summary struct {
@@ -66,6 +70,7 @@ func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary
 		reasonCode := ""
 		riskFlags := buildRiskFlags(input, coverageLoss, ambiguity)
 		modelInvocations := []core.ModelInvocation{}
+		transformChain := []string{"intel:route:v1", "intel:judge:v1"}
 
 		if a.cfg.Runtime.LaneMax >= 1 {
 			switch {
@@ -81,6 +86,18 @@ func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary
 			lane = min(hints.ForceLane, a.cfg.Runtime.LaneMax)
 			if lane > 0 {
 				reasonCode = ReasonDomainForceLane
+			}
+		}
+		if lane < 2 && a.cfg.Runtime.LaneMax >= 2 {
+			if ambiguity >= 0.85 || (coverageLoss >= 0.90 && input.Confidence < 0.70) {
+				lane = 2
+				reasonCode = ReasonExtractorTriggered
+			}
+		}
+		if lane < 3 && a.cfg.Runtime.LaneMax >= 3 {
+			if hints.Profile == core.ProfileTiny && (lane >= 2 || ambiguity >= 0.60) {
+				lane = 3
+				reasonCode = ReasonFormatterTriggered
 			}
 		}
 
@@ -104,6 +121,12 @@ func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary
 				},
 			)
 		}
+		if lane >= 2 {
+			transformChain = append(transformChain, "intel:extract_slm:v1")
+		}
+		if lane >= 3 {
+			transformChain = append(transformChain, "intel:formatter:v1")
+		}
 
 		decisions[input.Fingerprint] = Decision{
 			Fingerprint:      input.Fingerprint,
@@ -113,6 +136,7 @@ func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary
 			CoverageLoss:     coverageLoss,
 			RiskFlags:        riskFlags,
 			ModelInvocations: modelInvocations,
+			TransformChain:   transformChain,
 		}
 	}
 

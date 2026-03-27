@@ -28,6 +28,7 @@ func (s *Service) pack(recorder *proof.Recorder, req ReadRequest, document core.
 	ranked := rankSegments(document.ID, req.Objective, segments)
 	intelSummary := s.analyzeRanked(recorder, req, ranked)
 	selected := selectProfile(ranked, req.Profile)
+	selected = s.applyIntel(req, selected, intelSummary.Decisions)
 	chunks := collectChunks(selected)
 	proofRecords, err := buildProofRecords(selected, intelSummary.Decisions)
 	if err != nil {
@@ -152,7 +153,7 @@ func buildProofRecords(selected []rankedSegment, decisions map[string]intel.Deci
 			Chunk:            item.chunk,
 			Segment:          item.segment,
 			Lane:             decision.Lane,
-			TransformChain:   []string{"acquire:v1", "reduce:v1", "segment:v1", "intel:v1", "pack:v3"},
+			TransformChain:   append([]string{"acquire:v1", "reduce:v1", "segment:v1"}, decision.TransformChain...),
 			ModelInvocations: decision.ModelInvocations,
 			RiskFlags:        decision.RiskFlags,
 		})
@@ -234,6 +235,7 @@ func (s *Service) analyzeRanked(recorder *proof.Recorder, req ReadRequest, ranke
 
 	summary := intel.New(s.cfg).Analyze(req.Objective, inputs, intel.Hints{
 		ForceLane: req.ForceLane,
+		Profile:   req.Profile,
 	})
 	for _, decision := range summary.Decisions {
 		if decision.Lane == 0 {
@@ -255,7 +257,41 @@ func lanePath(maxLane int) []int {
 	if maxLane <= 0 {
 		return []int{0}
 	}
-	return []int{0, maxLane}
+	path := []int{0}
+	for lane := 1; lane <= maxLane; lane++ {
+		path = append(path, lane)
+	}
+	return path
+}
+
+func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decisions map[string]intel.Decision) []rankedSegment {
+	out := make([]rankedSegment, 0, len(selected))
+	for _, item := range selected {
+		decision := decisions[item.chunk.Fingerprint]
+		if decision.Lane >= 2 {
+			extracted := intel.Extract(s.cfg, decision, item.chunk, req.Objective)
+			if strings.TrimSpace(extracted.Text) != "" {
+				item.chunk.Text = extracted.Text
+			}
+			if extracted.Invocation.Model != "" {
+				decision.ModelInvocations = append(decision.ModelInvocations, extracted.Invocation)
+			}
+			decision.RiskFlags = append(decision.RiskFlags, extracted.AdditionalRisk...)
+		}
+		if decision.Lane >= 3 {
+			formatted := intel.Format(s.cfg, decision, item.chunk, req.Profile)
+			if strings.TrimSpace(formatted.Text) != "" {
+				item.chunk.Text = formatted.Text
+			}
+			if formatted.Invocation.Model != "" {
+				decision.ModelInvocations = append(decision.ModelInvocations, formatted.Invocation)
+			}
+			decision.RiskFlags = append(decision.RiskFlags, formatted.AdditionalRisk...)
+		}
+		decisions[item.chunk.Fingerprint] = decision
+		out = append(out, item)
+	}
+	return out
 }
 
 func segmentScore(segment pipeline.Segment, objective string, index, total int) float64 {

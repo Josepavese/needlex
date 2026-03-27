@@ -16,7 +16,7 @@ Current implemented baseline:
 2. Canonical core contracts in `internal/core`
 3. JSON-first config loading with env overrides in `internal/config`
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
-5. Local `intel` policy engine with ambiguity scoring, reason codes, lane escalation, and domain force-lane hints
+5. Local `intel` policy engine with ambiguity scoring, reason codes, lane escalation, domain force-lane hints, deterministic extractor, and constrained formatter
 6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
 7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`
 8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query` and `crawl`
@@ -25,6 +25,7 @@ Current implemented baseline:
 11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`
 12. Contract tests for CLI and MCP transport shape
 13. Tests and budget enforcement passing
+14. Lane `2/3` transform chain recorded in proofs and traces through local `extract_slm` and `formatter` policy stages
 
 ## Current CLI
 

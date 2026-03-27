@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,5 +135,43 @@ func TestReadEscalatesLaneForAmbiguousObjective(t *testing.T) {
 	}
 	if !foundEscalation {
 		t.Fatal("expected escalation event in trace")
+	}
+}
+
+func TestReadAppliesExtractorAndFormatterAtHigherLanes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Needle Runtime</title></head><body><article><h1>Needle Runtime</h1><p>Short proof. Replay deterministic context.</p></article></body></html>`)
+	}))
+	defer server.Close()
+
+	cfg := config.Defaults()
+	cfg.Policy.ThresholdAmbiguity = 0.10
+
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Profile:   core.ProfileTiny,
+		Objective: "proof replay deterministic context",
+		ForceLane: 3,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if len(resp.ResultPack.CostReport.LanePath) != 4 || resp.ResultPack.CostReport.LanePath[3] != 3 {
+		t.Fatalf("expected lane path [0 1 2 3], got %#v", resp.ResultPack.CostReport.LanePath)
+	}
+	if len(resp.ProofRecords[0].Proof.ModelInvocations) < 4 {
+		t.Fatalf("expected router/judge/extractor/formatter invocations, got %d", len(resp.ProofRecords[0].Proof.ModelInvocations))
+	}
+	if !strings.HasSuffix(resp.ResultPack.Chunks[0].Text, ".") {
+		t.Fatalf("expected formatter to normalize punctuation, got %q", resp.ResultPack.Chunks[0].Text)
 	}
 }
