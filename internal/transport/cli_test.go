@@ -170,6 +170,35 @@ func TestRunnerProofByTraceAndChunk(t *testing.T) {
 	}
 }
 
+func TestRunnerPruneAll(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: config.Load,
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			resp := fakeResponse()
+			resp.Trace.TraceID = "trace_for_prune"
+			return resp, nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if code := runner.Run([]string{"read", "https://example.com"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("seed state failed: %d %q", code, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"prune", "--all", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("prune failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"removed_files": 3`) {
+		t.Fatalf("expected 3 removed files, got %q", stdout.String())
+	}
+}
+
 func fakeResponse() coreservice.ReadResponse {
 	return coreservice.ReadResponse{
 		Document: core.Document{

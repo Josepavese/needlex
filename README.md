@@ -18,8 +18,8 @@ Current implemented baseline:
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
 6. End-to-end deterministic `Read` orchestration in `internal/core/service`
-7. Thin CLI transport with `needle read`, `needle replay`, and `needle diff` in `cmd/needle` and `internal/transport`
-8. Local trace persistence in `.needlex/traces` via `internal/store`
+7. Thin CLI transport with `needle read`, `needle replay`, `needle diff`, `needle proof`, and `needle prune` in `cmd/needle` and `internal/transport`
+8. Local state persistence in `.needlex/{traces,proofs,fingerprints}` via `internal/store`
 9. Versioned schema files in `schemas/`
 10. Golden end-to-end fixtures and benchmark coverage for `read`
 11. Tests and budget enforcement passing
@@ -35,6 +35,7 @@ go run ./cmd/needle replay trace_1
 go run ./cmd/needle diff trace_a trace_b --json
 go run ./cmd/needle proof trace_1 --json
 go run ./cmd/needle proof chk_1
+go run ./cmd/needle prune --older-than-hours 24
 ```
 
 ## Working Documents

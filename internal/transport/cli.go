@@ -49,6 +49,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runDiff(args[1:], stdout, stderr)
 	case "proof":
 		return r.runProof(args[1:], stdout, stderr)
+	case "prune":
+		return r.runPrune(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return 0
@@ -110,6 +112,11 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "save proofs: %v\n", err)
 		return 1
 	}
+	fingerprintPath, err := store.NewFingerprintStore(r.storeRoot).SaveChunks(resp.Trace.TraceID, resp.ResultPack.Chunks)
+	if err != nil {
+		fmt.Fprintf(stderr, "save fingerprints: %v\n", err)
+		return 1
+	}
 
 	if jsonOut {
 		enc := json.NewEncoder(stdout)
@@ -121,7 +128,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	renderReadText(stdout, resp, tracePath, proofPath)
+	renderReadText(stdout, resp, tracePath, proofPath, fingerprintPath)
 	return 0
 }
 
@@ -131,6 +138,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
 	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
 	fmt.Fprintln(w, "  needle proof <trace-id|chunk-id> [--json]")
+	fmt.Fprintln(w, "  needle prune (--all | --older-than-hours N) [--json]")
 }
 
 func writeReadUsage(w io.Writer) {
@@ -251,7 +259,7 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proofPath string) {
+func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proofPath, fingerprintPath string) {
 	title := strings.TrimSpace(resp.Document.Title)
 	if title == "" {
 		title = "(untitled)"
@@ -269,6 +277,7 @@ func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proof
 	fmt.Fprintf(w, "Trace ID: %s\n", resp.Trace.TraceID)
 	fmt.Fprintf(w, "Trace Path: %s\n", tracePath)
 	fmt.Fprintf(w, "Proof Path: %s\n", proofPath)
+	fmt.Fprintf(w, "Fingerprint Path: %s\n", fingerprintPath)
 
 	for i, chunk := range resp.ResultPack.Chunks {
 		fmt.Fprintf(w, "\n[%d] ", i+1)
