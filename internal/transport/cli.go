@@ -47,6 +47,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runReplay(args[1:], stdout, stderr)
 	case "diff":
 		return r.runDiff(args[1:], stdout, stderr)
+	case "proof":
+		return r.runProof(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return 0
@@ -103,6 +105,11 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "save trace: %v\n", err)
 		return 1
 	}
+	proofPath, err := store.NewProofStore(r.storeRoot).SaveProofRecords(resp.Trace.TraceID, resp.ProofRecords)
+	if err != nil {
+		fmt.Fprintf(stderr, "save proofs: %v\n", err)
+		return 1
+	}
 
 	if jsonOut {
 		enc := json.NewEncoder(stdout)
@@ -114,7 +121,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	renderReadText(stdout, resp, tracePath)
+	renderReadText(stdout, resp, tracePath, proofPath)
 	return 0
 }
 
@@ -123,6 +130,7 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
 	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
+	fmt.Fprintln(w, "  needle proof <trace-id|chunk-id> [--json]")
 }
 
 func writeReadUsage(w io.Writer) {
@@ -243,7 +251,7 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath string) {
+func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proofPath string) {
 	title := strings.TrimSpace(resp.Document.Title)
 	if title == "" {
 		title = "(untitled)"
@@ -260,6 +268,7 @@ func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath string
 	fmt.Fprintf(w, "Latency: %dms\n", resp.ResultPack.CostReport.LatencyMS)
 	fmt.Fprintf(w, "Trace ID: %s\n", resp.Trace.TraceID)
 	fmt.Fprintf(w, "Trace Path: %s\n", tracePath)
+	fmt.Fprintf(w, "Proof Path: %s\n", proofPath)
 
 	for i, chunk := range resp.ResultPack.Chunks {
 		fmt.Fprintf(w, "\n[%d] ", i+1)

@@ -132,6 +132,44 @@ func TestRunnerReplayAndDiff(t *testing.T) {
 	}
 }
 
+func TestRunnerProofByTraceAndChunk(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: config.Load,
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			resp := fakeResponse()
+			resp.Trace.TraceID = "trace_for_proof"
+			return resp, nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if code := runner.Run([]string{"read", "https://example.com"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("seed proof records failed: %d %q", code, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"proof", "trace_for_proof", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("proof by trace failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"trace_id": "trace_for_proof"`) {
+		t.Fatalf("expected trace id in output, got %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"proof", "chk_1"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("proof by chunk failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Chunk ID: chk_1") {
+		t.Fatalf("expected chunk proof output, got %q", stdout.String())
+	}
+}
+
 func fakeResponse() coreservice.ReadResponse {
 	return coreservice.ReadResponse{
 		Document: core.Document{

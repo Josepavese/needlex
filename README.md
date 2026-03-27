@@ -32,6 +32,8 @@ go run ./cmd/needle read https://example.com --profile tiny
 go run ./cmd/needle read https://example.com --profile deep --json
 go run ./cmd/needle replay trace_1
 go run ./cmd/needle diff trace_a trace_b --json
+go run ./cmd/needle proof trace_1 --json
+go run ./cmd/needle proof chk_1
 ```
 
 ## Working Documents
