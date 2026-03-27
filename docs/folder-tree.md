@@ -4,6 +4,12 @@
 
 The tree is designed before code, but directories are created only when real code exists. No empty folders are committed to "reserve" architecture.
 
+Currently materialized:
+1. `internal/config`
+2. `internal/core`
+3. `schemas`
+4. `scripts`
+
 ## Planned Tree
 
 ```text

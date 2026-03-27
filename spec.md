@@ -503,29 +503,34 @@ Regole vincolanti:
 5. Directory vuote non vanno create solo per "prenotare" spazio architetturale; si creano quando esiste codice reale da ospitare.
 
 ## 18. Config Spec (esempio)
-```yaml
-runtime:
-  max_pages: 20
-  max_depth: 2
-  timeout_ms: 2000
-  max_bytes: 4000000
-  lane_max: 3
+Prima implementazione: JSON-first per rimanere stdlib-only e non introdurre dipendenze di parsing premature.
 
-policy:
-  threshold_conflict: 0.42
-  threshold_ambiguity: 0.37
-  threshold_coverage: 0.15
-  threshold_confidence: 0.78
-
-budget:
-  max_tokens: 8000
-  max_latency_ms: 1800
-
-models:
-  router: local-slm-router
-  judge: local-slm-judge
-  extractor: local-slm-extractor
-  formatter: local-slm-formatter
+```json
+{
+  "runtime": {
+    "max_pages": 20,
+    "max_depth": 2,
+    "timeout_ms": 2000,
+    "max_bytes": 4000000,
+    "lane_max": 3
+  },
+  "policy": {
+    "threshold_conflict": 0.42,
+    "threshold_ambiguity": 0.37,
+    "threshold_coverage": 0.15,
+    "threshold_confidence": 0.78
+  },
+  "budget": {
+    "max_tokens": 8000,
+    "max_latency_ms": 1800
+  },
+  "models": {
+    "router": "local-slm-router",
+    "judge": "local-slm-judge",
+    "extractor": "local-slm-extractor",
+    "formatter": "local-slm-formatter"
+  }
+}
 ```
 
 ## 19. Decisioni Architetturali Vincolanti

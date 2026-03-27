@@ -11,6 +11,13 @@ The design target is aggressive but explicit:
 
 This repository is in architecture and planning mode. There is no placeholder application code yet by design.
 
+Current implemented baseline:
+1. `go.mod` with zero runtime dependencies
+2. Canonical core contracts in `internal/core`
+3. JSON-first config loading with env overrides in `internal/config`
+4. Versioned schema files in `schemas/`
+5. Tests and budget enforcement passing
+
 ## Working Documents
 
 - [idea.md](/home/jose/hpdev/Libraries/needlex/idea.md)
