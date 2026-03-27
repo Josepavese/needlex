@@ -16,13 +16,14 @@ Current implemented baseline:
 2. Canonical core contracts in `internal/core`
 3. JSON-first config loading with env overrides in `internal/config`
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
-5. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
-6. End-to-end deterministic `Read` orchestration in `internal/core/service`
-7. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`
-8. Local state persistence in `.needlex/{traces,proofs,fingerprints}` via `internal/store`
-9. Versioned schema files in `schemas/`
-10. Golden end-to-end fixtures and benchmark coverage for `read`
-11. Tests and budget enforcement passing
+5. Local `intel` policy engine with ambiguity scoring, reason codes, and lane escalation
+6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
+7. End-to-end deterministic `Read` orchestration in `internal/core/service`
+8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`
+9. Local state persistence in `.needlex/{traces,proofs,fingerprints}` via `internal/store`
+10. Versioned schema files in `schemas/`
+11. Golden end-to-end fixtures and benchmark coverage for `read`
+12. Tests and budget enforcement passing
 
 ## Current CLI
 

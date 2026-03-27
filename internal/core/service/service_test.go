@@ -10,6 +10,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/proof"
 )
 
 const testHTML = `
@@ -86,5 +87,52 @@ func TestReadRejectsEmptyURL(t *testing.T) {
 	_, err = svc.Read(context.Background(), ReadRequest{})
 	if err == nil {
 		t.Fatal("expected empty URL to fail")
+	}
+}
+
+func TestReadEscalatesLaneForAmbiguousObjective(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, testHTML)
+	}))
+	defer server.Close()
+
+	cfg := config.Defaults()
+	cfg.Policy.ThresholdAmbiguity = 0.20
+
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Profile:   core.ProfileTiny,
+		Objective: "forum thread regression incident",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if len(resp.ResultPack.CostReport.LanePath) != 2 || resp.ResultPack.CostReport.LanePath[1] != 1 {
+		t.Fatalf("expected lane path [0 1], got %#v", resp.ResultPack.CostReport.LanePath)
+	}
+	if resp.ProofRecords[0].Proof.Lane != 1 {
+		t.Fatalf("expected proof lane 1, got %d", resp.ProofRecords[0].Proof.Lane)
+	}
+	if len(resp.ProofRecords[0].Proof.RiskFlags) == 0 {
+		t.Fatal("expected risk flags on escalated proof")
+	}
+	foundEscalation := false
+	for _, event := range resp.Trace.Events {
+		if event.Type == proof.EventEscalationTriggered {
+			foundEscalation = true
+			break
+		}
+	}
+	if !foundEscalation {
+		t.Fatal("expected escalation event in trace")
 	}
 }

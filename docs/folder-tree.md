@@ -8,13 +8,14 @@ Currently materialized:
 1. `cmd/needle`
 2. `internal/config`
 3. `internal/core`
-4. `internal/pipeline`
-5. `internal/proof`
-6. `internal/store`
-7. `internal/transport`
-8. `schemas`
-9. `scripts`
-10. `testdata/golden`
+4. `internal/intel`
+5. `internal/pipeline`
+6. `internal/proof`
+7. `internal/store`
+8. `internal/transport`
+9. `schemas`
+10. `scripts`
+11. `testdata/golden`
 
 ## Planned Tree
 

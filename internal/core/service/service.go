@@ -93,7 +93,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	if err != nil {
 		return ReadResponse{}, err
 	}
-	resultPack.CostReport = buildCostReport(trace)
+	resultPack.CostReport = buildCostReport(trace, resultPack.CostReport.LanePath)
 
 	response := ReadResponse{
 		Document:     document,

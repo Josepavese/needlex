@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -25,9 +26,10 @@ func (s *Service) pack(recorder *proof.Recorder, req ReadRequest, document core.
 	}
 
 	ranked := rankSegments(document.ID, req.Objective, segments)
+	intelSummary := s.analyzeRanked(recorder, req, ranked)
 	selected := selectProfile(ranked, req.Profile)
 	chunks := collectChunks(selected)
-	proofRecords, err := buildProofRecords(selected)
+	proofRecords, err := buildProofRecords(selected, intelSummary.Decisions)
 	if err != nil {
 		recorder.Error(stage, "NX_PROOF_BUILD_FAILED", err.Error(), nil, s.now().UTC())
 		return core.ResultPack{}, nil, err
@@ -48,7 +50,7 @@ func (s *Service) pack(recorder *proof.Recorder, req ReadRequest, document core.
 		Outline:    buildOutline(selected),
 		Links:      []string{document.FinalURL},
 		ProofRefs:  proofIDs(proofRecords),
-		CostReport: core.CostReport{LanePath: []int{0}},
+		CostReport: core.CostReport{LanePath: lanePath(intelSummary.MaxLane)},
 	}
 
 	if err := resultPack.Validate(); err != nil {
@@ -56,8 +58,12 @@ func (s *Service) pack(recorder *proof.Recorder, req ReadRequest, document core.
 	}
 
 	if err := recorder.StageCompleted(stage, resultPack, len(chunks), map[string]string{
-		"profile": req.Profile,
-		"chunks":  fmt.Sprintf("%d", len(chunks)),
+		"profile":          req.Profile,
+		"chunks":           fmt.Sprintf("%d", len(chunks)),
+		"page_type":        intelSummary.PageType,
+		"difficulty":       intelSummary.Difficulty,
+		"noise_level":      intelSummary.NoiseLevel,
+		"escalation_count": fmt.Sprintf("%d", intelSummary.EscalationCount),
 	}, s.now().UTC()); err != nil {
 		return core.ResultPack{}, nil, err
 	}
@@ -138,14 +144,17 @@ func collectChunks(selected []rankedSegment) []core.Chunk {
 	return chunks
 }
 
-func buildProofRecords(selected []rankedSegment) ([]proof.ProofRecord, error) {
+func buildProofRecords(selected []rankedSegment, decisions map[string]intel.Decision) ([]proof.ProofRecord, error) {
 	records := make([]proof.ProofRecord, 0, len(selected))
 	for _, item := range selected {
+		decision := decisions[item.chunk.Fingerprint]
 		record, err := proof.BuildProofRecord(proof.BuildInput{
-			Chunk:          item.chunk,
-			Segment:        item.segment,
-			Lane:           0,
-			TransformChain: []string{"acquire:v1", "reduce:v1", "segment:v1", "pack:v2"},
+			Chunk:            item.chunk,
+			Segment:          item.segment,
+			Lane:             decision.Lane,
+			TransformChain:   []string{"acquire:v1", "reduce:v1", "segment:v1", "intel:v1", "pack:v3"},
+			ModelInvocations: decision.ModelInvocations,
+			RiskFlags:        decision.RiskFlags,
 		})
 		if err != nil {
 			return nil, err
@@ -155,16 +164,19 @@ func buildProofRecords(selected []rankedSegment) ([]proof.ProofRecord, error) {
 	return records, nil
 }
 
-func buildCostReport(trace proof.RunTrace) core.CostReport {
+func buildCostReport(trace proof.RunTrace, lanePath []int) core.CostReport {
 	latency := int64(0)
 	if !trace.FinishedAt.IsZero() {
 		latency = trace.FinishedAt.Sub(trace.StartedAt).Milliseconds()
+	}
+	if len(lanePath) == 0 {
+		lanePath = []int{0}
 	}
 	return core.CostReport{
 		LatencyMS: latency,
 		TokenIn:   0,
 		TokenOut:  0,
-		LanePath:  []int{0},
+		LanePath:  append([]int{}, lanePath...),
 	}
 }
 
@@ -206,6 +218,42 @@ func objectiveOrDefault(objective string) string {
 		return "read"
 	}
 	return objective
+}
+
+func (s *Service) analyzeRanked(recorder *proof.Recorder, req ReadRequest, ranked []rankedSegment) intel.Summary {
+	inputs := make([]intel.Input, 0, len(ranked))
+	for _, item := range ranked {
+		inputs = append(inputs, intel.Input{
+			Fingerprint: item.chunk.Fingerprint,
+			Text:        item.chunk.Text,
+			HeadingPath: append([]string{}, item.chunk.HeadingPath...),
+			Score:       item.chunk.Score,
+			Confidence:  item.chunk.Confidence,
+		})
+	}
+
+	summary := intel.New(s.cfg).Analyze(req.Objective, inputs)
+	for _, decision := range summary.Decisions {
+		if decision.Lane == 0 {
+			continue
+		}
+		recorder.EscalationTriggered(
+			"pack",
+			decision.ReasonCode,
+			"lane escalation triggered by local ambiguity policy",
+			decision.Lane,
+			decision.Metadata(),
+			s.now().UTC(),
+		)
+	}
+	return summary
+}
+
+func lanePath(maxLane int) []int {
+	if maxLane <= 0 {
+		return []int{0}
+	}
+	return []int{0, maxLane}
 }
 
 func segmentScore(segment pipeline.Segment, objective string, index, total int) float64 {
