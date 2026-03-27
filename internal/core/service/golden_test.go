@@ -18,6 +18,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/pipeline"
 )
 
 var wordPattern = regexp.MustCompile(`\S+`)
@@ -236,6 +237,27 @@ func TestGoldenNeedlexBeatsNaiveBaselineOnSignalDensity(t *testing.T) {
 	}
 }
 
+func TestGoldenNeedlexBeatsReducedBaselineOnSignalDensity(t *testing.T) {
+	rawHTML := loadGoldenHTML(t, "article.html")
+	objective := "proof replay deterministic context"
+	needle := runGoldenRead(t, "article.html", ReadRequest{
+		Profile:   core.ProfileTiny,
+		Objective: objective,
+	})
+	needleText := joinChunkText(needle.ResultPack.Chunks)
+	reducedText := reducedBaselineText(rawHTML)
+
+	needleDensity := objectiveSignalDensity(needleText, objective)
+	reducedDensity := objectiveSignalDensity(reducedText, objective)
+
+	if needleDensity <= reducedDensity {
+		t.Fatalf("expected needle signal density %.4f to exceed reduced baseline %.4f", needleDensity, reducedDensity)
+	}
+	if compressionRatio(rawHTML, needleText) <= compressionRatio(rawHTML, reducedText) {
+		t.Fatal("expected needle compression ratio to exceed reduced baseline")
+	}
+}
+
 func BenchmarkReadGoldenArticle(b *testing.B) {
 	html := loadGoldenHTML(b, "article.html")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -272,6 +294,18 @@ func BenchmarkNaiveBaselineGoldenArticle(b *testing.B) {
 		text := naiveBaselineText(htmlText)
 		if text == "" {
 			b.Fatal("baseline extract returned empty text")
+		}
+	}
+}
+
+func BenchmarkReducedBaselineGoldenArticle(b *testing.B) {
+	htmlText := loadGoldenHTML(b, "article.html")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		text := reducedBaselineText(htmlText)
+		if text == "" {
+			b.Fatal("reduced baseline extract returned empty text")
 		}
 	}
 }
@@ -505,6 +539,30 @@ func naiveBaselineText(rawHTML string) string {
 	}
 	walk(body)
 	return strings.Join(parts, " ")
+}
+
+func reducedBaselineText(rawHTML string) string {
+	dom, err := pipeline.Reducer{}.ReduceProfile(pipeline.RawPage{
+		URL:       "https://example.com/article",
+		FinalURL:  "https://example.com/article",
+		HTML:      rawHTML,
+		FetchMode: core.FetchModeHTTP,
+	}, "standard")
+	if err != nil {
+		return ""
+	}
+	segments := pipeline.Segmenter{MaxSegmentChars: 1200}.Segment(dom)
+	if len(segments) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if strings.TrimSpace(segment.Text) == "" {
+			continue
+		}
+		parts = append(parts, segment.Text)
+	}
+	return strings.Join(parts, "\n")
 }
 
 func findHTMLNode(node *html.Node, name string) *html.Node {

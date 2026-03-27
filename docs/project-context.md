@@ -137,7 +137,8 @@ Current quality gates include:
 4. `tiny` compression `>= 3x`
 5. query strategy comparison
 6. comparison against a naive plain-text baseline
-7. code budget checks
+7. comparison against a reduced deterministic baseline
+8. code budget checks
 
 Current budget status:
 1. production LOC under `8000`
@@ -172,7 +173,7 @@ We still do not have:
 We currently compare against a naive baseline.
 
 We still need:
-1. a stronger deterministic reader baseline
+1. a stronger external deterministic reader baseline
 2. a more realistic retrieval comparison suite
 
 ### 3. Performance Work
@@ -198,7 +199,7 @@ It is the engine that could become the retrieval core of that product.
 
 The best next steps are:
 1. create a persistent benchmark report in the repo
-2. add a stronger deterministic baseline than the naive one
+2. add a stronger external deterministic baseline beyond the in-repo reduced baseline
 3. design the first true `discover_web` path
 4. expand `query` from same-site discovery to multi-source discovery
 

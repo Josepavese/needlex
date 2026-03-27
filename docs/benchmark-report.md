@@ -13,6 +13,7 @@ Current benchmark coverage focuses on:
 1. deterministic `read`
 2. query strategy comparison
 3. Needle-X versus a naive plain-text baseline
+4. Needle-X versus a reduced deterministic baseline
 
 This is not yet a full public benchmark suite.
 
@@ -34,6 +35,7 @@ The repo currently enforces:
 3. `tiny` compression ratio `>= 3.0`
 4. query improvement through same-site discovery
 5. Needle-X signal-density win over a naive plain-text baseline
+6. Needle-X signal-density win over a reduced deterministic baseline
 
 ## Latest Measured Results
 
@@ -111,23 +113,44 @@ Reading:
 2. the naive baseline is much lighter
 3. Needle-X currently wins on output quality and retrieval usefulness, not on raw cost
 
+### 4. Needle-X Versus Reduced Deterministic Baseline
+
+Command used:
+
+```bash
+go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|NaiveBaselineGoldenArticle|ReducedBaselineGoldenArticle)$' -benchmem -count=3
+```
+
+Observed reduced deterministic baseline:
+1. `36696 ns/op`
+2. `35724 ns/op`
+3. `34122 ns/op`
+4. memory `21531 B/op`
+5. `263 allocs/op`
+
+Reading:
+1. this baseline is still much cheaper than Needle-X
+2. it is a more serious comparison than naive plain-text extraction
+3. Needle-X still wins on objective signal density and compression under the current golden article test
+
 ## Current Quality Conclusions
 
 What the benchmarks support today:
 1. Needle-X can produce more concentrated context than a naive baseline
-2. same-site discovery improves query quality in the golden scenario
-3. `tiny` reaches the compression target while remaining traceable
-4. the runtime is still deterministic under replay-oriented checks
+2. Needle-X can produce more concentrated context than a reduced deterministic baseline
+3. same-site discovery improves query quality in the golden scenario
+4. `tiny` reaches the compression target while remaining traceable
+5. the runtime is still deterministic under replay-oriented checks
 
 What the benchmarks do not support yet:
 1. that Needle-X is faster than simple baselines
-2. that Needle-X beats stronger deterministic readers
+2. that Needle-X beats established external deterministic readers
 3. that Needle-X is ready for web-scale discovery claims
 
 ## Current Gaps In The Benchmark Story
 
 The main missing pieces are:
-1. a stronger deterministic baseline than plain-text extraction
+1. a stronger external deterministic baseline than the in-repo reduced baseline
 2. more fixture diversity
 3. a persistent benchmark script or command wrapper
 4. profiling-backed optimization data
@@ -135,7 +158,7 @@ The main missing pieces are:
 
 ## Recommended Next Benchmarking Steps
 
-1. add a stronger deterministic baseline
+1. add a stronger external deterministic baseline
 2. add one or two more golden fixture families
 3. create a reproducible benchmark runner script
 4. track benchmark history over time
@@ -145,5 +168,5 @@ The main missing pieces are:
 This report should be updated when:
 1. benchmark methodology changes
 2. benchmark numbers are rerun and materially different
-3. a stronger baseline is added
+3. a stronger baseline is added or upgraded
 4. `discover_web` becomes real
