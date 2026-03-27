@@ -299,8 +299,11 @@ func TestRunnerReadUsesGenomeForceLane(t *testing.T) {
 	root := t.TempDir()
 	genomeStore := store.NewGenomeStore(root)
 	if _, _, err := genomeStore.Observe(store.GenomeObservation{
-		URL:          "https://example.com/docs",
-		ObservedLane: 1,
+		URL:              "https://example.com/docs",
+		ObservedLane:     1,
+		PreferredProfile: "tiny",
+		PruningProfile:   "aggressive",
+		RenderNeeded:     true,
 	}); err != nil {
 		t.Fatalf("seed genome: %v", err)
 	}
@@ -327,6 +330,15 @@ func TestRunnerReadUsesGenomeForceLane(t *testing.T) {
 	}
 	if captured.ForceLane != 1 {
 		t.Fatalf("expected force lane 1 from genome, got %d", captured.ForceLane)
+	}
+	if captured.Profile != "tiny" {
+		t.Fatalf("expected profile from genome, got %q", captured.Profile)
+	}
+	if captured.PruningProfile != "aggressive" {
+		t.Fatalf("expected pruning profile from genome, got %q", captured.PruningProfile)
+	}
+	if !captured.RenderHint {
+		t.Fatal("expected render hint from genome")
 	}
 }
 

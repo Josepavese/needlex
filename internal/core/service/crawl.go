@@ -14,13 +14,15 @@ import (
 )
 
 type CrawlRequest struct {
-	SeedURL    string
-	Profile    string
-	UserAgent  string
-	MaxPages   int
-	MaxDepth   int
-	SameDomain bool
-	ForceLane  int
+	SeedURL        string
+	Profile        string
+	UserAgent      string
+	MaxPages       int
+	MaxDepth       int
+	SameDomain     bool
+	ForceLane      int
+	PruningProfile string
+	RenderHint     bool
 }
 
 type CrawlSummary struct {
@@ -82,11 +84,13 @@ func (s *Service) Crawl(ctx context.Context, req CrawlRequest) (CrawlResponse, e
 		}
 
 		readResp, err := s.Read(ctx, ReadRequest{
-			URL:       node.url,
-			Objective: "crawl",
-			Profile:   profile,
-			UserAgent: req.UserAgent,
-			ForceLane: req.ForceLane,
+			URL:            node.url,
+			Objective:      "crawl",
+			Profile:        profile,
+			UserAgent:      req.UserAgent,
+			ForceLane:      req.ForceLane,
+			PruningProfile: req.PruningProfile,
+			RenderHint:     req.RenderHint,
 		})
 		if err != nil {
 			continue

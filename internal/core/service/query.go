@@ -15,12 +15,14 @@ const (
 )
 
 type QueryRequest struct {
-	Goal          string
-	SeedURL       string
-	Profile       string
-	UserAgent     string
-	ForceLane     int
-	DiscoveryMode string
+	Goal           string
+	SeedURL        string
+	Profile        string
+	UserAgent      string
+	ForceLane      int
+	DiscoveryMode  string
+	PruningProfile string
+	RenderHint     bool
 }
 
 type QueryPlan struct {
@@ -97,11 +99,13 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 	plan.CandidateURLs = candidateURLs
 
 	readResp, err := s.Read(ctx, ReadRequest{
-		URL:       selectedURL,
-		Objective: req.Goal,
-		Profile:   profile,
-		UserAgent: req.UserAgent,
-		ForceLane: req.ForceLane,
+		URL:            selectedURL,
+		Objective:      req.Goal,
+		Profile:        profile,
+		UserAgent:      req.UserAgent,
+		ForceLane:      req.ForceLane,
+		PruningProfile: req.PruningProfile,
+		RenderHint:     req.RenderHint,
 	})
 	if err != nil {
 		return QueryResponse{}, err

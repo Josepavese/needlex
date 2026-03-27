@@ -20,7 +20,7 @@ Current implemented baseline:
 6. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
 7. End-to-end deterministic `Read`, `Query`, and `Crawl` orchestration in `internal/core/service`, with query strategies `off|same_site_links` for measurable discovery-vs-seed comparison
 8. Thin CLI and MCP transport surface in `cmd/needle` and `internal/transport`, including `query` and `crawl`
-9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`
+9. Local state persistence in `.needlex/{traces,proofs,fingerprints,genome}` via `internal/store`, with genome-driven `force_lane`, `preferred_profile`, `pruning_profile`, and `render_hint`
 10. Versioned schema files in `schemas/`
 11. Golden end-to-end fixtures and benchmark coverage for `read`, `query`, and `crawl`
 12. Contract tests for CLI and MCP transport shape

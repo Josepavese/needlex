@@ -17,6 +17,7 @@ type DomainGenome struct {
 	Domain           string    `json:"domain"`
 	ForceLane        int       `json:"force_lane"`
 	PreferredProfile string    `json:"preferred_profile,omitempty"`
+	PruningProfile   string    `json:"pruning_profile,omitempty"`
 	RenderNeeded     bool      `json:"render_needed,omitempty"`
 	NoiseLevel       string    `json:"noise_level,omitempty"`
 	LastPageType     string    `json:"last_page_type,omitempty"`
@@ -29,6 +30,8 @@ type GenomeObservation struct {
 	URL              string
 	ObservedLane     int
 	PreferredProfile string
+	PruningProfile   string
+	RenderNeeded     bool
 	FetchMode        string
 	NoiseLevel       string
 	PageType         string
@@ -102,7 +105,10 @@ func (s GenomeStore) Observe(observation GenomeObservation) (DomainGenome, strin
 	if strings.TrimSpace(observation.PreferredProfile) != "" {
 		genome.PreferredProfile = observation.PreferredProfile
 	}
-	if observation.FetchMode == "render" {
+	if pruningProfile := resolvePruningProfile(observation); pruningProfile != "" {
+		genome.PruningProfile = pruningProfile
+	}
+	if observation.FetchMode == "render" || observation.RenderNeeded {
 		genome.RenderNeeded = true
 	}
 	if strings.TrimSpace(observation.NoiseLevel) != "" {
@@ -141,6 +147,11 @@ func (g DomainGenome) Validate() error {
 	if g.SeenCount < 0 {
 		return fmt.Errorf("seen_count must be >= 0")
 	}
+	switch strings.TrimSpace(g.PruningProfile) {
+	case "", "standard", "aggressive", "forum":
+	default:
+		return fmt.Errorf("pruning_profile must be one of %q, %q, or %q", "standard", "aggressive", "forum")
+	}
 	if g.SeenCount > 0 && g.LastSeenAt.IsZero() {
 		return fmt.Errorf("last_seen_at is required when seen_count > 0")
 	}
@@ -159,4 +170,18 @@ func domainFromURL(rawURL string) (string, error) {
 		return "", fmt.Errorf("url hostname is required")
 	}
 	return strings.ToLower(parsed.Hostname()), nil
+}
+
+func resolvePruningProfile(observation GenomeObservation) string {
+	if strings.TrimSpace(observation.PruningProfile) != "" {
+		return observation.PruningProfile
+	}
+	switch {
+	case strings.EqualFold(observation.PageType, "forum"):
+		return "forum"
+	case strings.EqualFold(observation.NoiseLevel, "high"):
+		return "aggressive"
+	default:
+		return "standard"
+	}
 }

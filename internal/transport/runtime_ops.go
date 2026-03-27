@@ -23,7 +23,7 @@ type queryArtifacts struct {
 
 func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, crawlArtifacts, error) {
 	if genome, err := store.NewGenomeStore(r.storeRoot).LoadByURL(req.SeedURL); err == nil {
-		req.ForceLane = genome.ForceLane
+		req = applyGenomeToCrawlRequest(req, genome)
 	}
 
 	resp, err := r.crawl(context.Background(), cfg, req)
@@ -42,6 +42,8 @@ func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (c
 			URL:              page.Document.FinalURL,
 			ObservedLane:     maxLane(page.ResultPack.CostReport.LanePath),
 			PreferredProfile: page.ResultPack.Profile,
+			PruningProfile:   req.PruningProfile,
+			RenderNeeded:     req.RenderHint,
 			FetchMode:        page.Document.FetchMode,
 			NoiseLevel:       packMetadata(page.Trace, "noise_level"),
 			PageType:         packMetadata(page.Trace, "page_type"),
@@ -54,7 +56,7 @@ func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (c
 func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, readArtifacts, error) {
 	genomeStore := store.NewGenomeStore(r.storeRoot)
 	if genome, err := genomeStore.LoadByURL(req.URL); err == nil {
-		req.ForceLane = genome.ForceLane
+		req = applyGenomeToReadRequest(req, genome)
 	}
 
 	resp, err := r.read(context.Background(), cfg, req)
@@ -78,6 +80,8 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 		URL:              resp.Document.FinalURL,
 		ObservedLane:     maxLane(resp.ResultPack.CostReport.LanePath),
 		PreferredProfile: resp.ResultPack.Profile,
+		PruningProfile:   req.PruningProfile,
+		RenderNeeded:     req.RenderHint,
 		FetchMode:        resp.Document.FetchMode,
 		NoiseLevel:       packMetadata(resp.Trace, "noise_level"),
 		PageType:         packMetadata(resp.Trace, "page_type"),
@@ -92,7 +96,7 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 
 func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, queryArtifacts, error) {
 	if genome, err := store.NewGenomeStore(r.storeRoot).LoadByURL(req.SeedURL); err == nil {
-		req.ForceLane = genome.ForceLane
+		req = applyGenomeToQueryRequest(req, genome)
 	}
 	resp, err := r.query(context.Background(), cfg, req)
 	if err != nil {
@@ -116,6 +120,8 @@ func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (c
 		URL:              resp.Document.FinalURL,
 		ObservedLane:     maxLane(resp.CostReport.LanePath),
 		PreferredProfile: resp.ResultPack.Profile,
+		PruningProfile:   req.PruningProfile,
+		RenderNeeded:     req.RenderHint,
 		FetchMode:        resp.Document.FetchMode,
 		NoiseLevel:       packMetadata(resp.Trace, "noise_level"),
 		PageType:         packMetadata(resp.Trace, "page_type"),
@@ -186,4 +192,52 @@ func maxLane(path []int) int {
 		}
 	}
 	return max
+}
+
+func applyGenomeToReadRequest(req coreservice.ReadRequest, genome store.DomainGenome) coreservice.ReadRequest {
+	if req.ForceLane == 0 {
+		req.ForceLane = genome.ForceLane
+	}
+	if req.Profile == "" && genome.PreferredProfile != "" {
+		req.Profile = genome.PreferredProfile
+	}
+	if req.PruningProfile == "" && genome.PruningProfile != "" {
+		req.PruningProfile = genome.PruningProfile
+	}
+	if !req.RenderHint && genome.RenderNeeded {
+		req.RenderHint = true
+	}
+	return req
+}
+
+func applyGenomeToQueryRequest(req coreservice.QueryRequest, genome store.DomainGenome) coreservice.QueryRequest {
+	if req.ForceLane == 0 {
+		req.ForceLane = genome.ForceLane
+	}
+	if req.Profile == "" && genome.PreferredProfile != "" {
+		req.Profile = genome.PreferredProfile
+	}
+	if req.PruningProfile == "" && genome.PruningProfile != "" {
+		req.PruningProfile = genome.PruningProfile
+	}
+	if !req.RenderHint && genome.RenderNeeded {
+		req.RenderHint = true
+	}
+	return req
+}
+
+func applyGenomeToCrawlRequest(req coreservice.CrawlRequest, genome store.DomainGenome) coreservice.CrawlRequest {
+	if req.ForceLane == 0 {
+		req.ForceLane = genome.ForceLane
+	}
+	if req.Profile == "" && genome.PreferredProfile != "" {
+		req.Profile = genome.PreferredProfile
+	}
+	if req.PruningProfile == "" && genome.PruningProfile != "" {
+		req.PruningProfile = genome.PruningProfile
+	}
+	if !req.RenderHint && genome.RenderNeeded {
+		req.RenderHint = true
+	}
+	return req
 }

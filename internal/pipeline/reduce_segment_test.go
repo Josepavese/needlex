@@ -84,3 +84,26 @@ func TestSegmentBuildsHeadingAwareSegments(t *testing.T) {
 		t.Fatalf("expected code block content, got %q", last.Text)
 	}
 }
+
+func TestReduceProfileAggressiveRemovesAdditionalNoiseHints(t *testing.T) {
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		URL:       "https://example.com/spec",
+		FinalURL:  "https://example.com/spec",
+		HTML:      `<html><body><div class="hero-banner">Hero chrome</div><article><h1>Main</h1><p>Useful core text.</p></article></body></html>`,
+		FetchMode: "http",
+	}, "aggressive")
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
+	}
+
+	allText := ""
+	for _, node := range dom.Nodes {
+		allText += node.Text + "\n"
+	}
+	if strings.Contains(allText, "Hero chrome") {
+		t.Fatalf("expected aggressive profile to remove hero content, got %q", allText)
+	}
+	if !strings.Contains(allText, "Useful core text.") {
+		t.Fatalf("expected core content to remain, got %q", allText)
+	}
+}

@@ -14,11 +14,13 @@ import (
 )
 
 type ReadRequest struct {
-	URL       string
-	Objective string
-	Profile   string
-	UserAgent string
-	ForceLane int
+	URL            string
+	Objective      string
+	Profile        string
+	UserAgent      string
+	ForceLane      int
+	PruningProfile string
+	RenderHint     bool
 }
 
 type ReadResponse struct {
@@ -72,7 +74,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		return ReadResponse{}, err
 	}
 
-	dom, err := s.reduce(recorder, rawPage)
+	dom, err := s.reduce(recorder, rawPage, req)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -137,7 +139,7 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 		URL:       req.URL,
 		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
 		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: req.UserAgent,
+		UserAgent: effectiveUserAgent(req.UserAgent, req.RenderHint),
 	})
 	if err != nil {
 		recorder.Error(stage, "NX_FETCH_FAILED", err.Error(), nil, s.now().UTC())
@@ -153,13 +155,13 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 	return page, nil
 }
 
-func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage) (pipeline.SimplifiedDOM, error) {
+func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage, req ReadRequest) (pipeline.SimplifiedDOM, error) {
 	const stage = "reduce"
 	if err := recorder.StageStarted(stage, rawPage, s.now().UTC()); err != nil {
 		return pipeline.SimplifiedDOM{}, err
 	}
 
-	dom, err := s.reducer.Reduce(rawPage)
+	dom, err := s.reducer.ReduceProfile(rawPage, req.PruningProfile)
 	if err != nil {
 		recorder.Error(stage, "NX_REDUCE_FAILED", err.Error(), nil, s.now().UTC())
 		return pipeline.SimplifiedDOM{}, err
@@ -209,4 +211,14 @@ func buildDocument(page pipeline.RawPage, title string) core.Document {
 		FetchMode: page.FetchMode,
 		RawHash:   prefixedHash("sha256", page.HTML),
 	}
+}
+
+func effectiveUserAgent(userAgent string, renderHint bool) string {
+	if strings.TrimSpace(userAgent) != "" {
+		return userAgent
+	}
+	if renderHint {
+		return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"
+	}
+	return ""
 }

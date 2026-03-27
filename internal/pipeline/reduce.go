@@ -42,6 +42,10 @@ var textTags = map[string]string{
 type Reducer struct{}
 
 func (Reducer) Reduce(page RawPage) (SimplifiedDOM, error) {
+	return Reducer{}.ReduceProfile(page, "standard")
+}
+
+func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error) {
 	root, err := html.Parse(strings.NewReader(page.HTML))
 	if err != nil {
 		return SimplifiedDOM{}, fmt.Errorf("parse html: %w", err)
@@ -55,7 +59,7 @@ func (Reducer) Reduce(page RawPage) (SimplifiedDOM, error) {
 	walker := domWalker{
 		title: extractTitle(root),
 	}
-	walker.walk(body, pathState{})
+	walker.walk(body, pathState{}, profile)
 
 	return SimplifiedDOM{
 		URL:   page.FinalURL,
@@ -73,7 +77,7 @@ type pathState struct {
 	path []string
 }
 
-func (w *domWalker) walk(node *html.Node, state pathState) {
+func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
 	siblingCounts := map[string]int{}
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		if child.Type != html.ElementNode {
@@ -81,7 +85,7 @@ func (w *domWalker) walk(node *html.Node, state pathState) {
 		}
 
 		tag := strings.ToLower(child.Data)
-		if shouldSkipNode(child, tag) {
+		if shouldSkipNode(child, tag, profile) {
 			continue
 		}
 
@@ -104,7 +108,7 @@ func (w *domWalker) walk(node *html.Node, state pathState) {
 			}
 		}
 
-		w.walk(child, nextState)
+		w.walk(child, nextState, profile)
 	}
 }
 
@@ -114,7 +118,7 @@ func (s pathState) clone() pathState {
 	}
 }
 
-func shouldSkipNode(node *html.Node, tag string) bool {
+func shouldSkipNode(node *html.Node, tag, profile string) bool {
 	if _, blocked := noiseTags[tag]; blocked {
 		return true
 	}
@@ -127,17 +131,23 @@ func shouldSkipNode(node *html.Node, tag string) bool {
 		if key == "aria-hidden" && value == "true" {
 			return true
 		}
-		if (key == "class" || key == "id" || key == "role") && isNoiseHint(value) {
+		if (key == "class" || key == "id" || key == "role") && isNoiseHint(value, profile) {
 			return true
 		}
 	}
 	return false
 }
 
-func isNoiseHint(value string) bool {
+func isNoiseHint(value, profile string) bool {
 	hints := []string{
 		"cookie", "consent", "banner", "promo", "advert", "ads",
 		"nav", "footer", "header", "sidebar", "comment", "modal", "popup",
+	}
+	switch strings.TrimSpace(strings.ToLower(profile)) {
+	case "aggressive":
+		hints = append(hints, "related", "share", "newsletter", "social", "hero", "toolbar")
+	case "forum":
+		hints = append(hints, "trending", "reaction", "avatar", "signature", "profile-card")
 	}
 	for _, hint := range hints {
 		if strings.Contains(value, hint) {

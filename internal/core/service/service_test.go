@@ -213,3 +213,62 @@ func TestReadTinyCompactionIsTraced(t *testing.T) {
 		t.Fatal("expected tiny compaction to be recorded in transform chain")
 	}
 }
+
+func TestReadUsesBrowserLikeUserAgentWhenRenderHintIsSet(t *testing.T) {
+	var seenUserAgent string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenUserAgent = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Needle Runtime</title></head><body><article><h1>Needle Runtime</h1><p>Compact context.</p></article></body></html>`)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	_, err = svc.Read(context.Background(), ReadRequest{
+		URL:        server.URL,
+		RenderHint: true,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if !strings.Contains(seenUserAgent, "Mozilla/5.0") {
+		t.Fatalf("expected browser-like user agent, got %q", seenUserAgent)
+	}
+}
+
+func TestReadAppliesAggressivePruningProfile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Needle Runtime</title></head><body><div class="hero-banner">Hero chrome</div><article><h1>Needle Runtime</h1><p>Useful compact context.</p></article></body></html>`)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:            server.URL,
+		Profile:        core.ProfileTiny,
+		PruningProfile: "aggressive",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	for _, chunk := range resp.ResultPack.Chunks {
+		if strings.Contains(chunk.Text, "Hero chrome") {
+			t.Fatalf("expected aggressive pruning to remove hero content, got %q", chunk.Text)
+		}
+	}
+}
