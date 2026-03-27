@@ -17,8 +17,9 @@ Current implemented baseline:
 3. JSON-first config loading with env overrides in `internal/config`
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
-6. Versioned schema files in `schemas/`
-7. Tests and budget enforcement passing
+6. End-to-end deterministic `Read` orchestration in `internal/core/service`
+7. Versioned schema files in `schemas/`
+8. Tests and budget enforcement passing
 
 ## Working Documents
 

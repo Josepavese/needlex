@@ -58,6 +58,9 @@ Config loading and runtime policy values.
 `internal/core`
 Canonical types, run context, service orchestration, and transport-neutral API.
 
+`internal/core/service`
+End-to-end orchestration for deterministic read flow. It composes config, pipeline, and proof without introducing transport logic.
+
 `internal/pipeline`
 Deterministic extraction stages and shared stage contracts.
 
