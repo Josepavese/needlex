@@ -11,6 +11,7 @@ import (
 const (
 	ReasonAmbiguityTriggered = "NX_AMBIGUITY_TRIGGERED"
 	ReasonCoverageTriggered  = "NX_COVERAGE_TRIGGERED"
+	ReasonDomainForceLane    = "NX_DOMAIN_FORCE_LANE"
 )
 
 type Input struct {
@@ -31,6 +32,10 @@ type Decision struct {
 	ModelInvocations []core.ModelInvocation
 }
 
+type Hints struct {
+	ForceLane int
+}
+
 type Summary struct {
 	PageType        string
 	Difficulty      string
@@ -48,7 +53,7 @@ func New(cfg config.Config) Analyzer {
 	return Analyzer{cfg: cfg}
 }
 
-func (a Analyzer) Analyze(objective string, inputs []Input) Summary {
+func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary {
 	decisions := make(map[string]Decision, len(inputs))
 	maxLane := 0
 	escalations := 0
@@ -70,6 +75,12 @@ func (a Analyzer) Analyze(objective string, inputs []Input) Summary {
 			case coverageLoss > a.cfg.Policy.ThresholdCoverage:
 				lane = 1
 				reasonCode = ReasonCoverageTriggered
+			}
+		}
+		if hints.ForceLane > lane {
+			lane = min(hints.ForceLane, a.cfg.Runtime.LaneMax)
+			if lane > 0 {
+				reasonCode = ReasonDomainForceLane
 			}
 		}
 
@@ -255,6 +266,13 @@ func clamp(value, lower, upper float64) float64 {
 
 func max(left, right int) int {
 	if left > right {
+		return left
+	}
+	return right
+}
+
+func min(left, right int) int {
+	if left < right {
 		return left
 	}
 	return right

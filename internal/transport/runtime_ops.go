@@ -16,6 +16,11 @@ type readArtifacts struct {
 }
 
 func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, readArtifacts, error) {
+	genomeStore := store.NewGenomeStore(r.storeRoot)
+	if genome, err := genomeStore.LoadByURL(req.URL); err == nil {
+		req.ForceLane = genome.ForceLane
+	}
+
 	resp, err := r.read(context.Background(), cfg, req)
 	if err != nil {
 		return coreservice.ReadResponse{}, readArtifacts{}, err
@@ -33,6 +38,14 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 	if err != nil {
 		return coreservice.ReadResponse{}, readArtifacts{}, err
 	}
+	_, _, _ = genomeStore.Observe(store.GenomeObservation{
+		URL:              resp.Document.FinalURL,
+		ObservedLane:     maxLane(resp.ResultPack.CostReport.LanePath),
+		PreferredProfile: resp.ResultPack.Profile,
+		FetchMode:        resp.Document.FetchMode,
+		NoiseLevel:       packMetadata(resp.Trace, "noise_level"),
+		PageType:         packMetadata(resp.Trace, "page_type"),
+	})
 
 	return resp, readArtifacts{
 		TracePath:       tracePath,
@@ -79,4 +92,24 @@ func (r Runner) loadProof(lookup string) (proofLookupResult, error) {
 	result.TraceID = traceID
 	result.Records = []proof.ProofRecord{record}
 	return result, nil
+}
+
+func packMetadata(trace proof.RunTrace, key string) string {
+	for _, stage := range trace.Stages {
+		if stage.Stage != "pack" {
+			continue
+		}
+		return stage.Metadata[key]
+	}
+	return ""
+}
+
+func maxLane(path []int) int {
+	max := 0
+	for _, lane := range path {
+		if lane > max {
+			max = lane
+		}
+	}
+	return max
 }

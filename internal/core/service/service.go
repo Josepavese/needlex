@@ -18,6 +18,7 @@ type ReadRequest struct {
 	Objective string
 	Profile   string
 	UserAgent string
+	ForceLane int
 }
 
 type ReadResponse struct {

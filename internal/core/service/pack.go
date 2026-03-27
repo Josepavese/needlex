@@ -232,7 +232,9 @@ func (s *Service) analyzeRanked(recorder *proof.Recorder, req ReadRequest, ranke
 		})
 	}
 
-	summary := intel.New(s.cfg).Analyze(req.Objective, inputs)
+	summary := intel.New(s.cfg).Analyze(req.Objective, inputs, intel.Hints{
+		ForceLane: req.ForceLane,
+	})
 	for _, decision := range summary.Decisions {
 		if decision.Lane == 0 {
 			continue

@@ -24,7 +24,7 @@ func Prune(root string, olderThan time.Duration, pruneAll bool, now time.Time) (
 	}
 
 	report := PruneReport{}
-	for _, dir := range []string{"traces", "proofs", "fingerprints"} {
+	for _, dir := range []string{"traces", "proofs", "fingerprints", "genome"} {
 		pattern := filepath.Join(root, dir, "*.json")
 		paths, err := filepath.Glob(pattern)
 		if err != nil {

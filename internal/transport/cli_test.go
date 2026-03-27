@@ -11,6 +11,7 @@ import (
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/proof"
+	"github.com/josepavese/needlex/internal/store"
 )
 
 func TestRunnerReadJSON(t *testing.T) {
@@ -194,8 +195,43 @@ func TestRunnerPruneAll(t *testing.T) {
 	if code := runner.Run([]string{"prune", "--all", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("prune failed: %d %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), `"removed_files": 3`) {
-		t.Fatalf("expected 3 removed files, got %q", stdout.String())
+	if !strings.Contains(stdout.String(), `"removed_files": 4`) {
+		t.Fatalf("expected 4 removed files, got %q", stdout.String())
+	}
+}
+
+func TestRunnerReadUsesGenomeForceLane(t *testing.T) {
+	root := t.TempDir()
+	genomeStore := store.NewGenomeStore(root)
+	if _, _, err := genomeStore.Observe(store.GenomeObservation{
+		URL:          "https://example.com/docs",
+		ObservedLane: 1,
+	}); err != nil {
+		t.Fatalf("seed genome: %v", err)
+	}
+
+	var captured coreservice.ReadRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			captured = req
+			resp := fakeResponse()
+			resp.Document.FinalURL = "https://example.com/docs"
+			resp.ResultPack.CostReport.LanePath = []int{0, 1}
+			return resp, nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := runner.Run([]string{"read", "https://example.com/docs"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("read failed: %d %q", code, stderr.String())
+	}
+	if captured.ForceLane != 1 {
+		t.Fatalf("expected force lane 1 from genome, got %d", captured.ForceLane)
 	}
 }
 

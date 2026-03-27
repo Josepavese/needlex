@@ -12,13 +12,14 @@ func TestPruneAllRemovesStateFiles(t *testing.T) {
 	writeStateFile(t, filepath.Join(root, "traces", "a.json"))
 	writeStateFile(t, filepath.Join(root, "proofs", "a.json"))
 	writeStateFile(t, filepath.Join(root, "fingerprints", "a.json"))
+	writeStateFile(t, filepath.Join(root, "genome", "a.json"))
 
 	report, err := Prune(root, 0, true, time.Unix(1700000000, 0).UTC())
 	if err != nil {
 		t.Fatalf("prune all: %v", err)
 	}
-	if report.RemovedFiles != 3 {
-		t.Fatalf("expected 3 files removed, got %d", report.RemovedFiles)
+	if report.RemovedFiles != 4 {
+		t.Fatalf("expected 4 files removed, got %d", report.RemovedFiles)
 	}
 }
 
