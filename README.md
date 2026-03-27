@@ -9,7 +9,7 @@ The design target is aggressive but explicit:
 
 ## Status
 
-This repository is in architecture and planning mode. There is no placeholder application code yet by design.
+This repository is in active implementation mode. The runtime is still incomplete, but the deterministic core path is real and executable.
 
 Current implemented baseline:
 1. `go.mod` with one runtime dependency for HTML parsing (`golang.org/x/net/html`)
@@ -18,9 +18,10 @@ Current implemented baseline:
 4. Deterministic `Acquire`, `Reduce`, and `Segment` in `internal/pipeline`
 5. `ProofRecord`, `RunTrace`, `Recorder`, and `DiffReport` in `internal/proof`
 6. End-to-end deterministic `Read` orchestration in `internal/core/service`
-7. Thin CLI transport with `needle read <url>` in `cmd/needle` and `internal/transport`
-8. Versioned schema files in `schemas/`
-9. Tests and budget enforcement passing
+7. Thin CLI transport with `needle read`, `needle replay`, and `needle diff` in `cmd/needle` and `internal/transport`
+8. Local trace persistence in `.needlex/traces` via `internal/store`
+9. Versioned schema files in `schemas/`
+10. Tests and budget enforcement passing
 
 ## Current CLI
 
@@ -29,6 +30,8 @@ go run ./cmd/needle read https://example.com
 go run ./cmd/needle read https://example.com --json
 go run ./cmd/needle read https://example.com --profile tiny
 go run ./cmd/needle read https://example.com --profile deep --json
+go run ./cmd/needle replay trace_1
+go run ./cmd/needle diff trace_a trace_b --json
 ```
 
 ## Working Documents

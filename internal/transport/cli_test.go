@@ -15,6 +15,7 @@ import (
 
 func TestRunnerReadJSON(t *testing.T) {
 	var captured coreservice.ReadRequest
+	root := t.TempDir()
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			return config.Defaults(), nil
@@ -23,6 +24,7 @@ func TestRunnerReadJSON(t *testing.T) {
 			captured = req
 			return fakeResponse(), nil
 		},
+		storeRoot: root,
 	}
 
 	var stdout bytes.Buffer
@@ -41,6 +43,7 @@ func TestRunnerReadJSON(t *testing.T) {
 }
 
 func TestRunnerReadText(t *testing.T) {
+	root := t.TempDir()
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			return config.Defaults(), nil
@@ -48,6 +51,7 @@ func TestRunnerReadText(t *testing.T) {
 		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
 			return fakeResponse(), nil
 		},
+		storeRoot: root,
 	}
 
 	var stdout bytes.Buffer
@@ -73,6 +77,58 @@ func TestRunnerUnknownCommand(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "unknown command") {
 		t.Fatalf("expected unknown command message, got %q", stderr.String())
+	}
+}
+
+func TestRunnerReplayAndDiff(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: config.Load,
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			resp := fakeResponse()
+			resp.Trace.TraceID = req.URL
+			resp.Trace.RunID = req.URL
+			resp.Trace.Stages = []proof.StageSnapshot{
+				{
+					Stage:       "acquire",
+					StartedAt:   time.Unix(1700000000, 0).UTC(),
+					CompletedAt: time.Unix(1700000001, 0).UTC(),
+					OutputHash:  req.URL,
+				},
+			}
+			return resp, nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if code := runner.Run([]string{"read", "trace_a"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("seed trace a failed: %d %q", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"read", "trace_b"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("seed trace b failed: %d %q", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+
+	if code := runner.Run([]string{"replay", "trace_a", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"trace_id": "trace_a"`) {
+		t.Fatalf("expected replay json, got %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"diff", "trace_a", "trace_b"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Changed Stages: 1") {
+		t.Fatalf("expected diff output, got %q", stdout.String())
 	}
 }
 
@@ -133,7 +189,7 @@ func fakeResponse() coreservice.ReadResponse {
 			StartedAt:  time.Unix(1700000000, 0).UTC(),
 			FinishedAt: time.Unix(1700000001, 0).UTC(),
 			Stages: []proof.StageSnapshot{
-				{Stage: "acquire", StartedAt: time.Unix(1700000000, 0).UTC(), CompletedAt: time.Unix(1700000000, 0).UTC()},
+				{Stage: "acquire", StartedAt: time.Unix(1700000000, 0).UTC(), CompletedAt: time.Unix(1700000000, 0).UTC(), OutputHash: "hash"},
 			},
 			Events: []proof.TraceEvent{
 				{Type: proof.EventStageStarted, Stage: "acquire", Timestamp: time.Unix(1700000000, 0).UTC()},

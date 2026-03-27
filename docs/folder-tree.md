@@ -10,9 +10,10 @@ Currently materialized:
 3. `internal/core`
 4. `internal/pipeline`
 5. `internal/proof`
-6. `internal/transport`
-7. `schemas`
-8. `scripts`
+6. `internal/store`
+7. `internal/transport`
+8. `schemas`
+9. `scripts`
 
 ## Planned Tree
 
