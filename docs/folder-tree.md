@@ -30,6 +30,7 @@ needlex/
     architecture.md
     development-plan.md
     folder-tree.md
+    project-context.md
   internal/
     config/
     core/

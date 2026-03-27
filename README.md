@@ -50,6 +50,7 @@ go run ./cmd/needle mcp
 
 - [idea.md](/home/jose/hpdev/Libraries/needlex/idea.md)
 - [spec.md](/home/jose/hpdev/Libraries/needlex/spec.md)
+- [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
 - [architecture.md](/home/jose/hpdev/Libraries/needlex/docs/architecture.md)
 - [folder-tree.md](/home/jose/hpdev/Libraries/needlex/docs/folder-tree.md)
 - [development-plan.md](/home/jose/hpdev/Libraries/needlex/docs/development-plan.md)
