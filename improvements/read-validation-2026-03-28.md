@@ -203,6 +203,12 @@ Current default adapter uses `trafilatura` through `scripts/external_baselines/t
      - `cnf` noise hits: `4 -> 0`
      - `halfpocket` remained stable with `noise=0` and full keyword coverage
 
+3. Adaptive acquire retry on timeout (`2026-03-28`, post-validation)
+   - one bounded retry is now attempted when the first fetch fails with deadline exceeded
+   - retry timeout is expanded from the original timeout and capped
+   - no retry is performed for non-timeout fetch errors
+   - covered by dedicated acquire test and validated on live suite without quality regression
+
 ### P0
 
 1. Embedded structured payload extraction

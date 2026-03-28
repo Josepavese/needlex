@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"strings"
 	"testing"
 	"time"
@@ -52,5 +53,33 @@ func TestAcquireRejectsOversizedBody(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected oversized body to fail")
+	}
+}
+
+func TestAcquireRetriesOnceOnTimeout(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		call := atomic.AddInt32(&calls, 1)
+		if call == 1 {
+			time.Sleep(900 * time.Millisecond)
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = fmt.Fprint(w, "<html><body><p>retry success</p></body></html>")
+	}))
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:      server.URL,
+		Timeout:  600 * time.Millisecond,
+		MaxBytes: 4096,
+	})
+	if err != nil {
+		t.Fatalf("expected retry to recover timeout, got %v", err)
+	}
+	if !strings.Contains(page.HTML, "retry success") {
+		t.Fatalf("expected html payload after retry, got %q", page.HTML)
+	}
+	if got := atomic.LoadInt32(&calls); got < 2 {
+		t.Fatalf("expected retry call, got %d requests", got)
 	}
 }

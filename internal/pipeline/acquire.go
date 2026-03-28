@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,18 +22,38 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 		return RawPage{}, err
 	}
 
+	page, err := a.acquireAttempt(ctx, input, input.Timeout)
+	if err == nil {
+		return page, nil
+	}
+	if !shouldRetryOnTimeout(ctx, err, input.Timeout) {
+		return RawPage{}, err
+	}
+
+	retryTimeout := expandedTimeout(input.Timeout)
+	page, retryErr := a.acquireAttempt(ctx, input, retryTimeout)
+	if retryErr == nil {
+		return page, nil
+	}
+	return RawPage{}, retryErr
+}
+
+func (a Acquirer) acquireAttempt(ctx context.Context, input AcquireInput, timeout time.Duration) (RawPage, error) {
+	attemptInput := input
+	attemptInput.Timeout = timeout
+
 	reqCtx := ctx
 	cancel := func() {}
-	if input.Timeout > 0 {
-		reqCtx, cancel = context.WithTimeout(ctx, input.Timeout)
+	if attemptInput.Timeout > 0 {
+		reqCtx, cancel = context.WithTimeout(ctx, attemptInput.Timeout)
 	}
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, input.URL, nil)
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, attemptInput.URL, nil)
 	if err != nil {
 		return RawPage{}, fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("User-Agent", userAgent(input.UserAgent))
+	req.Header.Set("User-Agent", userAgent(attemptInput.UserAgent))
 
 	client := a.Client
 	if client == nil {
@@ -54,13 +75,13 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 		return RawPage{}, fmt.Errorf("unsupported content type %q", contentType)
 	}
 
-	htmlBody, err := readBounded(resp.Body, input.MaxBytes)
+	htmlBody, err := readBounded(resp.Body, attemptInput.MaxBytes)
 	if err != nil {
 		return RawPage{}, err
 	}
 
 	return RawPage{
-		URL:         input.URL,
+		URL:         attemptInput.URL,
 		FinalURL:    resp.Request.URL.String(),
 		StatusCode:  resp.StatusCode,
 		ContentType: contentType,
@@ -68,6 +89,25 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 		FetchMode:   "http",
 		FetchedAt:   time.Now().UTC(),
 	}, nil
+}
+
+func shouldRetryOnTimeout(ctx context.Context, err error, timeout time.Duration) bool {
+	if timeout <= 0 {
+		return false
+	}
+	if ctx.Err() != nil {
+		return false
+	}
+	return errors.Is(err, context.DeadlineExceeded) || strings.Contains(strings.ToLower(err.Error()), "deadline exceeded")
+}
+
+func expandedTimeout(current time.Duration) time.Duration {
+	next := current + current/2
+	maxTimeout := 12 * time.Second
+	if next > maxTimeout {
+		return maxTimeout
+	}
+	return next
 }
 
 func validateAcquireInput(input AcquireInput) error {
