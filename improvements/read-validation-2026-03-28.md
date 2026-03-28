@@ -15,6 +15,28 @@ Sites tested:
 2. `https://www.cnfsrl.it/`
 3. `https://halfpocket.net/`
 
+## Automated Regression Suite
+
+A repeatable evaluator is now available:
+
+```bash
+./scripts/run_live_read_eval.sh
+```
+
+Outputs:
+1. `improvements/live-read-latest.json`
+2. regression checks against `improvements/live-read-baseline.json` when present
+
+To refresh the baseline after intentional improvements:
+
+```bash
+./scripts/run_live_read_eval.sh --update-baseline
+```
+
+Exit behavior:
+1. `0` no regression
+2. `2` regression detected vs baseline
+
 ## Commands Used
 
 ### Default timeout
@@ -151,6 +173,18 @@ The runtime already handles three different realities:
 
 This means the product is no longer hypothetical.
 It also means the main gaps are now specific and testable.
+
+## External Comparison Meter
+
+Optional external baseline is supported through:
+
+```bash
+export NEEDLEX_EXTERNAL_BASELINE_CMD=".venv/bin/python scripts/external_baselines/trafilatura_stdin.py"
+./scripts/run_live_read_eval.sh --out improvements/live-read-latest-with-external.json
+```
+
+This compares Needle-X coverage/noise metrics with text extracted by an external reader.
+Current default adapter uses `trafilatura` through `scripts/external_baselines/trafilatura_stdin.py`.
 
 ## Priority Improvement Backlog
 

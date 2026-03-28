@@ -7,4 +7,5 @@
 dist/
 bin/
 .venv/
+improvements/live-read-latest*.json
 .DS_Store

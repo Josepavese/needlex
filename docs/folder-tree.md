@@ -18,6 +18,7 @@ Currently materialized:
 11. `testdata/golden`
 12. `scripts/external_baselines`
 13. `improvements`
+14. `scripts/live_read_eval`
 
 ## Planned Tree
 
@@ -35,6 +36,8 @@ needlex/
     folder-tree.md
     project-context.md
   improvements/
+    live-read-baseline.json
+    live-read-latest.json
     read-validation-2026-03-28.md
   internal/
     config/
@@ -51,6 +54,9 @@ needlex/
   scripts/
     check_budget.sh
     external_baselines/
+    live_read_eval/
+      main.go
+    run_live_read_eval.sh
   testdata/
     benchmark/
     golden/

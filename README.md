@@ -78,3 +78,24 @@ Current hard targets:
 2. Internal packages <= 10
 3. Runtime dependencies <= 8
 4. Max file size <= 400 LOC
+
+## Live Read Regression Check
+
+Run the 3 real-world read checks and compare with baseline:
+
+```bash
+./scripts/run_live_read_eval.sh
+```
+
+Refresh baseline after intentional improvements:
+
+```bash
+./scripts/run_live_read_eval.sh --update-baseline
+```
+
+Optional external comparison (trafilatura adapter):
+
+```bash
+export NEEDLEX_EXTERNAL_BASELINE_CMD=".venv/bin/python scripts/external_baselines/trafilatura_stdin.py"
+./scripts/run_live_read_eval.sh --out improvements/live-read-latest-with-external.json
+```
