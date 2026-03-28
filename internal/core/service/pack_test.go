@@ -67,3 +67,42 @@ func TestSelectProfileLimitsChunkCount(t *testing.T) {
 		t.Fatalf("expected deep profile to keep all chunks, got %d", got)
 	}
 }
+
+func TestApplyContaminationPenaltyDemotesSpam(t *testing.T) {
+	ranked := []rankedSegment{
+		{
+			index: 0,
+			chunk: core.Chunk{
+				ID:          "chk_1",
+				DocID:       "doc",
+				Text:        "casino bonus 22bet piattaforma aams",
+				Score:       0.95,
+				Fingerprint: "fp_1",
+				Confidence:  0.90,
+			},
+		},
+		{
+			index: 1,
+			chunk: core.Chunk{
+				ID:          "chk_2",
+				DocID:       "doc",
+				Text:        "Intralogistica e gestione magazzino per aziende.",
+				Score:       0.88,
+				Fingerprint: "fp_2",
+				Confidence:  0.90,
+			},
+		},
+	}
+
+	penalized := applyContaminationPenalty(ranked, "intralogistica")
+	if penalized[0].chunk.Fingerprint != "fp_2" {
+		t.Fatalf("expected clean segment first after contamination penalty, got %#v", penalized[0].chunk)
+	}
+}
+
+func TestContaminationRiskFlagsDisabledForGamblingObjective(t *testing.T) {
+	flags := contaminationRiskFlags("casino bonus 22bet payout", "casino migliori payout")
+	if len(flags) != 0 {
+		t.Fatalf("expected no contamination flags for gambling objective, got %#v", flags)
+	}
+}

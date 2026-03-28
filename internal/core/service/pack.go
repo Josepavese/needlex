@@ -26,6 +26,7 @@ func (s *Service) pack(recorder *proof.Recorder, req ReadRequest, document core.
 	}
 
 	ranked := rankSegments(document.ID, req.Objective, segments)
+	ranked = applyContaminationPenalty(ranked, req.Objective)
 	intelSummary := s.analyzeRanked(recorder, req, ranked)
 	selected := selectProfile(ranked, req.Profile)
 	selected = s.applyIntel(req, selected, intelSummary.Decisions)
@@ -268,6 +269,7 @@ func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decision
 	out := make([]rankedSegment, 0, len(selected))
 	for _, item := range selected {
 		decision := decisions[item.chunk.Fingerprint]
+		decision.RiskFlags = append(decision.RiskFlags, contaminationRiskFlags(item.chunk.Text, req.Objective)...)
 		if decision.Lane >= 2 {
 			extracted := intel.Extract(s.cfg, decision, item.chunk, req.Objective)
 			if strings.TrimSpace(extracted.Text) != "" {

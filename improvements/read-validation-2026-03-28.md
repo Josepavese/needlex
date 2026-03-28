@@ -196,6 +196,13 @@ Current default adapter uses `trafilatura` through `scripts/external_baselines/t
    - it converts HTML fragments inside JSON strings into plain text nodes
    - validated with unit tests and a live re-run on `https://carratellire.com/`
 
+2. Contamination-aware ranking penalty in pack stage (`2026-03-28`, post-validation)
+   - applies a score/ confidence penalty to contamination-prone segments for non-gambling objectives
+   - adds `contamination_risk` in proof flags when applicable
+   - measured effect on live suite:
+     - `cnf` noise hits: `4 -> 0`
+     - `halfpocket` remained stable with `noise=0` and full keyword coverage
+
 ### P0
 
 1. Embedded structured payload extraction
