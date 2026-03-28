@@ -154,6 +154,14 @@ It also means the main gaps are now specific and testable.
 
 ## Priority Improvement Backlog
 
+## Implemented Since This Validation
+
+1. Embedded payload fallback in reducer (`2026-03-28`, post-validation)
+   - when semantic DOM extraction is sparse, the reducer now scans script payloads
+   - it extracts high-signal fields (`title`, `description`, `subtitle`, `name`, `business_name`)
+   - it converts HTML fragments inside JSON strings into plain text nodes
+   - validated with unit tests and a live re-run on `https://carratellire.com/`
+
 ### P0
 
 1. Embedded structured payload extraction

@@ -272,3 +272,33 @@ func TestReadAppliesAggressivePruningProfile(t *testing.T) {
 		}
 	}
 }
+
+func TestReadRecoversFromAppShellEmbeddedPayload(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:     server.URL,
+		Profile: core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if len(resp.ResultPack.Chunks) == 0 {
+		t.Fatal("expected chunks from embedded payload extraction")
+	}
+	if !strings.Contains(resp.ResultPack.Chunks[0].Text, "Needle-X compiles noisy pages") {
+		t.Fatalf("expected embedded text in first chunk, got %q", resp.ResultPack.Chunks[0].Text)
+	}
+}

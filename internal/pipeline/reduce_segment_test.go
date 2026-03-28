@@ -107,3 +107,28 @@ func TestReduceProfileAggressiveRemovesAdditionalNoiseHints(t *testing.T) {
 		t.Fatalf("expected core content to remain, got %q", allText)
 	}
 }
+
+func TestReduceExtractsEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		URL:      "https://example.com/app",
+		FinalURL: "https://example.com/app",
+		HTML: `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime Update","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`,
+	}, "standard")
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
+	}
+
+	if len(dom.Nodes) == 0 {
+		t.Fatal("expected embedded payload nodes to be extracted")
+	}
+	found := false
+	for _, node := range dom.Nodes {
+		if strings.Contains(node.Text, "Needle-X compiles noisy pages into compact proof-carrying context for agents.") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected embedded payload text in reduced nodes, got %#v", dom.Nodes)
+	}
+}
