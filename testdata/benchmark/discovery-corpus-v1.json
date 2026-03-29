@@ -1,0 +1,23 @@
+{
+  "version": "discovery-corpus-v1",
+  "cases": [
+    {
+      "name": "same_site_goal_match",
+      "mode": "same_site",
+      "goal": "proof replay deterministic",
+      "seed_html": "<html><head><title>Portal</title></head><body><a href=\"/blog\">Blog</a><a href=\"/docs/replay\">Replay Guide</a></body></html>",
+      "expected_selected_suffix": "/docs/replay",
+      "expect_local_provider": true,
+      "expect_bootstrap": false
+    },
+    {
+      "name": "seedless_local_autoseed",
+      "mode": "seedless_local",
+      "goal": "proof replay deterministic",
+      "seed_html": "<html><head><title>Portal</title></head><body><a href=\"/docs/replay\">Replay Guide</a></body></html>",
+      "expected_selected_suffix": "/docs/replay",
+      "expect_local_provider": true,
+      "expect_bootstrap": false
+    }
+  ]
+}

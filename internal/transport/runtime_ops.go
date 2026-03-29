@@ -22,9 +22,7 @@ type queryArtifacts struct {
 }
 
 func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, crawlArtifacts, error) {
-	if genome, err := store.NewGenomeStore(r.storeRoot).LoadByURL(req.SeedURL); err == nil {
-		req = applyGenomeToCrawlRequest(req, genome)
-	}
+	req = coreservice.PrepareCrawlRequestWithLocalState(r.storeRoot, req)
 
 	resp, err := r.crawl(context.Background(), cfg, req)
 	if err != nil {
@@ -38,26 +36,14 @@ func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (c
 		}
 		_, _ = store.NewProofStore(r.storeRoot).SaveProofRecords(page.Trace.TraceID, page.ProofRecords)
 		_, _ = store.NewFingerprintStore(r.storeRoot).SaveChunks(page.Trace.TraceID, page.ResultPack.Chunks)
-		_, _, _ = store.NewGenomeStore(r.storeRoot).Observe(store.GenomeObservation{
-			URL:              page.Document.FinalURL,
-			ObservedLane:     maxLane(page.ResultPack.CostReport.LanePath),
-			PreferredProfile: page.ResultPack.Profile,
-			PruningProfile:   req.PruningProfile,
-			RenderNeeded:     req.RenderHint,
-			FetchMode:        page.Document.FetchMode,
-			NoiseLevel:       packMetadata(page.Trace, "noise_level"),
-			PageType:         packMetadata(page.Trace, "page_type"),
-		})
 	}
+	coreservice.ObserveCrawlResponseWithLocalState(r.storeRoot, req, resp)
 
 	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
 }
 
 func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, readArtifacts, error) {
-	genomeStore := store.NewGenomeStore(r.storeRoot)
-	if genome, err := genomeStore.LoadByURL(req.URL); err == nil {
-		req = applyGenomeToReadRequest(req, genome)
-	}
+	req = coreservice.PrepareReadRequestWithLocalState(r.storeRoot, req)
 
 	resp, err := r.read(context.Background(), cfg, req)
 	if err != nil {
@@ -76,16 +62,7 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 	if err != nil {
 		return coreservice.ReadResponse{}, readArtifacts{}, err
 	}
-	_, _, _ = genomeStore.Observe(store.GenomeObservation{
-		URL:              resp.Document.FinalURL,
-		ObservedLane:     maxLane(resp.ResultPack.CostReport.LanePath),
-		PreferredProfile: resp.ResultPack.Profile,
-		PruningProfile:   req.PruningProfile,
-		RenderNeeded:     req.RenderHint,
-		FetchMode:        resp.Document.FetchMode,
-		NoiseLevel:       packMetadata(resp.Trace, "noise_level"),
-		PageType:         packMetadata(resp.Trace, "page_type"),
-	})
+	coreservice.ObserveReadResponseWithLocalState(r.storeRoot, req, resp)
 
 	return resp, readArtifacts{
 		TracePath:       tracePath,
@@ -95,9 +72,8 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 }
 
 func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, queryArtifacts, error) {
-	if genome, err := store.NewGenomeStore(r.storeRoot).LoadByURL(req.SeedURL); err == nil {
-		req = applyGenomeToQueryRequest(req, genome)
-	}
+	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req)
+	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(r.storeRoot)
 	resp, err := r.query(context.Background(), cfg, req)
 	if err != nil {
 		return coreservice.QueryResponse{}, queryArtifacts{}, err
@@ -115,17 +91,7 @@ func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (c
 	if err != nil {
 		return coreservice.QueryResponse{}, queryArtifacts{}, err
 	}
-
-	_, _, _ = store.NewGenomeStore(r.storeRoot).Observe(store.GenomeObservation{
-		URL:              resp.Document.FinalURL,
-		ObservedLane:     maxLane(resp.CostReport.LanePath),
-		PreferredProfile: resp.ResultPack.Profile,
-		PruningProfile:   req.PruningProfile,
-		RenderNeeded:     req.RenderHint,
-		FetchMode:        resp.Document.FetchMode,
-		NoiseLevel:       packMetadata(resp.Trace, "noise_level"),
-		PageType:         packMetadata(resp.Trace, "page_type"),
-	})
+	coreservice.ObserveQueryResponseWithLocalState(r.storeRoot, req, resp)
 
 	return resp, queryArtifacts{
 		TracePath:       tracePath,
@@ -172,72 +138,4 @@ func (r Runner) loadProof(lookup string) (proofLookupResult, error) {
 	result.TraceID = traceID
 	result.Records = []proof.ProofRecord{record}
 	return result, nil
-}
-
-func packMetadata(trace proof.RunTrace, key string) string {
-	for _, stage := range trace.Stages {
-		if stage.Stage != "pack" {
-			continue
-		}
-		return stage.Metadata[key]
-	}
-	return ""
-}
-
-func maxLane(path []int) int {
-	max := 0
-	for _, lane := range path {
-		if lane > max {
-			max = lane
-		}
-	}
-	return max
-}
-
-func applyGenomeToReadRequest(req coreservice.ReadRequest, genome store.DomainGenome) coreservice.ReadRequest {
-	if req.ForceLane == 0 {
-		req.ForceLane = genome.ForceLane
-	}
-	if req.Profile == "" && genome.PreferredProfile != "" {
-		req.Profile = genome.PreferredProfile
-	}
-	if req.PruningProfile == "" && genome.PruningProfile != "" {
-		req.PruningProfile = genome.PruningProfile
-	}
-	if !req.RenderHint && genome.RenderNeeded {
-		req.RenderHint = true
-	}
-	return req
-}
-
-func applyGenomeToQueryRequest(req coreservice.QueryRequest, genome store.DomainGenome) coreservice.QueryRequest {
-	if req.ForceLane == 0 {
-		req.ForceLane = genome.ForceLane
-	}
-	if req.Profile == "" && genome.PreferredProfile != "" {
-		req.Profile = genome.PreferredProfile
-	}
-	if req.PruningProfile == "" && genome.PruningProfile != "" {
-		req.PruningProfile = genome.PruningProfile
-	}
-	if !req.RenderHint && genome.RenderNeeded {
-		req.RenderHint = true
-	}
-	return req
-}
-
-func applyGenomeToCrawlRequest(req coreservice.CrawlRequest, genome store.DomainGenome) coreservice.CrawlRequest {
-	if req.ForceLane == 0 {
-		req.ForceLane = genome.ForceLane
-	}
-	if req.Profile == "" && genome.PreferredProfile != "" {
-		req.Profile = genome.PreferredProfile
-	}
-	if req.PruningProfile == "" && genome.PruningProfile != "" {
-		req.PruningProfile = genome.PruningProfile
-	}
-	if !req.RenderHint && genome.RenderNeeded {
-		req.RenderHint = true
-	}
-	return req
 }

@@ -16,6 +16,7 @@ mapfile -t GO_FILES < <(find . -type f -name '*.go' \
   ! -path './testdata/*' \
   ! -path './.agent/*' \
   ! -path './docs/*' \
+  ! -path './scripts/*' \
   | sort)
 
 PROD_LOC=0

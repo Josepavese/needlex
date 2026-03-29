@@ -14,17 +14,15 @@ import (
 )
 
 type ReadRequest struct {
-	URL            string
-	Objective      string
-	Profile        string
-	UserAgent      string
-	ForceLane      int
-	PruningProfile string
-	RenderHint     bool
+	URL, Objective, Profile, UserAgent, PruningProfile string
+	ForceLane                                          int
+	RenderHint                                         bool
+	StableFingerprints                                 []string
 }
 
 type ReadResponse struct {
 	Document     core.Document       `json:"document"`
+	WebIR        core.WebIR          `json:"web_ir"`
 	ResultPack   core.ResultPack     `json:"result_pack"`
 	ProofRecords []proof.ProofRecord `json:"proof_records"`
 	Trace        proof.RunTrace      `json:"trace"`
@@ -79,6 +77,10 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	if err != nil {
 		return ReadResponse{}, err
 	}
+	webIR := buildWebIR(dom)
+	if err := webIR.Validate(); err != nil {
+		return ReadResponse{}, err
+	}
 
 	document := buildDocument(rawPage, dom.Title)
 
@@ -87,7 +89,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		return ReadResponse{}, err
 	}
 
-	resultPack, proofRecords, err := s.pack(recorder, req, document, segments)
+	resultPack, proofRecords, err := s.pack(recorder, req, document, webIR, segments)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -101,6 +103,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 
 	response := ReadResponse{
 		Document:     document,
+		WebIR:        webIR,
 		ResultPack:   resultPack,
 		ProofRecords: proofRecords,
 		Trace:        trace,
@@ -114,6 +117,9 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 
 func (r ReadResponse) Validate() error {
 	if err := r.Document.Validate(); err != nil {
+		return err
+	}
+	if err := r.WebIR.Validate(); err != nil {
 		return err
 	}
 	if err := r.ResultPack.Validate(); err != nil {
@@ -169,7 +175,8 @@ func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage, req
 	}
 
 	if err := recorder.StageCompleted(stage, dom, len(dom.Nodes), map[string]string{
-		"title": dom.Title,
+		"title":          dom.Title,
+		"web_ir_version": core.WebIRVersion,
 	}, s.now().UTC()); err != nil {
 		return pipeline.SimplifiedDOM{}, err
 	}

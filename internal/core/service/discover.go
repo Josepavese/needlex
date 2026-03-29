@@ -18,13 +18,15 @@ type DiscoverRequest struct {
 	UserAgent     string
 	SameDomain    bool
 	MaxCandidates int
+	DomainHints   []string
 }
 
 type DiscoverCandidate struct {
-	URL    string   `json:"url"`
-	Label  string   `json:"label,omitempty"`
-	Score  float64  `json:"score"`
-	Reason []string `json:"reason,omitempty"`
+	URL      string            `json:"url"`
+	Label    string            `json:"label,omitempty"`
+	Score    float64           `json:"score"`
+	Reason   []string          `json:"reason,omitempty"`
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 type DiscoverResponse struct {
@@ -60,7 +62,7 @@ func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverRe
 		return DiscoverResponse{}, err
 	}
 
-	candidates := scoreDiscoveryCandidates(req.Goal, rawPage.FinalURL, dom.Title, extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, req.SameDomain))
+	candidates := scoreDiscoveryCandidates(req.Goal, rawPage.FinalURL, dom.Title, extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, req.SameDomain), req.DomainHints)
 	limit := min(len(candidates), req.MaxCandidates)
 	candidates = append([]DiscoverCandidate{}, candidates[:limit]...)
 
@@ -77,12 +79,13 @@ func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverRe
 	}, nil
 }
 
-func scoreDiscoveryCandidates(goal, seedURL, seedLabel string, links []linkCandidate) []DiscoverCandidate {
+func scoreDiscoveryCandidates(goal, seedURL, seedLabel string, links []linkCandidate, domainHints []string) []DiscoverCandidate {
+	domainHints = normalizeDomainHints(domainHints)
 	out := make([]DiscoverCandidate, 0, len(links)+1)
 	seen := map[string]struct{}{}
 
 	if strings.TrimSpace(seedURL) != "" {
-		seedScore, seedReason := discoveryScore(goal, seedURL, seedLabel, true)
+		seedScore, seedReason := discoveryScore(goal, seedURL, seedLabel, true, domainHints)
 		out = append(out, DiscoverCandidate{
 			URL:    seedURL,
 			Label:  strings.TrimSpace(seedLabel),
@@ -97,7 +100,7 @@ func scoreDiscoveryCandidates(goal, seedURL, seedLabel string, links []linkCandi
 			continue
 		}
 		seen[link.URL] = struct{}{}
-		score, reason := discoveryScore(goal, link.URL, link.Label, false)
+		score, reason := discoveryScore(goal, link.URL, link.Label, false, domainHints)
 		out = append(out, DiscoverCandidate{
 			URL:    link.URL,
 			Label:  strings.TrimSpace(link.Label),
@@ -123,7 +126,7 @@ func scoreDiscoveryCandidates(goal, seedURL, seedLabel string, links []linkCandi
 	return out
 }
 
-func discoveryScore(goal, rawURL, label string, isSeed bool) (float64, []string) {
+func discoveryScore(goal, rawURL, label string, isSeed bool, domainHints []string) (float64, []string) {
 	reasons := []string{}
 	score := 0.0
 
@@ -149,6 +152,10 @@ func discoveryScore(goal, rawURL, label string, isSeed bool) (float64, []string)
 	if strings.Contains(strings.ToLower(rawURL), "docs") || strings.Contains(strings.ToLower(rawURL), "guide") {
 		score += 0.20
 		reasons = append(reasons, "path_hint")
+	}
+	if host, ok := discoverHostname(rawURL); ok && slices.Contains(domainHints, host) {
+		score += 1.10
+		reasons = append(reasons, "domain_hint_match")
 	}
 
 	return score, reasons
@@ -235,4 +242,36 @@ func urlTokenText(rawURL string) string {
 		return rawURL
 	}
 	return strings.Join([]string{parsed.Hostname(), parsed.Path, path.Base(parsed.Path)}, " ")
+}
+
+func normalizeDomainHints(hints []string) []string {
+	out := make([]string, 0, len(hints))
+	seen := map[string]struct{}{}
+	for _, hint := range hints {
+		host := strings.TrimSpace(strings.ToLower(hint))
+		if host == "" {
+			continue
+		}
+		if parsed, err := url.Parse(host); err == nil && strings.TrimSpace(parsed.Hostname()) != "" {
+			host = strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+		}
+		if _, ok := seen[host]; ok {
+			continue
+		}
+		seen[host] = struct{}{}
+		out = append(out, host)
+	}
+	return out
+}
+
+func discoverHostname(rawURL string) (string, bool) {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return "", false
+	}
+	host := strings.TrimSpace(strings.ToLower(parsed.Hostname()))
+	if host == "" {
+		return "", false
+	}
+	return host, true
 }

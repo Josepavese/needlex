@@ -19,6 +19,8 @@ Currently materialized:
 12. `scripts/external_baselines`
 13. `improvements`
 14. `scripts/live_read_eval`
+15. `scripts/hard_case_matrix`
+16. `testdata/benchmark`
 
 ## Planned Tree
 
@@ -54,8 +56,11 @@ needlex/
   scripts/
     check_budget.sh
     external_baselines/
+    hard_case_matrix/
+      doc.go
     live_read_eval/
       main.go
+    run_hard_case_matrix.sh
     run_live_read_eval.sh
   testdata/
     benchmark/

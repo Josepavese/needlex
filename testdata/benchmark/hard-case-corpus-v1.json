@@ -1,0 +1,41 @@
+{
+  "version": "hard-case-corpus-v1",
+  "cases": [
+    {
+      "name": "embedded_lane3_vs_lane0",
+      "objective": "company profile",
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 1.0,
+      "expected_terms": [
+        "Needle-X compiles noisy pages into compact proof-carrying context for agents"
+      ],
+      "html_inline": "<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={\"configuration\":{\"blog\":[{\"title\":\"Needle Runtime\",\"description\":\"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>\"}]}}</script></body></html>"
+    },
+    {
+      "name": "forum_lane2_vs_lane0",
+      "objective": "forum replay drift troubleshooting",
+      "profile": "deep",
+      "compare_force_lane": 2,
+      "min_compare_fidelity": 0.66,
+      "expected_terms": [
+        "Compare stage hashes first",
+        "inspect proof records by chunk id",
+        "replay became deterministic again"
+      ],
+      "fixture_path": "testdata/golden/forum.html"
+    },
+    {
+      "name": "tiny_lane3_vs_lane0",
+      "objective": "company profile",
+      "profile": "tiny",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 1.0,
+      "expected_terms": [
+        "Needle-X compiles noisy public pages compact context agents",
+        "proof replay auditable operators"
+      ],
+      "html_inline": "<html><head><title>Needle Runtime</title></head><body><article><h1>Needle Runtime</h1><p>Needle-X compiles noisy public pages into compact context for agents and keeps proof and replay auditable for operators.</p></article></body></html>"
+    }
+  ]
+}

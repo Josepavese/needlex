@@ -1,0 +1,28 @@
+{
+  "generated_at_utc": "2026-03-29T15:43:28Z",
+  "corpus_version": "discovery-corpus-v1",
+  "rows": [
+    {
+      "name": "same_site_goal_match",
+      "mode": "same_site",
+      "selected_url": "http://127.0.0.1:35641/docs/replay",
+      "provider": "local_same_site",
+      "candidate_count": 3,
+      "bootstrap_hits": 0,
+      "pass": true,
+      "local_provider": true,
+      "bootstrap_active": false
+    },
+    {
+      "name": "seedless_local_autoseed",
+      "mode": "seedless_local",
+      "selected_url": "http://127.0.0.1:32959/docs/replay",
+      "provider": "local_same_site",
+      "candidate_count": 2,
+      "bootstrap_hits": 0,
+      "pass": true,
+      "local_provider": true,
+      "bootstrap_active": false
+    }
+  ]
+}

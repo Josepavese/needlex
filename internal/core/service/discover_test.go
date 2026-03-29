@@ -68,6 +68,28 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 	}
 }
 
+func TestScoreDiscoveryCandidatesBoostsDomainHint(t *testing.T) {
+	candidates := scoreDiscoveryCandidates(
+		"official studio profile",
+		"",
+		"",
+		[]linkCandidate{
+			{URL: "https://other.example.com/company", Label: "Official site"},
+			{URL: "https://preferred.example.com/company", Label: "Official site"},
+		},
+		[]string{"preferred.example.com"},
+	)
+	if len(candidates) != 2 {
+		t.Fatalf("expected 2 candidates, got %d", len(candidates))
+	}
+	if candidates[0].URL != "https://preferred.example.com/company" {
+		t.Fatalf("expected preferred domain to be boosted, got %q", candidates[0].URL)
+	}
+	if !containsReason(candidates[0].Reason, "domain_hint_match") {
+		t.Fatalf("expected domain_hint_match reason, got %#v", candidates[0].Reason)
+	}
+}
+
 func TestExtractSearchResultsResolvesRedirectTargets(t *testing.T) {
 	results := extractSearchResults(
 		`<html><body><a class="result__a" href="/l/?uddg=https%3A%2F%2Fdocs.example.com%2Freplay">Replay Docs</a></body></html>`,
@@ -165,6 +187,9 @@ func TestDiscoverWebReranksUsingFetchedPageTitle(t *testing.T) {
 	}
 	if len(resp.Candidates) == 0 || !containsReason(resp.Candidates[0].Reason, "page_title_probe") {
 		t.Fatalf("expected top candidate to include page_title_probe reason, got %#v", resp.Candidates)
+	}
+	if resp.Candidates[0].Metadata["web_ir_node_count"] == "" {
+		t.Fatalf("expected web ir metadata on top candidate, got %#v", resp.Candidates[0].Metadata)
 	}
 }
 
@@ -264,6 +289,48 @@ func TestDiscoverWebMergesMultipleProviders(t *testing.T) {
 	}
 	if !strings.Contains(resp.Provider, discoverProviderName(searchOne.URL)) || !strings.Contains(resp.Provider, discoverProviderName(searchTwo.URL)) {
 		t.Fatalf("expected combined provider names, got %q", resp.Provider)
+	}
+}
+
+func TestDiscoverWebUsesLocalSubstrateBeforeWebBootstrap(t *testing.T) {
+	var seedURL string
+	seedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><head><title>Portal</title></head><body><article><a href="%s/docs/replay">Replay Guide</a></article></body></html>`, seedURL)
+	}))
+	defer seedServer.Close()
+	seedURL = seedServer.URL
+
+	searchHits := 0
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><body><a class="result__a" href="https://external.example/replay">Replay</a></body></html>`)
+	}))
+	defer searchServer.Close()
+
+	svc, err := New(config.Defaults(), seedServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.webDiscoverBaseURL = searchServer.URL
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       seedServer.URL,
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.Provider != "local_same_site" {
+		t.Fatalf("expected local substrate provider, got %q", resp.Provider)
+	}
+	if resp.SelectedURL != seedServer.URL+"/docs/replay" {
+		t.Fatalf("expected local docs selection, got %q", resp.SelectedURL)
+	}
+	if searchHits != 0 {
+		t.Fatalf("expected web bootstrap not used, got hits=%d", searchHits)
 	}
 }
 

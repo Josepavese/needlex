@@ -74,6 +74,29 @@ func TestRunnerQueryJSON(t *testing.T) {
 	}
 }
 
+func TestRunnerQueryTextIncludesWebIRSignals(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "https://example.com", "--goal", "proof replay deterministic"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Web IR Signals: heading=0.50 short_text=0.50 embedded=0") {
+		t.Fatalf("expected query output to include web ir signals, got %q", stdout.String())
+	}
+}
+
 func TestRunnerQueryDiscoveryFlag(t *testing.T) {
 	root := t.TempDir()
 	var captured coreservice.QueryRequest
@@ -96,6 +119,152 @@ func TestRunnerQueryDiscoveryFlag(t *testing.T) {
 	}
 	if captured.DiscoveryMode != "off" {
 		t.Fatalf("expected discovery mode to be forwarded, got %q", captured.DiscoveryMode)
+	}
+}
+
+func TestRunnerQueryWithoutSeedURL(t *testing.T) {
+	root := t.TempDir()
+	var captured coreservice.QueryRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			captured = req
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "--goal", "proof replay deterministic", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if captured.SeedURL != "" {
+		t.Fatalf("expected empty seed url for query-only mode, got %q", captured.SeedURL)
+	}
+}
+
+func TestRunnerQueryAutoSeedsFromCandidateMemory(t *testing.T) {
+	root := t.TempDir()
+	candidateStore := store.NewCandidateStore(root)
+	if _, _, err := candidateStore.Observe(store.CandidateObservation{
+		URL:    "https://halfpocket.net/about",
+		Title:  "Halfpocket Studio",
+		Source: "read",
+	}); err != nil {
+		t.Fatalf("seed candidate store: %v", err)
+	}
+
+	var captured coreservice.QueryRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			captured = req
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "--goal", "halfpocket studio profile", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if captured.SeedURL != "https://halfpocket.net/about" {
+		t.Fatalf("expected auto-seeded url from candidate memory, got %q", captured.SeedURL)
+	}
+	if len(captured.DomainHints) == 0 || captured.DomainHints[0] != "halfpocket.net" {
+		t.Fatalf("expected domain hint halfpocket.net, got %#v", captured.DomainHints)
+	}
+}
+
+func TestRunnerQueryDoesNotAutoSeedWhenDiscoveryOff(t *testing.T) {
+	root := t.TempDir()
+	candidateStore := store.NewCandidateStore(root)
+	if _, _, err := candidateStore.Observe(store.CandidateObservation{
+		URL:    "https://halfpocket.net/about",
+		Title:  "Halfpocket Studio",
+		Source: "read",
+	}); err != nil {
+		t.Fatalf("seed candidate store: %v", err)
+	}
+
+	var captured coreservice.QueryRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			captured = req
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "--goal", "halfpocket studio profile", "--discovery", "off", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if captured.SeedURL != "" {
+		t.Fatalf("expected no auto-seeding when discovery=off, got %q", captured.SeedURL)
+	}
+	if len(captured.DomainHints) != 0 {
+		t.Fatalf("expected no domain hints when discovery=off and no seed, got %#v", captured.DomainHints)
+	}
+}
+
+func TestRunnerQueryExpandsDomainHintsFromDomainGraph(t *testing.T) {
+	root := t.TempDir()
+	domainGraphStore := store.NewDomainGraphStore(root)
+	if _, _, err := domainGraphStore.Observe("https://seed.example/root", "https://expansion.example/docs", "query_discovery"); err != nil {
+		t.Fatalf("seed domain graph: %v", err)
+	}
+	if _, _, err := domainGraphStore.Observe("https://seed.example/root", "https://expansion.example/docs-2", "query_discovery"); err != nil {
+		t.Fatalf("seed domain graph second edge: %v", err)
+	}
+
+	var captured coreservice.QueryRequest
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			captured = req
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "https://seed.example/root", "--goal", "proof replay deterministic", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+
+	foundSeed := false
+	foundExpansion := false
+	for _, hint := range captured.DomainHints {
+		if hint == "seed.example" {
+			foundSeed = true
+		}
+		if hint == "expansion.example" {
+			foundExpansion = true
+		}
+	}
+	if !foundSeed {
+		t.Fatalf("expected seed domain hint, got %#v", captured.DomainHints)
+	}
+	if !foundExpansion {
+		t.Fatalf("expected expanded domain hint, got %#v", captured.DomainHints)
 	}
 }
 
@@ -143,6 +312,39 @@ func TestRunnerReadText(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "Title: Needle Runtime") {
 		t.Fatalf("expected text output, got %q", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "Web IR Signals: heading=0.50 short_text=0.50 embedded=0") {
+		t.Fatalf("expected web ir signal line, got %q", stdout.String())
+	}
+}
+
+func TestRunnerReadStoresCandidateMemory(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			return fakeResponse(), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := runner.Run([]string{"read", "https://example.com", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+
+	matches, err := store.NewCandidateStore(root).Search("needle runtime", 1)
+	if err != nil {
+		t.Fatalf("search candidate store: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected 1 candidate match, got %d", len(matches))
+	}
+	if matches[0].URL != "https://example.com" {
+		t.Fatalf("expected candidate url https://example.com, got %q", matches[0].URL)
 	}
 }
 
@@ -353,6 +555,32 @@ func fakeResponse() coreservice.ReadResponse {
 			FetchMode: core.FetchModeHTTP,
 			RawHash:   "sha256_abc",
 		},
+		WebIR: core.WebIR{
+			Version:   core.WebIRVersion,
+			SourceURL: "https://example.com",
+			NodeCount: 2,
+			Nodes: []core.WebIRNode{
+				{
+					Path:  "/article[1]/h1[1]",
+					Tag:   "h1",
+					Kind:  "heading",
+					Text:  "Needle Runtime",
+					Depth: 2,
+				},
+				{
+					Path:  "/article[1]/p[1]",
+					Tag:   "p",
+					Kind:  "paragraph",
+					Text:  "Compact context.",
+					Depth: 2,
+				},
+			},
+			Signals: core.WebIRSignals{
+				ShortTextRatio:    0.5,
+				HeadingRatio:      0.5,
+				EmbeddedNodeCount: 0,
+			},
+		},
 		ResultPack: core.ResultPack{
 			Objective: "read",
 			Profile:   core.ProfileStandard,
@@ -428,8 +656,8 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 			SeedURL:       req.SeedURL,
 			Profile:       core.ProfileStandard,
 			DiscoveryMode: discoveryMode,
-			SelectedURL:   req.SeedURL,
-			CandidateURLs: []string{req.SeedURL},
+			SelectedURL:   firstNonEmpty(req.SeedURL, read.Document.FinalURL),
+			CandidateURLs: []string{firstNonEmpty(req.SeedURL, read.Document.FinalURL)},
 			Budget: core.Budget{
 				MaxTokens:    8000,
 				MaxLatencyMS: 1800,
@@ -440,6 +668,7 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 			LaneMax: 3,
 		},
 		Document:     read.Document,
+		WebIR:        read.WebIR,
 		ResultPack:   read.ResultPack,
 		ProofRefs:    read.ResultPack.ProofRefs,
 		ProofRecords: read.ProofRecords,
@@ -447,6 +676,15 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 		TraceID:      read.Trace.TraceID,
 		CostReport:   read.ResultPack.CostReport,
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func fakeCrawlResponse() coreservice.CrawlResponse {

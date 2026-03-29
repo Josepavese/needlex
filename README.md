@@ -27,12 +27,27 @@ Current implemented baseline:
 13. Golden NFR gates for determinism, fidelity, and `tiny` compression >= `3x`
 14. Tests and budget enforcement passing
 15. Lane `2/3` transform chain recorded in proofs and traces through local `extract_slm` and `formatter` policy stages
+16. Canonical `WebIR` artifact emitted in `read/query` responses with versioned shape and runtime signals
+
+## Strategic Priority Order
+
+The execution order is now explicit and enforced:
+1. Web IR as a first-class runtime artifact.
+2. Retrieval compiler evolution (`QueryPlan` with explicit policy decisions).
+3. Native discovery substrate beyond provider bootstrap.
+4. Fingerprint graph materialization for delta-aware retrieval.
+5. SLM usage that proves measurable quality gains on hard ambiguity cases.
+6. Performance and benchmark tightening around the core moat.
+
+Important:
+provider bootstrap (`web_search`) is tactical scaffolding, not product identity.
 
 ## Current CLI
 
 ```bash
 go run ./cmd/needle crawl https://example.com --max-pages 3 --max-depth 1 --same-domain
 go run ./cmd/needle query https://example.com --goal "proof replay deterministic"
+go run ./cmd/needle query --goal "proof replay deterministic"
 go run ./cmd/needle query https://example.com --goal "proof replay deterministic" --discovery off
 go run ./cmd/needle query https://example.com --goal "proof replay deterministic" --discovery web_search
 go run ./cmd/needle read https://example.com

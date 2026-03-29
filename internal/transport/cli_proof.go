@@ -61,5 +61,11 @@ func renderProofText(w io.Writer, result proofLookupResult) {
 		if len(record.Proof.TransformChain) > 0 {
 			fmt.Fprintf(w, "Transform Chain: %s\n", strings.Join(record.Proof.TransformChain, " -> "))
 		}
+		if len(record.Proof.RiskFlags) > 0 {
+			fmt.Fprintf(w, "Risk Flags: %s\n", strings.Join(record.Proof.RiskFlags, ", "))
+		}
+		if len(record.Proof.ModelInvocations) > 0 {
+			fmt.Fprintf(w, "Model Invocations: %d\n", len(record.Proof.ModelInvocations))
+		}
 	}
 }

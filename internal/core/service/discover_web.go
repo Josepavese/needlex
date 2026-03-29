@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/net/html"
 
+	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
@@ -18,6 +20,7 @@ type DiscoverWebRequest struct {
 	SeedURL       string
 	UserAgent     string
 	MaxCandidates int
+	DomainHints   []string
 }
 
 type DiscoverWebResponse struct {
@@ -38,16 +41,21 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 	if req.MaxCandidates <= 0 {
 		req.MaxCandidates = 5
 	}
+	if strings.TrimSpace(req.SeedURL) != "" {
+		if native, ok := s.discoverWebLocalFirst(ctx, req); ok {
+			return native, nil
+		}
+	}
 
 	providers := webSearchProviders(s.webDiscoverBaseURL)
 	if len(providers) == 0 {
 		providers = []string{defaultWebDiscoverBaseURL}
 	}
 	var (
-		discoveryURL   string
-		candidates     []DiscoverCandidate
-		providerNames  []string
-		lastErr        error
+		discoveryURL  string
+		candidates    []DiscoverCandidate
+		providerNames []string
+		lastErr       error
 	)
 	for _, providerBaseURL := range providers {
 		bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req)
@@ -67,7 +75,7 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		}
 		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
 	}
-	candidates = s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, candidates, req.MaxCandidates)
+	candidates = s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, candidates, req.MaxCandidates)
 	filtered := make([]DiscoverCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
 		if candidate.URL == "" {
@@ -91,6 +99,19 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 	}, nil
 }
 
+func (s *Service) discoverWebLocalFirst(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, bool) {
+	discovery, err := s.Discover(ctx, DiscoverRequest{Goal: req.Goal, SeedURL: req.SeedURL, UserAgent: req.UserAgent, SameDomain: true, MaxCandidates: req.MaxCandidates, DomainHints: req.DomainHints})
+	if err != nil || len(discovery.Candidates) == 0 {
+		return DiscoverWebResponse{}, false
+	}
+	top := discovery.Candidates[0]
+	if top.URL == discovery.SeedURL || top.Score < 1.8 {
+		return DiscoverWebResponse{}, false
+	}
+	top.Reason = appendUniqueReason(top.Reason, "native_substrate")
+	return DiscoverWebResponse{SeedURL: req.SeedURL, Provider: "local_same_site", SelectedURL: top.URL, DiscoveryURL: discovery.DiscoveryURL, Candidates: []DiscoverCandidate{top}}, true
+}
+
 func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req DiscoverWebRequest) ([]DiscoverCandidate, string, error) {
 	searchURL, err := webSearchURL(baseURL, req.Goal)
 	if err != nil {
@@ -108,10 +129,10 @@ func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req 
 	}
 
 	results := extractSearchResults(rawPage.HTML, rawPage.FinalURL)
-	return scoreDiscoveryCandidates(req.Goal, req.SeedURL, "", results), rawPage.FinalURL, nil
+	return scoreDiscoveryCandidates(req.Goal, req.SeedURL, "", results, req.DomainHints), rawPage.FinalURL, nil
 }
 
-func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAgent string, candidates []DiscoverCandidate, maxCandidates int) []DiscoverCandidate {
+func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAgent string, domainHints []string, candidates []DiscoverCandidate, maxCandidates int) []DiscoverCandidate {
 	if len(candidates) == 0 {
 		return nil
 	}
@@ -122,7 +143,7 @@ func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAg
 
 	merged := append([]DiscoverCandidate{}, candidates...)
 	for _, candidate := range candidates[:probeCount] {
-		probed, err := s.probeWebCandidate(ctx, goal, userAgent, candidate)
+		probed, err := s.probeWebCandidate(ctx, goal, userAgent, domainHints, candidate)
 		if err != nil {
 			continue
 		}
@@ -146,7 +167,7 @@ func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAg
 	return merged
 }
 
-func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string, candidate DiscoverCandidate) ([]DiscoverCandidate, error) {
+func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidate DiscoverCandidate) ([]DiscoverCandidate, error) {
 	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
 		URL:       candidate.URL,
 		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
@@ -161,12 +182,13 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 	if err != nil {
 		return nil, err
 	}
+	webIR := buildWebIR(dom)
 
-	refined := refineWebCandidate(goal, candidate, rawPage.FinalURL, dom.Title)
+	refined := refineWebCandidate(goal, candidate, rawPage.FinalURL, dom.Title, webIR, domainHints)
 	out := []DiscoverCandidate{refined}
 
 	expanded := extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, true)
-	expandedScored := scoreDiscoveryCandidates(goal, "", "", expanded)
+	expandedScored := scoreDiscoveryCandidates(goal, "", "", expanded, domainHints)
 	if len(expandedScored) > 0 {
 		best := expandedScored[0]
 		best.Score += 0.40
@@ -176,20 +198,29 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 	return out, nil
 }
 
-func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, pageTitle string) DiscoverCandidate {
-	score, reasons := discoveryScore(goal, finalURL, joinNonEmpty(pageTitle, candidate.Label), false)
+func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, pageTitle string, webIR core.WebIR, domainHints []string) DiscoverCandidate {
+	score, reasons := discoveryScore(goal, finalURL, joinNonEmpty(pageTitle, candidate.Label), false, domainHints)
 	if strings.TrimSpace(pageTitle) != "" {
 		score += 0.35
 		reasons = append(reasons, "page_title_probe")
+	}
+	if webIR.NodeCount > 0 {
+		score += 0.10
+		reasons = append(reasons, "web_ir_probe")
+	}
+	if webIR.Signals.EmbeddedNodeCount > 0 {
+		score += 0.12
+		reasons = append(reasons, "web_ir_embedded")
 	}
 	if strings.TrimSpace(finalURL) != "" && finalURL != candidate.URL {
 		reasons = append(reasons, "redirect_resolved")
 	}
 	return DiscoverCandidate{
-		URL:    finalURL,
-		Label:  firstNonEmpty(pageTitle, candidate.Label),
-		Score:  max(score, candidate.Score),
-		Reason: appendUniqueReason(append([]string{}, candidate.Reason...), reasons...),
+		URL:      finalURL,
+		Label:    firstNonEmpty(pageTitle, candidate.Label),
+		Score:    max(score, candidate.Score),
+		Reason:   appendUniqueReason(append([]string{}, candidate.Reason...), reasons...),
+		Metadata: mergeCandidateMetadata(candidate.Metadata, webIRDiscoveryMetadata(webIR)),
 	}
 }
 
@@ -209,12 +240,42 @@ func mergeDiscoverCandidate(existing []DiscoverCandidate, incoming []DiscoverCan
 			}
 			out[i].Label = firstNonEmpty(candidate.Label, out[i].Label)
 			out[i].Reason = appendUniqueReason(out[i].Reason, candidate.Reason...)
+			out[i].Metadata = mergeCandidateMetadata(out[i].Metadata, candidate.Metadata)
 			replaced = true
 			break
 		}
 		if !replaced {
 			out = append(out, candidate)
 		}
+	}
+	return out
+}
+
+func webIRDiscoveryMetadata(webIR core.WebIR) map[string]string {
+	if webIR.NodeCount <= 0 {
+		return nil
+	}
+	return map[string]string{
+		"web_ir_node_count":          strconv.Itoa(webIR.NodeCount),
+		"web_ir_embedded_node_count": strconv.Itoa(webIR.Signals.EmbeddedNodeCount),
+		"web_ir_heading_ratio":       strconv.FormatFloat(webIR.Signals.HeadingRatio, 'f', 3, 64),
+		"web_ir_short_text_ratio":    strconv.FormatFloat(webIR.Signals.ShortTextRatio, 'f', 3, 64),
+	}
+}
+
+func mergeCandidateMetadata(existing, incoming map[string]string) map[string]string {
+	if len(existing) == 0 && len(incoming) == 0 {
+		return nil
+	}
+	out := map[string]string{}
+	for key, value := range existing {
+		out[key] = value
+	}
+	for key, value := range incoming {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		out[key] = value
 	}
 	return out
 }

@@ -143,7 +143,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  needle crawl <seed-url> [--json] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]")
-	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
+	fmt.Fprintln(w, "  needle query [seed-url] --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
 	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
 	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
@@ -154,7 +154,8 @@ func writeRootUsage(w io.Writer) {
 
 func writeQueryUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle query <seed-url> --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
+	fmt.Fprintln(w, "  needle query [seed-url] --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
+	fmt.Fprintln(w, "  note: when seed-url is omitted, discovery defaults to web_search")
 }
 
 func writeReadUsage(w io.Writer) {
@@ -269,6 +270,8 @@ func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proof
 	fmt.Fprintf(w, "Title: %s\n", title)
 	fmt.Fprintf(w, "URL: %s\n", resp.Document.FinalURL)
 	fmt.Fprintf(w, "Chunks: %d\n", len(resp.ResultPack.Chunks))
+	fmt.Fprintf(w, "Web IR Nodes: %d\n", resp.WebIR.NodeCount)
+	fmt.Fprintf(w, "Web IR Signals: heading=%.2f short_text=%.2f embedded=%d\n", resp.WebIR.Signals.HeadingRatio, resp.WebIR.Signals.ShortTextRatio, resp.WebIR.Signals.EmbeddedNodeCount)
 	if resp.ResultPack.Profile != "" {
 		fmt.Fprintf(w, "Profile: %s\n", resp.ResultPack.Profile)
 	}
@@ -279,6 +282,16 @@ func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proof
 	fmt.Fprintf(w, "Trace Path: %s\n", tracePath)
 	fmt.Fprintf(w, "Proof Path: %s\n", proofPath)
 	fmt.Fprintf(w, "Fingerprint Path: %s\n", fingerprintPath)
+	if pack := tracePackMetadata(resp.Trace); len(pack) > 0 {
+		fmt.Fprintf(w, "IR Selection: embedded=%s heading=%s shallow=%s\n", firstNonEmptyValue(pack["selected_ir_embedded_hits"], "0"), firstNonEmptyValue(pack["selected_ir_heading_hits"], "0"), firstNonEmptyValue(pack["selected_ir_shallow_hits"], "0"))
+		fmt.Fprintf(w, "IR Policy: embedded_required=%s embedded_applied=%s heading_required=%s heading_applied=%s noise_swap=%s\n",
+			firstNonEmptyValue(pack["web_ir_policy_embedded_required"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_embedded_applied"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_heading_required"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_heading_applied"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_noise_swap"], "false"),
+		)
+	}
 
 	for i, chunk := range resp.ResultPack.Chunks {
 		fmt.Fprintf(w, "\n[%d] ", i+1)
@@ -289,6 +302,24 @@ func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proof
 		}
 		fmt.Fprintf(w, "%s\n", chunk.Text)
 	}
+}
+
+func tracePackMetadata(trace proof.RunTrace) map[string]string {
+	for _, stage := range trace.Stages {
+		if stage.Stage != "pack" || len(stage.Metadata) == 0 {
+			continue
+		}
+		return stage.Metadata
+	}
+	return nil
+}
+
+func firstNonEmptyValue(value, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 func renderReplayText(w io.Writer, report proof.ReplayReport) {

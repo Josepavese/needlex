@@ -11,6 +11,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
@@ -59,6 +60,12 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	}
 	if len(resp.ResultPack.Chunks) != 2 {
 		t.Fatalf("expected tiny profile to keep 2 chunks, got %d", len(resp.ResultPack.Chunks))
+	}
+	if resp.WebIR.Version != core.WebIRVersion {
+		t.Fatalf("expected web_ir version %q, got %q", core.WebIRVersion, resp.WebIR.Version)
+	}
+	if resp.WebIR.NodeCount == 0 {
+		t.Fatal("expected web_ir nodes to be populated")
 	}
 	if len(resp.ProofRecords) != len(resp.ResultPack.Chunks) {
 		t.Fatalf("expected proof count to match chunks, got %d proofs and %d chunks", len(resp.ProofRecords), len(resp.ResultPack.Chunks))
@@ -211,6 +218,52 @@ func TestReadTinyCompactionIsTraced(t *testing.T) {
 	}
 	if !foundCompactTrace {
 		t.Fatal("expected tiny compaction to be recorded in transform chain")
+	}
+}
+
+func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, testHTML)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	seed := rankSegments("doc_seed", "", core.WebIR{}, []pipeline.Segment{{Text: "Needle-X compiles noisy pages into compact context.", HeadingPath: []string{"Needle Runtime"}}})
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:                server.URL,
+		Profile:            core.ProfileTiny,
+		StableFingerprints: []string{seed[0].chunk.Fingerprint},
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	found := false
+	for _, stage := range resp.Trace.Stages {
+		if stage.Stage == "pack" &&
+			stage.Metadata["stable_fp_hits"] != "" &&
+			stage.Metadata["novel_fp_hits"] != "" &&
+			stage.Metadata["delta_class"] != "" &&
+			stage.Metadata["reuse_mode"] == "delta_aware" &&
+			stage.Metadata["reuse_eligible"] != "" &&
+			stage.Metadata["reuse_applied"] != "" &&
+			stage.Metadata["selected_ir_embedded_hits"] != "" &&
+			stage.Metadata["selected_ir_heading_hits"] != "" &&
+			stage.Metadata["selected_ir_shallow_hits"] != "" &&
+			stage.Metadata["web_ir_policy_embedded_required"] != "" &&
+			stage.Metadata["web_ir_policy_heading_required"] != "" &&
+			stage.Metadata["web_ir_policy_noise_swap"] != "" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected fingerprint stability metadata in pack trace, got %#v", resp.Trace.Stages)
 	}
 }
 

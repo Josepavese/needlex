@@ -32,6 +32,15 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 2. Non sostituire un browser general purpose.
 3. Non fare automazione auth/form submit by default.
 4. Non dipendere da servizi cloud obbligatori.
+5. Non diventare un wrapper sottile di provider search esterni.
+
+### 2.3 Priorita' Strategiche (Execution Order)
+1. Rendere `WebIR` un artifact first-class e versionato.
+2. Evolvere `QueryPlan` in retrieval compiler con decisioni esplicite e reason code.
+3. Costruire discovery nativa oltre il bootstrap provider-based.
+4. Materializzare fingerprint graph per dedup/delta retrieval cross-run.
+5. Usare lane SLM solo dove forniscono vantaggio misurabile su casi ad alta ambiguita'.
+6. Ottimizzare performance e benchmark senza compromettere il moat tecnico.
 
 ## 3. Definizioni
 1. Web IR: rappresentazione intermedia canonica del contenuto web.
@@ -49,6 +58,7 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 ### 4.2 DOM Reduction e Segmentazione
 - FR-004: il sistema deve applicare pruning deterministico configurabile per rimuovere boilerplate.
 - FR-005: il sistema deve produrre `SimplifiedDOM` con mapping al DOM originale.
+- FR-005b: il sistema deve materializzare un `WebIR` canonico e versionato derivato dal DOM ridotto.
 - FR-006: il sistema deve segmentare in regioni semantiche (heading, paragraph, list, code, table).
 
 ### 4.3 Estrazione
@@ -90,6 +100,7 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 - FR-028: CLI deve includere `read`, `query`, `crawl`, `replay`, `diff`, `proof`.
 - FR-029: MCP deve esporre tools equivalenti con schema I/O stabile.
 - FR-030: output deve includere sempre `sources` e `cost_report`.
+- FR-030b: output di `read/query` deve includere `web_ir` come artifact ispezionabile.
 
 ### 4.11 Sicurezza e Guardrail
 - FR-031: enforcement su `max_pages`, `max_depth`, `max_bytes`, `timeout`.
@@ -250,7 +261,7 @@ Output:
 - cost report
 
 ### 9.2 `needle query`
-`needle query "<goal>" --seed <url> [--budget-ms 1200] [--budget-tokens 8000] [--json]`
+`needle query [seed-url] --goal "<goal>" [--budget-ms 1200] [--budget-tokens 8000] [--json]`
 
 Output:
 - result pack orientato al goal
@@ -282,6 +293,7 @@ Output:
 ```json
 {
   "document": {},
+  "web_ir": {},
   "chunks": [],
   "proof_refs": [],
   "cost_report": {}
@@ -293,13 +305,16 @@ Input:
 ```json
 {
   "goal": "...",
-  "seed_url": "https://...",
+  "seed_url": "https://... (optional)",
   "budget": {"ms": 1200, "tokens": 8000}
 }
 ```
 Output:
 ```json
 {
+  "plan": {},
+  "document": {},
+  "web_ir": {},
   "result_pack": {}
 }
 ```

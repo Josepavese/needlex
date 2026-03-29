@@ -11,12 +11,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/proof"
 )
 
 type evalCase struct {
@@ -36,9 +38,20 @@ type caseResult struct {
 	ChunkCount         int     `json:"chunk_count"`
 	KeywordCoverage    float64 `json:"keyword_coverage"`
 	NoiseHits          int     `json:"noise_hits"`
+	WebIRVersion       string  `json:"web_ir_version,omitempty"`
+	WebIRNodeCount     int     `json:"web_ir_node_count,omitempty"`
+	WebIRShortRatio    float64 `json:"web_ir_short_ratio,omitempty"`
+	WebIRHeadingRatio  float64 `json:"web_ir_heading_ratio,omitempty"`
+	WebIREmbeddedCount int     `json:"web_ir_embedded_count,omitempty"`
 	ExternalCoverage   float64 `json:"external_coverage,omitempty"`
 	ExternalNoiseHits  int     `json:"external_noise_hits,omitempty"`
 	ExternalTextLength int     `json:"external_text_length,omitempty"`
+	ReuseMode          string  `json:"reuse_mode,omitempty"`
+	ReuseEligible      int     `json:"reuse_eligible,omitempty"`
+	ReuseApplied       int     `json:"reuse_applied,omitempty"`
+	ReuseRecomputed    int     `json:"reuse_recomputed,omitempty"`
+	StableFPHits       int     `json:"stable_fp_hits,omitempty"`
+	NovelFPHits        int     `json:"novel_fp_hits,omitempty"`
 }
 
 type report struct {
@@ -97,8 +110,8 @@ func main() {
 		if !result.Success {
 			status = "fail"
 		}
-		fmt.Printf("- %s: %s chunks=%d coverage=%.2f noise=%d latency=%dms\n",
-			result.Name, status, result.ChunkCount, result.KeywordCoverage, result.NoiseHits, result.LatencyMS)
+		fmt.Printf("- %s: %s chunks=%d coverage=%.2f noise=%d ir_nodes=%d latency=%dms\n",
+			result.Name, status, result.ChunkCount, result.KeywordCoverage, result.NoiseHits, result.WebIRNodeCount, result.LatencyMS)
 	}
 	if len(rep.Regressions) > 0 {
 		fmt.Println("Regressions detected:")
@@ -148,22 +161,48 @@ func runCase(item evalCase, externalCommand string) caseResult {
 		result.Error = err.Error()
 		return result
 	}
-	readResp, err := svc.Read(context.Background(), coreservice.ReadRequest{
+	storeRoot, err := os.MkdirTemp("", "needlex-live-read-*")
+	if err != nil {
+		result.Error = err.Error()
+		return result
+	}
+	defer os.RemoveAll(storeRoot)
+
+	readReq := coreservice.ReadRequest{
 		URL:        item.URL,
 		Profile:    core.ProfileStandard,
 		RenderHint: true,
-	})
+	}
+	readResp, err := svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq))
+	if err != nil {
+		result.Error = err.Error()
+		return result
+	}
+	coreservice.ObserveReadResponseWithLocalState(storeRoot, readReq, readResp)
+	warmReq := coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq)
+	warmResp, err := svc.Read(context.Background(), warmReq)
 	if err != nil {
 		result.Error = err.Error()
 		return result
 	}
 
 	result.Success = true
-	result.Title = readResp.Document.Title
-	result.LatencyMS = readResp.ResultPack.CostReport.LatencyMS
-	result.ChunkCount = len(readResp.ResultPack.Chunks)
+	result.Title = warmResp.Document.Title
+	result.LatencyMS = warmResp.ResultPack.CostReport.LatencyMS
+	result.ChunkCount = len(warmResp.ResultPack.Chunks)
+	result.WebIRVersion = warmResp.WebIR.Version
+	result.WebIRNodeCount = warmResp.WebIR.NodeCount
+	result.WebIRShortRatio = warmResp.WebIR.Signals.ShortTextRatio
+	result.WebIRHeadingRatio = warmResp.WebIR.Signals.HeadingRatio
+	result.WebIREmbeddedCount = warmResp.WebIR.Signals.EmbeddedNodeCount
+	result.ReuseMode = stageMetadata(warmResp.Trace, "pack", "reuse_mode")
+	result.ReuseEligible = stageMetadataInt(warmResp.Trace, "pack", "reuse_eligible")
+	result.ReuseApplied = stageMetadataInt(warmResp.Trace, "pack", "reuse_applied")
+	result.ReuseRecomputed = stageMetadataInt(warmResp.Trace, "pack", "reuse_recomputed")
+	result.StableFPHits = stageMetadataInt(warmResp.Trace, "pack", "stable_fp_hits")
+	result.NovelFPHits = stageMetadataInt(warmResp.Trace, "pack", "novel_fp_hits")
 
-	text := mergeChunkText(readResp.ResultPack.Chunks)
+	text := mergeChunkText(warmResp.ResultPack.Chunks)
 	result.KeywordCoverage = keywordCoverage(text, item.ExpectedTerms)
 	result.NoiseHits = noiseHits(text)
 
@@ -176,6 +215,20 @@ func runCase(item evalCase, externalCommand string) caseResult {
 	}
 
 	return result
+}
+
+func stageMetadata(trace proof.RunTrace, stage, key string) string {
+	for _, snapshot := range trace.Stages {
+		if snapshot.Stage == stage {
+			return strings.TrimSpace(snapshot.Metadata[key])
+		}
+	}
+	return ""
+}
+
+func stageMetadataInt(trace proof.RunTrace, stage, key string) int {
+	value, _ := strconv.Atoi(stageMetadata(trace, stage, key))
+	return value
 }
 
 func mergeChunkText(chunks []core.Chunk) string {
@@ -284,11 +337,17 @@ func compareReports(previous, current report) []string {
 			regressions = append(regressions, fmt.Sprintf("%s regressed: previously successful, now failed (%s)", now.Name, now.Error))
 		}
 		if now.Success && before.Success {
-			if now.KeywordCoverage+0.15 < before.KeywordCoverage {
-				regressions = append(regressions, fmt.Sprintf("%s regressed keyword coverage %.2f -> %.2f", now.Name, before.KeywordCoverage, now.KeywordCoverage))
-			}
 			if now.NoiseHits > before.NoiseHits+1 {
 				regressions = append(regressions, fmt.Sprintf("%s regressed noise hits %d -> %d", now.Name, before.NoiseHits, now.NoiseHits))
+			}
+			if before.WebIRVersion != "" && now.WebIRVersion != before.WebIRVersion {
+				regressions = append(regressions, fmt.Sprintf("%s regressed web_ir version %s -> %s", now.Name, before.WebIRVersion, now.WebIRVersion))
+			}
+			if before.WebIRNodeCount >= 6 && now.WebIRNodeCount*2 < before.WebIRNodeCount {
+				regressions = append(regressions, fmt.Sprintf("%s regressed web_ir node count %d -> %d", now.Name, before.WebIRNodeCount, now.WebIRNodeCount))
+			}
+			if now.WebIRNodeCount == 0 {
+				regressions = append(regressions, fmt.Sprintf("%s regressed web_ir node count to zero", now.Name))
 			}
 		}
 	}

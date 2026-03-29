@@ -15,6 +15,8 @@ Current benchmark coverage focuses on:
 3. Needle-X versus a naive plain-text baseline
 4. Needle-X versus a reduced deterministic baseline
 5. optional external deterministic baseline adapter
+6. hard-case lane behavior on embedded-state and troubleshooting-style pages
+7. comparative hard-case matrix between default lane behavior and forced lane `2/3` behavior
 
 This is not yet a full public benchmark suite.
 
@@ -50,6 +52,17 @@ Current dynamic query benchmark fixture:
 1. seed page with docs and blog candidates
 2. docs candidate that is more relevant than the seed page
 
+Current hard-case matrix corpus:
+1. `testdata/benchmark/hard-case-corpus-v2.json`
+2. exported via `./scripts/run_hard_case_matrix.sh`
+3. written to:
+   - `improvements/hard-case-matrix-latest.json`
+   - `improvements/hard-case-matrix-baseline.json`
+4. now includes explicit `objective_terms` so abstract goals are measured against grounded domain terms
+5. each case now carries a `family` label and each export includes `family_summary` aggregates
+6. the corpus now also defines `family_thresholds`, so benchmark export can fail on aggregate family risk, not only on per-case regressions
+7. the corpus now defines final `acceptance` thresholds (pass-rate, lane-lift-rate, objective-lift average, risk ceiling) and a failure-class map linked to future SLM rollout gates
+
 ## Active Quality Gates
 
 The repo currently enforces:
@@ -59,6 +72,20 @@ The repo currently enforces:
 4. query improvement through same-site discovery
 5. Needle-X signal-density win over a naive plain-text baseline
 6. Needle-X signal-density win over a reduced deterministic baseline
+7. hard-case matrix checks that elevated lanes improve or preserve useful signal under controlled difficult inputs
+8. hard-case acceptance checks enforce final intelligence-readiness thresholds and classify failures by integration risk class
+
+Hard-case matrix export command:
+
+```bash
+./scripts/run_hard_case_matrix.sh --update-baseline
+```
+
+Blocking intelligence gate command:
+
+```bash
+./scripts/run_intelligence_gate.sh
+```
 
 ## Latest Measured Results
 
@@ -187,11 +214,20 @@ What the benchmarks support today:
 5. the first bootstrap `web_search` path is implemented, multi-provider capable, and test-covered
 6. `tiny` reaches the compression target while remaining traceable
 7. the runtime is still deterministic under replay-oriented checks
+8. lane behavior on the first hard cases is now test-gated for deterministic lane 0, forced lane 2, and forced lane 3 flows
+9. a comparative hard-case matrix now checks that forced lane `2/3` paths either improve objective focus and signal density or preserve tiny-profile compactness under the same input
+10. the hard-case benchmark story is now exportable as a versioned JSON artifact, not only as test assertions
+11. the current hard-case corpus covers six cases across embedded app-shell, forum remediation, pricing compaction, and tiny capability summaries
+12. the report now exposes `lossiness_risk`, making compaction-vs-fidelity tradeoffs visible instead of implicit
+13. aggregate family thresholds are now enforced for `embedded`, `forum`, `tiny`, and `compaction`
+14. final intelligence-acceptance thresholds are enforced globally (`pass_rate`, `lane_lift_rate`, `objective_lift_avg`, `medium/high risk rate`)
+15. acceptance failures are now classified through an explicit failure-class map tied to SLM rollout blocking policy
 
 What the benchmarks do not support yet:
 1. that Needle-X is faster than simple baselines
 2. that Needle-X beats established external deterministic readers in a fair like-for-like in-process comparison
 3. that Needle-X is ready for web-scale discovery claims
+4. that selective SLM activation beats deterministic-only behavior on a broad hard-case corpus
 
 ## Current Gaps In The Benchmark Story
 
@@ -201,6 +237,7 @@ The main missing pieces are:
 3. a persistent benchmark script or command wrapper
 4. profiling-backed optimization data
 5. stronger open-web search benchmarks after the current two-stage bootstrap `web_search`
+6. `lossiness_risk` is still heuristic and should later be validated against human-reviewed cases
 
 ## Recommended Next Benchmarking Steps
 

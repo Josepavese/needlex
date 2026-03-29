@@ -41,9 +41,13 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	})); err != nil {
 		return 2
 	}
-	if fs.NArg() != 1 || goal == "" {
+	if fs.NArg() > 1 || goal == "" {
 		writeQueryUsage(stderr)
 		return 2
+	}
+	seedURL := ""
+	if fs.NArg() == 1 {
+		seedURL = fs.Arg(0)
 	}
 
 	cfg, err := r.loadConfig(configPath)
@@ -54,7 +58,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 
 	resp, artifacts, err := r.executeQuery(cfg, coreservice.QueryRequest{
 		Goal:          goal,
-		SeedURL:       fs.Arg(0),
+		SeedURL:       seedURL,
 		Profile:       profile,
 		UserAgent:     userAgent,
 		DiscoveryMode: discovery,
@@ -80,7 +84,9 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 
 func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts queryArtifacts) {
 	fmt.Fprintf(w, "Goal: %s\n", resp.Plan.Goal)
-	fmt.Fprintf(w, "Seed URL: %s\n", resp.Plan.SeedURL)
+	if resp.Plan.SeedURL != "" {
+		fmt.Fprintf(w, "Seed URL: %s\n", resp.Plan.SeedURL)
+	}
 	fmt.Fprintf(w, "Discovery: %s\n", resp.Plan.DiscoveryMode)
 	if resp.Plan.DiscoveryProvider != "" {
 		fmt.Fprintf(w, "Provider: %s\n", resp.Plan.DiscoveryProvider)
@@ -93,6 +99,11 @@ func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts quer
 	fmt.Fprintf(w, "Fingerprint Path: %s\n", artifacts.FingerprintPath)
 	fmt.Fprintf(w, "Candidates: %d\n", len(resp.Plan.CandidateURLs))
 	fmt.Fprintf(w, "Chunks: %d\n", len(resp.ResultPack.Chunks))
+	fmt.Fprintf(w, "Web IR Nodes: %d\n", resp.WebIR.NodeCount)
+	fmt.Fprintf(w, "Web IR Signals: heading=%.2f short_text=%.2f embedded=%d\n", resp.WebIR.Signals.HeadingRatio, resp.WebIR.Signals.ShortTextRatio, resp.WebIR.Signals.EmbeddedNodeCount)
+	if pack := tracePackMetadata(resp.Trace); len(pack) > 0 {
+		fmt.Fprintf(w, "IR Selection: embedded=%s heading=%s shallow=%s\n", firstNonEmptyValue(pack["selected_ir_embedded_hits"], "0"), firstNonEmptyValue(pack["selected_ir_heading_hits"], "0"), firstNonEmptyValue(pack["selected_ir_shallow_hits"], "0"))
+	}
 	for i, chunk := range resp.ResultPack.Chunks {
 		fmt.Fprintf(w, "\n[%d] %s\n", i+1, chunk.Text)
 	}

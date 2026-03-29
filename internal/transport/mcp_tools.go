@@ -52,6 +52,7 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 		return mcpToolResult(map[string]any{
 			"plan":             resp.Plan,
 			"document":         resp.Document,
+			"web_ir":           resp.WebIR,
 			"result_pack":      resp.ResultPack,
 			"proof_refs":       resp.ProofRefs,
 			"trace_id":         resp.TraceID,
@@ -78,6 +79,7 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 		}
 		return mcpToolResult(map[string]any{
 			"document":         resp.Document,
+			"web_ir":           resp.WebIR,
 			"chunks":           resp.ResultPack.Chunks,
 			"proof_refs":       resp.ResultPack.ProofRefs,
 			"cost_report":      resp.ResultPack.CostReport,
@@ -149,7 +151,7 @@ func mcpTools() []mcpTool {
 		},
 		{
 			Name:        "web_query",
-			Description: "Plan and execute a goal-oriented query with seed-only, same-site, or web-search discovery.",
+			Description: "Plan and execute a goal-oriented query with optional seed URL and discovery (same-site or web-search).",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -160,7 +162,7 @@ func mcpTools() []mcpTool {
 					"discovery_mode": map[string]any{"type": "string"},
 					"lane_max":       map[string]any{"type": "integer"},
 				},
-				"required": []string{"goal", "seed_url"},
+				"required": []string{"goal"},
 			},
 		},
 		{

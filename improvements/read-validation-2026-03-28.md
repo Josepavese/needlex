@@ -209,6 +209,188 @@ Current default adapter uses `trafilatura` through `scripts/external_baselines/t
    - no retry is performed for non-timeout fetch errors
    - covered by dedicated acquire test and validated on live suite without quality regression
 
+4. WebIR live regression automation (`2026-03-28`, post-realignment)
+   - live evaluator now records `web_ir_version`, `web_ir_node_count`, and core IR signals
+   - live regression compare now fails on:
+     - IR version drift
+     - IR node collapse (strong drop vs baseline)
+     - IR node count reaching zero
+   - external comparison remains supported through `trafilatura`
+   - validation commands:
+     - `go test ./scripts/live_read_eval ./internal/core/service`
+     - `./scripts/run_live_read_eval.sh --out improvements/live-read-latest.json`
+     - `NEEDLEX_EXTERNAL_BASELINE_CMD=".venv/bin/python scripts/external_baselines/trafilatura_stdin.py" ./scripts/run_live_read_eval.sh --out improvements/live-read-latest-with-external.json`
+
+5. Local candidate memory + query auto-seed (`2026-03-28`, post-realignment)
+   - runtime now persists URL candidates from `read`, `query`, and `crawl` into `.needlex/candidates/index.json`
+   - `query` without `seed_url` can bootstrap from local candidate memory before external discovery
+   - auto-seed is intentionally disabled when `discovery=off`
+   - covered by new tests in:
+     - `internal/store/candidates_test.go`
+     - `internal/transport/cli_test.go`
+
+6. Runtime-native domain hint reranking (`2026-03-28`, post-realignment)
+   - query now carries `domain_hints` into `same_site_links` and `web_search` discovery scoring
+   - discovery scoring adds explicit `domain_hint_match` reason when candidate host matches local hints
+   - runtime populates hints from candidate memory and current seed host
+   - covered by tests in:
+     - `internal/core/service/discover_test.go`
+     - `internal/core/service/query_test.go`
+     - `internal/transport/cli_test.go`
+
+7. Native domain graph bootstrap (`2026-03-28`, post-realignment)
+   - runtime now stores domain-to-domain transitions in `.needlex/domain_graph/index.json`
+   - query expands local `domain_hints` via graph edges before discovery execution
+   - graph edges are observed from query candidate exploration (`seed -> candidate`, `selected -> candidate`)
+   - covered by tests in:
+     - `internal/store/domain_graph_test.go`
+     - `internal/transport/cli_test.go`
+
+8. Architecture + noise guardrails (`2026-03-28`, post-realignment)
+   - graph-based domain expansion now applies a minimum score gate to reduce one-off noisy expansions
+   - transport adapter guard tests now fail package-wide if transport entry `.go` files directly reintroduce candidate/domain-graph/genome state orchestration
+   - additional guardrails enforce scoped `internal/store` imports and forbid state-logic symbol definitions in transport files
+   - covered by tests in:
+      - `internal/core/service/query_state_test.go`
+      - `internal/transport/architecture_guard_test.go`
+
+9. WebIR-backed ranking substrate (`2026-03-28`, post-realignment)
+   - `pack` ranking now consumes explicit `WebIR` evidence derived from node paths
+   - ranking gets additional signal from IR kind coherence, embedded provenance, and shallow-node structural support
+   - query compiler now records observed `WebIR` node/embedded counts in plan decisions
+   - covered by tests in:
+     - `internal/core/service/pack_test.go`
+     - `internal/core/service/query_test.go`
+
+10. WebIR-backed planning evidence (`2026-03-28`, post-realignment)
+   - web candidate probe now materializes `WebIR` metadata during discovery
+   - probed candidate metadata contributes to reranking and is carried into compiler decisions
+   - query plans now record `WebIR` evidence for selected discovery candidates before final page read
+   - covered by tests in:
+     - `internal/core/service/discover_test.go`
+     - `internal/core/service/query_test.go`
+
+11. Query compiler reason-family expansion (`2026-03-28`, post-realignment)
+   - query plans now emit explicit reason codes for provider fallback, graph/domain evidence, and basic selection risk gates
+   - selected candidate decisions now retain score metadata, making plan diffs more informative
+   - this moves `QueryPlan` closer to a real planner artifact instead of a thin execution log
+   - covered by tests in:
+     - `internal/core/service/query_test.go`
+
+12. First fingerprint graph substrate (`2026-03-28`, post-realignment)
+   - local store now persists per-URL latest chunk-fingerprint snapshots and cross-run delta history
+   - `read/query/crawl` observers now update retained/added/removed chunk-fingerprint relationships automatically
+   - this creates the first deterministic base for future delta-aware retrieval and graph-guided dedup
+   - covered by tests in:
+     - `internal/store/fingerprint_graph_test.go`
+     - `internal/core/service/read_crawl_state_test.go`
+     - `internal/core/service/query_state_test.go`
+
+13. First fingerprint-graph lookup path (`2026-03-28`, post-realignment)
+   - `read` now loads previous fingerprint snapshots from local state and exposes stable-vs-novel chunk counts in pack trace metadata
+   - this is the first runtime consumer of the fingerprint graph, making change-awareness visible before any ranking or dedup policy uses it
+   - covered by tests in:
+     - `internal/core/service/read_crawl_state_test.go`
+     - `internal/core/service/service_test.go`
+
+14. Guarded graph-aware dedup for `tiny` profile (`2026-03-28`, post-realignment)
+   - near-duplicate compaction now prefers novel chunks over stable ones, but only in `tiny` profile
+   - this keeps aggressive minimal-token packing aligned with change-awareness without degrading standard-profile fidelity on real sites
+   - validated against live sites after an initial regression on `halfpocket`, which was fixed by scoping the policy to `tiny`
+   - covered by tests in:
+     - `internal/core/service/pack_cleanup_test.go`
+
+15. First ambiguity validation suite (`2026-03-28`, post-realignment)
+   - added a repeatable lane-behavior suite covering:
+     - deterministic lane 0 docs flow
+     - ambiguity-triggered escalation
+     - forced lane 3 full-stack execution
+   - this creates a concrete gate for future SLM advantage work without adding production runtime weight
+   - covered by tests in:
+     - `internal/core/service/ambiguity_suite_test.go`
+
+16. First hard-case benchmark suite (`2026-03-29`, post-realignment)
+   - added explicit hard cases for:
+     - embedded app-shell extraction under forced lane 3
+     - troubleshooting/forum replay investigation under forced lane 2
+     - embedded-state extraction without forced escalation
+   - the suite adds concrete expectations on lane ceiling, model invocation count, and extracted text
+   - benchmark entrypoints were added for the lane 2 and lane 3 hard cases
+   - covered by tests in:
+     - `internal/core/service/hard_case_suite_test.go`
+
+17. Hard-case comparative matrix (`2026-03-29`, post-realignment)
+   - added a comparative matrix between default lane behavior and forced lane `2/3` behavior on controlled hard inputs
+   - the matrix intentionally measures:
+     - retained anchor fidelity
+     - expected-signal density
+     - objective-focus density
+     - token compactness for `tiny`
+   - this closes an important prerequisite before real SLM work because it creates an A/B gate for hard-case value claims without changing runtime code
+   - covered by tests in:
+     - `internal/core/service/hard_case_matrix_test.go`
+
+18. Versioned hard-case corpus + exportable score table (`2026-03-29`, post-realignment)
+   - added `testdata/benchmark/hard-case-corpus-v1.json` as the first versioned hard-case corpus
+   - added benchmark-only export infrastructure under `scripts/hard_case_matrix`
+   - export is intentionally implemented as test-only infrastructure to avoid increasing production LOC
+   - `./scripts/run_hard_case_matrix.sh --update-baseline` now produces:
+     - `improvements/hard-case-matrix-latest.json`
+     - `improvements/hard-case-matrix-baseline.json`
+   - the exported table includes:
+     - baseline vs compare lane metrics
+     - packed text
+     - pass/fail reasons
+     - regression checks against the prior baseline
+
+19. Hard-case corpus v2 + grounded objective scoring (`2026-03-29`, post-realignment)
+   - added `testdata/benchmark/hard-case-corpus-v2.json`
+   - expanded the hard-case matrix from 3 to 6 benchmark cases
+   - introduced explicit `objective_terms` so abstract intents like `company profile` or `capability summary` no longer collapse to zero-value objective scores
+   - validated and frozen via:
+     - `go test ./scripts/hard_case_matrix`
+     - `./scripts/run_hard_case_matrix.sh --update-baseline`
+
+20. Lossiness-risk axis + family aggregation (`2026-03-29`, post-realignment)
+   - each hard-case corpus entry now declares a `family` such as `embedded`, `forum`, `tiny`, or `compaction`
+   - exported matrix rows now include:
+     - `lossiness_risk`
+     - `lossiness_level`
+   - exported reports now also include `family_summary` with average signal/objective improvements and average/max lossiness per family
+   - current reading from the fresh baseline:
+     - `forum` has the highest average lossiness risk because it benefits from aggressive focus compaction
+     - `tiny` currently stays at zero measured lossiness on the curated cases
+     - `compaction` currently improves objective focus while staying low-risk
+
+21. Family-threshold guardrails (`2026-03-29`, post-realignment)
+   - the hard-case corpus now contains `family_thresholds`
+   - benchmark export now fails if a whole family exceeds its allowed average or max lossiness risk
+   - current thresholds were set from the observed stable baseline:
+     - `embedded`: strict low-lossiness envelope
+     - `tiny`: near-zero-lossiness envelope
+     - `forum`: looser envelope because this family intentionally trades coverage for sharper focus
+     - `compaction`: moderate envelope
+
+22. Fingerprint graph enters query planning (`2026-03-29`, post-realignment)
+   - `PrepareQueryRequestWithLocalState` now loads seed-side fingerprint evidence from local state
+   - `QueryCompiler` now emits explicit reason codes when local fingerprint history shows:
+     - stable region bias
+     - novelty bias
+     - delta risk
+   - this is the first step where fingerprint memory is no longer only stored or shown in traces, but starts shaping planner reasoning directly
+   - validated by:
+     - `internal/core/service/query_test.go`
+     - `internal/core/service/query_state_test.go`
+
+23. First graph-aware ranking bias in query discovery (`2026-03-29`, post-realignment)
+   - query discovery now uses seed-side fingerprint evidence not only for planner reasons, but also for candidate reranking
+   - current policy is intentionally narrow:
+     - stable unchanged seed gets a small penalty
+     - novel/changed seed gets a small bias
+   - this is the first runtime behavior where fingerprint memory changes candidate ordering, not just annotations
+   - validated by:
+     - `internal/core/service/query_test.go`
+
 ### P0
 
 1. Embedded structured payload extraction

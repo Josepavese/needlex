@@ -121,7 +121,7 @@ func TestRunnerMCPReadReplayAndProof(t *testing.T) {
 	if !strings.Contains(string(responses[3]), `"proof"`) {
 		t.Fatalf("expected proof payload, got %s", responses[3])
 	}
-	assertMCPStructuredKeys(t, responses[1], "document", "chunks", "proof_refs", "cost_report")
+	assertMCPStructuredKeys(t, responses[1], "document", "web_ir", "chunks", "proof_refs", "cost_report")
 	assertMCPStructuredKeys(t, responses[2], "replay_report")
 	assertMCPStructuredKeys(t, responses[3], "proof_records")
 }
@@ -169,7 +169,7 @@ func TestRunnerMCPQuery(t *testing.T) {
 	if !strings.Contains(string(responses[1]), `"result_pack"`) {
 		t.Fatalf("expected query payload, got %s", responses[1])
 	}
-	assertMCPStructuredKeys(t, responses[1], "plan", "result_pack", "proof_refs", "trace_id")
+	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "proof_refs", "trace_id")
 }
 
 func TestRunnerMCPCrawl(t *testing.T) {
