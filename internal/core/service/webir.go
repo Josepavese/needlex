@@ -55,6 +55,32 @@ func buildWebIR(dom pipeline.SimplifiedDOM) core.WebIR {
 			ShortTextRatio:    shortRatio,
 			HeadingRatio:      headingRatio,
 			EmbeddedNodeCount: embedded,
+			SubstrateClass:    strings.TrimSpace(dom.SubstrateClass),
 		},
 	}
+}
+
+func ensureMinimumDOM(dom pipeline.SimplifiedDOM) pipeline.SimplifiedDOM {
+	if len(dom.Nodes) > 0 || strings.TrimSpace(dom.Title) == "" {
+		return dom
+	}
+	title := strings.TrimSpace(dom.Title)
+	dom.Nodes = []pipeline.SimplifiedNode{
+		{
+			Path:         "/synthetic/title[1]",
+			Tag:          "h1",
+			Kind:         "heading",
+			Text:         title,
+			Depth:        1,
+			HeadingLevel: 1,
+		},
+		{
+			Path:  "/synthetic/body[1]",
+			Tag:   "p",
+			Kind:  "paragraph",
+			Text:  title,
+			Depth: 1,
+		},
+	}
+	return dom
 }

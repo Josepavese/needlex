@@ -21,6 +21,7 @@ type WebIRSignals struct {
 	ShortTextRatio    float64 `json:"short_text_ratio"`
 	HeadingRatio      float64 `json:"heading_ratio"`
 	EmbeddedNodeCount int     `json:"embedded_node_count"`
+	SubstrateClass    string  `json:"substrate_class,omitempty"`
 }
 
 type WebIR struct {
@@ -34,10 +35,10 @@ type WebIR struct {
 
 func (w WebIRNode) Validate() error {
 	errs := []error{
-		requireNonEmpty("web_ir.nodes.path", w.Path),
-		requireNonEmpty("web_ir.nodes.tag", w.Tag),
-		requireNonEmpty("web_ir.nodes.kind", w.Kind),
-		requireNonEmpty("web_ir.nodes.text", w.Text),
+		RequireNonEmpty("web_ir.nodes.path", w.Path),
+		RequireNonEmpty("web_ir.nodes.tag", w.Tag),
+		RequireNonEmpty("web_ir.nodes.kind", w.Kind),
+		RequireNonEmpty("web_ir.nodes.text", w.Text),
 	}
 	if w.Depth <= 0 {
 		errs = append(errs, fmt.Errorf("web_ir.nodes.depth must be > 0"))
@@ -45,7 +46,7 @@ func (w WebIRNode) Validate() error {
 	if w.HeadingLevel < 0 || w.HeadingLevel > 6 {
 		errs = append(errs, fmt.Errorf("web_ir.nodes.heading_level must be between 0 and 6"))
 	}
-	return joinErrors(errs...)
+	return JoinErrors(errs...)
 }
 
 func (s WebIRSignals) Validate() error {
@@ -59,13 +60,20 @@ func (s WebIRSignals) Validate() error {
 	if s.EmbeddedNodeCount < 0 {
 		errs = append(errs, fmt.Errorf("web_ir.signals.embedded_node_count must be >= 0"))
 	}
-	return joinErrors(errs...)
+	if s.SubstrateClass != "" {
+		switch s.SubstrateClass {
+		case "embedded_app_payload", "theme_heavy_wordpress", "generic_content":
+		default:
+			errs = append(errs, fmt.Errorf("web_ir.signals.substrate_class %q is not supported", s.SubstrateClass))
+		}
+	}
+	return JoinErrors(errs...)
 }
 
 func (w WebIR) Validate() error {
 	errs := []error{
-		requireNonEmpty("web_ir.version", w.Version),
-		requireNonEmpty("web_ir.source_url", w.SourceURL),
+		RequireNonEmpty("web_ir.version", w.Version),
+		RequireNonEmpty("web_ir.source_url", w.SourceURL),
 		w.Signals.Validate(),
 	}
 	if strings.TrimSpace(w.Version) != WebIRVersion {
@@ -85,7 +93,7 @@ func (w WebIR) Validate() error {
 			errs = append(errs, fmt.Errorf("web_ir.nodes[%d]: %w", i, err))
 		}
 	}
-	return joinErrors(errs...)
+	return JoinErrors(errs...)
 }
 
 func validateUnit(value float64) error {

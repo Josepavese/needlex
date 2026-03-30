@@ -29,9 +29,10 @@ type SimplifiedNode struct {
 }
 
 type SimplifiedDOM struct {
-	URL   string
-	Title string
-	Nodes []SimplifiedNode
+	URL            string
+	Title          string
+	SubstrateClass string
+	Nodes          []SimplifiedNode
 }
 
 type Segment struct {

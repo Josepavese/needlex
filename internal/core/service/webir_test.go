@@ -9,8 +9,9 @@ import (
 
 func TestBuildWebIRBuildsSignals(t *testing.T) {
 	dom := pipeline.SimplifiedDOM{
-		URL:   "https://example.com",
-		Title: "Needle",
+		URL:            "https://example.com",
+		Title:          "Needle",
+		SubstrateClass: "embedded_app_payload",
 		Nodes: []pipeline.SimplifiedNode{
 			{
 				Path:  "/article[1]/h1[1]",
@@ -46,10 +47,30 @@ func TestBuildWebIRBuildsSignals(t *testing.T) {
 	if ir.Signals.EmbeddedNodeCount != 1 {
 		t.Fatalf("expected embedded node count 1, got %d", ir.Signals.EmbeddedNodeCount)
 	}
+	if ir.Signals.SubstrateClass != "embedded_app_payload" {
+		t.Fatalf("expected substrate class to be propagated, got %q", ir.Signals.SubstrateClass)
+	}
 	if ir.Signals.HeadingRatio <= 0 {
 		t.Fatalf("expected heading ratio > 0, got %.2f", ir.Signals.HeadingRatio)
 	}
 	if err := ir.Validate(); err != nil {
 		t.Fatalf("expected built web ir to validate, got %v", err)
+	}
+}
+
+func TestEnsureMinimumDOMSynthesizesTitleNodes(t *testing.T) {
+	dom := ensureMinimumDOM(pipeline.SimplifiedDOM{
+		URL:   "https://example.com/forum",
+		Title: "Discourse Meta",
+	})
+	if len(dom.Nodes) != 2 {
+		t.Fatalf("expected 2 synthetic nodes, got %#v", dom.Nodes)
+	}
+	if dom.Nodes[0].Kind != "heading" || dom.Nodes[1].Kind != "paragraph" {
+		t.Fatalf("unexpected synthetic node kinds %#v", dom.Nodes)
+	}
+	ir := buildWebIR(dom)
+	if err := ir.Validate(); err != nil {
+		t.Fatalf("expected synthetic dom to produce valid web ir, got %v", err)
 	}
 }

@@ -112,7 +112,7 @@ func TestReduceExtractsEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
 	dom, err := Reducer{}.ReduceProfile(RawPage{
 		URL:      "https://example.com/app",
 		FinalURL: "https://example.com/app",
-		HTML: `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime Update","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`,
+		HTML:     `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime Update","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`,
 	}, "standard")
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
@@ -130,5 +130,22 @@ func TestReduceExtractsEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected embedded payload text in reduced nodes, got %#v", dom.Nodes)
+	}
+	if dom.SubstrateClass != "embedded_app_payload" {
+		t.Fatalf("expected embedded_app_payload substrate, got %q", dom.SubstrateClass)
+	}
+}
+
+func TestReduceClassifiesThemeHeavyWordPressSubstrate(t *testing.T) {
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		URL:      "https://example.com/agency",
+		FinalURL: "https://example.com/agency",
+		HTML:     `<html><head><title>Agency</title><script src="/wp-includes/js/jquery.js"></script></head><body class="et_pb"><article><h1>Agency</h1><p>Digital marketing and websites.</p></article><script src="/wp-content/themes/divi/js/swiper.js"></script><script>window.gsap={}</script></body></html>`,
+	}, "standard")
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
+	}
+	if dom.SubstrateClass != "theme_heavy_wordpress" {
+		t.Fatalf("expected theme_heavy_wordpress substrate, got %q", dom.SubstrateClass)
 	}
 }

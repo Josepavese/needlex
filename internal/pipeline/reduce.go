@@ -67,19 +67,54 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 	}
 
 	return SimplifiedDOM{
-		URL:   page.FinalURL,
-		Title: walker.title,
-		Nodes: walker.nodes,
+		URL:            page.FinalURL,
+		Title:          walker.title,
+		SubstrateClass: inferSubstrateClass(page.HTML),
+		Nodes:          walker.nodes,
 	}, nil
+}
+
+func inferSubstrateClass(rawHTML string) string {
+	haystack := strings.ToLower(strings.TrimSpace(rawHTML))
+	if haystack == "" {
+		return "generic_content"
+	}
+	if containsAny(haystack,
+		"window._a2s",
+		"__next_data__",
+		"__nuxt__",
+		"__apollo_state__",
+		"<app-root",
+		"data-reactroot",
+	) {
+		return "embedded_app_payload"
+	}
+	if containsAny(haystack,
+		"wp-content",
+		"wp-json",
+		"wp-includes",
+		"et_pb",
+		"elementor",
+		"swiper",
+		"gsap",
+	) {
+		return "theme_heavy_wordpress"
+	}
+	return "generic_content"
+}
+
+func containsAny(haystack string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(haystack, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 type domWalker struct {
 	title string
 	nodes []SimplifiedNode
-}
-
-type pathState struct {
-	path []string
 }
 
 func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
@@ -94,32 +129,31 @@ func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
 			continue
 		}
 
-		nextState := state.clone()
 		siblingCounts[tag]++
-		path := append(append([]string{}, nextState.path...), fmt.Sprintf("%s[%d]", tag, siblingCounts[tag]))
-		nextState.path = path
+		path := append(clonePath(state), fmt.Sprintf("%s[%d]", tag, siblingCounts[tag]))
 
 		if kind, ok := textTags[tag]; ok {
-			text := normalizeWhitespace(extractText(child))
-			if text != "" {
-				w.nodes = append(w.nodes, SimplifiedNode{
-					Path:         "/" + strings.Join(path, "/"),
-					Tag:          tag,
-					Kind:         kind,
-					Text:         text,
-					Depth:        len(path),
-					HeadingLevel: headingLevel(tag),
-				})
-			}
+			w.appendTextNode(child, path, tag, kind)
 		}
 
-		w.walk(child, nextState, profile)
+		w.walk(child, path, profile)
 	}
 }
 
-func (s pathState) clone() pathState {
-	return pathState{
-		path: append([]string{}, s.path...),
+type pathState []string
+
+func clonePath(path pathState) []string { return append([]string{}, path...) }
+
+func (w *domWalker) appendTextNode(node *html.Node, path []string, tag, kind string) {
+	if text := normalizeWhitespace(extractText(node)); text != "" {
+		w.nodes = append(w.nodes, SimplifiedNode{
+			Path:         "/" + strings.Join(path, "/"),
+			Tag:          tag,
+			Kind:         kind,
+			Text:         text,
+			Depth:        len(path),
+			HeadingLevel: headingLevel(tag),
+		})
 	}
 }
 
@@ -128,19 +162,21 @@ func shouldSkipNode(node *html.Node, tag, profile string) bool {
 		return true
 	}
 	for _, attr := range node.Attr {
-		key := strings.ToLower(attr.Key)
-		value := strings.ToLower(attr.Val)
-		if key == "hidden" {
-			return true
-		}
-		if key == "aria-hidden" && value == "true" {
-			return true
-		}
-		if (key == "class" || key == "id" || key == "role") && isNoiseHint(value, profile) {
+		if attrHidden(attr) || attrNoise(attr, profile) {
 			return true
 		}
 	}
 	return false
+}
+
+func attrHidden(attr html.Attribute) bool {
+	key, value := strings.ToLower(attr.Key), strings.ToLower(attr.Val)
+	return key == "hidden" || (key == "aria-hidden" && value == "true")
+}
+
+func attrNoise(attr html.Attribute, profile string) bool {
+	key := strings.ToLower(attr.Key)
+	return (key == "class" || key == "id" || key == "role") && isNoiseHint(strings.ToLower(attr.Val), profile)
 }
 
 func isNoiseHint(value, profile string) bool {
@@ -249,8 +285,7 @@ func collectScriptContent(root *html.Node) []string {
 	var walk func(*html.Node)
 	walk = func(node *html.Node) {
 		if node.Type == html.ElementNode && strings.EqualFold(node.Data, "script") {
-			text := normalizeWhitespace(scriptText(node))
-			if text != "" {
+			if text := normalizeWhitespace(scriptText(node)); text != "" {
 				out = append(out, text)
 			}
 		}
@@ -377,13 +412,7 @@ func htmlText(value string) string {
 
 func isLikelyJunk(value string) bool {
 	lower := strings.ToLower(value)
-	if strings.Contains(lower, "{") || strings.Contains(lower, "function(") {
-		return true
-	}
-	if strings.Count(lower, "http") > 4 {
-		return true
-	}
-	return false
+	return strings.Contains(lower, "{") || strings.Contains(lower, "function(") || strings.Count(lower, "http") > 4
 }
 
 func headingLevel(tag string) int {
