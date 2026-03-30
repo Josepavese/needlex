@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -95,6 +97,33 @@ func TestReadRejectsEmptyURL(t *testing.T) {
 	_, err = svc.Read(context.Background(), ReadRequest{})
 	if err == nil {
 		t.Fatal("expected empty URL to fail")
+	}
+}
+
+func TestReadSynthesizesMinimalDOMWhenReducerYieldsNoTextNodes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Discourse Meta</title></head><body><nav><a href="/latest">Latest</a></nav><script>window.__APP__={}</script></body></html>`)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{URL: server.URL, Profile: core.ProfileStandard})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.WebIR.NodeCount == 0 {
+		t.Fatal("expected fallback web_ir nodes to be synthesized")
+	}
+	if len(resp.ResultPack.Chunks) == 0 {
+		t.Fatal("expected fallback pack chunk")
 	}
 }
 
@@ -221,6 +250,103 @@ func TestReadTinyCompactionIsTraced(t *testing.T) {
 	}
 }
 
+func TestReadTraceSkipsModelInterventionWhenCoverageGateSuppressesRoute(t *testing.T) {
+	pageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Needle Runtime</title></head><body><article><h1>Needle Runtime</h1><h2>Overview</h2><p>Operator incident notes for runtime failures.</p><h2>Details</h2><p>Remediation workflow for operators handling incidents.</p></article></body></html>`)
+	}))
+	defer pageServer.Close()
+
+	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type candidate struct {
+			ChunkID string `json:"chunk_id"`
+		}
+		var payload struct {
+			Messages []struct {
+				Content string `json:"content"`
+			} `json:"messages"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode model request: %v", err)
+		}
+		rawInput := payload.Messages[len(payload.Messages)-1].Content
+		_, after, ok := strings.Cut(rawInput, "input=")
+		if !ok {
+			t.Fatalf("missing input payload in %q", rawInput)
+		}
+		var input struct {
+			Candidates []candidate `json:"candidates"`
+		}
+		if err := json.Unmarshal([]byte(after), &input); err != nil {
+			t.Fatalf("decode input payload: %v", err)
+		}
+		if len(input.Candidates) < 2 {
+			t.Fatalf("expected 2 candidates, got %#v", input.Candidates)
+		}
+		content, err := json.Marshal(map[string]any{
+			"selected_chunk_ids": []string{input.Candidates[1].ChunkID},
+			"rejected_chunk_ids": []string{input.Candidates[0].ChunkID},
+			"decision_reason":    "second candidate is more grounded",
+			"confidence":         0.91,
+		})
+		if err != nil {
+			t.Fatalf("marshal content: %v", err)
+		}
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{
+				{
+					"finish_reason": "stop",
+					"message": map[string]any{
+						"content": string(content),
+					},
+				},
+			},
+			"usage": map[string]any{
+				"prompt_tokens":     36,
+				"completion_tokens": 11,
+			},
+		}); err != nil {
+			t.Fatalf("encode response: %v", err)
+		}
+	}))
+	defer modelServer.Close()
+
+	cfg := config.Defaults()
+	cfg.Models.Backend = "openai-compatible"
+	cfg.Models.BaseURL = modelServer.URL
+	cfg.Models.Router = "qwen-ambiguity"
+
+	svc, err := New(cfg, pageServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time {
+		return time.Unix(1700000000, 0).UTC()
+	}
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       pageServer.URL,
+		Profile:   core.ProfileStandard,
+		Objective: "operator incident remediation",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+
+	for _, event := range resp.Trace.Events {
+		if event.Type == proof.EventModelIntervention {
+			t.Fatalf("expected no model intervention trace when coverage gate suppresses route, got %#v", resp.Trace.Events)
+		}
+	}
+	for _, record := range resp.ProofRecords {
+		for _, invocation := range record.Proof.ModelInvocations {
+			if invocation.Task == intel.TaskResolveAmbiguity {
+				t.Fatalf("expected no resolve_ambiguity invocation in proof records, got %#v", resp.ProofRecords)
+			}
+		}
+	}
+}
+
 func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -255,6 +381,7 @@ func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 			stage.Metadata["selected_ir_embedded_hits"] != "" &&
 			stage.Metadata["selected_ir_heading_hits"] != "" &&
 			stage.Metadata["selected_ir_shallow_hits"] != "" &&
+			stage.Metadata["intel_task_route_count"] != "" &&
 			stage.Metadata["web_ir_policy_embedded_required"] != "" &&
 			stage.Metadata["web_ir_policy_heading_required"] != "" &&
 			stage.Metadata["web_ir_policy_noise_swap"] != "" {
@@ -264,6 +391,60 @@ func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected fingerprint stability metadata in pack trace, got %#v", resp.Trace.Stages)
+	}
+}
+
+func TestReadPlansIntelTasksForEmbeddedAndAmbiguityCases(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`)
+	}))
+	defer server.Close()
+
+	svc, err := New(config.Defaults(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Profile:   core.ProfileStandard,
+		Objective: "company profile proof context",
+		ForceLane: 2,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+
+	foundPackMetadata := false
+	for _, stage := range resp.Trace.Stages {
+		if stage.Stage != "pack" {
+			continue
+		}
+		if stage.Metadata["intel_task_route_count"] == "0" {
+			t.Fatalf("expected planned intel tasks in pack metadata, got %#v", stage.Metadata)
+		}
+		if !strings.Contains(stage.Metadata["intel_task_names"], intel.TaskInterpretEmbedded) {
+			t.Fatalf("expected embedded task in metadata, got %#v", stage.Metadata)
+		}
+		foundPackMetadata = true
+	}
+	if !foundPackMetadata {
+		t.Fatal("expected pack stage metadata")
+	}
+
+	foundTaskMarker := false
+	for _, record := range resp.ProofRecords {
+		for _, step := range record.Proof.TransformChain {
+			if step == "intel:task:"+intel.TaskInterpretEmbedded+":v1" {
+				foundTaskMarker = true
+				break
+			}
+		}
+	}
+	if !foundTaskMarker {
+		t.Fatal("expected planned task transform markers in proof chain")
 	}
 }
 

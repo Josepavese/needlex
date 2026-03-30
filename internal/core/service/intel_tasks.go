@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
@@ -75,6 +76,12 @@ func buildResolveAmbiguityInput(objective string, webIR core.WebIR, candidates [
 }
 
 func ambiguityRoutingSuppressed(objective string, webIR core.WebIR, candidates []rankedSegment, decisions map[string]intel.Decision) bool {
+	if lowLexicalObjectiveSignalSuppressed(objective, candidates) {
+		return true
+	}
+	if coverageAnchorSuppressed(candidates, decisions) {
+		return true
+	}
 	if coverageDominanceSuppressed(objective, candidates, decisions) {
 		return true
 	}
@@ -86,6 +93,52 @@ func ambiguityRoutingSuppressed(objective string, webIR core.WebIR, candidates [
 	default:
 		return ambiguityAlreadyResolved(objective, candidates, decisions, 1.0)
 	}
+}
+
+func lowLexicalObjectiveSignalSuppressed(objective string, candidates []rankedSegment) bool {
+	objectiveTokens := normalizedObjectiveTokens(objective)
+	if len(objectiveTokens) == 0 || len(candidates) < 2 {
+		return false
+	}
+	dominant := candidates[0]
+	if dominant.chunk.Confidence < 0.88 || dominant.chunk.Score < 0.95 {
+		return false
+	}
+	if !hasStructuralEvidence(dominant) {
+		return false
+	}
+	maxCoverage := 0.0
+	for _, candidate := range candidates {
+		coverage := objectiveCoverageForChunk(candidate.chunk.Text, candidate.chunk.HeadingPath, objectiveTokens)
+		if coverage > maxCoverage {
+			maxCoverage = coverage
+		}
+	}
+	return maxCoverage < 0.34
+}
+
+func coverageAnchorSuppressed(candidates []rankedSegment, decisions map[string]intel.Decision) bool {
+	if len(candidates) < 2 {
+		return false
+	}
+	anchor := candidates[0]
+	anchorDecision := decisions[anchor.chunk.Fingerprint]
+	if anchor.chunk.Confidence < 0.88 || anchor.chunk.Score < 0.90 {
+		return false
+	}
+	if !hasStructuralEvidence(anchor) {
+		return false
+	}
+	if slices.Contains(anchorDecision.RiskFlags, "coverage_gap") || hasStrictAmbiguityRisk(anchorDecision.RiskFlags) {
+		return false
+	}
+	for _, candidate := range candidates[1:] {
+		decision := decisions[candidate.chunk.Fingerprint]
+		if hasStrictAmbiguityRisk(decision.RiskFlags) {
+			return false
+		}
+	}
+	return true
 }
 
 func coverageDominanceSuppressed(objective string, candidates []rankedSegment, decisions map[string]intel.Decision) bool {
@@ -101,7 +154,7 @@ func coverageDominanceSuppressed(objective string, candidates []rankedSegment, d
 	if dominant.chunk.Confidence < 0.84 || dominant.chunk.Score < 0.86 {
 		return false
 	}
-	if !hasStructuralEvidence(dominant.ir) {
+	if !hasStructuralEvidence(dominant) {
 		return false
 	}
 	for _, candidate := range candidates[1:] {
@@ -116,8 +169,11 @@ func coverageDominanceSuppressed(objective string, candidates []rankedSegment, d
 	return true
 }
 
-func hasStructuralEvidence(ir segmentIREvidence) bool {
-	return ir.headingBacked || ir.kindMatch || ir.embedded
+func hasStructuralEvidence(item rankedSegment) bool {
+	if item.ir.headingBacked || item.ir.kindMatch || item.ir.embedded {
+		return true
+	}
+	return len(item.chunk.HeadingPath) > 0
 }
 
 func ambiguityAlreadyResolved(objective string, candidates []rankedSegment, decisions map[string]intel.Decision, minCoverage float64) bool {

@@ -171,6 +171,32 @@ func TestBuildResolveAmbiguityInputKeepsRouteWhenTwoFullCoverageCandidatesAreClo
 	}
 }
 
+func TestBuildResolveAmbiguityInputSkipsForLowLexicalObjectiveSignal(t *testing.T) {
+	input, ok := buildResolveAmbiguityInput("service offering", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}, []rankedSegment{
+		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "Aiutiamo aziende e startup a crescere attraverso il digitale.", HeadingPath: []string{"Diamo forma alle tue idee"}, Score: 1.0, Confidence: 0.93}},
+		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Realizziamo siti web e marketing digitale per il business.", HeadingPath: []string{"Servizi"}, Score: 0.99, Confidence: 0.93}},
+	}, map[string]intel.Decision{
+		"fp_1": {Fingerprint: "fp_1", Lane: 1, RiskFlags: []string{"coverage_gap"}},
+		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"coverage_gap"}},
+	})
+	if ok {
+		t.Fatalf("expected low lexical objective signal to suppress ambiguity route, got %#v", input)
+	}
+}
+
+func TestBuildResolveAmbiguityInputSkipsForCoverageAnchor(t *testing.T) {
+	input, ok := buildResolveAmbiguityInput("database engine summary", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}, []rankedSegment{
+		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "SQLite is a database engine library used in embedded and local applications.", HeadingPath: []string{"Overview"}, Score: 0.96, Confidence: 0.91}},
+		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Documentation, download, and support resources.", HeadingPath: []string{"Resources"}, Score: 0.89, Confidence: 0.89}},
+	}, map[string]intel.Decision{
+		"fp_1": {Fingerprint: "fp_1", Lane: 1, RiskFlags: []string{"selection_reused"}},
+		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"coverage_gap", "selection_recomputed"}},
+	})
+	if ok {
+		t.Fatalf("expected coverage anchor to suppress ambiguity route, got %#v", input)
+	}
+}
+
 func TestBuildInterpretEmbeddedStateInputCollectsEmbeddedAndVisibleEvidence(t *testing.T) {
 	dom := pipeline.SimplifiedDOM{
 		Title: "Needle Runtime",
