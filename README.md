@@ -1,5 +1,8 @@
 # Needle-X
 
+> [!WARNING]
+> Alpha software. Needle-X is still in active development and test. Install flow, local state layout, CLI details, and output shape may still change.
+
 **Turn messy web pages into compact, proof-carrying context for AI agents.**
 
 **Smaller packets. Fewer hops. Real provenance.**
@@ -75,6 +78,27 @@ go run ./cmd/needle read https://example.com --json
 go run ./cmd/needle query https://example.com --goal "pricing" --json
 go run ./cmd/needle proof proof_1 --json
 ```
+
+## Install
+
+Linux and macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.sh | bash
+```
+
+Windows:
+
+```powershell
+irm https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.ps1 | iex
+```
+
+Installed command:
+1. `needlex`
+2. compatibility alias: `needle`
+
+This installer downloads the right release binary. Full details:
+1. [Install Guide](/home/jose/hpdev/Libraries/needlex/docs/install.md)
 
 ## What It Is Not
 

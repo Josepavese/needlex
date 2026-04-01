@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/internal/platform"
 	_ "modernc.org/sqlite"
 )
 
@@ -23,7 +24,7 @@ type SQLiteStore struct {
 func NewSQLiteStore(root, relativePath string) SQLiteStore {
 	cleanRoot := strings.TrimSpace(root)
 	if cleanRoot == "" {
-		cleanRoot = ".needlex"
+		cleanRoot = platform.DefaultStateRoot()
 	}
 	cleanPath := strings.TrimSpace(relativePath)
 	if cleanPath == "" {

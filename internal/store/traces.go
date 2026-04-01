@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
@@ -19,7 +20,7 @@ type TraceStore struct {
 
 func NewTraceStore(root string) TraceStore {
 	if strings.TrimSpace(root) == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	return TraceStore{root: root}
 }

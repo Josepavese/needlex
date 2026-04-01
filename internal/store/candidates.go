@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/intel"
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 var ErrCandidatesNotFound = errors.New("candidates not found")
@@ -46,7 +47,7 @@ type CandidateStore struct {
 
 func NewCandidateStore(root string) CandidateStore {
 	if strings.TrimSpace(root) == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	return CandidateStore{
 		root: root,

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 var ErrGenomeNotFound = errors.New("genome not found")
@@ -44,7 +46,7 @@ type GenomeStore struct {
 
 func NewGenomeStore(root string) GenomeStore {
 	if strings.TrimSpace(root) == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	return GenomeStore{
 		root: root,

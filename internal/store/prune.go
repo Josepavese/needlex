@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 type PruneReport struct {
@@ -17,7 +19,7 @@ func Prune(root string, olderThan time.Duration, pruneAll bool, now time.Time) (
 		return PruneReport{}, fmt.Errorf("prune requires --all or positive older_than")
 	}
 	if root == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	if now.IsZero() {
 		now = time.Now().UTC()

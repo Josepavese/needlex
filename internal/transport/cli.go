@@ -11,6 +11,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
@@ -51,7 +52,7 @@ func NewRunner() Runner {
 			return svc.Crawl(ctx, req)
 		},
 		stdin:     os.Stdin,
-		storeRoot: ".needlex",
+		storeRoot: platform.DefaultStateRoot(),
 	}
 }
 

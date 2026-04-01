@@ -1,0 +1,74 @@
+name: dist
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            archive: tar.gz
+          - goos: linux
+            goarch: arm64
+            archive: tar.gz
+          - goos: darwin
+            goarch: amd64
+            archive: tar.gz
+          - goos: darwin
+            goarch: arm64
+            archive: tar.gz
+          - goos: windows
+            goarch: amd64
+            archive: zip
+          - goos: windows
+            goarch: arm64
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./... -count=1
+
+      - name: Build archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist work
+          BIN="needlex"
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            BIN="needlex.exe"
+          fi
+          GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" go build -o "work/${BIN}" ./cmd/needle
+          BASE="needlex_${{ matrix.goos }}_${{ matrix.goarch }}"
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            (cd work && zip -q "../dist/${BASE}.zip" "${BIN}")
+          else
+            tar -C work -czf "dist/${BASE}.tar.gz" "${BIN}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: needlex_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: dist/*
+
+      - name: Publish release assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

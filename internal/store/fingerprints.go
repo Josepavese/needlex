@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 var ErrFingerprintNotFound = errors.New("fingerprint not found")
@@ -30,7 +31,7 @@ type FingerprintStore struct {
 
 func NewFingerprintStore(root string) FingerprintStore {
 	if strings.TrimSpace(root) == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	return FingerprintStore{
 		root: root,

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 type FingerprintGraphNode struct {
@@ -48,7 +49,7 @@ type FingerprintGraphStore struct {
 
 func NewFingerprintGraphStore(root string) FingerprintGraphStore {
 	if strings.TrimSpace(root) == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	return FingerprintGraphStore{root: root, now: time.Now}
 }

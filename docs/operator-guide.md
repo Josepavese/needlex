@@ -198,7 +198,9 @@ Use trace when you need to answer:
 
 ## Storage Layout
 
-Needle-X persists local state under `.needlex/`.
+Needle-X persists local state under `.needlex/` by default.
+
+Installed setups can override the state root with `NEEDLEX_HOME`.
 
 Important paths:
 1. `.needlex/traces/`

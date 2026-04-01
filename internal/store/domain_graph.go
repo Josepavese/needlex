@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 var ErrDomainGraphNotFound = errors.New("domain graph not found")
@@ -34,7 +36,7 @@ type DomainGraphStore struct {
 
 func NewDomainGraphStore(root string) DomainGraphStore {
 	if strings.TrimSpace(root) == "" {
-		root = ".needlex"
+		root = platform.DefaultStateRoot()
 	}
 	return DomainGraphStore{
 		root: root,
