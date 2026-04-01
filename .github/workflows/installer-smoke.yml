@@ -1,0 +1,62 @@
+name: installer-smoke
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  linux-installer-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install from public GitHub script
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.sh | bash
+
+      - name: Verify installed command and state root
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "${HOME}/.profile" >/dev/null 2>&1 || true
+          source "${HOME}/.bashrc" >/dev/null 2>&1 || true
+          command -v needlex
+          test -x "${HOME}/.local/bin/needlex"
+          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex"
+          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/traces"
+          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/proofs"
+          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/fingerprints"
+          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/genome"
+          test -f "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/discovery/discovery.db"
+
+      - name: Smoke CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "${HOME}/.profile" >/dev/null 2>&1 || true
+          source "${HOME}/.bashrc" >/dev/null 2>&1 || true
+          needlex memory stats --json
+          needlex read https://example.com --json > /tmp/needlex-read.json
+          python3 - <<'PY'
+          import json
+          payload = json.load(open("/tmp/needlex-read.json"))
+          assert payload.get("url"), "missing url"
+          assert payload.get("summary"), "missing summary"
+          print("read smoke ok")
+          PY
+
+      - name: Smoke MCP stdio
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "${HOME}/.profile" >/dev/null 2>&1 || true
+          source "${HOME}/.bashrc" >/dev/null 2>&1 || true
+          set +e
+          timeout 2s needlex mcp >/tmp/needlex-mcp.out 2>/tmp/needlex-mcp.err
+          code=$?
+          set -e
+          if [[ "${code}" != "0" && "${code}" != "124" ]]; then
+            cat /tmp/needlex-mcp.err
+            exit "${code}"
+          fi

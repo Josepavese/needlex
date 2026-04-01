@@ -1,5 +1,9 @@
 # Needle-X
 
+[![dist](https://github.com/Josepavese/needlex/actions/workflows/dist.yml/badge.svg)](https://github.com/Josepavese/needlex/actions/workflows/dist.yml)
+[![installer-smoke](https://github.com/Josepavese/needlex/actions/workflows/installer-smoke.yml/badge.svg)](https://github.com/Josepavese/needlex/actions/workflows/installer-smoke.yml)
+[![release](https://img.shields.io/github/v/release/Josepavese/needlex?display_name=tag)](https://github.com/Josepavese/needlex/releases/latest)
+
 > [!WARNING]
 > Alpha software. Needle-X is still in active development and test. Install flow, local state layout, CLI details, and output shape may still change.
 
