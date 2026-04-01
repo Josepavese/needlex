@@ -36,9 +36,9 @@ jobs:
             goarch: arm64
             archive: zip
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -62,13 +62,30 @@ jobs:
             tar -C work -czf "dist/${BASE}.tar.gz" "${BIN}"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: needlex_${{ matrix.goos }}_${{ matrix.goarch }}
           path: dist/*
 
-      - name: Publish release assets
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
         with:
-          files: dist/*
+          path: dist
+          pattern: needlex_*
+          merge-multiple: true
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" dist/* --clobber
+          else
+            gh release create "${tag}" dist/* --title "${tag}" --generate-notes
+          fi
