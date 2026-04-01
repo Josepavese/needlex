@@ -80,15 +80,16 @@ That preserves the current operator workflow while giving installed setups a cle
 Release archives are built with:
 
 ```bash
-./scripts/release/build_release.sh <version>
+./scripts/release/build_release.sh dist
 ```
 
 Current target artifacts:
-1. `needle_<version>_linux_amd64.tar.gz`
-2. `needle_<version>_linux_arm64.tar.gz`
-3. `needle_<version>_darwin_amd64.tar.gz`
-4. `needle_<version>_darwin_arm64.tar.gz`
-5. `needle_<version>_windows_amd64.zip`
+1. `needlex_linux_amd64.tar.gz`
+2. `needlex_linux_arm64.tar.gz`
+3. `needlex_darwin_amd64.tar.gz`
+4. `needlex_darwin_arm64.tar.gz`
+5. `needlex_windows_amd64.zip`
+6. `needlex_windows_arm64.zip`
 
 ## Recommendation
 
