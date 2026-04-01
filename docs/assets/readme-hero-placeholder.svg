@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="Needle-X hero graphic">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7f1e3"/>
+      <stop offset="100%" stop-color="#e9e0ca"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="1110" cy="110" r="150" fill="#d8e8d8"/>
+  <circle cx="1180" cy="560" r="180" fill="#f3b46b"/>
+  <rect x="32" y="32" width="1216" height="576" rx="28" fill="#fdf9f0" stroke="#1f1a17" stroke-width="4"/>
+  <text x="84" y="132" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="84" font-weight="700" fill="#1f1a17">Needle-X</text>
+  <text x="84" y="192" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="28" fill="#4e453d">Turn messy web pages into compact, proof-carrying context.</text>
+  <text x="84" y="232" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="28" fill="#4e453d">Built for AI agents that need less noise and more proof.</text>
+
+  <rect x="84" y="286" width="330" height="84" rx="20" fill="#1f1a17"/>
+  <text x="116" y="337" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#fdf9f0">85.5% smaller</text>
+  <text x="116" y="364" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#d8d1c3">than the Jina baseline packet</text>
+
+  <rect x="84" y="390" width="330" height="84" rx="20" fill="#d8e8d8" stroke="#1f1a17" stroke-width="3"/>
+  <text x="116" y="441" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#1f1a17">1 step to source</text>
+  <text x="116" y="468" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#314034">claim-to-source in the live run</text>
+
+  <rect x="84" y="494" width="330" height="84" rx="20" fill="#f3b46b" stroke="#1f1a17" stroke-width="3"/>
+  <text x="116" y="545" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#1f1a17">Proof carried</text>
+  <text x="116" y="572" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#4d2d13">context, not just extracted text</text>
+
+  <rect x="520" y="154" width="650" height="332" rx="28" fill="#1f1a17"/>
+  <text x="564" y="220" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#fdf9f0">MESSY WEB</text>
+  <text x="564" y="254" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#d2cabd">navigation chrome, repetitive text, raw dumps</text>
+  <text x="791" y="310" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#f3b46b">→</text>
+  <text x="850" y="220" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#fdf9f0">COMPACT PACKET</text>
+  <text x="850" y="254" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#d2cabd">small enough to feed an agent fast</text>
+
+  <rect x="564" y="300" width="240" height="126" rx="18" fill="#fdf9f0"/>
+  <text x="590" y="348" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f1a17">raw page</text>
+  <text x="590" y="382" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#4e453d">too much text</text>
+  <text x="590" y="408" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#4e453d">too much layout noise</text>
+
+  <rect x="850" y="300" width="276" height="126" rx="18" fill="#d8e8d8"/>
+  <text x="876" y="348" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f1a17">summary + chunks</text>
+  <text x="876" y="382" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#314034">proof_ref</text>
+  <text x="876" y="408" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#314034">source selector</text>
+
+  <text x="520" y="552" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="22" fill="#1f1a17">Smaller packets. Fewer hops. Real provenance.</text>
+</svg>

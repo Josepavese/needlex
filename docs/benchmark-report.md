@@ -1,175 +1,96 @@
 # Benchmark Report
 
-This document tracks the current measurable state of Needle-X against simple baselines.
+This is the shortest honest read of Needle-X today.
 
-It is intentionally conservative:
-1. only report numbers we actually ran
-2. keep the methodology explicit
-3. avoid marketing claims that the benchmarks do not support
+Rule:
+1. only report what was actually run
+2. separate quality metrics from advantage metrics
+3. do not market weak or still-uncalibrated signals
 
-Operational artifact policy:
-1. active benchmark outputs live in `improvements/`
-2. only current `baseline` and `latest` style reports should remain in `improvements/` root
-3. old waves, provider-specific experiments, and one-off empirical captures belong in `improvements/archive/`
-4. paid-provider benchmark reuse cache lives locally in `.needlex/competitive-benchmark-cache.json`
+## What The Benchmarks Already Support
 
-## Scope
+1. compact agent-facing output
+2. proof-carrying context
+3. benchmark-backed narrow model use
+4. semantic context alignment on multilingual pages
+5. strong warm-state local retrieval through `Discovery Memory`
 
-Current benchmark coverage focuses on:
-1. deterministic `read`
-2. query strategy comparison
-3. Needle-X versus a naive plain-text baseline
-4. Needle-X versus a reduced deterministic baseline
-5. optional external deterministic baseline adapter
-6. hard-case lane behavior on ambiguity-style pages
-7. comparative hard-case matrix between default lane behavior and forced lane `2/3` behavior
-8. live semantic context evaluation on multilingual pages
+## What They Do Not Support Yet
 
-## Semantic Context Regime
+1. broad market-superiority claims
+2. cold-state seedless open-web strength
+3. lexical metrics as proxies for meaning
+4. reopening specialist model tasks in the active core
 
-Meaning-sensitive evaluation is now semantic-first.
+## Live Advantage Metrics
 
-This means:
-1. `context_alignment` is the primary signal for context quality in live evaluation
-2. lexical overlap is not treated as a primary meaning metric
-3. hard-case exports declare their metric regime explicitly
+Source run:
+1. `Needle-X`
+2. `Jina`
+3. `Firecrawl`
+4. `Tavily`
 
-Current semantic gate baseline:
-1. backend: `openai-embeddings`
-2. model: `intfloat/multilingual-e5-small`
+| Metric | Needle-X | Tavily | Jina | Firecrawl |
+| --- | ---: | ---: | ---: | ---: |
+| Avg packet bytes | 4436 | 6975 | 30565 | 72166 |
+| Claim-to-source steps | 1 | 2 | 2 | 2 |
+| Post-processing burden | 0.25 | 1.92 | 1.86 | 2.50 |
+| Proof usability | 1.0 | 0 | 0 | 0 |
 
-## Current Quality Gates
-
-The repo currently enforces:
-1. replay determinism on golden tests
-2. fidelity checks on golden tests
-3. `tiny` compression ratio `>= 3.0`
-4. query improvement through same-site discovery
-5. Needle-X signal-quality win over naive and reduced deterministic baselines
-6. hard-case matrix checks that elevated lanes improve or preserve useful signal under controlled difficult inputs
-7. hard-case acceptance checks enforce final intelligence-readiness thresholds
-8. live semantic evaluation on multilingual pages
-9. discovery memory cold-vs-warm evaluation
-10. structural budget checks
-
-Benchmark interpretation rule:
-1. seeded benchmark reports must separate execution reliability from product quality
-2. `runtime_success_rate` tracks whether a case completed at all
-3. `quality_pass_rate` tracks whether Needle-X passed the product criteria on completed cases
-4. competitive comparisons are invalid if these two axes are collapsed into a single pass rate
-
-## Current Quality Conclusions
-
-What the benchmarks support today:
-1. Needle-X produces more concentrated context than simpler baselines
-2. the active CPU model path is real and benchmark-backed
-3. `Gemma 3 1B` is the current CPU baseline
-4. semantic context alignment is measurable and works on multilingual pages where lexical overlap is blind
-5. the active model task set is intentionally narrow: `resolve_ambiguity` only
-6. warm-state `Discovery Memory` can dominate local retrieval on the active benchmark corpus
-
-What the benchmarks do not support yet:
-1. a broad market-superiority claim
-2. reopening specialist model tasks in the active core
-3. equating lexical overlap with context understanding
-4. claiming cold-state open-web seedless strength from the discovery-memory benchmark
-
-## Current Advantage Metrics
-
-These are the strongest public-facing metrics today because they describe operator and agent leverage directly.
-
-From the live competitive run (`Needle-X`, `Jina`, `Firecrawl`, `Tavily`):
-1. average packet bytes:
-   - `Needle-X`: `4436`
-   - `Tavily`: `6975`
-   - `Jina`: `30565`
-   - `Firecrawl`: `72166`
-2. packet reduction versus `Jina`:
-   - `Needle-X`: `0.8549`
-   - roughly `85.5%` smaller
-3. average claim-to-source steps:
-   - `Needle-X`: `1`
-   - `Jina`: `2`
-   - `Firecrawl`: `2`
-   - `Tavily`: `2`
-4. average post-processing burden:
-   - `Needle-X`: `0.25`
-   - `Jina`: `1.8571`
-   - `Firecrawl`: `2.5`
-   - `Tavily`: `1.9167`
-5. proof usability:
-   - `Needle-X`: `1.0`
-   - `Jina`: `0`
-   - `Firecrawl`: `0`
-   - `Tavily`: `0`
+Extra read:
+1. Needle-X is about `85.5%` smaller than the `Jina` baseline on packet size
+2. Needle-X reaches the source in half the steps of the others in this live run
+3. Needle-X imposes much less cleanup on the next agent in the loop
 
 Interpretation:
-1. these are advantage metrics, not broad quality claims
-2. they show that Needle-X is strongest when the user values:
-   - compact context
-   - direct verification
-   - low-friction downstream agent use
+1. these are advantage metrics
+2. they are strong enough for public storytelling
+3. they are not broad quality-superiority claims
 
 ## Discovery Memory Benchmark
 
-Active artifact:
-- [discovery-memory-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-memory-benchmark-latest.json)
-
-Current measured summary:
+Active warm-state result:
 1. `case_count = 30`
-2. `cold_selected_pass_rate = 0`
-3. `warm_selected_pass_rate = 1`
-4. `warm_memory_provider_rate = 1`
-5. `improvement_rate = 1`
+2. `warm_selected_pass_rate = 1`
+3. `warm_memory_provider_rate = 1`
+4. `improvement_rate = 1`
 
-Correct interpretation:
-1. the benchmark measures a local warm-state retrieval regime
-2. once prior evidence is observed, Needle-X can reuse it extremely well on the active corpus
-3. this benchmark does not prove that cold-state seedless discovery is solved
+Read it correctly:
+1. local warm-state retrieval is strong
+2. repeated use materially improves retrieval
+3. this does not prove cold-state open-web seedless performance
 
-Competitive benchmark scope now distinguishes:
-1. direct market references:
-   - Firecrawl
-   - Tavily
-   - Exa
-   - Brave Search API
-2. simple baseline references:
-   - raw page / Jina Reader style readers
-3. adjacent browser-agent references:
-   - Vercel Browser Agent
+## Quality Interpretation Rule
 
-Competitive reporting must also distinguish:
-1. `quality metrics`
-2. `advantage metrics`
+Keep these axes separate:
+1. `runtime_success_rate`
+2. `quality_pass_rate`
+3. `advantage metrics`
 
-Recommended advantage metrics:
-1. token/character reduction versus baselines
-2. hop count to target page or answer
-3. tool calls to target
-4. time to verifiable claim
-5. proof/audit leverage
-6. cached reuse savings on paid providers
+If these are collapsed into one leaderboard, the report becomes misleading.
 
-Default comparative rule:
-1. token reduction should default to comparison against `Jina Reader` when that baseline is present in the same report
+## Competitive Discipline
 
-Rule:
-1. Vercel Browser Agent is not treated as a fully isomorphic competitor to Needle-X
-2. it is valid mainly on seeded routing and browsing tasks
-3. it is not a fair primary comparator for proof-carrying compact packet quality
-4. competitive quality must include `fact_coverage_rate` over `must_contain_facts`
-5. otherwise raw-text baselines can appear artificially strong
-6. in this repo, Vercel Browser Agent enters the benchmark through a bridge endpoint contract, not a single official public comparator API
-7. advantage metrics are allowed for product storytelling, but they cannot replace quality metrics
+Direct references:
+1. `Firecrawl`
+2. `Tavily`
+3. `Exa`
+4. `Brave Search API`
 
-Next benchmark protocol reference:
+Simple baseline:
+1. `Jina Reader` / raw-page readers
+
+Adjacent reference:
+1. `Vercel Browser Agent`
+
+Important:
+1. `Vercel Browser Agent` is not an isomorphic comparator for compact proof-carrying packet quality
+2. it is mainly useful on seeded routing and browsing tasks
+
+## Where To Look Next
+
 1. [seeded-benchmark-spec.md](/home/jose/hpdev/Libraries/needlex/docs/seeded-benchmark-spec.md)
-2. [seeded-corpus-v1.json](/home/jose/hpdev/Libraries/needlex/benchmarks/corpora/seeded-corpus-v1.json)
-3. active seeded benchmark artifact:
-   [seeded-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/seeded-benchmark-latest.json)
-4. active discovery memory benchmark artifact:
-   [discovery-memory-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-memory-benchmark-latest.json)
-5. competitive benchmark protocol:
-   [competitive-benchmark-protocol.md](/home/jose/hpdev/Libraries/needlex/docs/competitive-benchmark-protocol.md)
-6. competitive corpus:
-   [competitive-corpus-v1.json](/home/jose/hpdev/Libraries/needlex/benchmarks/corpora/competitive-corpus-v1.json)
+2. [competitive-benchmark-protocol.md](/home/jose/hpdev/Libraries/needlex/docs/competitive-benchmark-protocol.md)
+3. [seeded-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/seeded-benchmark-latest.json)
+4. [competitive-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/competitive-benchmark-latest.json)
+5. [discovery-memory-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-memory-benchmark-latest.json)

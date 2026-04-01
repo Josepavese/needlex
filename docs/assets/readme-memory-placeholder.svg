@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-label="Needle-X discovery memory infographic">
+  <rect width="1280" height="520" fill="#f7f2ea"/>
+  <rect x="32" y="32" width="1216" height="456" rx="28" fill="#fffaf3" stroke="#1f1a17" stroke-width="4"/>
+  <text x="74" y="110" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#1f1a17">Discovery Memory</text>
+  <text x="74" y="150" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="24" fill="#4e453d">Warm-state local retrieval. SQLite-backed. Proof-aware. No hosted infra.</text>
+
+  <rect x="74" y="212" width="260" height="180" rx="22" fill="#efe7d8" stroke="#1f1a17" stroke-width="3"/>
+  <text x="104" y="268" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f1a17">1st run</text>
+  <text x="104" y="312" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#4e453d">observe page</text>
+  <text x="104" y="340" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#4e453d">compile context</text>
+  <text x="104" y="368" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#4e453d">store proof + embeddings</text>
+
+  <text x="372" y="318" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="56" font-weight="700" fill="#1f1a17">→</text>
+
+  <rect x="438" y="186" width="404" height="232" rx="22" fill="#1f1a17"/>
+  <text x="470" y="246" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#fdf9f0">local memory</text>
+  <text x="470" y="292" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#d2cabd">SQLite</text>
+  <text x="470" y="322" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#d2cabd">documents + edges</text>
+  <text x="470" y="352" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#d2cabd">embeddings + proof refs</text>
+  <text x="470" y="382" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#d2cabd">warm-state retrieval substrate</text>
+
+  <text x="880" y="318" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="56" font-weight="700" fill="#1f1a17">→</text>
+
+  <rect x="946" y="212" width="260" height="180" rx="22" fill="#d8e8d8" stroke="#1f1a17" stroke-width="3"/>
+  <text x="976" y="268" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f1a17">Later run</text>
+  <text x="976" y="312" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#314034">reuse local evidence</text>
+  <text x="976" y="340" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#314034">route faster</text>
+  <text x="976" y="368" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#314034">stay local-first</text>
+
+  <rect x="438" y="54" width="178" height="92" rx="20" fill="#f3b46b" stroke="#1f1a17" stroke-width="3"/>
+  <text x="468" y="92" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#1f1a17">Warm-state retrieval</text>
+  <text x="468" y="127" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#1f1a17">30 / 30</text>
+
+  <rect x="636" y="54" width="206" height="92" rx="20" fill="#d96e45" stroke="#1f1a17" stroke-width="3"/>
+  <text x="666" y="92" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#fff6ef">Memory-selected provider</text>
+  <text x="666" y="127" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#fffaf3">30 / 30</text>
+
+  <text x="74" y="446" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#4e453d">Guardrail: warm-state claim only. Not a cold-state open-web seedless claim.</text>
+</svg>

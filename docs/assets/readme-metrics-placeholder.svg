@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-label="Needle-X metrics infographic">
+  <rect width="1280" height="820" fill="#f8f5ef"/>
+  <rect x="32" y="32" width="1216" height="756" rx="28" fill="#fffaf3" stroke="#1f1a17" stroke-width="4"/>
+  <text x="74" y="116" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#1f1a17">Why It Wins</text>
+  <text x="74" y="158" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="24" fill="#4e453d">Live advantage metrics. Same corpus. Same task surface.</text>
+
+  <rect x="74" y="208" width="1132" height="146" rx="24" fill="#1f1a17"/>
+  <text x="116" y="266" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#fdf9f0">Needle-X vs Jina</text>
+  <text x="116" y="316" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" fill="#f3b46b">85.5% smaller</text>
+  <text x="594" y="266" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="22" fill="#d2cabd">Avg packet bytes</text>
+  <text x="594" y="316" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="#fdf9f0">4436 vs 30565</text>
+
+  <text x="74" y="420" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1f1a17">Packet Size</text>
+  <rect x="74" y="440" width="1132" height="122" rx="22" fill="#efe7d8"/>
+
+  <text x="104" y="488" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="22" fill="#1f1a17">Needle-X</text>
+  <rect x="250" y="466" width="80" height="26" rx="13" fill="#1f1a17"/>
+  <text x="348" y="488" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#1f1a17">4436</text>
+
+  <text x="104" y="530" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="22" fill="#1f1a17">Tavily</text>
+  <rect x="250" y="508" width="126" height="26" rx="13" fill="#d8e8d8"/>
+  <text x="394" y="530" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#1f1a17">6975</text>
+
+  <text x="560" y="488" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="22" fill="#1f1a17">Jina</text>
+  <rect x="650" y="466" width="553" height="26" rx="13" fill="#f3b46b"/>
+  <text x="1080" y="488" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#1f1a17">30565</text>
+
+  <text x="560" y="530" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="22" fill="#1f1a17">Firecrawl</text>
+  <rect x="650" y="508" width="556" height="26" rx="13" fill="#d96e45"/>
+  <text x="1072" y="530" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#1f1a17">72166</text>
+
+  <rect x="74" y="602" width="360" height="146" rx="22" fill="#d8e8d8" stroke="#1f1a17" stroke-width="3"/>
+  <text x="104" y="654" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f1a17">Claim → Source</text>
+  <text x="104" y="708" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" fill="#1f1a17">1 step</text>
+  <text x="252" y="708" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="24" fill="#314034">others: 2</text>
+
+  <rect x="460" y="602" width="360" height="146" rx="22" fill="#f3b46b" stroke="#1f1a17" stroke-width="3"/>
+  <text x="490" y="654" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f1a17">Post-Processing</text>
+  <text x="490" y="708" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" fill="#1f1a17">0.25</text>
+  <text x="640" y="708" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="24" fill="#4d2d13">others: 1.86–2.50</text>
+
+  <rect x="846" y="602" width="360" height="146" rx="22" fill="#1f1a17"/>
+  <text x="876" y="654" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#fdf9f0">Proof Usability</text>
+  <text x="876" y="708" font-family="Space Grotesk, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" fill="#f3b46b">1.0</text>
+  <text x="1012" y="708" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="24" fill="#d2cabd">others: 0</text>
+</svg>
