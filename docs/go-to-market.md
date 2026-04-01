@@ -16,6 +16,11 @@ What we can say today, and defend:
 5. Warm-state `Discovery Memory` turns repeated use into strong local retrieval.
 6. The active path is operationally stable.
 
+What is especially marketable because it is already measured:
+1. Needle-X is much smaller than extraction-heavy competitors on agent-facing output
+2. Needle-X is the only measured runtime in the live comparison with usable proof-carrying output
+3. Needle-X reduces claim-to-source distance and post-processing burden for downstream agents
+
 What we must not say yet:
 1. that Needle-X is a broad web-search replacement
 2. that it is a browser agent
@@ -37,6 +42,24 @@ In practical terms:
 1. commodity stacks read pages and ask a model to improvise
 2. Needle-X compiles pages into auditable context before the agent consumes them
 3. with warm local memory, Needle-X can route and recall from prior verified work without requiring hosted search infrastructure
+
+Current live competitive advantage metrics:
+1. average packet size:
+   - `Needle-X`: `4436`
+   - `Tavily`: `6975`
+   - `Jina`: `30565`
+   - `Firecrawl`: `72166`
+2. claim-to-source steps:
+   - `Needle-X`: `1`
+   - others in the live run: `2`
+3. average post-processing burden:
+   - `Needle-X`: `0.25`
+   - `Jina`: `1.86`
+   - `Tavily`: `1.92`
+   - `Firecrawl`: `2.5`
+4. proof usability:
+   - `Needle-X`: `1.0`
+   - others in the live run: `0`
 
 ## Discovery Memory Story
 

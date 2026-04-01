@@ -25,6 +25,12 @@ Tesi di rottura:
 Posizionamento:
 - "Needle-X compila il web in contesto macchina verificabile."
 
+Metriche che oggi rafforzano davvero questa tesi:
+1. packet molto piu' piccoli di stack extraction-heavy
+2. distanza claim->source piu' corta
+3. burden post-processing molto piu' basso per un agente a valle
+4. retrieval locale warm-state molto forte con `Discovery Memory`
+
 ## 2) Research Snapshot (Stato del Mercato e Gap Reale)
 
 ### 2.1 Segnali da benchmark agentici

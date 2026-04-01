@@ -7,6 +7,43 @@ It turns noisy web pages into compact, auditable, proof-carrying context with:
 2. semantic context alignment on a multilingual web
 3. bounded model escalation only for benchmark-backed ambiguity solving
 
+## Why Needle-X
+
+What stands out in the current benchmarked runtime:
+1. much smaller agent-facing packets than extraction-heavy baselines
+2. proof-carrying output instead of raw extracted text only
+3. lower post-processing burden for downstream agents
+4. strong warm-state local retrieval through `Discovery Memory`
+
+Current benchmark-backed highlights:
+1. average packet size on the live competitive run:
+   - `Needle-X`: `4436` bytes
+   - `Tavily`: `6975`
+   - `Jina`: `30565`
+   - `Firecrawl`: `72166`
+2. packet reduction versus `Jina` baseline:
+   - `Needle-X`: about `85.5%` smaller
+3. average claim-to-source steps on the live competitive run:
+   - `Needle-X`: `1`
+   - `Jina`: `2`
+   - `Tavily`: `2`
+   - `Firecrawl`: `2`
+4. average post-processing burden on the live competitive run:
+   - `Needle-X`: `0.25`
+   - `Jina`: `1.86`
+   - `Tavily`: `1.92`
+   - `Firecrawl`: `2.5`
+5. proof usability on the live competitive run:
+   - `Needle-X`: `1.0`
+   - `Jina`, `Tavily`, `Firecrawl`: `0`
+
+Interpretation rule:
+1. these are advantage metrics, not broad quality-superiority claims
+2. they show where Needle-X is strongest today:
+   - compactness
+   - verification leverage
+   - low-friction agent consumption
+
 ## Output Philosophy
 
 The primary product surface is compact compiled context, not the full diagnostic envelope.

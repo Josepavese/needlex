@@ -74,6 +74,42 @@ What the benchmarks do not support yet:
 3. equating lexical overlap with context understanding
 4. claiming cold-state open-web seedless strength from the discovery-memory benchmark
 
+## Current Advantage Metrics
+
+These are the strongest public-facing metrics today because they describe operator and agent leverage directly.
+
+From the live competitive run (`Needle-X`, `Jina`, `Firecrawl`, `Tavily`):
+1. average packet bytes:
+   - `Needle-X`: `4436`
+   - `Tavily`: `6975`
+   - `Jina`: `30565`
+   - `Firecrawl`: `72166`
+2. packet reduction versus `Jina`:
+   - `Needle-X`: `0.8549`
+   - roughly `85.5%` smaller
+3. average claim-to-source steps:
+   - `Needle-X`: `1`
+   - `Jina`: `2`
+   - `Firecrawl`: `2`
+   - `Tavily`: `2`
+4. average post-processing burden:
+   - `Needle-X`: `0.25`
+   - `Jina`: `1.8571`
+   - `Firecrawl`: `2.5`
+   - `Tavily`: `1.9167`
+5. proof usability:
+   - `Needle-X`: `1.0`
+   - `Jina`: `0`
+   - `Firecrawl`: `0`
+   - `Tavily`: `0`
+
+Interpretation:
+1. these are advantage metrics, not broad quality claims
+2. they show that Needle-X is strongest when the user values:
+   - compact context
+   - direct verification
+   - low-friction downstream agent use
+
 ## Discovery Memory Benchmark
 
 Active artifact:
