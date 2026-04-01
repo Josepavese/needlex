@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"golang.org/x/net/html"
 
@@ -92,13 +91,7 @@ func TestGoldenNFRDeterminismArticle(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newSemanticService(t, server.Client())
 
 	req := ReadRequest{
 		URL:       server.URL,
@@ -174,13 +167,7 @@ func TestGoldenQueryDiscoveryImprovesSignal(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newSemanticService(t, server.Client())
 
 	seedOnly, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -267,13 +254,7 @@ func BenchmarkReadGoldenArticle(b *testing.B) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		b.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newTestService(b, config.Defaults(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -338,13 +319,7 @@ func BenchmarkQueryGoldenArticle(b *testing.B) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		b.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newTestService(b, config.Defaults(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -383,13 +358,7 @@ func BenchmarkCrawlGoldenArticle(b *testing.B) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		b.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newTestService(b, config.Defaults(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -416,13 +385,7 @@ func runGoldenRead(t *testing.T, fixture string, req ReadRequest) ReadResponse {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newTestService(t, config.Defaults(), server.Client())
 
 	req.URL = server.URL
 	resp, err := svc.Read(context.Background(), req)
@@ -450,13 +413,7 @@ func benchmarkQueryModes(b *testing.B, mode string) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		b.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newTestService(b, config.Defaults(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -667,6 +624,25 @@ func objectiveSignalDensity(text, objective string) float64 {
 		}
 	}
 	return float64(matches) / float64(tokens)
+}
+
+func uniqueTokens(text string) []string {
+	raw := strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
+	})
+	out := make([]string, 0, len(raw))
+	seen := map[string]struct{}{}
+	for _, item := range raw {
+		if len(item) < 3 {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		out = append(out, item)
+	}
+	return out
 }
 
 func TestGoldenNFRMetricsShape(t *testing.T) {

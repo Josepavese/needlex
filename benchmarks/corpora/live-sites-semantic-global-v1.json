@@ -1,0 +1,44 @@
+[
+  {
+    "name": "mdn-zh-javascript",
+    "family": "docs-multilingual",
+    "url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+    "timeout_ms": 12000,
+    "objective": "javascript language guide"
+  },
+  {
+    "name": "mdn-de-javascript",
+    "family": "docs-multilingual",
+    "url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+    "timeout_ms": 12000,
+    "objective": "javascript language guide"
+  },
+  {
+    "name": "mdn-ru-javascript",
+    "family": "docs-multilingual",
+    "url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+    "timeout_ms": 12000,
+    "objective": "javascript language guide"
+  },
+  {
+    "name": "mdn-ja-javascript",
+    "family": "docs-multilingual",
+    "url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+    "timeout_ms": 12000,
+    "objective": "javascript language guide"
+  },
+  {
+    "name": "mdn-fr-javascript-guide",
+    "family": "docs-multilingual",
+    "url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+    "timeout_ms": 12000,
+    "objective": "javascript language guide"
+  },
+  {
+    "name": "mdn-es-javascript",
+    "family": "docs-multilingual",
+    "url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+    "timeout_ms": 12000,
+    "objective": "javascript language guide"
+  }
+]

@@ -3,12 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"path"
-	"slices"
 	"strings"
 	"time"
 
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
@@ -21,13 +20,7 @@ type DiscoverRequest struct {
 	DomainHints   []string
 }
 
-type DiscoverCandidate struct {
-	URL      string            `json:"url"`
-	Label    string            `json:"label,omitempty"`
-	Score    float64           `json:"score"`
-	Reason   []string          `json:"reason,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
-}
+type DiscoverCandidate = discoverycore.Candidate
 
 type DiscoverResponse struct {
 	SeedURL      string              `json:"seed_url"`
@@ -37,241 +30,85 @@ type DiscoverResponse struct {
 }
 
 func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverResponse, error) {
-	if strings.TrimSpace(req.SeedURL) == "" {
-		return DiscoverResponse{}, fmt.Errorf("discover request seed_url must not be empty")
+	req = normalizeDiscoverRequest(req)
+	if err := validateDiscoverRequest(req); err != nil {
+		return DiscoverResponse{}, err
 	}
-	if strings.TrimSpace(req.Goal) == "" {
-		return DiscoverResponse{}, fmt.Errorf("discover request goal must not be empty")
+	rawPage, dom, err := s.acquireDiscoverPage(ctx, req.SeedURL, req.UserAgent)
+	if err != nil {
+		return DiscoverResponse{}, err
 	}
+	candidates := discoverycore.NewSet(discoverycore.ScoreCandidates(req.Goal, rawPage.FinalURL, dom.Title, extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, req.SameDomain), req.DomainHints))
+	candidates = discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates.Sorted()))
+	selected := candidates.SelectedURL(rawPage.FinalURL)
+	return DiscoverResponse{SeedURL: req.SeedURL, SelectedURL: selected, DiscoveryURL: rawPage.FinalURL, Candidates: candidates.Limited(req.MaxCandidates)}, nil
+}
+
+func normalizeDiscoverRequest(req DiscoverRequest) DiscoverRequest {
 	if req.MaxCandidates <= 0 {
 		req.MaxCandidates = 5
 	}
+	return req
+}
 
+func validateDiscoverRequest(req DiscoverRequest) error {
+	switch {
+	case strings.TrimSpace(req.SeedURL) == "":
+		return fmt.Errorf("discover request seed_url must not be empty")
+	case strings.TrimSpace(req.Goal) == "":
+		return fmt.Errorf("discover request goal must not be empty")
+	default:
+		return nil
+	}
+}
+
+func (s *Service) acquireDiscoverPage(ctx context.Context, rawURL, userAgent string) (pipeline.RawPage, pipeline.SimplifiedDOM, error) {
 	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       req.SeedURL,
+		URL:       rawURL,
 		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
 		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: req.UserAgent,
+		UserAgent: userAgent,
 	})
 	if err != nil {
-		return DiscoverResponse{}, err
+		return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, err
 	}
-
 	dom, err := s.reducer.Reduce(rawPage)
 	if err != nil {
-		return DiscoverResponse{}, err
+		return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, err
 	}
-
-	candidates := scoreDiscoveryCandidates(req.Goal, rawPage.FinalURL, dom.Title, extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, req.SameDomain), req.DomainHints)
-	limit := min(len(candidates), req.MaxCandidates)
-	candidates = append([]DiscoverCandidate{}, candidates[:limit]...)
-
-	selectedURL := rawPage.FinalURL
-	if len(candidates) > 0 {
-		selectedURL = candidates[0].URL
-	}
-
-	return DiscoverResponse{
-		SeedURL:      req.SeedURL,
-		SelectedURL:  selectedURL,
-		DiscoveryURL: rawPage.FinalURL,
-		Candidates:   candidates,
-	}, nil
+	return rawPage, dom, nil
 }
 
-func scoreDiscoveryCandidates(goal, seedURL, seedLabel string, links []linkCandidate, domainHints []string) []DiscoverCandidate {
-	domainHints = normalizeDomainHints(domainHints)
-	out := make([]DiscoverCandidate, 0, len(links)+1)
-	seen := map[string]struct{}{}
-
-	if strings.TrimSpace(seedURL) != "" {
-		seedScore, seedReason := discoveryScore(goal, seedURL, seedLabel, true, domainHints)
-		out = append(out, DiscoverCandidate{
-			URL:    seedURL,
-			Label:  strings.TrimSpace(seedLabel),
-			Score:  seedScore,
-			Reason: seedReason,
-		})
-		seen[seedURL] = struct{}{}
+func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
+	if strings.TrimSpace(goal) == "" || len(candidates) == 0 {
+		return candidates
 	}
-
-	for _, link := range links {
-		if _, ok := seen[link.URL]; ok {
-			continue
+	semanticCandidates := make([]intel.SemanticCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		text := strings.TrimSpace(candidate.Label)
+		if text == "" {
+			text = discoverycore.URLTokenText(candidate.URL)
 		}
-		seen[link.URL] = struct{}{}
-		score, reason := discoveryScore(goal, link.URL, link.Label, false, domainHints)
-		out = append(out, DiscoverCandidate{
-			URL:    link.URL,
-			Label:  strings.TrimSpace(link.Label),
-			Score:  score,
-			Reason: reason,
+		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
+			ID:   candidate.URL,
+			Text: text,
 		})
 	}
-
-	slices.SortStableFunc(out, func(left, right DiscoverCandidate) int {
-		switch {
-		case left.Score > right.Score:
-			return -1
-		case left.Score < right.Score:
-			return 1
-		case left.URL < right.URL:
-			return -1
-		case left.URL > right.URL:
-			return 1
-		default:
-			return 0
+	scored, err := s.semantic.Score(ctx, goal, semanticCandidates)
+	if err != nil || len(scored) == 0 {
+		return candidates
+	}
+	byURL := make(map[string]float64, len(scored))
+	for _, item := range scored {
+		byURL[item.ID] = item.Similarity
+	}
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := range out {
+		if similarity, ok := byURL[out[i].URL]; ok {
+			out[i].Score += similarity * 3
+			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_goal_alignment")
 		}
-	})
+	}
+	discoverycore.SortCandidates(out)
 	return out
-}
-
-func discoveryScore(goal, rawURL, label string, isSeed bool, domainHints []string) (float64, []string) {
-	reasons := []string{}
-	score := 0.0
-
-	goalTokens := uniqueTokens(goal)
-	labelTokens := uniqueTokens(label)
-	urlTokens := uniqueTokens(urlTokenText(rawURL))
-
-	labelMatches := tokenOverlap(goalTokens, labelTokens)
-	urlMatches := tokenOverlap(goalTokens, urlTokens)
-
-	if labelMatches > 0 {
-		score += float64(labelMatches) * 1.5
-		reasons = append(reasons, "label_match")
-	}
-	if urlMatches > 0 {
-		score += float64(urlMatches)
-		reasons = append(reasons, "url_match")
-	}
-	if isSeed {
-		score += 0.35
-		reasons = append(reasons, "seed_fallback")
-	}
-	if strings.Contains(strings.ToLower(rawURL), "docs") || strings.Contains(strings.ToLower(rawURL), "guide") {
-		score += 0.20
-		reasons = append(reasons, "path_hint")
-	}
-	if host, ok := discoverHostname(rawURL); ok && slices.Contains(domainHints, host) {
-		score += 1.10
-		reasons = append(reasons, "domain_hint_match")
-	}
-
-	return score, reasons
-}
-
-func appendUniqueReason(existing []string, incoming ...string) []string {
-	seen := make(map[string]struct{}, len(existing))
-	out := append([]string{}, existing...)
-	for _, value := range existing {
-		seen[value] = struct{}{}
-	}
-	for _, value := range incoming {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
-	}
-	return out
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
-}
-
-func joinNonEmpty(values ...string) string {
-	parts := make([]string, 0, len(values))
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	return strings.Join(parts, " ")
-}
-
-func uniqueTokens(text string) []string {
-	fields := strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
-		return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
-	})
-	out := make([]string, 0, len(fields))
-	seen := map[string]struct{}{}
-	for _, field := range fields {
-		if len(field) < 2 {
-			continue
-		}
-		if _, ok := seen[field]; ok {
-			continue
-		}
-		seen[field] = struct{}{}
-		out = append(out, field)
-	}
-	return out
-}
-
-func tokenOverlap(left, right []string) int {
-	if len(left) == 0 || len(right) == 0 {
-		return 0
-	}
-	set := make(map[string]struct{}, len(right))
-	for _, token := range right {
-		set[token] = struct{}{}
-	}
-	matches := 0
-	for _, token := range left {
-		if _, ok := set[token]; ok {
-			matches++
-		}
-	}
-	return matches
-}
-
-func urlTokenText(rawURL string) string {
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return rawURL
-	}
-	return strings.Join([]string{parsed.Hostname(), parsed.Path, path.Base(parsed.Path)}, " ")
-}
-
-func normalizeDomainHints(hints []string) []string {
-	out := make([]string, 0, len(hints))
-	seen := map[string]struct{}{}
-	for _, hint := range hints {
-		host := strings.TrimSpace(strings.ToLower(hint))
-		if host == "" {
-			continue
-		}
-		if parsed, err := url.Parse(host); err == nil && strings.TrimSpace(parsed.Hostname()) != "" {
-			host = strings.ToLower(strings.TrimSpace(parsed.Hostname()))
-		}
-		if _, ok := seen[host]; ok {
-			continue
-		}
-		seen[host] = struct{}{}
-		out = append(out, host)
-	}
-	return out
-}
-
-func discoverHostname(rawURL string) (string, bool) {
-	parsed, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil {
-		return "", false
-	}
-	host := strings.TrimSpace(strings.ToLower(parsed.Hostname()))
-	if host == "" {
-		return "", false
-	}
-	return host, true
 }

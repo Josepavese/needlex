@@ -1,13 +1,17 @@
 # NEEDLE-X SPEC
 Version: 0.2
-Status: Draft for execution
+Status: Active product/runtime contract
 Language: IT/EN technical
 
 Related docs:
 - `README.md`
 - `docs/architecture.md`
+- `docs/agent-answer-packet.md`
 - `docs/folder-tree.md`
 - `docs/development-plan.md`
+- `docs/semantic-alignment-gate.md`
+- `docs/model-baseline.md`
+- `docs/experimental/discovery-memory-spec.md`
 
 ## 1. Scopo
 Questo documento definisce la specifica tecnica e di prodotto di Needle-X come:
@@ -17,7 +21,12 @@ Questo documento definisce la specifica tecnica e di prodotto di Needle-X come:
 - deterministic-first
 - SLM policy-gated per risoluzione ambiguita'
 
-Obiettivo: trasformare pagine web rumorose in context fragments compatti, verificabili e ad alta fedelta'.
+Obiettivo: trasformare superfici web rumorose in contesto compatto, verificabile e semanticamente coerente per agenti, senza dipendere da matching lessicale come giudice principale del significato.
+
+Principio di output:
+1. la superficie primaria del prodotto deve essere il contesto compilato compatto
+2. artifact diagnostici e di audit devono restare disponibili ma espliciti
+3. il runtime non deve costringere agenti o operatori a consumare bundle completi quando basta il contesto finale
 
 ## 2. Obiettivi e Non-Obiettivi
 ### 2.1 Obiettivi
@@ -25,7 +34,8 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 2. Massimizzare extraction fidelity con prove verificabili.
 3. Garantire replay deterministico e debug stage-by-stage.
 4. Offrire surface minima ma completa: CLI + MCP.
-5. Supportare lanes di intelligenza con escalation controllata.
+5. Supportare escalation modellata solo dove esiste vantaggio benchmark-backed.
+6. Compilare contesto web multilingua sulla base del significato, non della sola coincidenza lessicale.
 
 ### 2.2 Non-Obiettivi
 1. Non essere un motore di ricerca globale.
@@ -35,11 +45,18 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 5. Non diventare un wrapper sottile di provider search esterni.
 
 ### 2.3 Priorita' Strategiche (Execution Order)
+
+Current active runtime contract:
+1. deterministic substrate
+2. semantic context gate
+3. bounded ambiguity solver only when benchmark-backed
+
 1. Rendere `WebIR` un artifact first-class e versionato.
 2. Evolvere `QueryPlan` in retrieval compiler con decisioni esplicite e reason code.
 3. Costruire discovery nativa oltre il bootstrap provider-based.
+3b. Costruire `Discovery Memory` client-local come substrate seedless senza infrastruttura obbligatoria.
 4. Materializzare fingerprint graph per dedup/delta retrieval cross-run.
-5. Usare lane SLM solo dove forniscono vantaggio misurabile su casi ad alta ambiguita'.
+5. Usare modello locale solo dove fornisce vantaggio misurabile su casi ad alta ambiguita'.
 6. Ottimizzare performance e benchmark senza compromettere il moat tecnico.
 
 ## 3. Definizioni
@@ -48,6 +65,8 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 3. Lane: livello di computazione da deterministic-only a model-assisted.
 4. Ambiguity score: indice di incertezza che guida escalation lane.
 5. Fidelity@k: percentuale di chunk top-k aderenti alla fonte reale.
+6. Semantic alignment: misura di vicinanza contestuale tra obiettivo e chunk, anche cross-lingua.
+7. Discovery Memory: memoria locale di pagine e segnali gia' osservati, usata per retrieval seedless prima del bootstrap pubblico.
 
 ## 4. Product Requirements (FR)
 ### 4.1 Acquisition
@@ -63,13 +82,17 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 
 ### 4.3 Estrazione
 - FR-007: il sistema deve eseguire estrazione deterministica come percorso primario.
-- FR-008: il sistema deve supportare estrazione SLM solo con trigger policy.
-- FR-009: il sistema deve supportare modalita' dual extraction con compare/merge/escalate.
+- FR-008: il sistema deve supportare escalation modellata solo con trigger policy.
+- FR-008b: il sistema deve usare il modello locale come solver di task tipizzati e non come reader libero della pagina.
+- FR-009: il sistema deve poter confrontare percorso deterministico e percorso con escalation senza confondere i due come identita' di prodotto.
 
 ### 4.4 Routing e Judge
-- FR-010: il router deve classificare `page_type`, `difficulty`, `noise_level`.
-- FR-011: il judge deve scegliere output `best | merge | escalate` con motivazione esplicita.
-- FR-012: ogni decisione router/judge deve essere tracciata con reason code.
+- FR-010: il runtime deve classificare `page_type`, `difficulty`, `noise_level` e substrate utili al routing.
+- FR-011: le decisioni di escalation devono avere motivazione esplicita.
+- FR-012: ogni decisione context-sensitive deve essere tracciata con reason code.
+- FR-012b: ogni task modello deve emettere output schema-locked validabile come decisione tipizzata.
+- FR-012c: le decisioni context-sensitive devono usare segnali semantici come gate primario quando il significato non e' affidabile via matching lessicale.
+- FR-012d: il matching lessicale puo' restare solo come segnale ausiliario, fallback cheap o euristica di rumore.
 
 ### 4.5 Chunking, Ranking, Packing
 - FR-013: il sistema deve generare chunk con `id`, `text`, `heading_path`, `score`.
@@ -95,12 +118,17 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 - FR-025: input obiettivo utente deve essere tradotto in execution plan.
 - FR-026: plan deve includere budget costo/latenza/qualita'.
 - FR-027: plan deve essere serializzabile in formato machine-readable.
+- FR-027b: il compiler deve supportare objective-to-chunk semantic alignment su web multilingua.
+- FR-027c: il compiler deve poter consultare un substrate locale di `Discovery Memory` prima di usare bootstrap pubblico, quando disponibile.
 
 ### 4.10 Interfaccia
 - FR-028: CLI deve includere `read`, `query`, `crawl`, `replay`, `diff`, `proof`.
 - FR-029: MCP deve esporre tools equivalenti con schema I/O stabile.
 - FR-030: output deve includere sempre `sources` e `cost_report`.
 - FR-030b: output di `read/query` deve includere `web_ir` come artifact ispezionabile.
+- FR-030c: output default di `read/query/crawl` deve privilegiare un payload compatto agent-facing ottimizzato per navigazione rapida e basso consumo token.
+- FR-030d: payload diagnostici completi devono richiedere una modalita' esplicita, senza sostituire il contratto compatto di default.
+- FR-030e: il payload compatto default deve essere ordinato per consumo AI-first e includere almeno locator primario, summary, uncertainty sintetica, evidenza minima inline, alternative di selezione quando rilevanti, segnali sintetici e costo.
 
 ### 4.11 Sicurezza e Guardrail
 - FR-031: enforcement su `max_pages`, `max_depth`, `max_bytes`, `timeout`.
@@ -135,16 +163,18 @@ Obiettivo: trasformare pagine web rumorose in context fragments compatti, verifi
 3. `segment`: region building semantico.
 4. `extract_det`: estrazione deterministic.
 5. `extract_slm`: estrazione assistita modello (policy-gated).
-6. `judge`: compare outputs e decisione.
-7. `chunk_rank`: chunking + scoring + selection.
-8. `pack`: costruzione ResultPack.
-9. `proof`: produzione artifact verificabili.
-10. `trace`: event timeline + replay store.
-11. `genome`: profili dominio.
-12. `planner`: retrieval compiler.
+5b. `patch_validate`: validazione deterministica dei delta proposti dal modello.
+6. `semantic_gate`: allineamento semantico multilingua per decisioni meaning-sensitive.
+7. `judge`: compare outputs e decisione.
+8. `chunk_rank`: chunking + scoring + selection.
+9. `pack`: costruzione ResultPack.
+10. `proof`: produzione artifact verificabili.
+11. `trace`: event timeline + replay store.
+12. `genome`: profili dominio.
+13. `planner`: retrieval compiler.
 
 ### 6.2 Flusso
-`Acquire -> Reduce -> Segment -> Extract_det (+Extract_slm) -> Judge -> ChunkRank -> Pack -> Proof -> Trace`
+`Acquire -> Reduce -> Segment -> Extract_det -> SemanticGate -> (+ResolveAmbiguity) -> ChunkRank -> Pack -> Proof -> Trace`
 
 ### 6.3 Policy Engine
 Input policy:
@@ -161,17 +191,17 @@ Output policy:
 ## 7. Lane System
 ### 7.1 Lanes
 - Lane 0: deterministic-only
-- Lane 1: router + judge
-- Lane 2: SLM extraction
-- Lane 3: formatter constrained
-- Lane 4: remote burst (eccezione)
+- Lane 1: deterministic + policy analysis
+- Lane 2: typed local ambiguity solver
+- Lane 3: reserved for future bounded expansion only if benchmark-backed
+- Lane 4: not part of the active product contract
 
 ### 7.2 Trigger escalation
 Escalation consentita se almeno una condizione:
-1. `conflict_score > threshold_conflict`
-2. `ambiguity_score > threshold_ambiguity`
-3. `coverage_loss > threshold_coverage`
-4. `domain_profile.force_lane >= n`
+1. `ambiguity_score > threshold_ambiguity`
+2. `domain_profile.force_lane >= n`
+3. il semantic gate non riesce a chiudere il caso con sufficiente dominanza contestuale
+4. il top candidate non e' abbastanza supportato strutturalmente
 
 ### 7.3 De-escalation
 Ritorno a lane inferiore quando:
@@ -188,7 +218,7 @@ Ritorno a lane inferiore quando:
   "final_url": "https://...",
   "title": "...",
   "fetched_at": "2026-03-27T20:00:00Z",
-  "fetch_mode": "http|render",
+  "fetch_mode": "http",
   "raw_hash": "sha256:..."
 }
 ```
@@ -252,23 +282,46 @@ Ritorno a lane inferiore quando:
 
 ## 9. CLI Specification
 ## 9.1 `needle read`
-`needle read <url> [--profile tiny|standard|deep] [--json]`
+`needle read <url> [--profile tiny|standard|deep] [--json] [--json-mode compact|full]`
 
 Output:
-- documento estratto
+- contesto compilato compatto
 - top chunks
 - proof summary
 - cost report
 
+JSON modes:
+- `--json` => payload compatto default
+- `--json --json-mode full` => envelope diagnostico completo
+
+Default compact contract:
+- `Agent Answer Packet v1`
+
 ### 9.2 `needle query`
-`needle query [seed-url] --goal "<goal>" [--budget-ms 1200] [--budget-tokens 8000] [--json]`
+`needle query [seed-url] --goal "<goal>" [--budget-ms 1200] [--budget-tokens 8000] [--json] [--json-mode compact|full]`
 
 Output:
 - result pack orientato al goal
 - motivazione ranking
 
+JSON modes:
+- `--json` => payload compatto default
+- `--json --json-mode full` => envelope diagnostico completo
+
+Default compact contract:
+- `Agent Answer Packet v1`
+
 ### 9.3 `needle crawl`
-`needle crawl <url> [--max-pages 20] [--max-depth 2] [--same-domain]`
+`needle crawl <url> [--max-pages 20] [--max-depth 2] [--same-domain] [--json] [--json-mode compact|full]`
+
+Output:
+- summary compatto del crawl
+- documenti compilati essenziali
+- stored run ids
+
+JSON modes:
+- `--json` => payload compatto default
+- `--json --json-mode full` => envelope completo quando richiesto
 
 ### 9.4 `needle replay`
 `needle replay <trace_id> [--json] [--stage all|name]`
@@ -277,7 +330,7 @@ Output:
 `needle diff <trace_a> <trace_b> [--stage all|name] [--json]`
 
 ### 9.6 `needle proof`
-`needle proof <chunk_id|trace_id> [--json]`
+`needle proof <chunk_id|proof_id|trace_id> [--json]`
 
 ## 10. MCP Tool Contracts
 ### 10.1 `web_read`
@@ -370,6 +423,8 @@ Output:
 Input:
 ```json
 {
+  "trace_id": "trace_...",
+  "proof_id": "proof_...",
   "chunk_id": "chk_..."
 }
 ```
@@ -572,7 +627,7 @@ Regole di design:
 3. Nessuna interfaccia se non esistono almeno 2 implementazioni reali.
 4. Niente reflection o metaprogramming se evitabile.
 5. Config-driven behavior prima di nuova logica hardcoded.
-6. Reuse massimo di primitive comuni (`RunContext`, `StageResult`, `ProofEvent`).
+6. Reuse massimo di primitive comuni attive (`Budget`, `ProofEvent`, packet/trace contracts).
 
 Regole di implementazione:
 1. Ogni nuova feature deve riusare la pipeline esistente, non creare pipeline parallela.

@@ -1,0 +1,301 @@
+{
+  "generated_at_utc": "2026-03-30T15:03:42Z",
+  "compare_enabled": true,
+  "compare_backend": "openai-compatible",
+  "summary": {
+    "case_count": 5,
+    "baseline_success_rate": 1,
+    "compare_success_rate": 1,
+    "avg_baseline_latency_ms": 1471,
+    "avg_compare_latency_ms": 5882,
+    "avg_baseline_keyword_coverage": 0.6666666666666666,
+    "avg_compare_keyword_coverage": 0.6666666666666666,
+    "families": [
+      {
+        "family": "app-shell",
+        "case_count": 1,
+        "baseline_success_rate": 1,
+        "compare_success_rate": 1,
+        "avg_baseline_latency_ms": 72,
+        "avg_compare_latency_ms": 12448,
+        "avg_baseline_keyword_coverage": 1,
+        "avg_compare_keyword_coverage": 1,
+        "rejected_interventions": 1
+      },
+      {
+        "family": "corporate",
+        "case_count": 3,
+        "baseline_success_rate": 1,
+        "compare_success_rate": 1,
+        "avg_baseline_latency_ms": 2308,
+        "avg_compare_latency_ms": 2182,
+        "avg_baseline_keyword_coverage": 0.4444444444444444,
+        "avg_compare_keyword_coverage": 0.4444444444444444
+      },
+      {
+        "family": "embedded-heavy",
+        "case_count": 1,
+        "baseline_success_rate": 1,
+        "compare_success_rate": 1,
+        "avg_baseline_latency_ms": 362,
+        "avg_compare_latency_ms": 10419,
+        "avg_baseline_keyword_coverage": 1,
+        "avg_compare_keyword_coverage": 1,
+        "rejected_interventions": 1
+      }
+    ],
+    "rejected_interventions": 2
+  },
+  "results": [
+    {
+      "name": "carratellire",
+      "family": "corporate",
+      "url": "https://carratellire.com/",
+      "objective": "company profile",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "Carratelli",
+        "latency_ms": 899,
+        "chunk_count": 6,
+        "keyword_coverage": 0.3333333333333333,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 8,
+        "web_ir_embedded_count": 8,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_applied": 3,
+        "reuse_recomputed": 3,
+        "stable_fp_hits": 4,
+        "novel_fp_hits": 2,
+        "invocations": 18,
+        "interventions": 1,
+        "patch_effects": [
+          "backend_disabled"
+        ]
+      },
+      "compare": {
+        "backend": "openai-compatible",
+        "success": true,
+        "title": "Carratelli",
+        "latency_ms": 837,
+        "chunk_count": 6,
+        "keyword_coverage": 0.3333333333333333,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 8,
+        "web_ir_embedded_count": 8,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_applied": 3,
+        "reuse_recomputed": 3,
+        "stable_fp_hits": 4,
+        "novel_fp_hits": 2,
+        "invocations": 18,
+        "interventions": 1,
+        "patch_effects": [
+          "not_benchmark_proven"
+        ]
+      }
+    },
+    {
+      "name": "cnf",
+      "family": "corporate",
+      "url": "https://www.cnfsrl.it/",
+      "objective": "capability summary",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "Homepage - Cnf",
+        "latency_ms": 5046,
+        "chunk_count": 6,
+        "keyword_coverage": 0,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 59,
+        "web_ir_short_ratio": 0.4406779661016949,
+        "web_ir_heading_ratio": 0.2711864406779661,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_recomputed": 6,
+        "stable_fp_hits": 1,
+        "novel_fp_hits": 5,
+        "invocations": 12
+      },
+      "compare": {
+        "backend": "openai-compatible",
+        "success": true,
+        "title": "Homepage - Cnf",
+        "latency_ms": 4672,
+        "chunk_count": 6,
+        "keyword_coverage": 0,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 59,
+        "web_ir_short_ratio": 0.4406779661016949,
+        "web_ir_heading_ratio": 0.2711864406779661,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_recomputed": 6,
+        "stable_fp_hits": 1,
+        "novel_fp_hits": 5,
+        "invocations": 12
+      }
+    },
+    {
+      "name": "halfpocket",
+      "family": "corporate",
+      "url": "https://halfpocket.net/",
+      "objective": "service offering",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+        "latency_ms": 980,
+        "chunk_count": 6,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 56,
+        "web_ir_short_ratio": 0.5892857142857143,
+        "web_ir_heading_ratio": 0.39285714285714285,
+        "reuse_mode": "fresh",
+        "reuse_recomputed": 6,
+        "novel_fp_hits": 6,
+        "invocations": 12
+      },
+      "compare": {
+        "backend": "openai-compatible",
+        "success": true,
+        "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+        "latency_ms": 1037,
+        "chunk_count": 6,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 56,
+        "web_ir_short_ratio": 0.5892857142857143,
+        "web_ir_heading_ratio": 0.39285714285714285,
+        "reuse_mode": "fresh",
+        "reuse_recomputed": 6,
+        "novel_fp_hits": 6,
+        "invocations": 12
+      }
+    },
+    {
+      "name": "sqlite",
+      "family": "embedded-heavy",
+      "url": "https://www.sqlite.org/index.html",
+      "objective": "database engine summary",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "SQLite Home Page",
+        "latency_ms": 362,
+        "chunk_count": 4,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 43,
+        "web_ir_short_ratio": 0.8604651162790697,
+        "web_ir_heading_ratio": 0.06976744186046512,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 4,
+        "reuse_applied": 2,
+        "reuse_recomputed": 2,
+        "stable_fp_hits": 4,
+        "invocations": 12,
+        "interventions": 1,
+        "patch_effects": [
+          "backend_disabled"
+        ]
+      },
+      "compare": {
+        "backend": "openai-compatible",
+        "success": true,
+        "title": "SQLite Home Page",
+        "latency_ms": 10419,
+        "chunk_count": 4,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 43,
+        "web_ir_short_ratio": 0.8604651162790697,
+        "web_ir_heading_ratio": 0.06976744186046512,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 4,
+        "reuse_applied": 2,
+        "reuse_recomputed": 2,
+        "stable_fp_hits": 4,
+        "invocations": 12,
+        "interventions": 1,
+        "rejected_interventions": 1,
+        "patch_effects": [
+          "selection_rejected"
+        ],
+        "validator_messages": [
+          "decode resolve ambiguity patch: unexpected end of JSON input"
+        ]
+      }
+    },
+    {
+      "name": "nginx",
+      "family": "app-shell",
+      "url": "https://nginx.org/",
+      "objective": "web server platform summary",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "nginx",
+        "latency_ms": 72,
+        "chunk_count": 6,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 24,
+        "web_ir_short_ratio": 0.5,
+        "web_ir_heading_ratio": 0.125,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_applied": 3,
+        "reuse_recomputed": 3,
+        "stable_fp_hits": 4,
+        "novel_fp_hits": 2,
+        "invocations": 18,
+        "interventions": 1,
+        "patch_effects": [
+          "backend_disabled"
+        ]
+      },
+      "compare": {
+        "backend": "openai-compatible",
+        "success": true,
+        "title": "nginx",
+        "latency_ms": 12448,
+        "chunk_count": 6,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 24,
+        "web_ir_short_ratio": 0.5,
+        "web_ir_heading_ratio": 0.125,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_applied": 3,
+        "reuse_recomputed": 3,
+        "stable_fp_hits": 4,
+        "novel_fp_hits": 2,
+        "invocations": 18,
+        "interventions": 1,
+        "rejected_interventions": 1,
+        "patch_effects": [
+          "selection_rejected"
+        ],
+        "validator_messages": [
+          "decode resolve ambiguity patch: unexpected end of JSON input"
+        ]
+      }
+    }
+  ]
+}

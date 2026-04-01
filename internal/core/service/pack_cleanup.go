@@ -12,10 +12,7 @@ func deduplicateSelected(selected []rankedSegment, stable []string) []rankedSegm
 	if len(selected) <= 1 {
 		return selected
 	}
-	stableSet := map[string]struct{}{}
-	for _, fp := range stable {
-		stableSet[fp] = struct{}{}
-	}
+	stableSet := fingerprintSet(stable)
 	out := make([]rankedSegment, 0, len(selected))
 	kept := map[string]int{}
 	for _, item := range selected {
@@ -133,17 +130,17 @@ func buildOutline(selected []rankedSegment) []string {
 }
 
 func proofIDs(records []proof.ProofRecord) []string {
-	out := make([]string, 0, len(records))
-	for _, record := range records {
-		out = append(out, record.ID)
-	}
-	return out
+	return collectStrings(records, func(record proof.ProofRecord) string { return record.ID })
 }
 
 func chunkIDs(chunks []core.Chunk) []string {
-	out := make([]string, 0, len(chunks))
-	for _, chunk := range chunks {
-		out = append(out, chunk.ID)
+	return collectStrings(chunks, func(chunk core.Chunk) string { return chunk.ID })
+}
+
+func collectStrings[T any](items []T, value func(T) string) []string {
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		out = append(out, value(item))
 	}
 	return out
 }

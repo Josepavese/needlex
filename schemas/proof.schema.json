@@ -68,6 +68,14 @@
             "type": "string",
             "minLength": 1
           },
+          "backend": {
+            "type": "string",
+            "minLength": 1
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1
+          },
           "purpose": {
             "type": "string",
             "minLength": 1
@@ -83,6 +91,33 @@
           "latency_ms": {
             "type": "integer",
             "minimum": 0
+          },
+          "patch_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "patch_effect": {
+            "type": "string",
+            "minLength": 1
+          },
+          "patch_preview": {
+            "type": "string",
+            "minLength": 1
+          },
+          "affected_chunk_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "validator_outcome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validator_message": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }

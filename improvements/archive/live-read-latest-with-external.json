@@ -1,0 +1,52 @@
+{
+  "generated_at_utc": "2026-03-28T17:57:22Z",
+  "external_baseline": ".venv/bin/python scripts/external_baselines/trafilatura_stdin.py",
+  "results": [
+    {
+      "name": "carratellire",
+      "url": "https://carratellire.com/",
+      "success": true,
+      "title": "Carratelli",
+      "latency_ms": 1042,
+      "chunk_count": 6,
+      "keyword_coverage": 0.3333333333333333,
+      "noise_hits": 0,
+      "web_ir_version": "web_ir.v1",
+      "web_ir_node_count": 8,
+      "web_ir_embedded_count": 8
+    },
+    {
+      "name": "cnf",
+      "url": "https://www.cnfsrl.it/",
+      "success": true,
+      "title": "Homepage - Cnf",
+      "latency_ms": 4954,
+      "chunk_count": 6,
+      "keyword_coverage": 1,
+      "noise_hits": 0,
+      "web_ir_version": "web_ir.v1",
+      "web_ir_node_count": 59,
+      "web_ir_short_ratio": 0.4406779661016949,
+      "web_ir_heading_ratio": 0.2711864406779661,
+      "external_coverage": 1,
+      "external_noise_hits": 4,
+      "external_text_length": 7117
+    },
+    {
+      "name": "halfpocket",
+      "url": "https://halfpocket.net/",
+      "success": true,
+      "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+      "latency_ms": 1492,
+      "chunk_count": 6,
+      "keyword_coverage": 1,
+      "noise_hits": 0,
+      "web_ir_version": "web_ir.v1",
+      "web_ir_node_count": 56,
+      "web_ir_short_ratio": 0.5892857142857143,
+      "web_ir_heading_ratio": 0.39285714285714285,
+      "external_coverage": 1,
+      "external_text_length": 1161
+    }
+  ]
+}

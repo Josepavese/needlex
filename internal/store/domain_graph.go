@@ -102,12 +102,26 @@ func (s DomainGraphStore) Expand(seedDomains []string, limit int) ([]DomainMatch
 	if len(seeds) == 0 {
 		return nil, nil
 	}
+	return buildDomainMatches(graph, seeds, limit), nil
+}
 
-	type score struct {
-		value  float64
-		reason []string
+type domainScore struct {
+	value  float64
+	reason []string
+}
+
+func buildDomainMatches(graph []DomainTransition, seeds []string, limit int) []DomainMatch {
+	acc := accumulateDomainScores(graph, seeds)
+	matches := collectDomainMatches(acc)
+	sortDomainMatches(matches)
+	if len(matches) > limit {
+		matches = matches[:limit]
 	}
-	acc := map[string]score{}
+	return matches
+}
+
+func accumulateDomainScores(graph []DomainTransition, seeds []string) map[string]domainScore {
+	acc := map[string]domainScore{}
 	for _, edge := range graph {
 		if edge.Count <= 0 {
 			continue
@@ -127,7 +141,10 @@ func (s DomainGraphStore) Expand(seedDomains []string, limit int) ([]DomainMatch
 			acc[edge.From] = current
 		}
 	}
+	return acc
+}
 
+func collectDomainMatches(acc map[string]domainScore) []DomainMatch {
 	matches := make([]DomainMatch, 0, len(acc))
 	for domain, item := range acc {
 		if item.value <= 0 {
@@ -139,6 +156,10 @@ func (s DomainGraphStore) Expand(seedDomains []string, limit int) ([]DomainMatch
 			Reason: item.reason,
 		})
 	}
+	return matches
+}
+
+func sortDomainMatches(matches []DomainMatch) {
 	slices.SortStableFunc(matches, func(left, right DomainMatch) int {
 		switch {
 		case left.Score > right.Score:
@@ -153,10 +174,6 @@ func (s DomainGraphStore) Expand(seedDomains []string, limit int) ([]DomainMatch
 			return 0
 		}
 	})
-	if len(matches) > limit {
-		matches = matches[:limit]
-	}
-	return matches, nil
 }
 
 func (s DomainGraphStore) loadAll() ([]DomainTransition, error) {

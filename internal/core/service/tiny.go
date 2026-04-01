@@ -1,6 +1,13 @@
 package service
 
-import "strings"
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/josepavese/needlex/internal/intel"
+)
 
 var tinyStopwords = map[string]struct{}{
 	"a": {}, "an": {}, "and": {}, "are": {}, "as": {}, "at": {}, "be": {}, "before": {},
@@ -9,13 +16,13 @@ var tinyStopwords = map[string]struct{}{
 	"without": {},
 }
 
-func compactTinyText(text, objective string) (string, bool) {
+func (s *Service) compactTinyText(text, objective string) (string, bool) {
 	normalized := strings.Join(strings.Fields(strings.TrimSpace(text)), " ")
 	if normalized == "" {
 		return "", false
 	}
 
-	candidate := bestCompactSentence(normalized, objective)
+	candidate := s.bestCompactSentence(normalized, objective)
 	words := strings.Fields(candidate)
 	if len(words) == 0 {
 		return normalized, false
@@ -50,7 +57,7 @@ func compactTinyText(text, objective string) (string, bool) {
 	return compacted, compacted != normalized
 }
 
-func bestCompactSentence(text, objective string) string {
+func (s *Service) bestCompactSentence(text, objective string) string {
 	sentences := splitTinySentences(text)
 	if len(sentences) == 0 {
 		return text
@@ -58,24 +65,33 @@ func bestCompactSentence(text, objective string) string {
 	if strings.TrimSpace(objective) == "" {
 		return sentences[0]
 	}
-
-	tokens := uniqueTokens(objective)
-	best := sentences[0]
-	bestScore := -1
-	for _, sentence := range sentences {
-		score := 0
-		haystack := strings.ToLower(sentence)
-		for _, token := range tokens {
-			if strings.Contains(haystack, token) {
-				score++
-			}
-		}
-		if score > bestScore {
-			bestScore = score
-			best = sentence
+	candidates := make([]intel.SemanticCandidate, 0, len(sentences))
+	for idx, sentence := range sentences {
+		candidates = append(candidates, intel.SemanticCandidate{
+			ID:   fmt.Sprintf("sent_%d", idx),
+			Text: sentence,
+		})
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.cfg.Semantic.TimeoutMS)*time.Millisecond)
+	defer cancel()
+	scores, err := s.semantic.Score(ctx, objective, candidates)
+	if err != nil || len(scores) == 0 {
+		return sentences[0]
+	}
+	bestID := ""
+	bestScore := -1.0
+	for _, score := range scores {
+		if score.Similarity > bestScore {
+			bestID = score.ID
+			bestScore = score.Similarity
 		}
 	}
-	return best
+	for idx, sentence := range sentences {
+		if bestID == fmt.Sprintf("sent_%d", idx) {
+			return sentence
+		}
+	}
+	return sentences[0]
 }
 
 func splitTinySentences(text string) []string {

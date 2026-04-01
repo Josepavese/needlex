@@ -7,6 +7,12 @@ It is intentionally conservative:
 2. keep the methodology explicit
 3. avoid marketing claims that the benchmarks do not support
 
+Operational artifact policy:
+1. active benchmark outputs live in `improvements/`
+2. only current `baseline` and `latest` style reports should remain in `improvements/` root
+3. old waves, provider-specific experiments, and one-off empirical captures belong in `improvements/archive/`
+4. paid-provider benchmark reuse cache lives locally in `.needlex/competitive-benchmark-cache.json`
+
 ## Scope
 
 Current benchmark coverage focuses on:
@@ -15,241 +21,119 @@ Current benchmark coverage focuses on:
 3. Needle-X versus a naive plain-text baseline
 4. Needle-X versus a reduced deterministic baseline
 5. optional external deterministic baseline adapter
-6. hard-case lane behavior on embedded-state and troubleshooting-style pages
+6. hard-case lane behavior on ambiguity-style pages
 7. comparative hard-case matrix between default lane behavior and forced lane `2/3` behavior
+8. live semantic context evaluation on multilingual pages
 
-This is not yet a full public benchmark suite.
+## Semantic Context Regime
 
-## External Baseline Adapter
+Meaning-sensitive evaluation is now semantic-first.
 
-The repo now includes an optional external baseline adapter:
+This means:
+1. `context_alignment` is the primary signal for context quality in live evaluation
+2. lexical overlap is not treated as a primary meaning metric
+3. hard-case exports declare their metric regime explicitly
 
-- `scripts/external_baselines/trafilatura_stdin.py`
+Current semantic gate baseline:
+1. backend: `openai-embeddings`
+2. model: `intfloat/multilingual-e5-small`
 
-Contract:
-1. set `NEEDLEX_EXTERNAL_BASELINE_CMD`
-2. the command reads HTML from stdin
-3. the command writes extracted text to stdout
-
-Example:
-
-```bash
-export NEEDLEX_EXTERNAL_BASELINE_CMD="python3 scripts/external_baselines/trafilatura_stdin.py"
-```
-
-Important:
-1. this is benchmark-only support
-2. it adds no runtime dependency to Needle-X
-3. it is currently exercised through a local repo-scoped `.venv` and measured in the benchmark suite
-
-## Test Corpus
-
-Current fixtures:
-1. `testdata/golden/article.html`
-2. `testdata/golden/forum.html`
-
-Current dynamic query benchmark fixture:
-1. seed page with docs and blog candidates
-2. docs candidate that is more relevant than the seed page
-
-Current hard-case matrix corpus:
-1. `testdata/benchmark/hard-case-corpus-v2.json`
-2. exported via `./scripts/run_hard_case_matrix.sh`
-3. written to:
-   - `improvements/hard-case-matrix-latest.json`
-   - `improvements/hard-case-matrix-baseline.json`
-4. now includes explicit `objective_terms` so abstract goals are measured against grounded domain terms
-5. each case now carries a `family` label and each export includes `family_summary` aggregates
-6. the corpus now also defines `family_thresholds`, so benchmark export can fail on aggregate family risk, not only on per-case regressions
-7. the corpus now defines final `acceptance` thresholds (pass-rate, lane-lift-rate, objective-lift average, risk ceiling) and a failure-class map linked to future SLM rollout gates
-
-## Active Quality Gates
+## Current Quality Gates
 
 The repo currently enforces:
 1. replay determinism on golden tests
 2. fidelity checks on golden tests
 3. `tiny` compression ratio `>= 3.0`
 4. query improvement through same-site discovery
-5. Needle-X signal-density win over a naive plain-text baseline
-6. Needle-X signal-density win over a reduced deterministic baseline
-7. hard-case matrix checks that elevated lanes improve or preserve useful signal under controlled difficult inputs
-8. hard-case acceptance checks enforce final intelligence-readiness thresholds and classify failures by integration risk class
+5. Needle-X signal-quality win over naive and reduced deterministic baselines
+6. hard-case matrix checks that elevated lanes improve or preserve useful signal under controlled difficult inputs
+7. hard-case acceptance checks enforce final intelligence-readiness thresholds
+8. live semantic evaluation on multilingual pages
+9. discovery memory cold-vs-warm evaluation
+10. structural budget checks
 
-Hard-case matrix export command:
-
-```bash
-./scripts/run_hard_case_matrix.sh --update-baseline
-```
-
-Blocking intelligence gate command:
-
-```bash
-./scripts/run_intelligence_gate.sh
-```
-
-## Latest Measured Results
-
-### 1. Read Baseline
-
-Command used:
-
-```bash
-go test ./internal/core/service -run '^$' -bench 'BenchmarkReadGoldenArticle$' -benchmem -count=3
-```
-
-Observed:
-1. `337089 ns/op`
-2. `427261 ns/op`
-3. `326834 ns/op`
-4. memory around `84656-84837 B/op`
-5. `606 allocs/op`
-
-Practical reading:
-1. stable sub-millisecond local benchmark
-2. not optimized for raw speed yet
-3. acceptable for current validation phase
-
-### 2. Query Strategy Comparison
-
-Command used:
-
-```bash
-go test ./internal/core/service -run '^$' -bench 'BenchmarkQuery(SeedOnly|DiscoverFirst)$' -benchmem -count=3
-```
-
-Observed `seed-only`:
-1. `234842 ns/op`
-2. `192041 ns/op`
-3. `186824 ns/op`
-4. memory around `43235-43253 B/op`
-5. `387 allocs/op`
-
-Observed `discover-first`:
-1. `309028 ns/op`
-2. `339751 ns/op`
-3. `321344 ns/op`
-4. memory around `68904-68950 B/op`
-5. `605 allocs/op`
-
-Reading:
-1. `discover-first` is materially more expensive
-2. `discover-first` improves target quality on the golden query scenario
-3. this is an explicit quality-vs-cost tradeoff, not a free win
-
-### 3. Needle-X Versus Naive Baseline
-
-Command used:
-
-```bash
-go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|NaiveBaselineGoldenArticle)$' -benchmem -count=3
-```
-
-Observed Needle-X:
-1. `392443 ns/op`
-2. `376720 ns/op`
-3. `360696 ns/op`
-4. memory around `84783-84867 B/op`
-5. `606 allocs/op`
-
-Observed naive baseline:
-1. `23100 ns/op`
-2. `19190 ns/op`
-3. `21231 ns/op`
-4. memory `14144 B/op`
-5. `127 allocs/op`
-
-Reading:
-1. the naive baseline is much faster
-2. the naive baseline is much lighter
-3. Needle-X currently wins on output quality and retrieval usefulness, not on raw cost
-
-### 4. Needle-X Versus Reduced Deterministic Baseline
-
-Command used:
-
-```bash
-go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|NaiveBaselineGoldenArticle|ReducedBaselineGoldenArticle)$' -benchmem -count=3
-```
-
-Observed reduced deterministic baseline:
-1. `32035 ns/op`
-2. `32426 ns/op`
-3. `32031 ns/op`
-4. memory `21530-21531 B/op`
-5. `263 allocs/op`
-
-Reading:
-1. this baseline is still much cheaper than Needle-X
-2. it is a more serious comparison than naive plain-text extraction
-3. Needle-X still wins on objective signal density and compression under the current golden article test
-
-### 5. Needle-X Versus External `trafilatura` Baseline
-
-Command used:
-
-```bash
-export NEEDLEX_EXTERNAL_BASELINE_CMD=".venv/bin/python scripts/external_baselines/trafilatura_stdin.py"
-go test ./internal/core/service -run '^$' -bench 'Benchmark(ReadGoldenArticle|NaiveBaselineGoldenArticle|ReducedBaselineGoldenArticle|ExternalBaselineGoldenArticle)$' -benchmem -count=3
-```
-
-Observed external baseline:
-1. `396708940 ns/op`
-2. `393493016 ns/op`
-3. `397309425 ns/op`
-4. memory around `65850-65856 B/op`
-5. `115 allocs/op`
-
-Reading:
-1. this adapter path is far slower than Needle-X in the current local setup because each benchmark iteration spawns a Python process
-2. the result is useful for end-to-end reproducibility of the adapter path, not for a fair in-process extractor comparison
-3. the next stronger comparison should embed or isolate parser cost separately from process-launch overhead
+Benchmark interpretation rule:
+1. seeded benchmark reports must separate execution reliability from product quality
+2. `runtime_success_rate` tracks whether a case completed at all
+3. `quality_pass_rate` tracks whether Needle-X passed the product criteria on completed cases
+4. competitive comparisons are invalid if these two axes are collapsed into a single pass rate
 
 ## Current Quality Conclusions
 
 What the benchmarks support today:
-1. Needle-X can produce more concentrated context than a naive baseline
-2. Needle-X can produce more concentrated context than a reduced deterministic baseline
-3. the optional external baseline adapter path is real and runnable
-4. same-site discovery improves query quality in the golden scenario
-5. the first bootstrap `web_search` path is implemented, multi-provider capable, and test-covered
-6. `tiny` reaches the compression target while remaining traceable
-7. the runtime is still deterministic under replay-oriented checks
-8. lane behavior on the first hard cases is now test-gated for deterministic lane 0, forced lane 2, and forced lane 3 flows
-9. a comparative hard-case matrix now checks that forced lane `2/3` paths either improve objective focus and signal density or preserve tiny-profile compactness under the same input
-10. the hard-case benchmark story is now exportable as a versioned JSON artifact, not only as test assertions
-11. the current hard-case corpus covers six cases across embedded app-shell, forum remediation, pricing compaction, and tiny capability summaries
-12. the report now exposes `lossiness_risk`, making compaction-vs-fidelity tradeoffs visible instead of implicit
-13. aggregate family thresholds are now enforced for `embedded`, `forum`, `tiny`, and `compaction`
-14. final intelligence-acceptance thresholds are enforced globally (`pass_rate`, `lane_lift_rate`, `objective_lift_avg`, `medium/high risk rate`)
-15. acceptance failures are now classified through an explicit failure-class map tied to SLM rollout blocking policy
+1. Needle-X produces more concentrated context than simpler baselines
+2. the active CPU model path is real and benchmark-backed
+3. `Gemma 3 1B` is the current CPU baseline
+4. semantic context alignment is measurable and works on multilingual pages where lexical overlap is blind
+5. the active model task set is intentionally narrow: `resolve_ambiguity` only
+6. warm-state `Discovery Memory` can dominate local retrieval on the active benchmark corpus
 
 What the benchmarks do not support yet:
-1. that Needle-X is faster than simple baselines
-2. that Needle-X beats established external deterministic readers in a fair like-for-like in-process comparison
-3. that Needle-X is ready for web-scale discovery claims
-4. that selective SLM activation beats deterministic-only behavior on a broad hard-case corpus
+1. a broad market-superiority claim
+2. reopening specialist model tasks in the active core
+3. equating lexical overlap with context understanding
+4. claiming cold-state open-web seedless strength from the discovery-memory benchmark
 
-## Current Gaps In The Benchmark Story
+## Discovery Memory Benchmark
 
-The main missing pieces are:
-1. a fairer external baseline comparison without process-spawn overhead dominating results
-2. more fixture diversity
-3. a persistent benchmark script or command wrapper
-4. profiling-backed optimization data
-5. stronger open-web search benchmarks after the current two-stage bootstrap `web_search`
-6. `lossiness_risk` is still heuristic and should later be validated against human-reviewed cases
+Active artifact:
+- [discovery-memory-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-memory-benchmark-latest.json)
 
-## Recommended Next Benchmarking Steps
+Current measured summary:
+1. `case_count = 30`
+2. `cold_selected_pass_rate = 0`
+3. `warm_selected_pass_rate = 1`
+4. `warm_memory_provider_rate = 1`
+5. `improvement_rate = 1`
 
-1. add a stronger external deterministic baseline
-2. add one or two more golden fixture families
-3. create a reproducible benchmark runner script
-4. track benchmark history over time
+Correct interpretation:
+1. the benchmark measures a local warm-state retrieval regime
+2. once prior evidence is observed, Needle-X can reuse it extremely well on the active corpus
+3. this benchmark does not prove that cold-state seedless discovery is solved
 
-## Notes
+Competitive benchmark scope now distinguishes:
+1. direct market references:
+   - Firecrawl
+   - Tavily
+   - Exa
+   - Brave Search API
+2. simple baseline references:
+   - raw page / Jina Reader style readers
+3. adjacent browser-agent references:
+   - Vercel Browser Agent
 
-This report should be updated when:
-1. benchmark methodology changes
-2. benchmark numbers are rerun and materially different
-3. a stronger baseline is added or upgraded
-4. `discover_web` becomes real
+Competitive reporting must also distinguish:
+1. `quality metrics`
+2. `advantage metrics`
+
+Recommended advantage metrics:
+1. token/character reduction versus baselines
+2. hop count to target page or answer
+3. tool calls to target
+4. time to verifiable claim
+5. proof/audit leverage
+6. cached reuse savings on paid providers
+
+Default comparative rule:
+1. token reduction should default to comparison against `Jina Reader` when that baseline is present in the same report
+
+Rule:
+1. Vercel Browser Agent is not treated as a fully isomorphic competitor to Needle-X
+2. it is valid mainly on seeded routing and browsing tasks
+3. it is not a fair primary comparator for proof-carrying compact packet quality
+4. competitive quality must include `fact_coverage_rate` over `must_contain_facts`
+5. otherwise raw-text baselines can appear artificially strong
+6. in this repo, Vercel Browser Agent enters the benchmark through a bridge endpoint contract, not a single official public comparator API
+7. advantage metrics are allowed for product storytelling, but they cannot replace quality metrics
+
+Next benchmark protocol reference:
+1. [seeded-benchmark-spec.md](/home/jose/hpdev/Libraries/needlex/docs/seeded-benchmark-spec.md)
+2. [seeded-corpus-v1.json](/home/jose/hpdev/Libraries/needlex/benchmarks/corpora/seeded-corpus-v1.json)
+3. active seeded benchmark artifact:
+   [seeded-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/seeded-benchmark-latest.json)
+4. active discovery memory benchmark artifact:
+   [discovery-memory-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-memory-benchmark-latest.json)
+5. competitive benchmark protocol:
+   [competitive-benchmark-protocol.md](/home/jose/hpdev/Libraries/needlex/docs/competitive-benchmark-protocol.md)
+6. competitive corpus:
+   [competitive-corpus-v1.json](/home/jose/hpdev/Libraries/needlex/benchmarks/corpora/competitive-corpus-v1.json)

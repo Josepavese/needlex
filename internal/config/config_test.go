@@ -12,6 +12,13 @@ func TestDefaultsValidate(t *testing.T) {
 	}
 }
 
+func TestDefaultsUseOperatorGradeRuntimeTimeout(t *testing.T) {
+	cfg := Defaults()
+	if cfg.Runtime.TimeoutMS != 8000 {
+		t.Fatalf("expected runtime timeout default 8000ms, got %d", cfg.Runtime.TimeoutMS)
+	}
+}
+
 func TestLoadMergesJSONWithDefaults(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "needlex.json")
@@ -39,9 +46,12 @@ func TestLoadMergesJSONWithDefaults(t *testing.T) {
 func TestApplyEnvOverridesValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
+		"NEEDLEX_MODELS_BACKEND":            "openai-compatible",
+		"NEEDLEX_MODELS_BASE_URL":           "http://localhost:11434/v1",
 		"NEEDLEX_RUNTIME_MAX_DEPTH":         "7",
 		"NEEDLEX_POLICY_THRESHOLD_CONFLICT": "0.65",
 		"NEEDLEX_MODELS_FORMATTER":          "formatter-x",
+		"NEEDLEX_MODELS_MICRO_TIMEOUT_MS":   "1500",
 	}
 
 	if err := cfg.ApplyEnv(env); err != nil {
@@ -56,6 +66,15 @@ func TestApplyEnvOverridesValues(t *testing.T) {
 	if cfg.Models.Formatter != "formatter-x" {
 		t.Fatalf("expected formatter override, got %q", cfg.Models.Formatter)
 	}
+	if cfg.Models.Backend != "openai-compatible" {
+		t.Fatalf("expected backend override, got %q", cfg.Models.Backend)
+	}
+	if cfg.Models.BaseURL != "http://localhost:11434/v1" {
+		t.Fatalf("expected base url override, got %q", cfg.Models.BaseURL)
+	}
+	if cfg.Models.MicroTimeoutMS != 1500 {
+		t.Fatalf("expected micro timeout override, got %d", cfg.Models.MicroTimeoutMS)
+	}
 }
 
 func TestLoadRejectsInvalidEnvValue(t *testing.T) {
@@ -63,5 +82,92 @@ func TestLoadRejectsInvalidEnvValue(t *testing.T) {
 
 	if _, err := Load(""); err == nil {
 		t.Fatal("expected invalid env value to fail")
+	}
+}
+
+func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
+	cfg := Defaults()
+	if cfg.Models.Router != "gemma3:1b-it-q8_0" {
+		t.Fatalf("expected gemma router baseline, got %q", cfg.Models.Router)
+	}
+	if cfg.Models.Extractor != "gemma3:1b-it-q8_0" {
+		t.Fatalf("expected gemma extractor baseline, got %q", cfg.Models.Extractor)
+	}
+	if cfg.Models.BaseURL != "http://127.0.0.1:11434/v1" {
+		t.Fatalf("expected baseline base url, got %q", cfg.Models.BaseURL)
+	}
+	if cfg.Models.MicroTimeoutMS != 8000 || cfg.Models.StructuredTimeoutMS != 20000 || cfg.Models.SpecialistTimeoutMS != 8000 {
+		t.Fatalf("unexpected SSOT timeout defaults: %+v", cfg.Models)
+	}
+	if cfg.Semantic.Backend != "openai-embeddings" || cfg.Semantic.BaseURL != "http://127.0.0.1:18180" || cfg.Semantic.Model != "intfloat/multilingual-e5-small" || cfg.Semantic.TimeoutMS != 1200 {
+		t.Fatalf("unexpected semantic SSOT defaults: %+v", cfg.Semantic)
+	}
+	if cfg.Semantic.Enabled {
+		t.Fatal("expected semantic gate disabled by default")
+	}
+	if cfg.Discovery.ProviderChain != "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/" {
+		t.Fatalf("unexpected discovery SSOT defaults: %+v", cfg.Discovery)
+	}
+	if cfg.Memory.Backend != "sqlite" || cfg.Memory.Path != "discovery/discovery.db" || cfg.Memory.EmbeddingBackend != "openai-embeddings" || cfg.Memory.EmbeddingModel != "intfloat/multilingual-e5-small" || cfg.Memory.VectorEngine != "sqlite-vec" {
+		t.Fatalf("unexpected memory SSOT defaults: %+v", cfg.Memory)
+	}
+	if cfg.Memory.Enabled {
+		t.Fatal("expected discovery memory disabled by default")
+	}
+}
+
+func TestApplyEnvOverridesSemanticValues(t *testing.T) {
+	cfg := Defaults()
+	env := map[string]string{
+		"NEEDLEX_SEMANTIC_ENABLED":              "true",
+		"NEEDLEX_SEMANTIC_BACKEND":              "ollama-embed",
+		"NEEDLEX_SEMANTIC_BASE_URL":             "http://localhost:11434",
+		"NEEDLEX_SEMANTIC_MODEL":                "embed-x",
+		"NEEDLEX_SEMANTIC_TIMEOUT_MS":           "1500",
+		"NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD": "0.66",
+		"NEEDLEX_SEMANTIC_DOMINANCE_DELTA":      "0.11",
+		"NEEDLEX_SEMANTIC_MAX_CANDIDATES":       "5",
+	}
+	if err := cfg.ApplyEnv(env); err != nil {
+		t.Fatalf("apply env: %v", err)
+	}
+	if !cfg.Semantic.Enabled || cfg.Semantic.Model != "embed-x" || cfg.Semantic.MaxCandidates != 5 {
+		t.Fatalf("unexpected semantic config override: %+v", cfg.Semantic)
+	}
+}
+
+func TestApplyEnvOverridesDiscoveryValues(t *testing.T) {
+	cfg := Defaults()
+	env := map[string]string{
+		"NEEDLEX_DISCOVERY_PROVIDER_CHAIN": "https://example.com/search,https://backup.example/search",
+	}
+	if err := cfg.ApplyEnv(env); err != nil {
+		t.Fatalf("apply env: %v", err)
+	}
+	if cfg.Discovery.ProviderChain != "https://example.com/search,https://backup.example/search" {
+		t.Fatalf("unexpected discovery override: %+v", cfg.Discovery)
+	}
+}
+
+func TestApplyEnvOverridesMemoryValues(t *testing.T) {
+	cfg := Defaults()
+	env := map[string]string{
+		"NEEDLEX_MEMORY_ENABLED":           "true",
+		"NEEDLEX_MEMORY_BACKEND":           "sqlite",
+		"NEEDLEX_MEMORY_PATH":              "memory/custom.db",
+		"NEEDLEX_MEMORY_MAX_DOCUMENTS":     "500",
+		"NEEDLEX_MEMORY_MAX_EDGES":         "900",
+		"NEEDLEX_MEMORY_MAX_EMBEDDINGS":    "500",
+		"NEEDLEX_MEMORY_EMBEDDING_BACKEND": "openai-embeddings",
+		"NEEDLEX_MEMORY_EMBEDDING_MODEL":   "embed-y",
+		"NEEDLEX_MEMORY_VECTOR_MODE":       "embedded",
+		"NEEDLEX_MEMORY_VECTOR_ENGINE":     "vec1",
+		"NEEDLEX_MEMORY_PRUNE_POLICY":      "lru",
+	}
+	if err := cfg.ApplyEnv(env); err != nil {
+		t.Fatalf("apply env: %v", err)
+	}
+	if !cfg.Memory.Enabled || cfg.Memory.Path != "memory/custom.db" || cfg.Memory.MaxDocuments != 500 || cfg.Memory.VectorEngine != "vec1" || cfg.Memory.VectorMode != "embedded" {
+		t.Fatalf("unexpected memory config override: %+v", cfg.Memory)
 	}
 }

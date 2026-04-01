@@ -9,6 +9,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -24,6 +25,7 @@ type ReadResponse struct {
 	Document     core.Document       `json:"document"`
 	WebIR        core.WebIR          `json:"web_ir"`
 	ResultPack   core.ResultPack     `json:"result_pack"`
+	AgentContext AgentContext        `json:"agent_context,omitempty"`
 	ProofRecords []proof.ProofRecord `json:"proof_records"`
 	Trace        proof.RunTrace      `json:"trace"`
 	Replay       proof.ReplayReport  `json:"replay"`
@@ -34,6 +36,8 @@ type Service struct {
 	acquirer           pipeline.Acquirer
 	reducer            pipeline.Reducer
 	segmenter          pipeline.Segmenter
+	runtime            intel.ModelRuntime
+	semantic           intel.SemanticAligner
 	now                func() time.Time
 	webDiscoverBaseURL string
 }
@@ -49,8 +53,15 @@ func New(cfg config.Config, client *http.Client) (*Service, error) {
 		segmenter: pipeline.Segmenter{
 			MaxSegmentChars: 1200,
 		},
-		now: time.Now,
+		runtime:            intel.NewRuntime(cfg, client),
+		semantic:           intel.NewSemanticAligner(cfg, client),
+		now:                time.Now,
+		webDiscoverBaseURL: strings.TrimSpace(cfg.Discovery.ProviderChain),
 	}, nil
+}
+
+func (s *Service) SetWebDiscoverBaseURL(baseURL string) {
+	s.webDiscoverBaseURL = strings.TrimSpace(baseURL)
 }
 
 func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, error) {
@@ -77,6 +88,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	if err != nil {
 		return ReadResponse{}, err
 	}
+	dom = ensureMinimumDOM(dom)
 	webIR := buildWebIR(dom)
 	if err := webIR.Validate(); err != nil {
 		return ReadResponse{}, err
@@ -89,7 +101,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		return ReadResponse{}, err
 	}
 
-	resultPack, proofRecords, err := s.pack(recorder, req, document, webIR, segments)
+	resultPack, proofRecords, err := s.pack(recorder, req, document, dom, webIR, segments)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -105,6 +117,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		Document:     document,
 		WebIR:        webIR,
 		ResultPack:   resultPack,
+		AgentContext: buildAgentContext(document, resultPack, proofRecords, nil),
 		ProofRecords: proofRecords,
 		Trace:        trace,
 		Replay:       replay,

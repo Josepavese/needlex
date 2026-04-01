@@ -1,0 +1,901 @@
+{
+  "document": {
+    "id": "doc_5650ba9e6b868769",
+    "url": "https://carratellire.com/",
+    "final_url": "https://carratellire.com/",
+    "title": "Carratelli",
+    "fetched_at": "2026-03-30T14:21:38.892240391Z",
+    "fetch_mode": "http",
+    "raw_hash": "sha256_d686b39dda735716"
+  },
+  "web_ir": {
+    "version": "web_ir.v1",
+    "source_url": "https://carratellire.com/",
+    "title": "Carratelli",
+    "node_count": 8,
+    "nodes": [
+      {
+        "path": "/embedded/script[5]/text[1]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Perché consegnare all’agenzia immobiliare i documenti di un immobile? Prima di iniziare la vendita, al momento di un acquisizione, ogni agente immobiliare richiede i documenti che riguardano l’immobile oggetto della vendita. Spesso accade che questa richiesta viene sottovalutata dai venditori, i quali superficialmente pensano di consegnarli al momento del futuro rogito. Ma comprendiamo meglio perché è così importante consegnare subito tali documenti alla propria agenzia immobiliare. L’agenzia Immobiliare, prima di porlo in vendita, deve effettuare una stima sull’immobile, ed avere a disposizione la documentazione, come ad esempio planimetrie, certificati di conformità degli impianti od i certificati di conformità urbanistica e catastale, aiuta a comprendere lo stato di consistenza e di qualità di un immobile e quindi quello che potrà essere il suo reale valore di mercato. Atto di provenienza e visura catastale, inoltre rendono chiaro l’excursus di un immobile mettendo da subito in evidenza se vi insistono vincoli o semplicemente a che classe catastale appartiene. In molte città ad esempio, gli acquirenti chiedono da subito la classe catastale di un immobile od ancora i documenti condominiali con indicazione dei millesimi e delle spese annuali, o contratti d'affitto se l'immobile è locato. Poi c’è l’ancora poco compreso APE che spesso viene subito chiesto, ma è un attestato molto importante sia per il futuro acquirente che per le Agenzie Immobiliari. Si tratta di un Attestato di Prestazione Energetica, redatto e rilasciato solo da un tecnico qualificato, a cui tutti gli immobili, che non siano riconosciuti come ruderi o magazzini, sono soggetti ed è obbligatorio sia in fase di rogito che precedentemente anche solo per mettere in pubblicità l’immobile.",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[2]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Cosa è l’APE o Attestato di Prestazione Energetica? E’ così chiamato il documento che descrive le caratteristiche energetiche di un edificio, di un abitazione o di un appartamento; rappresenta pertanto uno strumento di controllo che sintetizza, con una scala da A a G, quelle che sono le prestazioni energetiche degli edifici. Al momento dell' acquisto o della locazione di un immobile, oltre ad essere obbligatorio, è quindi uno strumento molto per informare sul consumo energetico ed aumentare il valore economico degli edifici ad alto risparmio energetico. L'APE contiene quindi al suo interno la “targa energetica” che sintetizza le caratteristiche energetiche dell'immobile, per la cui misura il tecnico deve analizzare le specifiche termoigrometriche, i consumi, la produzione di acqua calda, il raffrescamento e il riscaldamento degli ambienti, il tipo di impianto, nonché eventuali sistemi di produzione di energia rinnovabile. L'attestato, che se corredato di libretto di impianto assume validità decennale, deve contenere oltre ai dati del rilascio dello stesso anche i dati catastali dell'immobile e, nel caso si debba vendere la propria abitazione o stipulare un nuovo contratto di locazione per trovare un inquilino, l'indice di prestazione energetica (Ipe) dell’involucro edilizio e globale dell’edificio o dell’unità immobiliare e la classe energetica corrispondente.",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[3]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Il rent to buy o affitto con riscatto è un nuovo tipo di contratto che permette di stipulare un accordo d’affitto che poi si potrà trasformare in una compravendita. Quest’ultima non è obbligatoria, ma costituisce solamente un’opzione legata alla locazione, che potrà però essere prevista già dal contratto iniziale. In sostanza è un contratto in cui si fondono un contratto di locazione e un preliminare di vendita di un immobile . Significa che il proprietario consegna fin da subito l’immobile al conduttore (futuro acquirente), il quale paga il canone; dopo un certo periodo di tempo, che in genere è di 3-5 anni, il conduttore può decidere se acquistare il bene, detraendo dal prezzo una parte dei canoni pagati. La quota che verrà versata mensilmente, però, sarà superiore a un normale canone di locazione; una parte costituisce l’affitto quindi viene versata per il godimento del bene, l’altra andrà a comporre un acconto sul prezzo finale dell’immobile che avrà come effetto quello di ridurre il prezzo finale della vendita. La legge prevede che il conduttore abbia la facoltà ma non l’obbligo ad acquistare il bene, quindi non è obbligato a comprare la casa dopo il periodo di “affitto”, ovviamente ed in tutela anche del venditore, può essere stipulato dalle parti l’obbligato ad acquistare, ma a quel punto non parleremmo solo di rent to buy. È importante sapere che il termine entro il quale il conduttore potrà decidere di acquistare la casa è stabilito dalle due parti entro il limite di tempo di 10 anni. Il vantaggio principale è la possibilità di trovare un numero più elevato di potenziali acquirenti . Il rischio è che il conduttore decida di non comprare la casa. In tal caso, però, il proprietario può trattenere tutto di quanto è stato pagato (e sarà una somma maggiore rispetto ad un normale canone di locazione). Per comprendere meglio: se prendiamo ad esempio la vendita di un appartamento al prezzo di 150.000 euro, dove il canone di locazione è convenuto in 1.000 euro mensili avremo che una parte come ad esempio 500 euro andrà a costituire l’affitto mentre i restanti 500 euro si imputano come caparra sul prezzo. Alla fine il conduttore, con un contratto di rent to buy di 4 anni, andrà a pagare nella trattativa di compravendita, non 150.000 euro ma 126.000 euro in quanto 24.000 euro saranno stati precedentemente versati nei canoni mensili. Contattaci per maggiori informazioni.",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[4]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Le nuove misure agevolative sul regime fiscale, recepito nelle ultime manovre di legge, che si rivolgono alle persone fisiche, che trasferiscono la residenza in Italia per svolgere un’attività lavorativa, o anche a prescindere dallo svolgimento di una attività lavorativa sono diverse, ma andiamo più nello specifico! Agevolazioni fiscali per ricercatori e docenti Per quanto riguarda questa categoria le agevolazioni fiscali si basano in particolare sul reddito. La norma precedente che vigeva su questa categoria è stata modificata dalla Legge di bilancio 2017, che ha reso permanente l’agevolazione e non è più prevista una data ultima utile per poter far rientro in Italia. Fanno parte di questa categoria: Docenti e ricercatori che vogliono svolgere la propria attività in Italia con i seguenti requisiti: titolo di studio universitario, essere stati residenti all’estero, aver svolto all’estero un’attività di ricerca o docenza per almeno due anni consecutivi presso centri di ricerca pubblici o privati o università, devono trasferire la residenza fiscale in Italia. Regime fiscale rivolto ai contro-esodati Con contro-esodati si intendono coloro che sono stati residenti in Italia e che, dopo essersi trasferiti all’estero, hanno fatto ritorno in Italia. Fanno parte di questa categoria:Cittadini UE, laureati che hanno svolto un’attività di lavoro autonomo o impresa all’estero, studenti che hanno un titolo accademico conseguito all’estero, ammesso anche il lavoro in pubbliche amministrazioni con i seguenti requisiti : essere stato almeno per 24 mesi in Italia prima dell’espatrio, essere laureati e aver svolto un’attività di lavoro autonomo o di impresa all’estero per almeno 24 mesi, aver studiato all’estero per almeno 24 mesi e aver conseguito un titolo accademico, aver trasferito la residenza anagrafica in Italia entro 3 mesi dall’assunzione, svolgere attività di lavoro in Italia. Regime speciale per lavoratori “impatriati” Nell’ambito dei lavoratori “impatriati” ci sono diverse categorie di persone che si trasferirscono in Italia per svolgere un’attività lavorativa.Le fattispecie previste sono le seguenti catogorie: - Manager e lavoratori con elevata qualifica e specializzazione intesi come i cittadini UE, i lavoratori non laureati, persone che non svolgono lavoro presso le pubbliche amministrazioni in possesso dei seguenti requisti: Trasferire la residenza in Italia, non essere stati residenti in Italia nei periodi precedenti l’impatrio, impegnarsi a rimanere in Italia per 2 anni, prestare lavoro per almeno 183 giorni per ciascun anno, se dipendenti lavorare in un impresa residente - Lavoratori autonomi rimpatriati ed impatriati in possesso di laurea intesi come i Cittadini UE, cittadini extra UE, lavoratori laureati, lavoratori presso amministrazioni pubbliche in possesso dei seguenti requisiti: Laureati, svolto attività di lavoro autonomo o di un’impresa all’estero per 24 mesi, aver studiato all’estero per 24 mesi con conseguente titolo di studio certificabile, trasferire la residenza fiscale in Italia - Opzione per il regime fiscale dei lavoratori rimpatriati intesi come i Cittadini UE, laureati che hanno lavorato all’estero, studenti che hanno conseguito un titolo di studio accademico o una specializzazione della laurea, lavoratori in pubbliche amministrazioni in possesso dei seguenti requisiti: risieduto per 24 mesi in Italia prima dell’espatrio, essere laureati e aver svolto lavoro autonomo o laurea con titolo all’estero per 24 mesi Concludendo: Come abbiamo visto ci sono diverse tipologie di nuove agevolazioni fiscali che ricoprono nello specifico gran parte della popolazione, volte a favorire lo sviluppo economico e scientifico configurando così un sistema variegato, con una possibilità di reddito imponibile che va dal 20% al 70%, con un risparmio delle tasse del 20% ad anno, un grosso risparmio per chi vuole trasferirsi in Italia e un’occasione da cogliere al volo!",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[5]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Che cos’è un contratto transitorio? Il contratto di locazione ad uso transitorio è un tipo di contratto utilizzato per esigenze temporanee. Con questo tipo di contratto il proprietario o locatore concede per un limitato periodo di tempo il godimento di un'immobile destinato ad abitazione a un altro soggetto (comunemente chiamato conduttore) dietro a pagamento di un corrispettivo. Quanto è il periodo di tempo del contratto? La legge determina il periodo minimo (1 mese) e il periodo massimo (18 mesi) del contratto ad uso transitorio. Se le parti pattuiscono o un periodo inferiore di 1 mese o un periodo superiore di 18 mesi, la clausola è nulla e si applica automaticamente la norma rispettiva per durate inferiori o superiori prevista dalla legge. Quali sono gli elementi obbligatori che devono essere contenuti nel contratto transitorio? - le generalità delle parti; - la descrizione dell’immobile; - l'indicazione dell'importo del canone; - le modalità di versamento; - la durata della locazione; - l'espresso riferimento all'esigenza transitoria, che deve essere comprovata da idonea documentazione allegata al contratto stesso; - una clausola con la quale il conduttore dichiara di aver ricevuto la documentazione e le informazioni in ordine all'attestazione di prestazione energetica. Il canone è un canone libero o può essere concordato? Il corrispettivo della locazione ad uso transitorio può essere liberamente determinato dalle parti ( canone libero ), tranne in alcune zone in cui l’importo del canone è determinato secondo accordi territoriali \u003e e precisamente: Roma, Milano, Venezia, Genova, Bologna, Firenze, Napoli, Torino, Bari, Palermo, Catania, comuni confinanti con le città precedentemente elencate e capoluoghi di provincia. Con il contratto transitorio si può applicare la cedolare secca? Sì, è possibile applicarla, si può pagare con un'imposta sostitutiva del solo 10% se a canone concordato e del 21% in caso di altro contratto. La misura concreta del risparmio dipende dal canone di fitto che si applica al contratto transitorio. L’opzione è fruibile da tutti i locatori, basta che il locatore sia una persona fisica, che l’immobile si trovi in un capoluogo di provincia o in un’area metropolitana e deve essere stipulato un contratto di locazione a canone concordato. Il regime della cedolare secca non si applica agli immobili inclusi nella categoria catastale A/10, ma solo agli immobili ad uso abitativo. http://www.mit.gov.it/mit/site.php?p=normativa\u0026o=vd\u0026id=314\u0026id_dett=452",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[6]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Che cos’è il leasing immobiliare? Si tratta di una particolare forma di finanziamento che permette di disporre di un bene in cambio di un canone periodico, acquisendone la proprietà effettiva al termine del contratto, previo pagamento di una quota prefissata di riscatto. Solitamente questa tipologia di finanziamenti è collegata all’utilizzo di beni strumentali, quali ad esempio autovetture, macchinari o attrezzi industriali. Meno frequentemente se ne parla in relazione a immobili. Eppure la normativa ha recentemente disciplinato i leasing immobiliari, rendendoli uno strumento aggiuntivo per chi desidera acquistare casa, ma magari non ha sufficiente disponibilità economica per farlo. Chi può ottenere il leasing immobiliare? Il leasing immobiliare abitativo può essere stipulato da qualsiasi persona fisica a prescindere dalla età, dal reddito e dalla proprietà di altri immobili abitativi; sono invece subordinate a specifici requisiti soggettivi e/o oggettivi le agevolazioni fiscali previste dalla Legge di Stabilità 2016: - le detrazioni IRPEF vengono riconosciute solo a soggetti con reddito inferiore a 55.000 euro e in misura diversa a seconda dell’età (sopra o sotto i 35 anni); le agevolazioni “prima casa vengono riconosciute solo ad abitazioni diverse da quelle classificate nelle categorie catastali A/1, A/8 e A/9 e solo nel caso in cui l’utilizzatore possieda i requisiti soggettivi per accedere a tale tipo di agevolazione. Come si acquista con un leasing? Per poter accedere al leasing immobiliare ci sono dei requisiti che la persona fisica che intraprende questa strada deve avere. L’immobile soggetto a leasing immobiliare deve rispettare solo i requisiti previsti per il periodo di ammortamento che deve essere compreso tra gli 8 e massimo 15 anni . Questo è ciò che viene richiesto per i redditi d’impresa, mentre per i redditi da lavoro autonomo si applica la metà del periodo di ammortamento. Per quanto riguarda i documenti richiesti per la presentazione della domanda, i principali sono i seguenti: -certificato di vigenza (che accerta che non vi siano in corso procedure concorsuali di qualsiasi genere) -codice fiscale e/o partita iva -bilanci o dichiarazione dei redditi degli ultimi anni -eventuali fideiussioni bancarie, garanzie, cauzioni, impegni di acquisto A chi rivolgersi? Cosa molto importante, da sapere, è che il leasing immobiliare abitativo può essere concesso solamente da intermediari finanziari e banche. Non possono concederlo persone fisiche, quindi privati cittadini, non possono concederlo società o altri enti al di fuori delle banche. Al contrario l'utilizzatore del leasing ovvero il potenziale acquirente futuro può essere un cittadino privato cioè la cosiddetta persona fisica o un’azienda quindi una figura giuridica. Non è ideato per permettere a grandi enti di acquistare in forme agevolate dei beni immobiliari e poterli poi rivendere o affittare a loro volta. Cosa che invece è concessa nei più tradizionali finanziamenti. Come vendere un immobile con un leasing? Alla scadenza del contratto di leasing immobiliare , il cliente può poi decidere se riscattare il bene oppure di restituire l'immobile al concedente, o ancora, chiedere al concedente di rinnovare il contratto con le stesse o nuove condizioni economiche, o in alternativa far subentrare una terza figura cedendo il leasing. Infatti la compravendita di un immobile a leasing è sostanzialmente il passaggio del leasing da un titolare ad un altro, dove gli ovvi conteggi dei pagamenti regressi e la capitalizzazione del bene.",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[7]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "La vendita con riserva della proprietà è un contratto di compravendita, con il quale l’acquisizione del diritto di proprietà è però subordinata a una condizione sospensiva, ovvero il pagamento dell’intero prezzo pattuito dalle parti. Si tratta di un particolare contratto di compravendita che viene utilizzato per la vendita con dilazione di pagamento del prezzo ed assolve la funzione di garanzia a favore del venditore. In pratica, l'immobile viene consegnato al compratore al momento del rogito, con la clausola che la proprietà resti al venditore fino a che, solo con il pagamento (frazionato nel tempo) dell'ultima rata, non verrà trasferita all’acquirente, quindi quando il compratore avrà pagato la somma totale del prezzo. È come se l’acquirente pagasse un mutuo (e infatti il prezzo può ricomprendere anche gli interessi). Si tratta infatti di una forma di pagamento rateizzata spesso sostitutiva del mutuo che può consentire la conclusione di una compravendita immobiliare nei casi in cui l’acquirente non riesce a ottenere accesso al credito bancario. Attraverso la dilazione (in tutto o in parte) del prezzo, che viene pagato ratealmente, il venditore di fatto finanzia l’operazione di acquisto da parte dell'acquirente, ed è tutelato contro il rischio di inadempimento dal meccanismo della riserva di proprietà. L’acquirente assume immediatamente a proprio carico i rischi relativi all’immobile, anche se non ne è proprietario, e deve pertanto sostenere le spese di manutenzione ordinarie e straordinarie dell’immobile dal momento dell’atto. Anche le imposte indirette previste per il trasferimento della proprietà dell'immobile si applicano al momento dell'atto, nonostante l'apposizione della clausola di riserva della proprietà. Come viene fatta la vendita con riserva di proprietà? La vendita con riserva di proprietà di un bene immobile deve essere fatta con atto notarile e viene trascritta nei pubblici registri immobiliari come una vendita sottoposta ad una condizione, anche al fine di evitare che l’acquirente con riserva possa compiere atti dispositivi del bene durante tutta la pendenza della condizione. Allìintegrale pagamento del prezzo sarà dunque necessario un atto notarile di quietanza che consentirà di far risultare nei registri immobiliari il venir meno della riserva e quindi il passaggio di propriet��. Quali sono i vantaggi per l’acquirente? Il primo vantaggio sicuramente è la disponibilit�� immediata dell’immobile. Il carico fiscale, per imposte dirette e per imposte locali che “gravano” sulla proprietà rimangono a carico del venditore. Opponibilità dell’acquisto a terzi poiché la compravendita con riserva di proprietà è trascrivibile. Quali sono i vantaggi del venditore/ proprietario? Mantiene la proprietà dell'immobile sino al pagamento dell��intero prezzo convenuto. Le spese di manutenzione e il rischio del deperimento del bene sono a carico dell’acquirente. Se l’acquirente smette di pagare? Se l’acquirente smette di pagare, il venditore può far dichiarare al giudice la risoluzione del contratto, e la liberazione dell’immobile non è soggetta alle sospensioni e ai rischi tipici degli sfratti. Se la risoluzione ha luogo per l’inadempimento del venditore, il venditore deve restituire le rate riscosse, salvo il diritto ad un equo compenso per l’uso del bene, oltre al risarcimento del danno. Il risarcimento viene stabilito dal giudice, ma le parti possono gi�� prevedere nel contratto quale sia la somma che il venditore avrà facolt�� di trattenere per ogni mese di occupazione dell’immobile.",
+        "depth": 3
+      },
+      {
+        "path": "/embedded/script[5]/text[8]",
+        "tag": "script",
+        "kind": "paragraph",
+        "text": "Ogni proprietario pensa che la sua proprietà sia la migliore specialmente per i momenti trascorsi all’interno di essa, ma dobbiamo sempre ricordarci che come noi vediamo la nostra casa con i nostri occhi anche gli altri la guardano con i loro. Quali sono quindi le accortezze da utilizzare per vendere al meglio la propria casa? Come presentarla? Quando si mette in vendita un'immobile occorre allora guardarlo con occhi imparziali: c’��� qualche elemento che scoraggia al primo colpo d'occhio? Potrebbe trattarsi di infissi ormai rovinati, intonaco troppo opaco, parquet eccessivamente usurato, piccole incrostazioni in bagno, muffa in alcuni angoli della casa. Tutti aspetti che forse sarebbe meglio correggere prima di mettere l'immobile sul mercato. L'immobile è sempre preferibile che sia il più possibile neutro in modo che possa piacere ad un numero più vasto di persone. Facendo piccole riparazioni, tinteggiandola se necessario, togliendo le cose inutili, ripulendola e tenendola ordinata, susciterà sicuramente il favore e l'apprezzamento dei potenziali acquirenti, e ti distinguerà dagli altri venditori che non sanno quanto sia importante curare anche i piccoli particolari. Accortezze necessarie anche per il servizio fotografico, così che si possa valorizzare maggiormente, attraverso gli scatti, le potenzialit�� della vostra proprietà. Ci sono alcuni immobili che faticano ad essere venduti, altri invece che sono richiestissimi, uno dei principali motivi è sicuramente come questi vengono presentati! Strategie di mercato Quando gli eventuali acquirenti visitano una proprietà immaginano gi�� come potrebbero utilizzare quegli spazi in base ai loro bisogni, quindi il vostro compito oltre a pulire e sistemare �� quello di mettere ordine per far apparire la vostra casa più spaziosa. Sapere cosa i clienti cercano vi farà avvantaggiare. Molto importante �� il prezzo, bisogna essere realisti e attraverso un esperto fare una valutazione dell'immobile, che non solo faciliter�� poi successivamente la vendita del vostro immobile ma valuterà anche le sue potenzialità così da poter trovare gli acquirenti giusti. Anche essere pigri non giova, i primi 15 giorni in cui la casa ����� in vendita sono quelli in cui p�� efficacia e che porta maggiore visibilità. Un'altra opzione è il rendering che funziona molto per quanto riguarda i ruderi! Con il termine rendering fotorealistico (o rendering, o più semplicemente render) si definisce il processo che permette di ottenere un����immagine artificiale molto realistica per offrire un concetto migliore di come ristrutturare la propriet��. Quindi, se una fotografia ha la funzione di illustrare qualcosa che gi���������� esiste, un rendering ha lo scopo di illustrare un'idea, un progetto, un modello che ancora non esiste, ma che da l'effetto come se fosse reale. Bisogna mostrare al cliente un rendering fotorealistico delle varie stanze o degli spazi esterni della sua futura casa. In questo caso il cliente avrà la possibilit���������������������������������������������������������������������������������������������� di vedere concretamente gli spazi, i volumi, con tutti gli elementi che costituiranno i vani. Grazie al rendering anche il cliente può vedere e capire le diverse fasi del progetto, sentendosi all'interno di una sorta di realtà virtuale in cui i volumi, gli arredi, gli spazi funzionali e gli accessori ancora non esistono. Il cliente così è in grado di intervenire, proporre modifiche e partecipare attivamente al processo di progettazione. Inoltre, ad esempio, un'impresa di costruzioni può pubblicizzare il suo prossimo intervento ancor prima di realizzarlo per trovare subito nuovi clienti. Questo un metodo efficace sul quale un proprietario può appoggiarsi per vendere il proprio immobile!",
+        "depth": 3
+      }
+    ],
+    "signals": {
+      "short_text_ratio": 0,
+      "heading_ratio": 0,
+      "embedded_node_count": 8,
+      "substrate_class": "embedded_app_payload"
+    }
+  },
+  "result_pack": {
+    "objective": "company profile",
+    "profile": "standard",
+    "chunks": [
+      {
+        "id": "chk_72bc86fa596af357",
+        "doc_id": "doc_5650ba9e6b868769",
+        "text": "Perché consegnare all’agenzia immobiliare i documenti di un immobile? Prima di iniziare la vendita, al momento di un acquisizione, ogni agente immobiliare richiede i documenti che riguardano l’immobile oggetto della vendita. Spesso accade che questa richiesta viene sottovalutata dai venditori, i quali superficialmente pensano di consegnarli al momento del futuro rogito. Ma comprendiamo meglio perché è così importante consegnare subito tali documenti alla propria agenzia immobiliare. L’agenzia Immobiliare, prima di porlo in vendita, deve effettuare una stima sull’immobile, ed avere a disposizione la documentazione, come ad esempio planimetrie, certificati di conformità degli impianti od i certificati di conformità urbanistica e catastale, aiuta a comprendere lo stato di consistenza e di qualità di un immobile e quindi quello che potrà essere il suo reale valore di mercato. Atto di provenienza e visura catastale, inoltre rendono chiaro l’excursus di un immobile mettendo da subito in evidenza se vi insistono vincoli o semplicemente a che classe catastale appartiene. In molte città ad esempio, gli acquirenti chiedono da subito la classe catastale di un immobile od ancora i documenti condominiali con indicazione dei millesimi e delle spese annuali, o contratti d'affitto se l'immobile è locato. Poi c’è l’ancora poco compreso APE che spesso viene subito chiesto, ma è un attestato molto importante sia per il futuro acquirente che per le Agenzie Immobiliari. Si tratta di un Attestato di Prestazione Energetica, redatto e rilasciato solo da un tecnico qualificato, a cui tutti gli immobili, che non siano riconosciuti come ruderi o magazzini, sono soggetti ed è obbligatorio sia in fase di rogito che precedentemente anche solo per mettere in pubblicità l’immobile.",
+        "heading_path": [
+          "Carratelli"
+        ],
+        "score": 0.95,
+        "fingerprint": "fp_b7ca9a9cf7fe4575",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_24194f22157e7e52",
+        "doc_id": "doc_5650ba9e6b868769",
+        "text": "Cosa è l’APE o Attestato di Prestazione Energetica? E’ così chiamato il documento che descrive le caratteristiche energetiche di un edificio, di un abitazione o di un appartamento; rappresenta pertanto uno strumento di controllo che sintetizza, con una scala da A a G, quelle che sono le prestazioni energetiche degli edifici. Al momento dell' acquisto o della locazione di un immobile, oltre ad essere obbligatorio, è quindi uno strumento molto per informare sul consumo energetico ed aumentare il valore economico degli edifici ad alto risparmio energetico. L'APE contiene quindi al suo interno la “targa energetica” che sintetizza le caratteristiche energetiche dell'immobile, per la cui misura il tecnico deve analizzare le specifiche termoigrometriche, i consumi, la produzione di acqua calda, il raffrescamento e il riscaldamento degli ambienti, il tipo di impianto, nonché eventuali sistemi di produzione di energia rinnovabile. L'attestato, che se corredato di libretto di impianto assume validità decennale, deve contenere oltre ai dati del rilascio dello stesso anche i dati catastali dell'immobile e, nel caso si debba vendere la propria abitazione o stipulare un nuovo contratto di locazione per trovare un inquilino, l'indice di prestazione energetica (Ipe) dell’involucro edilizio e globale dell’edificio o dell’unità immobiliare e la classe energetica corrispondente.",
+        "heading_path": [
+          "Carratelli"
+        ],
+        "score": 0.95,
+        "fingerprint": "fp_566d3582f04c814f",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_89714552e45571a4",
+        "doc_id": "doc_5650ba9e6b868769",
+        "text": "Il rent to buy o affitto con riscatto è un nuovo tipo di contratto che permette di stipulare un accordo d’affitto che poi si potrà trasformare in una compravendita. Quest’ultima non è obbligatoria, ma costituisce solamente un’opzione legata alla locazione, che potrà però essere prevista già dal contratto iniziale. In sostanza è un contratto in cui si fondono un contratto di locazione e un preliminare di vendita di un immobile . Significa che il proprietario consegna fin da subito l’immobile al conduttore (futuro acquirente), il quale paga il canone; dopo un certo periodo di tempo, che in genere è di 3-5 anni, il conduttore può decidere se acquistare il bene, detraendo dal prezzo una parte dei canoni pagati. La quota che verrà versata mensilmente, però, sarà superiore a un normale canone di locazione; una parte costituisce l’affitto quindi viene versata per il godimento del bene, l’altra andrà a comporre un acconto sul prezzo finale dell’immobile che avrà come effetto quello di ridurre il prezzo finale della vendita. La legge prevede che il conduttore abbia la facoltà ma non l’obbligo ad acquistare il bene, quindi non è obbligato a comprare la casa dopo il periodo di “affitto”, ovviamente ed in tutela anche del venditore, può essere stipulato dalle parti l’obbligato ad acquistare, ma a quel punto non parleremmo solo di rent to buy. È importante sapere che il termine entro il quale il conduttore potrà decidere di acquistare la casa è stabilito dalle due parti entro il limite di tempo di 10 anni. Il vantaggio principale è la possibilità di trovare un numero più elevato di potenziali acquirenti . Il rischio è che il conduttore decida di non comprare la casa. In tal caso, però, il proprietario può trattenere tutto di quanto è stato pagato (e sarà una somma maggiore rispetto ad un normale canone di locazione). Per comprendere meglio: se prendiamo ad esempio la vendita di un appartamento al prezzo di 150.000 euro, dove il canone di locazione è convenuto in 1.000 euro mensili avremo che una parte come ad esempio 500 euro andrà a costituire l’affitto mentre i restanti 500 euro si imputano come caparra sul prezzo. Alla fine il conduttore, con un contratto di rent to buy di 4 anni, andrà a pagare nella trattativa di compravendita, non 150.000 euro ma 126.000 euro in quanto 24.000 euro saranno stati precedentemente versati nei canoni mensili. Contattaci per maggiori informazioni.",
+        "heading_path": [
+          "Carratelli"
+        ],
+        "score": 0.95,
+        "fingerprint": "fp_30686d46cc040c13",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_88d12e8cbb2b6b04",
+        "doc_id": "doc_5650ba9e6b868769",
+        "text": "Che cos’è un contratto transitorio? Il contratto di locazione ad uso transitorio è un tipo di contratto utilizzato per esigenze temporanee. Con questo tipo di contratto il proprietario o locatore concede per un limitato periodo di tempo il godimento di un'immobile destinato ad abitazione a un altro soggetto (comunemente chiamato conduttore) dietro a pagamento di un corrispettivo. Quanto è il periodo di tempo del contratto? La legge determina il periodo minimo (1 mese) e il periodo massimo (18 mesi) del contratto ad uso transitorio. Se le parti pattuiscono o un periodo inferiore di 1 mese o un periodo superiore di 18 mesi, la clausola è nulla e si applica automaticamente la norma rispettiva per durate inferiori o superiori prevista dalla legge. Quali sono gli elementi obbligatori che devono essere contenuti nel contratto transitorio? - le generalità delle parti; - la descrizione dell’immobile; - l'indicazione dell'importo del canone; - le modalità di versamento; - la durata della locazione; - l'espresso riferimento all'esigenza transitoria, che deve essere comprovata da idonea documentazione allegata al contratto stesso; - una clausola con la quale il conduttore dichiara di aver ricevuto la documentazione e le informazioni in ordine all'attestazione di prestazione energetica. Il canone è un canone libero o può essere concordato? Il corrispettivo della locazione ad uso transitorio può essere liberamente determinato dalle parti ( canone libero ), tranne in alcune zone in cui l’importo del canone è determinato secondo accordi territoriali \u003e e precisamente: Roma, Milano, Venezia, Genova, Bologna, Firenze, Napoli, Torino, Bari, Palermo, Catania, comuni confinanti con le città precedentemente elencate e capoluoghi di provincia. Con il contratto transitorio si può applicare la cedolare secca? Sì, è possibile applicarla, si può pagare con un'imposta sostitutiva del solo 10% se a canone concordato e del 21% in caso di altro contratto. La misura concreta del risparmio dipende dal canone di fitto che si applica al contratto transitorio. L’opzione è fruibile da tutti i locatori, basta che il locatore sia una persona fisica, che l’immobile si trovi in un capoluogo di provincia o in un’area metropolitana e deve essere stipulato un contratto di locazione a canone concordato. Il regime della cedolare secca non si applica agli immobili inclusi nella categoria catastale A/10, ma solo agli immobili ad uso abitativo. http://www.mit.gov.it/mit/site.php?p=normativa\u0026o=vd\u0026id=314\u0026id_dett=452",
+        "heading_path": [
+          "Carratelli"
+        ],
+        "score": 1.05,
+        "fingerprint": "fp_574d8127928437e8",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_06d96dee1b8e2ef5",
+        "doc_id": "doc_5650ba9e6b868769",
+        "text": "Che cos’è il leasing immobiliare? Si tratta di una particolare forma di finanziamento che permette di disporre di un bene in cambio di un canone periodico, acquisendone la proprietà effettiva al termine del contratto, previo pagamento di una quota prefissata di riscatto. Solitamente questa tipologia di finanziamenti è collegata all’utilizzo di beni strumentali, quali ad esempio autovetture, macchinari o attrezzi industriali. Meno frequentemente se ne parla in relazione a immobili. Eppure la normativa ha recentemente disciplinato i leasing immobiliari, rendendoli uno strumento aggiuntivo per chi desidera acquistare casa, ma magari non ha sufficiente disponibilità economica per farlo. Chi può ottenere il leasing immobiliare? Il leasing immobiliare abitativo può essere stipulato da qualsiasi persona fisica a prescindere dalla età, dal reddito e dalla proprietà di altri immobili abitativi; sono invece subordinate a specifici requisiti soggettivi e/o oggettivi le agevolazioni fiscali previste dalla Legge di Stabilità 2016: - le detrazioni IRPEF vengono riconosciute solo a soggetti con reddito inferiore a 55.000 euro e in misura diversa a seconda dell’età (sopra o sotto i 35 anni); le agevolazioni “prima casa vengono riconosciute solo ad abitazioni diverse da quelle classificate nelle categorie catastali A/1, A/8 e A/9 e solo nel caso in cui l’utilizzatore possieda i requisiti soggettivi per accedere a tale tipo di agevolazione. Come si acquista con un leasing? Per poter accedere al leasing immobiliare ci sono dei requisiti che la persona fisica che intraprende questa strada deve avere. L’immobile soggetto a leasing immobiliare deve rispettare solo i requisiti previsti per il periodo di ammortamento che deve essere compreso tra gli 8 e massimo 15 anni . Questo è ciò che viene richiesto per i redditi d’impresa, mentre per i redditi da lavoro autonomo si applica la metà del periodo di ammortamento. Per quanto riguarda i documenti richiesti per la presentazione della domanda, i principali sono i seguenti: -certificato di vigenza (che accerta che non vi siano in corso procedure concorsuali di qualsiasi genere) -codice fiscale e/o partita iva -bilanci o dichiarazione dei redditi degli ultimi anni -eventuali fideiussioni bancarie, garanzie, cauzioni, impegni di acquisto A chi rivolgersi? Cosa molto importante, da sapere, è che il leasing immobiliare abitativo può essere concesso solamente da intermediari finanziari e banche. Non possono concederlo persone fisiche, quindi privati cittadini, non possono concederlo società o altri enti al di fuori delle banche. Al contrario l'utilizzatore del leasing ovvero il potenziale acquirente futuro può essere un cittadino privato cioè la cosiddetta persona fisica o un’azienda quindi una figura giuridica. Non è ideato per permettere a grandi enti di acquistare in forme agevolate dei beni immobiliari e poterli poi rivendere o affittare a loro volta. Cosa che invece è concessa nei più tradizionali finanziamenti. Come vendere un immobile con un leasing? Alla scadenza del contratto di leasing immobiliare , il cliente può poi decidere se riscattare il bene oppure di restituire l'immobile al concedente, o ancora, chiedere al concedente di rinnovare il contratto con le stesse o nuove condizioni economiche, o in alternativa far subentrare una terza figura cedendo il leasing. Infatti la compravendita di un immobile a leasing è sostanzialmente il passaggio del leasing da un titolare ad un altro, dove gli ovvi conteggi dei pagamenti regressi e la capitalizzazione del bene.",
+        "heading_path": [
+          "Carratelli"
+        ],
+        "score": 1.05,
+        "fingerprint": "fp_b02236bbbb4c998c",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_d0b0f566d5af7e6e",
+        "doc_id": "doc_5650ba9e6b868769",
+        "text": "Le nuove misure agevolative sul regime fiscale, recepito nelle ultime manovre di legge, che si rivolgono alle persone fisiche, che trasferiscono la residenza in Italia per svolgere un’attività lavorativa, o anche a prescindere dallo svolgimento di una attività lavorativa sono diverse, ma andiamo più nello specifico! Agevolazioni fiscali per ricercatori e docenti Per quanto riguarda questa categoria le agevolazioni fiscali si basano in particolare sul reddito. La norma precedente che vigeva su questa categoria è stata modificata dalla Legge di bilancio 2017, che ha reso permanente l’agevolazione e non è più prevista una data ultima utile per poter far rientro in Italia. Fanno parte di questa categoria: Docenti e ricercatori che vogliono svolgere la propria attività in Italia con i seguenti requisiti: titolo di studio universitario, essere stati residenti all’estero, aver svolto all’estero un’attività di ricerca o docenza per almeno due anni consecutivi presso centri di ricerca pubblici o privati o università, devono trasferire la residenza fiscale in Italia. Regime fiscale rivolto ai contro-esodati Con contro-esodati si intendono coloro che sono stati residenti in Italia e che, dopo essersi trasferiti all’estero, hanno fatto ritorno in Italia. Fanno parte di questa categoria:Cittadini UE, laureati che hanno svolto un’attività di lavoro autonomo o impresa all’estero, studenti che hanno un titolo accademico conseguito all’estero, ammesso anche il lavoro in pubbliche amministrazioni con i seguenti requisiti : essere stato almeno per 24 mesi in Italia prima dell’espatrio, essere laureati e aver svolto un’attività di lavoro autonomo o di impresa all’estero per almeno 24 mesi, aver studiato all’estero per almeno 24 mesi e aver conseguito un titolo accademico, aver trasferito la residenza anagrafica in Italia entro 3 mesi dall’assunzione, svolgere attività di lavoro in Italia. Regime speciale per lavoratori “impatriati” Nell’ambito dei lavoratori “impatriati” ci sono diverse categorie di persone che si trasferirscono in Italia per svolgere un’attività lavorativa.Le fattispecie previste sono le seguenti catogorie: - Manager e lavoratori con elevata qualifica e specializzazione intesi come i cittadini UE, i lavoratori non laureati, persone che non svolgono lavoro presso le pubbliche amministrazioni in possesso dei seguenti requisti: Trasferire la residenza in Italia, non essere stati residenti in Italia nei periodi precedenti l’impatrio, impegnarsi a rimanere in Italia per 2 anni, prestare lavoro per almeno 183 giorni per ciascun anno, se dipendenti lavorare in un impresa residente - Lavoratori autonomi rimpatriati ed impatriati in possesso di laurea intesi come i Cittadini UE, cittadini extra UE, lavoratori laureati, lavoratori presso amministrazioni pubbliche in possesso dei seguenti requisiti: Laureati, svolto attività di lavoro autonomo o di un’impresa all’estero per 24 mesi, aver studiato all’estero per 24 mesi con conseguente titolo di studio certificabile, trasferire la residenza fiscale in Italia - Opzione per il regime fiscale dei lavoratori rimpatriati intesi come i Cittadini UE, laureati che hanno lavorato all’estero, studenti che hanno conseguito un titolo di studio accademico o una specializzazione della laurea, lavoratori in pubbliche amministrazioni in possesso dei seguenti requisiti: risieduto per 24 mesi in Italia prima dell’espatrio, essere laureati e aver svolto lavoro autonomo o laurea con titolo all’estero per 24 mesi Concludendo: Come abbiamo visto ci sono diverse tipologie di nuove agevolazioni fiscali che ricoprono nello specifico gran parte della popolazione, volte a favorire lo sviluppo economico e scientifico configurando così un sistema variegato, con una possibilità di reddito imponibile che va dal 20% al 70%, con un risparmio delle tasse del 20% ad anno, un grosso risparmio per chi vuole trasferirsi in Italia e un’occasione da cogliere al volo!",
+        "heading_path": [
+          "Carratelli"
+        ],
+        "score": 0.95,
+        "fingerprint": "fp_dd6c6482fa98fed7",
+        "confidence": 0.93
+      }
+    ],
+    "sources": [
+      {
+        "document_id": "doc_5650ba9e6b868769",
+        "url": "https://carratellire.com/",
+        "title": "Carratelli",
+        "chunk_ids": [
+          "chk_72bc86fa596af357",
+          "chk_24194f22157e7e52",
+          "chk_89714552e45571a4",
+          "chk_88d12e8cbb2b6b04",
+          "chk_06d96dee1b8e2ef5",
+          "chk_d0b0f566d5af7e6e"
+        ]
+      }
+    ],
+    "outline": [
+      "Carratelli"
+    ],
+    "links": [
+      "https://carratellire.com/"
+    ],
+    "proof_refs": [
+      "proof_0132ec0385dbb7eb",
+      "proof_025f3ae1f2571fc7",
+      "proof_8d9cbe0171964f8f",
+      "proof_6c88ecc62b9212e8",
+      "proof_252d57e48bf160f2",
+      "proof_2eb5c6da79dd31b4"
+    ],
+    "cost_report": {
+      "latency_ms": 3156,
+      "token_in": 0,
+      "token_out": 0,
+      "lane_path": [
+        0,
+        1
+      ]
+    }
+  },
+  "proof_records": [
+    {
+      "id": "proof_0132ec0385dbb7eb",
+      "proof": {
+        "chunk_id": "chk_72bc86fa596af357",
+        "source_span": {
+          "selector": "/embedded/script[5]/text[1]",
+          "char_start": 0,
+          "char_end": 1810
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:interpret_embedded_state:v1",
+          "intel:patch:interpret_embedded_state:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:embedded:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "openai-compatible",
+            "task": "interpret_embedded_state",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "not_benchmark_proven",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_interpret_embedded_state_planned",
+          "intel_patch_skipped",
+          "selection_reused",
+          "ir_embedded",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_025f3ae1f2571fc7",
+      "proof": {
+        "chunk_id": "chk_24194f22157e7e52",
+        "source_span": {
+          "selector": "/embedded/script[5]/text[2]",
+          "char_start": 0,
+          "char_end": 1402
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:interpret_embedded_state:v1",
+          "intel:patch:interpret_embedded_state:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:embedded:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "openai-compatible",
+            "task": "interpret_embedded_state",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "not_benchmark_proven",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_interpret_embedded_state_planned",
+          "intel_patch_skipped",
+          "selection_reused",
+          "ir_embedded",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_8d9cbe0171964f8f",
+      "proof": {
+        "chunk_id": "chk_89714552e45571a4",
+        "source_span": {
+          "selector": "/embedded/script[5]/text[3]",
+          "char_start": 0,
+          "char_end": 2465
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:interpret_embedded_state:v1",
+          "intel:patch:interpret_embedded_state:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:embedded:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "openai-compatible",
+            "task": "interpret_embedded_state",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "not_benchmark_proven",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_interpret_embedded_state_planned",
+          "intel_patch_skipped",
+          "selection_reused",
+          "ir_embedded",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_6c88ecc62b9212e8",
+      "proof": {
+        "chunk_id": "chk_88d12e8cbb2b6b04",
+        "source_span": {
+          "selector": "/embedded/script[5]/text[5]",
+          "char_start": 0,
+          "char_end": 2538
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:interpret_embedded_state:v1",
+          "intel:patch:interpret_embedded_state:skipped:v1",
+          "web_ir:embedded:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "openai-compatible",
+            "task": "interpret_embedded_state",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "not_benchmark_proven",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_interpret_embedded_state_planned",
+          "intel_patch_skipped",
+          "selection_recomputed",
+          "ir_embedded",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_252d57e48bf160f2",
+      "proof": {
+        "chunk_id": "chk_06d96dee1b8e2ef5",
+        "source_span": {
+          "selector": "/embedded/script[5]/text[6]",
+          "char_start": 0,
+          "char_end": 3590
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:interpret_embedded_state:v1",
+          "intel:patch:interpret_embedded_state:skipped:v1",
+          "web_ir:embedded:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "openai-compatible",
+            "task": "interpret_embedded_state",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "not_benchmark_proven",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_interpret_embedded_state_planned",
+          "intel_patch_skipped",
+          "selection_recomputed",
+          "ir_embedded",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_2eb5c6da79dd31b4",
+      "proof": {
+        "chunk_id": "chk_d0b0f566d5af7e6e",
+        "source_span": {
+          "selector": "/embedded/script[5]/text[4]",
+          "char_start": 0,
+          "char_end": 4008
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:interpret_embedded_state:v1",
+          "intel:patch:interpret_embedded_state:skipped:v1",
+          "web_ir:embedded:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "openai-compatible",
+            "task": "interpret_embedded_state",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "not_benchmark_proven",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_interpret_embedded_state_planned",
+          "intel_patch_skipped",
+          "selection_recomputed",
+          "ir_embedded",
+          "ir_shallow_depth"
+        ]
+      }
+    }
+  ],
+  "trace": {
+    "run_id": "run_1cee54ce24b2fb57",
+    "trace_id": "trace_00ea9ddb4174672c",
+    "started_at": "2026-03-30T14:21:35.828391816Z",
+    "finished_at": "2026-03-30T14:21:38.985072694Z",
+    "stages": [
+      {
+        "stage": "acquire",
+        "started_at": "2026-03-30T14:21:35.828391816Z",
+        "completed_at": "2026-03-30T14:21:38.892284228Z",
+        "input_hash": "51d7670b61059c89b0b3d35c0caa6fea7350c0990f731dee1a59bd7d007a3388",
+        "output_hash": "9ec9ce7f54690ce5f8478dfbbd0827bd42852a68020028f1229276fbda2ce20c",
+        "item_count": 1,
+        "metadata": {
+          "fetch_mode": "http",
+          "final_url": "https://carratellire.com/"
+        }
+      },
+      {
+        "stage": "reduce",
+        "started_at": "2026-03-30T14:21:38.920073747Z",
+        "completed_at": "2026-03-30T14:21:38.976344307Z",
+        "input_hash": "9ec9ce7f54690ce5f8478dfbbd0827bd42852a68020028f1229276fbda2ce20c",
+        "output_hash": "c4c61823c95f68743f50c6a776f22685b5fb84bd0018a8c2c87f7a1c70ffe5ba",
+        "item_count": 8,
+        "metadata": {
+          "title": "Carratelli",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "stage": "segment",
+        "started_at": "2026-03-30T14:21:38.98141348Z",
+        "completed_at": "2026-03-30T14:21:38.981798804Z",
+        "input_hash": "c4c61823c95f68743f50c6a776f22685b5fb84bd0018a8c2c87f7a1c70ffe5ba",
+        "output_hash": "29b358902400313ed746b7ad2348a1326900318b245cd220544c6d5d366bb426",
+        "item_count": 8
+      },
+      {
+        "stage": "pack",
+        "started_at": "2026-03-30T14:21:38.982138603Z",
+        "completed_at": "2026-03-30T14:21:38.984803113Z",
+        "input_hash": "29b358902400313ed746b7ad2348a1326900318b245cd220544c6d5d366bb426",
+        "output_hash": "4f66121cd4269e8139f4675c810bac48d461ea486fab2f4671b50ae182bc7b9a",
+        "item_count": 6,
+        "metadata": {
+          "chunks": "6",
+          "delta_class": "mixed",
+          "difficulty": "low",
+          "escalation_count": "8",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "embedded_payload_gap",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "interpret_embedded_state",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "low",
+          "novel_fp_hits": "2",
+          "page_type": "docs",
+          "profile": "standard",
+          "reuse_applied": "3",
+          "reuse_eligible": "6",
+          "reuse_mode": "delta_aware",
+          "reuse_recomputed": "3",
+          "selected_ir_embedded_hits": "6",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "6",
+          "stable_fp_hits": "4",
+          "substrate_class": "embedded_app_payload",
+          "web_ir_nodes": "8",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "true",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "false",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "stage_started",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:21:35.828391816Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:21:38.892284228Z",
+        "data": {
+          "fetch_mode": "http",
+          "final_url": "https://carratellire.com/"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:21:38.920073747Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:21:38.976344307Z",
+        "data": {
+          "title": "Carratelli",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:21:38.98141348Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:21:38.981798804Z"
+      },
+      {
+        "type": "stage_started",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.982138603Z"
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983256315Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_566d3582f04c814f",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983258195Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_30686d46cc040c13",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983259885Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_dd6c6482fa98fed7",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983260948Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_0e92a6c174b6aa09",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983262315Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_af94006878b8cde3",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983263741Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_574d8127928437e8",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983264847Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_b02236bbbb4c998c",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.983265933Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_b7ca9a9cf7fe4575",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "model_intervention",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.984453822Z",
+        "reason_code": "NX_EXTRACTOR_TRIGGERED",
+        "message": "model task skipped by runtime selection",
+        "lane": 2,
+        "data": {
+          "backend": "openai-compatible",
+          "failure_class": "embedded_payload_gap",
+          "latency_ms": "0",
+          "model": "gemma3:1b-it-q8_0",
+          "patch_effect": "not_benchmark_proven",
+          "patch_outcome": "skipped",
+          "task": "interpret_embedded_state",
+          "tokens_in": "0",
+          "tokens_out": "0",
+          "validator_outcome": "skipped"
+        }
+      },
+      {
+        "type": "stage_completed",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:21:38.984803113Z",
+        "data": {
+          "chunks": "6",
+          "delta_class": "mixed",
+          "difficulty": "low",
+          "escalation_count": "8",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "embedded_payload_gap",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "interpret_embedded_state",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "low",
+          "novel_fp_hits": "2",
+          "page_type": "docs",
+          "profile": "standard",
+          "reuse_applied": "3",
+          "reuse_eligible": "6",
+          "reuse_mode": "delta_aware",
+          "reuse_recomputed": "3",
+          "selected_ir_embedded_hits": "6",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "6",
+          "stable_fp_hits": "4",
+          "substrate_class": "embedded_app_payload",
+          "web_ir_nodes": "8",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "true",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "false",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ]
+  },
+  "replay": {
+    "run_id": "run_1cee54ce24b2fb57",
+    "trace_id": "trace_00ea9ddb4174672c",
+    "stage_count": 4,
+    "event_count": 17,
+    "completed_stages": [
+      "acquire",
+      "reduce",
+      "segment",
+      "pack"
+    ],
+    "deterministic": true
+  }
+}

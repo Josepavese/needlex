@@ -1,0 +1,38 @@
+[
+  {
+    "name": "carratellire",
+    "url": "https://carratellire.com/",
+    "timeout_ms": 12000,
+    "objective": "company profile"
+  },
+  {
+    "name": "cnf",
+    "url": "https://www.cnfsrl.it/",
+    "timeout_ms": 12000,
+    "objective": "capability summary"
+  },
+  {
+    "name": "halfpocket",
+    "url": "https://halfpocket.net/",
+    "timeout_ms": 12000,
+    "objective": "service offering"
+  },
+  {
+    "name": "go",
+    "url": "https://go.dev/",
+    "timeout_ms": 12000,
+    "objective": "developer platform summary"
+  },
+  {
+    "name": "sqlite",
+    "url": "https://www.sqlite.org/index.html",
+    "timeout_ms": 12000,
+    "objective": "database engine summary"
+  },
+  {
+    "name": "python-docs",
+    "url": "https://docs.python.org/3/",
+    "timeout_ms": 12000,
+    "objective": "language documentation summary"
+  }
+]

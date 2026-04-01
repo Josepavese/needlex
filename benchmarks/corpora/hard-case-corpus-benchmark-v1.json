@@ -1,0 +1,245 @@
+{
+  "version": "hard-case-corpus-benchmark-v1",
+  "acceptance": {
+    "min_pass_rate": 0.0,
+    "min_lane_lift_rate": 0.0,
+    "min_objective_lift_avg": -1.0,
+    "max_medium_or_high_risk_rate": 1.0,
+    "min_backend_case_rate": 0.0,
+    "min_backend_intervention_rate": 0.0,
+    "min_backend_acceptance_rate": 0.0,
+    "required_families": [],
+    "required_backend_tasks": [],
+    "require_higher_lane_for": [],
+    "allow_unclassified": true,
+    "failure_class_map": []
+  },
+  "cases": [
+    {
+      "name": "embedded_lane3_vs_lane0",
+      "objective": "company profile",
+      "objective_terms": [
+        "runtime",
+        "agents",
+        "proof",
+        "context"
+      ],
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Needle-X compiles noisy pages into compact proof-carrying context for agents"
+      ],
+      "html_inline": "<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={\"configuration\":{\"blog\":[{\"title\":\"Needle Runtime\",\"description\":\"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>\"}]}}</script></body></html>",
+      "family": "embedded"
+    },
+    {
+      "name": "forum_lane2_vs_lane0",
+      "objective": "forum replay drift troubleshooting",
+      "objective_terms": [
+        "replay",
+        "hashes",
+        "proof",
+        "deterministic"
+      ],
+      "profile": "deep",
+      "compare_force_lane": 2,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Compare stage hashes first",
+        "inspect proof records by chunk id",
+        "replay became deterministic again"
+      ],
+      "fixture_path": "testdata/golden/forum.html",
+      "family": "forum"
+    },
+    {
+      "name": "tiny_lane3_vs_lane0",
+      "objective": "company profile",
+      "objective_terms": [
+        "runtime",
+        "agents",
+        "proof",
+        "auditable"
+      ],
+      "profile": "tiny",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Needle-X compiles noisy public pages compact context agents",
+        "proof replay auditable operators"
+      ],
+      "html_inline": "<html><head><title>Needle Runtime</title></head><body><article><h1>Needle Runtime</h1><p>Needle-X compiles noisy public pages into compact context for agents and keeps proof and replay auditable for operators.</p></article></body></html>",
+      "family": "tiny"
+    },
+    {
+      "name": "embedded_pricing_lane3_vs_lane0",
+      "objective": "starter tier pricing summary",
+      "objective_terms": [
+        "starter",
+        "replay",
+        "trace"
+      ],
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Starter includes local replay and trace export"
+      ],
+      "html_inline": "<html><head><title>Pricing</title></head><body><article><h1>Pricing</h1><p>Starter includes local replay and trace export.</p><p>Enterprise adds audit streams and operator snapshots.</p></article><app-root></app-root><script>window.__NX={\"pricing\":[{\"tier\":\"Starter\",\"copy\":\"Starter includes local replay and trace export.\"},{\"tier\":\"Enterprise\",\"copy\":\"Enterprise adds audit streams and operator snapshots.\"}]}</script></body></html>",
+      "family": "compaction"
+    },
+    {
+      "name": "support_thread_lane2_vs_lane0",
+      "objective": "operator remediation checklist",
+      "objective_terms": [
+        "freeze",
+        "selector",
+        "snapshots",
+        "traffic"
+      ],
+      "profile": "deep",
+      "compare_force_lane": 2,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "freeze the crawler rollout",
+        "restore the previous selector pack",
+        "compare fresh snapshots before reopening traffic"
+      ],
+      "html_inline": "<html><head><title>Incident Thread</title></head><body><article><h1>Night incident</h1><p>Operator checklist: freeze the crawler rollout, restore the previous selector pack, compare fresh snapshots before reopening traffic.</p><p>Operators noticed drift after a rollout.</p><p>Several replies discuss unrelated tooling but the remediation stayed the same.</p></article></body></html>",
+      "family": "forum"
+    },
+    {
+      "name": "tiny_embedded_catalog_lane3_vs_lane0",
+      "objective": "capability summary",
+      "objective_terms": [
+        "capture",
+        "diff",
+        "proof",
+        "search"
+      ],
+      "profile": "tiny",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Capture pages locally Proof every chunk Diff every rerun Search minimal tokens"
+      ],
+      "html_inline": "<html><head><title>Capabilities</title></head><body><article><h1>Capabilities</h1><ul><li>Capture pages locally</li><li>Proof every chunk</li><li>Diff every rerun</li><li>Search with minimal tokens</li></ul></article><app-root></app-root><script>window.__catalog={\"capabilities\":[\"Capture pages locally\",\"Proof every chunk\",\"Diff every rerun\",\"Search with minimal tokens\"]}</script></body></html>",
+      "family": "tiny"
+    },
+    {
+      "name": "embedded_release_notes_lane3",
+      "objective": "release summary",
+      "objective_terms": [
+        "delta",
+        "selector",
+        "proof",
+        "export"
+      ],
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Delta export now keeps selector proof snapshots",
+        "Faster replay diff for changed pages"
+      ],
+      "html_inline": "<html><head><title>Release Notes</title></head><body><article><h1>Release notes</h1><p>Delta export now keeps selector proof snapshots.</p><p>Faster replay diff for changed pages.</p></article><app-shell></app-shell><script>window.__release={\"items\":[{\"title\":\"v1.4\",\"notes\":\"Delta export now keeps selector proof snapshots.\"},{\"title\":\"v1.3\",\"notes\":\"Faster replay diff for changed pages.\"}]}</script></body></html>",
+      "family": "embedded"
+    },
+    {
+      "name": "faq_resolution_lane2",
+      "objective": "support resolution summary",
+      "objective_terms": [
+        "retry",
+        "cache",
+        "trace",
+        "replay"
+      ],
+      "profile": "deep",
+      "compare_force_lane": 2,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "clear the stale cache",
+        "replay the failing trace",
+        "retry the acquisition step"
+      ],
+      "html_inline": "<html><head><title>FAQ</title></head><body><article><h1>Support FAQ</h1><h2>How to recover?</h2><p>First clear the stale cache, replay the failing trace, then retry the acquisition step.</p><p>Secondary notes mention browser plugins and office wifi, but those are incidental.</p></article></body></html>",
+      "family": "forum"
+    },
+    {
+      "name": "tiny_pricing_grid_lane3",
+      "objective": "pricing summary",
+      "objective_terms": [
+        "starter",
+        "team",
+        "audit",
+        "proof"
+      ],
+      "profile": "tiny",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Starter local read",
+        "Team shared traces",
+        "Audit proof exports"
+      ],
+      "html_inline": "<html><head><title>Plans</title></head><body><section><h1>Plans</h1><p>Starter local read. Team shared traces. Audit proof exports.</p><table><tr><th>Plan</th><th>Feature</th></tr><tr><td>Starter</td><td>local read</td></tr><tr><td>Team</td><td>shared traces</td></tr><tr><td>Audit</td><td>proof exports</td></tr></table></section></body></html>",
+      "family": "tiny"
+    },
+    {
+      "name": "comparison_table_lane3",
+      "objective": "feature comparison",
+      "objective_terms": [
+        "replay",
+        "proof",
+        "crawl",
+        "diff"
+      ],
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Replay and proof available on Pro"
+      ],
+      "html_inline": "<html><head><title>Compare</title></head><body><table><tr><th>Plan</th><th>Feature</th></tr><tr><td>Basic</td><td>Read only</td></tr><tr><td>Pro</td><td>Replay and proof available on Pro</td></tr><tr><td>Ops</td><td>Crawl diff streams</td></tr></table></body></html>",
+      "family": "compaction"
+    },
+    {
+      "name": "multilingual_company_lane2",
+      "objective": "company profile",
+      "objective_terms": [
+        "piattaforma",
+        "proof",
+        "agents",
+        "locale"
+      ],
+      "profile": "deep",
+      "compare_force_lane": 2,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Piattaforma locale per proof e contesto operativo"
+      ],
+      "html_inline": "<html><head><title>Profilo</title></head><body><article><h1>Profilo aziendale</h1><p>Piattaforma locale per proof e contesto operativo.</p><p>Needle-X compiles web context for agents and operators.</p><p>Le sezioni successive ripetono slogan di marketing meno utili.</p></article></body></html>",
+      "family": "forum"
+    },
+    {
+      "name": "appshell_catalog_lane3",
+      "objective": "service offering",
+      "objective_terms": [
+        "crawl",
+        "read",
+        "query",
+        "proof"
+      ],
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 0.0,
+      "expected_terms": [
+        "Read Query Crawl Proof exports"
+      ],
+      "html_inline": "<html><head><title>Catalog</title></head><body><app-root></app-root><script>window.__services={\"items\":[\"Read\",\"Query\",\"Crawl\",\"Proof exports\"]}</script><article><h1>Services</h1><p>Local runtime services.</p></article></body></html>",
+      "family": "embedded"
+    }
+  ],
+  "family_thresholds": []
+}

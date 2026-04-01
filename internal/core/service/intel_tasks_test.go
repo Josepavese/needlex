@@ -11,9 +11,29 @@ import (
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
-	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 )
+
+type fakeSemanticAligner struct {
+	suppressed bool
+	reason     string
+}
+
+func (f fakeSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{Suppressed: f.suppressed, Reason: f.reason}, nil
+}
+
+func (f fakeSemanticAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.10
+		if f.suppressed {
+			score = 0.92
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
 
 func TestBuildResolveAmbiguityInputBuildsGroundedCandidates(t *testing.T) {
 	input, ok := buildResolveAmbiguityInput("proof replay deterministic", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}, []rankedSegment{
@@ -115,7 +135,7 @@ func TestBuildResolveAmbiguityInputSkipsWhenObjectiveAlreadyResolved(t *testing.
 		"fp_2": {Fingerprint: "fp_2", Lane: 0},
 	})
 	if ok {
-		t.Fatalf("expected ambiguity route to stay off for fully resolved objective, got %#v", input)
+		t.Fatalf("expected structurally resolved anchor to keep ambiguity route off, got %#v", input)
 	}
 }
 
@@ -141,20 +161,20 @@ func TestBuildResolveAmbiguityInputSkipsForThemeHeavyWordPressWhenCoverageIsGood
 		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"short_segment"}},
 	})
 	if ok {
-		t.Fatalf("expected theme_heavy_wordpress to suppress ambiguity route when objective is already covered, got %#v", input)
+		t.Fatalf("expected theme_heavy_wordpress to suppress ambiguity route when the structure is already strong, got %#v", input)
 	}
 }
 
-func TestBuildResolveAmbiguityInputSkipsForCoverageDominantCandidate(t *testing.T) {
+func TestBuildResolveAmbiguityInputSkipsForStructurallyDominantCandidate(t *testing.T) {
 	input, ok := buildResolveAmbiguityInput("web server platform summary", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}, []rankedSegment{
-		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "Nginx is a web server platform summary for operators and developers.", HeadingPath: []string{"Overview"}, Score: 0.91, Confidence: 0.88}, ir: segmentIREvidence{headingBacked: true}},
-		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Downloads, docs, and resources.", HeadingPath: []string{"Resources"}, Score: 0.79, Confidence: 0.78}, ir: segmentIREvidence{headingBacked: true}},
+		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "Nginx is a web server platform summary for operators and developers.", HeadingPath: []string{"Overview"}, Score: 0.95, Confidence: 0.92}, ir: segmentIREvidence{headingBacked: true}},
+		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Downloads, docs, and resources.", HeadingPath: []string{"Resources"}, Score: 0.79, Confidence: 0.78}, ir: segmentIREvidence{}},
 	}, map[string]intel.Decision{
-		"fp_1": {Fingerprint: "fp_1", Lane: 1, RiskFlags: []string{"high_ambiguity"}},
+		"fp_1": {Fingerprint: "fp_1", Lane: 1, RiskFlags: []string{"selection_reused"}},
 		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"short_segment"}},
 	})
 	if ok {
-		t.Fatalf("expected coverage-dominant candidate to suppress ambiguity route, got %#v", input)
+		t.Fatalf("expected structurally dominant candidate to suppress ambiguity route, got %#v", input)
 	}
 }
 
@@ -171,7 +191,7 @@ func TestBuildResolveAmbiguityInputKeepsRouteWhenTwoFullCoverageCandidatesAreClo
 	}
 }
 
-func TestBuildResolveAmbiguityInputSkipsForLowLexicalObjectiveSignal(t *testing.T) {
+func TestBuildResolveAmbiguityInputKeepsRouteForCrossLingualMismatchUntilSemanticGateRuns(t *testing.T) {
 	input, ok := buildResolveAmbiguityInput("service offering", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}, []rankedSegment{
 		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "Aiutiamo aziende e startup a crescere attraverso il digitale.", HeadingPath: []string{"Diamo forma alle tue idee"}, Score: 1.0, Confidence: 0.93}},
 		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Realizziamo siti web e marketing digitale per il business.", HeadingPath: []string{"Servizi"}, Score: 0.99, Confidence: 0.93}},
@@ -179,8 +199,8 @@ func TestBuildResolveAmbiguityInputSkipsForLowLexicalObjectiveSignal(t *testing.
 		"fp_1": {Fingerprint: "fp_1", Lane: 1, RiskFlags: []string{"coverage_gap"}},
 		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"coverage_gap"}},
 	})
-	if ok {
-		t.Fatalf("expected low lexical objective signal to suppress ambiguity route, got %#v", input)
+	if !ok {
+		t.Fatalf("expected ambiguity route to stay available until semantic gate runs, got %#v", input)
 	}
 }
 
@@ -194,32 +214,6 @@ func TestBuildResolveAmbiguityInputSkipsForCoverageAnchor(t *testing.T) {
 	})
 	if ok {
 		t.Fatalf("expected coverage anchor to suppress ambiguity route, got %#v", input)
-	}
-}
-
-func TestBuildInterpretEmbeddedStateInputCollectsEmbeddedAndVisibleEvidence(t *testing.T) {
-	dom := pipeline.SimplifiedDOM{
-		Title: "Needle Runtime",
-		Nodes: []pipeline.SimplifiedNode{
-			{Path: "/article[1]/h1[1]", Kind: "heading", Text: "Needle Runtime", Depth: 2},
-			{Path: "/article[1]/p[1]", Kind: "paragraph", Text: "Visible company summary.", Depth: 2},
-			{Path: "/embedded/script[1]/text[1]", Kind: "paragraph", Text: `{"company":"Needle-X"}`, Depth: 3},
-		},
-	}
-	webIR := buildWebIR(dom)
-
-	input, ok := buildInterpretEmbeddedStateInput("company profile", dom, webIR)
-	if !ok {
-		t.Fatal("expected embedded state input to be built")
-	}
-	if err := input.Validate(); err != nil {
-		t.Fatalf("validate embedded input: %v", err)
-	}
-	if len(input.EmbeddedExcerpts) != 1 {
-		t.Fatalf("expected 1 embedded excerpt, got %d", len(input.EmbeddedExcerpts))
-	}
-	if len(input.VisibleEvidence) == 0 {
-		t.Fatal("expected visible corroboration evidence")
 	}
 }
 
@@ -250,7 +244,7 @@ func TestExecuteIntelTasksAcceptsAmbiguityPatch(t *testing.T) {
 	}
 	rec := proof.NewRecorder("run_1", "trace_1", svc.now())
 
-	out, executions, err := svc.executeIntelTasks(context.Background(), rec, ReadRequest{Objective: "proof replay context"}, pipeline.SimplifiedDOM{}, core.WebIR{}, selected, decisions, intel.ModelTraceContext{RunID: "run_1", TraceID: "trace_1"})
+	out, executions, err := svc.executeIntelTasks(context.Background(), rec, ReadRequest{Objective: "proof replay context"}, core.WebIR{}, selected, decisions, intel.ModelTraceContext{RunID: "run_1", TraceID: "trace_1"})
 	if err != nil {
 		t.Fatalf("execute intel tasks: %v", err)
 	}
@@ -268,175 +262,26 @@ func TestExecuteIntelTasksAcceptsAmbiguityPatch(t *testing.T) {
 	}
 }
 
-func TestExecuteIntelTasksSkipsInterpretEmbeddedWhenTaskIsHoldout(t *testing.T) {
-	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"normalized_fields\":[{\"name\":\"company\",\"value\":\"Needle-X\",\"source_paths\":[\"/embedded/invalid\"]}],\"confidence\":0.92}"}}],"usage":{"prompt_tokens":41,"completion_tokens":13}}`)
-	}))
-	defer modelServer.Close()
-
+func TestBuildPlannedIntelTasksSuppressesAmbiguityWhenSemanticGateFires(t *testing.T) {
 	cfg := config.Defaults()
-	cfg.Models.Backend = "openai-compatible"
-	cfg.Models.BaseURL = modelServer.URL
-	cfg.Models.Extractor = "qwen-embedded"
-
-	svc, err := New(cfg, modelServer.Client())
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Model = "embed-x"
+	svc, err := New(cfg, nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
-	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-
-	dom := pipeline.SimplifiedDOM{
-		Title: "Needle Runtime",
-		Nodes: []pipeline.SimplifiedNode{
-			{Path: "/article[1]/h1[1]", Kind: "heading", Text: "Needle Runtime"},
-			{Path: "/article[1]/p[1]", Kind: "paragraph", Text: "Release update."},
-			{Path: "/embedded/script[1]/text[1]", Kind: "paragraph", Text: `{"release_notes":["Delta export now keeps selector proof snapshots","Faster replay diff for changed pages"],"company":"Needle-X"}`},
-		},
-	}
-	webIR := buildWebIR(dom)
-	selected := []rankedSegment{
-		{
-			chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_embedded", Text: `{"release_notes":["Delta export now keeps selector proof snapshots","Faster replay diff for changed pages"],"company":"Needle-X"}`, HeadingPath: []string{"Needle Runtime"}, Score: 0.88, Confidence: 0.80},
-			ir:    segmentIREvidence{embedded: true},
-		},
-	}
-	decisions := map[string]intel.Decision{
-		"fp_embedded": {Fingerprint: "fp_embedded", Lane: 2},
-	}
-	rec := proof.NewRecorder("run_1", "trace_1", svc.now())
-
-	out, executions, err := svc.executeIntelTasks(context.Background(), rec, ReadRequest{Objective: "company profile"}, dom, webIR, selected, decisions, intel.ModelTraceContext{RunID: "run_1", TraceID: "trace_1"})
+	svc.semantic = fakeSemanticAligner{suppressed: true, reason: "cross_lingual_alignment"}
+	plans, err := svc.buildPlannedIntelTasks(context.Background(), ReadRequest{Objective: "service offering"}, core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}, []rankedSegment{
+		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "Aiutiamo aziende a crescere attraverso il digitale.", HeadingPath: []string{"Diamo forma alle tue idee"}, Score: 0.99, Confidence: 0.93}},
+		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Servizi di sviluppo siti web e marketing.", HeadingPath: []string{"Servizi"}, Score: 0.98, Confidence: 0.93}},
+	}, map[string]intel.Decision{
+		"fp_1": {Fingerprint: "fp_1", Lane: 1, RiskFlags: []string{"coverage_gap"}},
+		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"coverage_gap"}},
+	}, intel.ModelTraceContext{RunID: "run_1", TraceID: "trace_1"})
 	if err != nil {
-		t.Fatalf("execute intel tasks: %v", err)
+		t.Fatalf("build planned tasks: %v", err)
 	}
-	if len(executions) != 1 {
-		t.Fatalf("expected 1 execution, got %d", len(executions))
-	}
-	if executions[0].outcome != intelOutcomeSkipped {
-		t.Fatalf("expected skipped outcome, got %q", executions[0].outcome)
-	}
-	if out[0].chunk.Text != `{"release_notes":["Delta export now keeps selector proof snapshots","Faster replay diff for changed pages"],"company":"Needle-X"}` {
-		t.Fatalf("expected embedded text to remain unchanged, got %q", out[0].chunk.Text)
-	}
-	if got := decisions["fp_embedded"].ModelInvocations; len(got) == 0 || got[0].ValidatorOutcome != intelOutcomeSkipped {
-		t.Fatalf("expected skipped invocation on embedded fingerprint, got %#v", got)
-	}
-}
-
-func TestExecuteIntelTasksSkipsRuntimeErrorPathForHoldoutTask(t *testing.T) {
-	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "backend exploded", http.StatusBadGateway)
-	}))
-	defer modelServer.Close()
-
-	cfg := config.Defaults()
-	cfg.Models.Backend = "openai-compatible"
-	cfg.Models.BaseURL = modelServer.URL
-	cfg.Models.Extractor = "qwen-embedded"
-
-	svc, err := New(cfg, modelServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-
-	dom := pipeline.SimplifiedDOM{
-		Title: "Needle Runtime",
-		Nodes: []pipeline.SimplifiedNode{
-			{Path: "/article[1]/h1[1]", Kind: "heading", Text: "Needle Runtime"},
-			{Path: "/article[1]/p[1]", Kind: "paragraph", Text: "Release update."},
-			{Path: "/embedded/script[1]/text[1]", Kind: "paragraph", Text: `{"release_notes":["Delta export now keeps selector proof snapshots","Faster replay diff for changed pages"],"company":"Needle-X"}`},
-		},
-	}
-	webIR := buildWebIR(dom)
-	selected := []rankedSegment{
-		{
-			chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_embedded", Text: `{"release_notes":["Delta export now keeps selector proof snapshots","Faster replay diff for changed pages"],"company":"Needle-X"}`, HeadingPath: []string{"Needle Runtime"}, Score: 0.88, Confidence: 0.80},
-			ir:    segmentIREvidence{embedded: true},
-		},
-	}
-	decisions := map[string]intel.Decision{
-		"fp_embedded": {Fingerprint: "fp_embedded", Lane: 2},
-	}
-	rec := proof.NewRecorder("run_1", "trace_1", svc.now())
-
-	_, executions, err := svc.executeIntelTasks(context.Background(), rec, ReadRequest{Objective: "company profile"}, dom, webIR, selected, decisions, intel.ModelTraceContext{RunID: "run_1", TraceID: "trace_1"})
-	if err != nil {
-		t.Fatalf("execute intel tasks: %v", err)
-	}
-	if len(executions) != 1 {
-		t.Fatalf("expected 1 execution, got %d", len(executions))
-	}
-	if executions[0].outcome != intelOutcomeSkipped {
-		t.Fatalf("expected skipped outcome, got %q", executions[0].outcome)
-	}
-	got := decisions["fp_embedded"].ModelInvocations
-	if len(got) == 0 {
-		t.Fatal("expected skipped invocation to be recorded")
-	}
-	if got[0].ValidatorOutcome != intelOutcomeSkipped {
-		t.Fatalf("expected validator outcome error, got %#v", got[0])
-	}
-	if got[0].PatchEffect != "not_benchmark_proven" {
-		t.Fatalf("expected holdout skip effect, got %#v", got[0])
-	}
-}
-
-func TestExecuteIntelTasksSkipsEmbeddedWorthinessWhenTaskIsHoldout(t *testing.T) {
-	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"should_interpret_embedded\":false,\"selected_paths\":[],\"decision_reason\":\"visible DOM already covers the objective\",\"confidence\":0.93}"}}],"usage":{"prompt_tokens":33,"completion_tokens":11}}`)
-	}))
-	defer modelServer.Close()
-
-	cfg := config.Defaults()
-	cfg.Models.Backend = "openai-compatible"
-	cfg.Models.BaseURL = modelServer.URL
-	cfg.Models.Extractor = "readerlm-v2"
-
-	svc, err := New(cfg, modelServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-
-	dom := pipeline.SimplifiedDOM{
-		Title: "Needle Runtime",
-		Nodes: []pipeline.SimplifiedNode{
-			{Path: "/article[1]/h1[1]", Kind: "heading", Text: "Needle Runtime"},
-			{Path: "/article[1]/p[1]", Kind: "paragraph", Text: "Company profile and services overview for Needle-X."},
-			{Path: "/embedded/script[1]/text[1]", Kind: "paragraph", Text: `{"cta":"Contact us"}`},
-		},
-	}
-	webIR := buildWebIR(dom)
-	selected := []rankedSegment{
-		{
-			chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_embedded", Text: `{"cta":"Contact us"}`, HeadingPath: []string{"Needle Runtime"}, Score: 0.88, Confidence: 0.80},
-			ir:    segmentIREvidence{embedded: true},
-		},
-	}
-	decisions := map[string]intel.Decision{
-		"fp_embedded": {Fingerprint: "fp_embedded", Lane: 2},
-	}
-	rec := proof.NewRecorder("run_1", "trace_1", svc.now())
-
-	out, executions, err := svc.executeIntelTasks(context.Background(), rec, ReadRequest{Objective: "company profile"}, dom, webIR, selected, decisions, intel.ModelTraceContext{RunID: "run_1", TraceID: "trace_1"})
-	if err != nil {
-		t.Fatalf("execute intel tasks: %v", err)
-	}
-	if len(executions) != 1 {
-		t.Fatalf("expected 1 execution, got %d", len(executions))
-	}
-	if executions[0].outcome != intelOutcomeSkipped {
-		t.Fatalf("expected skipped worthiness outcome, got %q", executions[0].outcome)
-	}
-	if executions[0].invocation.PatchEffect != "not_benchmark_proven" {
-		t.Fatalf("expected holdout skip effect, got %q", executions[0].invocation.PatchEffect)
-	}
-	if out[0].chunk.Text != `{"cta":"Contact us"}` {
-		t.Fatalf("expected embedded text unchanged, got %q", out[0].chunk.Text)
-	}
-	got := decisions["fp_embedded"].ModelInvocations
-	if len(got) == 0 || got[0].ValidatorOutcome != intelOutcomeSkipped {
-		t.Fatalf("expected skipped worthiness invocation, got %#v", got)
+	if len(plans) != 0 {
+		t.Fatalf("expected semantic gate to suppress ambiguity plan, got %#v", plans)
 	}
 }

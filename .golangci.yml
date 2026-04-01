@@ -1,0 +1,18 @@
+run:
+  tests: false
+
+linters:
+  enable:
+    - gocyclo
+    - funlen
+    - ineffassign
+    - govet
+    - misspell
+  disable-all: true
+
+linters-settings:
+  funlen:
+    lines: 60
+    statements: 40
+  gocyclo:
+    min-complexity: 30

@@ -48,6 +48,25 @@ func TestProofStoreFindByChunkID(t *testing.T) {
 	}
 }
 
+func TestProofStoreFindByID(t *testing.T) {
+	root := t.TempDir()
+	store := NewProofStore(root)
+	if _, err := store.SaveProofRecords("trace_a", fakeProofRecords()); err != nil {
+		t.Fatalf("seed proof records: %v", err)
+	}
+
+	record, traceID, err := store.FindProofByID("proof_1")
+	if err != nil {
+		t.Fatalf("find by proof id: %v", err)
+	}
+	if traceID != "trace_a" {
+		t.Fatalf("expected trace id trace_a, got %q", traceID)
+	}
+	if record.Proof.ChunkID != "chk_1" {
+		t.Fatalf("expected chunk id chk_1, got %q", record.Proof.ChunkID)
+	}
+}
+
 func TestProofStoreMissingProof(t *testing.T) {
 	store := NewProofStore(t.TempDir())
 	_, err := store.LoadProofRecords("missing")

@@ -8,13 +8,14 @@ import (
 
 func TestAnalyzeEscalatesAmbiguousSegment(t *testing.T) {
 	analyzer := New(config.Defaults())
-	summary := analyzer.Analyze("api auth replay", []Input{
+	summary := analyzer.Analyze([]Input{
 		{
-			Fingerprint: "fp_1",
-			Text:        "Short note.",
-			HeadingPath: []string{"Intro"},
-			Score:       0.65,
-			Confidence:  0.70,
+			Fingerprint:      "fp_1",
+			Text:             "Short note.",
+			HeadingPath:      []string{"Intro"},
+			ContextAlignment: 0.18,
+			Score:            0.65,
+			Confidence:       0.70,
 		},
 	}, Hints{})
 
@@ -32,13 +33,14 @@ func TestAnalyzeEscalatesAmbiguousSegment(t *testing.T) {
 
 func TestAnalyzeKeepsClearSegmentDeterministic(t *testing.T) {
 	analyzer := New(config.Defaults())
-	summary := analyzer.Analyze("proof replay deterministic", []Input{
+	summary := analyzer.Analyze([]Input{
 		{
-			Fingerprint: "fp_1",
-			Text:        "Proof and replay keep every extraction deterministic and auditable for local agents.",
-			HeadingPath: []string{"Deterministic Core"},
-			Score:       0.94,
-			Confidence:  0.95,
+			Fingerprint:      "fp_1",
+			Text:             "Proof and replay keep every extraction deterministic and auditable for local agents.",
+			HeadingPath:      []string{"Deterministic Core"},
+			ContextAlignment: 0.92,
+			Score:            0.94,
+			Confidence:       0.95,
 		},
 	}, Hints{})
 
@@ -53,13 +55,14 @@ func TestAnalyzeKeepsClearSegmentDeterministic(t *testing.T) {
 
 func TestAnalyzeRespectsDomainForceLane(t *testing.T) {
 	analyzer := New(config.Defaults())
-	summary := analyzer.Analyze("proof replay deterministic", []Input{
+	summary := analyzer.Analyze([]Input{
 		{
-			Fingerprint: "fp_1",
-			Text:        "Proof and replay keep every extraction deterministic and auditable for local agents.",
-			HeadingPath: []string{"Deterministic Core"},
-			Score:       0.94,
-			Confidence:  0.95,
+			Fingerprint:      "fp_1",
+			Text:             "Proof and replay keep every extraction deterministic and auditable for local agents.",
+			HeadingPath:      []string{"Deterministic Core"},
+			ContextAlignment: 0.92,
+			Score:            0.94,
+			Confidence:       0.95,
 		},
 	}, Hints{ForceLane: 1})
 
@@ -75,13 +78,14 @@ func TestAnalyzeRespectsDomainForceLane(t *testing.T) {
 func TestAnalyzeEscalatesToExtractorAndFormatter(t *testing.T) {
 	cfg := config.Defaults()
 	analyzer := New(cfg)
-	summary := analyzer.Analyze("proof replay deterministic context", []Input{
+	summary := analyzer.Analyze([]Input{
 		{
-			Fingerprint: "fp_1",
-			Text:        "Short proof. Replay deterministic context.",
-			HeadingPath: []string{"Overview"},
-			Score:       0.60,
-			Confidence:  0.60,
+			Fingerprint:      "fp_1",
+			Text:             "Short proof. Replay deterministic context.",
+			HeadingPath:      []string{"Overview"},
+			ContextAlignment: 0.24,
+			Score:            0.60,
+			Confidence:       0.60,
 		},
 	}, Hints{ForceLane: 3, Profile: "tiny"})
 

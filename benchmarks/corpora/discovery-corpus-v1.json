@@ -1,0 +1,119 @@
+{
+  "version": "discovery-corpus-v1",
+  "cases": [
+    {
+      "name": "same_site_goal_match",
+      "mode": "same_site",
+      "goal": "proof replay deterministic",
+      "seed_html": "<html><head><title>Portal</title></head><body><a href=\"/blog\">Blog</a><a href=\"/docs/replay\">Replay Guide</a></body></html>",
+      "expected_selected_suffix": "/docs/replay",
+      "expect_local_provider": true,
+      "expect_bootstrap": false
+    },
+    {
+      "name": "seedless_local_autoseed",
+      "mode": "seedless_local",
+      "goal": "proof replay deterministic",
+      "seed_html": "<html><head><title>Portal</title></head><body><a href=\"/docs/replay\">Replay Guide</a></body></html>",
+      "expected_selected_suffix": "/docs/replay",
+      "expect_local_provider": true,
+      "expect_bootstrap": false
+    },
+    {
+      "name": "seedless_web_rewrite_entity_query",
+      "mode": "seedless_web_rewrite",
+      "goal": "understand what asd charly brown does in Alessandria",
+      "canonical_entity": "ASD Charly Brown",
+      "rewrite_scenario": "rewrite_needed",
+      "rewrite_queries": [
+        "\"ASD Charly Brown\" Alessandria",
+        "\"ASD Charly Brown\" scuola di danza"
+      ],
+      "expected_rewrite": true,
+      "seed_html": "<html><head><title>Unused</title></head><body></body></html>",
+      "expected_selected_suffix": "/asd-charly-brown",
+      "expect_local_provider": false,
+      "expect_bootstrap": true
+    },
+    {
+      "name": "seedless_web_rewrite_multilingual_corporate",
+      "mode": "seedless_web_rewrite",
+      "goal": "capire cosa fa half pocket in italia",
+      "canonical_entity": "Half Pocket",
+      "rewrite_scenario": "rewrite_needed",
+      "rewrite_queries": [
+        "\"Half Pocket\" Italia",
+        "\"Half Pocket\" software"
+      ],
+      "expected_rewrite": true,
+      "seed_html": "<html><head><title>Unused</title></head><body></body></html>",
+      "expected_selected_suffix": "/half-pocket",
+      "expect_local_provider": false,
+      "expect_bootstrap": true
+    },
+    {
+      "name": "seedless_web_rewrite_tool_brand",
+      "mode": "seedless_web_rewrite",
+      "goal": "find the official site for playwright browser automation",
+      "canonical_entity": "Playwright",
+      "rewrite_scenario": "rewrite_needed",
+      "rewrite_queries": [
+        "\"Playwright\" browser automation",
+        "\"Playwright\" official site"
+      ],
+      "expected_rewrite": true,
+      "seed_html": "<html><head><title>Unused</title></head><body></body></html>",
+      "expected_selected_suffix": "/playwright",
+      "expect_local_provider": false,
+      "expect_bootstrap": true
+    },
+    {
+      "name": "seedless_web_bootstrap_clear_no_rewrite",
+      "mode": "seedless_web_rewrite",
+      "goal": "find the official site for sqlite database engine",
+      "canonical_entity": "SQLite",
+      "rewrite_scenario": "bootstrap_clear",
+      "rewrite_queries": [
+        "\"SQLite\" database engine",
+        "\"SQLite\" official site"
+      ],
+      "expected_rewrite": false,
+      "seed_html": "<html><head><title>Unused</title></head><body></body></html>",
+      "expected_selected_suffix": "/sqlite",
+      "expect_local_provider": false,
+      "expect_bootstrap": true
+    },
+    {
+      "name": "seedless_web_invalid_rewrite_rejected",
+      "mode": "seedless_web_rewrite",
+      "goal": "voglio capire cosa fa asd charly brown a cassine",
+      "canonical_entity": "ASD Charly Brown",
+      "rewrite_scenario": "rewrite_invalid",
+      "rewrite_queries": [
+        "\"ASD Charly Brown\" Cassine",
+        "\"ASD Charly Brown\" scuola di danza"
+      ],
+      "expected_rewrite": false,
+      "seed_html": "<html><head><title>Unused</title></head><body></body></html>",
+      "expected_selected_suffix": "/asd-charly-brown",
+      "expect_local_provider": false,
+      "expect_bootstrap": true
+    },
+    {
+      "name": "seedless_web_rewrite_fallback_to_bootstrap",
+      "mode": "seedless_web_rewrite",
+      "goal": "understand what charly brown dance school does",
+      "canonical_entity": "ASD Charly Brown",
+      "rewrite_scenario": "rewrite_fallback_empty",
+      "rewrite_queries": [
+        "\"ASD Charly Brown\" dance school",
+        "\"ASD Charly Brown\" tango"
+      ],
+      "expected_rewrite": false,
+      "seed_html": "<html><head><title>Unused</title></head><body></body></html>",
+      "expected_selected_suffix": "/asd-charly-brown",
+      "expect_local_provider": false,
+      "expect_bootstrap": true
+    }
+  ]
+}

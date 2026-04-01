@@ -3,10 +3,16 @@ package service
 import (
 	"strings"
 	"testing"
+
+	"github.com/josepavese/needlex/internal/config"
 )
 
 func TestCompactTinyTextPreservesObjectiveTerms(t *testing.T) {
-	compacted, changed := compactTinyText(
+	svc, err := New(config.Defaults(), nil)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	compacted, changed := svc.compactTinyText(
 		"The runtime reduces HTML into a stable intermediate representation before ranking and packing.",
 		"stable ranking packing",
 	)
@@ -21,7 +27,11 @@ func TestCompactTinyTextPreservesObjectiveTerms(t *testing.T) {
 }
 
 func TestCompactTinyTextFallsBackForShortContent(t *testing.T) {
-	compacted, changed := compactTinyText("Proof replay deterministic context.", "proof replay")
+	svc, err := New(config.Defaults(), nil)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	compacted, changed := svc.compactTinyText("Proof replay deterministic context.", "proof replay")
 	if changed {
 		t.Fatalf("expected short content to remain unchanged, got %q", compacted)
 	}

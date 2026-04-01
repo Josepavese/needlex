@@ -14,7 +14,7 @@ Needle-X must deliver a full Day 1 runtime without turning into a sprawling code
 Canonical flow:
 
 ```text
-Acquire -> Reduce -> Segment -> ExtractDet -> ExtractSLM? -> Judge -> ChunkRank -> Pack -> Proof -> Trace
+Acquire -> Reduce -> Segment -> ExtractDet -> SemanticGate -> (+ResolveAmbiguity) -> ChunkRank -> Pack -> Proof -> Trace
 ```
 
 ## Internal Package Plan
@@ -45,10 +45,11 @@ Own thin CLI and MCP adapters that call `core`.
 ## Design Invariants
 
 1. Deterministic pipeline is the default path and must stay operable offline.
-2. SLM calls are policy-gated and must emit explicit reason codes.
+2. Model calls are policy-gated, benchmark-backed, and must emit explicit reason codes.
 3. Every successful run emits proof and trace artifacts.
 4. CLI and MCP never implement business logic directly.
 5. Domain genome and fingerprint graph are storage concerns, not new execution pipelines.
+6. The default transport contract must be the compact agent-facing packet, not the diagnostic envelope.
 
 ## Local Artifact Layout
 

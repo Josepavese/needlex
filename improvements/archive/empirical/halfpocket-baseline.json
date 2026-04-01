@@ -1,0 +1,1482 @@
+{
+  "document": {
+    "id": "doc_c3ffbb6eef56ce2c",
+    "url": "https://halfpocket.net/",
+    "final_url": "https://www.halfpocket.net/",
+    "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+    "fetched_at": "2026-03-30T14:22:23.309198162Z",
+    "fetch_mode": "http",
+    "raw_hash": "sha256_38e93d9c84fb7721"
+  },
+  "web_ir": {
+    "version": "web_ir.v1",
+    "source_url": "https://www.halfpocket.net/",
+    "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+    "node_count": 56,
+    "nodes": [
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h1[1]",
+        "tag": "h1",
+        "kind": "heading",
+        "text": "Diamo forma alle tue idee.",
+        "depth": 14,
+        "heading_level": 1
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Aiutiamo Aziende, Startup e Liberi Professionisti a crescere attraverso il digitale!",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Non andare alla cieca: ti aiuteremo a migliorare il tuo business tracciando la strada giusta da seguire",
+        "depth": 16
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Racconta la tua attività attraverso foto e video professionali .",
+        "depth": 16
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "La giusta immagine per il tuo business: trasformiamo l’immagine della tua azienda in un brand che colpisce",
+        "depth": 16
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Tecnologia su misura per le esigenze della tua azienda e dei tuoi clienti",
+        "depth": 16
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Un sito su misura: realizziamo siti vetrina, e-commerce, blog modellati sulle tue esigenze",
+        "depth": 16
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[3]/div[2]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Farsi conoscere attraverso il web è senza dubbio il modo più smart per risparmiare tempo e denaro.",
+        "depth": 16
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "GR",
+        "depth": 23,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "GRAFICA",
+        "depth": 24
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "Design emozionale",
+        "depth": 24,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Protocolli operativi collaudati negli anni e un team altamente specializzato: ecco gli ingredienti che ci permettono di creare siti web, loghi e grafiche ad altissimo impatto.",
+        "depth": 24
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "IT",
+        "depth": 23,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "SVILUPPO IT",
+        "depth": 24
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "Innovazione e tecnologia",
+        "depth": 24,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Il nostro reparto IT ha prodotto, negli anni, numerosi software studiati per aiutare le aziende ad ottimizzare i processi di lavoro ed aumentare il livello di fidelizzazione dei propri clienti.",
+        "depth": 24
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "MRK",
+        "depth": 23,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "DIGITAL MARKETING",
+        "depth": 24
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "Obiettivi misurabili",
+        "depth": 24,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Tutti i progetti digitali nascono e si evolvono con l’unico scopo di raggiungere gli obiettivi definiti in sede preliminare tra il cliente e il nostro team di marketing.",
+        "depth": 24
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "GR",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "GRAFICA",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[3]/div[1]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Design emozionale",
+        "depth": 14,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[3]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Protocolli operativi collaudati negli anni e un team altamente specializzato: ecco gli ingredienti che ci permettono di creare siti web, loghi e grafiche ad altissimo impatto.",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "IT",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "SVILUPPO IT",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[3]/div[1]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Innovazione e tecnologia",
+        "depth": 14,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[3]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Il nostro reparto IT ha prodotto, negli anni, numerosi software studiati per aiutare le aziende ad ottimizzare i processi di lavoro ed aumentare il livello di fidelizzazione dei propri clienti.",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "MRK",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[6]/div[1]/div[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "DIGITAL MARKETING",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[6]/div[1]/div[1]/div[3]/div[1]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Obiettivi misurabili",
+        "depth": 14,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[6]/div[1]/div[1]/div[3]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Tutti i progetti digitali nascono e si evolvono con l’unico scopo di raggiungere gli obiettivi definiti in sede preliminare tra il cliente e il nostro team di marketing.",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[8]/div[1]/div[1]/div[3]/div[1]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Certificazioni",
+        "depth": 14,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[8]/div[1]/div[1]/div[4]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Utilizziamo oltre 30 linguaggi di programmazione e abbiamo certificazioni in tutti gli ambiti della comunicazione digitale.",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[8]/div[1]/div[2]/div[3]/div[1]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Professionisti",
+        "depth": 14,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[8]/div[1]/div[2]/div[4]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Un team di 25 professionisti che lavorano fianco a fianco con lo stesso obiettivo: il successo dei nostri clienti.",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[8]/div[1]/div[3]/div[3]/div[1]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Clienti gestiti",
+        "depth": 14,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[8]/div[1]/div[3]/div[4]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "La nostra esperienza trasversale ci consente di gestire progetti digitali a 360°, in ogni ambito di business.",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[10]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "LAVORI TARGATI HALF POCKET",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[10]/div[1]/div[1]/div[2]/div[1]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Olio su codice",
+        "depth": 14,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[1]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "aggiornamenti",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[1]/div[1]/div[2]/div[1]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Half blog",
+        "depth": 14,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[2]/div[1]/div[1]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "aggiornamenti",
+        "depth": 14
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[2]/div[1]/div[2]/div[1]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Half blog",
+        "depth": 14,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Vibe Coding: come cambia lo sviluppo software con l’AI",
+        "depth": 21,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Negli ultimi anni l’intelligenza artificiale...",
+        "depth": 22
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/article[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Agenti AI: cosa sono e come stanno cambiando il lavoro digitale",
+        "depth": 21,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/article[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Negli ultimi anni abbiamo visto...",
+        "depth": 22
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/article[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "GEO vs SEO: nuove frontiere nell’era dell’AI?",
+        "depth": 21,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/article[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Negli ultimi vent’anni la SEO è cambiata...",
+        "depth": 22
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[4]/article[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Migliori pratiche per la progettazione di siti web aziendali moderni: layout, accessibilità e integrazione social",
+        "depth": 21,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[4]/article[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Quando si parla di progettazione siti web...",
+        "depth": 22
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[5]/article[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Come realizzare un sito web di successo per liberi professionisti",
+        "depth": 21,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[5]/article[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Sapevi che l'88% degli utenti sceglie...",
+        "depth": 22
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[6]/article[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "Come scrivere schede prodotto e-commerce efficaci e ottimizzate: una guida pratica per gestire il tuo shop online",
+        "depth": 21,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[11]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[6]/article[1]/div[2]/div[1]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Sapevi che l’87% dei consumatori digitali...",
+        "depth": 22
+      }
+    ],
+    "signals": {
+      "short_text_ratio": 0.5892857142857143,
+      "heading_ratio": 0.39285714285714285,
+      "embedded_node_count": 0,
+      "substrate_class": "theme_heavy_wordpress"
+    }
+  },
+  "result_pack": {
+    "objective": "service offering",
+    "profile": "standard",
+    "chunks": [
+      {
+        "id": "chk_63dfed48f75e735f",
+        "doc_id": "doc_c3ffbb6eef56ce2c",
+        "text": "Aiutiamo Aziende, Startup e Liberi Professionisti a crescere attraverso il digitale!\n\nNon andare alla cieca: ti aiuteremo a migliorare il tuo business tracciando la strada giusta da seguire\n\nRacconta la tua attività attraverso foto e video professionali .\n\nLa giusta immagine per il tuo business: trasformiamo l’immagine della tua azienda in un brand che colpisce\n\nTecnologia su misura per le esigenze della tua azienda e dei tuoi clienti\n\nUn sito su misura: realizziamo siti vetrina, e-commerce, blog modellati sulle tue esigenze\n\nFarsi conoscere attraverso il web è senza dubbio il modo più smart per risparmiare tempo e denaro.",
+        "heading_path": [
+          "Diamo forma alle tue idee."
+        ],
+        "score": 1,
+        "fingerprint": "fp_2cada698c4043c81",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_565e20e58f3d50c6",
+        "doc_id": "doc_c3ffbb6eef56ce2c",
+        "text": "Protocolli operativi collaudati negli anni e un team altamente specializzato: ecco gli ingredienti che ci permettono di creare siti web, loghi e grafiche ad altissimo impatto.",
+        "heading_path": [
+          "Diamo forma alle tue idee.",
+          "GR",
+          "Design emozionale"
+        ],
+        "score": 1,
+        "fingerprint": "fp_c024eeccc12a3c53",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_26750800b564fe53",
+        "doc_id": "doc_c3ffbb6eef56ce2c",
+        "text": "Il nostro reparto IT ha prodotto, negli anni, numerosi software studiati per aiutare le aziende ad ottimizzare i processi di lavoro ed aumentare il livello di fidelizzazione dei propri clienti.",
+        "heading_path": [
+          "Diamo forma alle tue idee.",
+          "GR",
+          "Design emozionale",
+          "Innovazione e tecnologia"
+        ],
+        "score": 0.9940000000000002,
+        "fingerprint": "fp_6da6a015a9b0880e",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_7207c97d97f3e780",
+        "doc_id": "doc_c3ffbb6eef56ce2c",
+        "text": "Tutti i progetti digitali nascono e si evolvono con l’unico scopo di raggiungere gli obiettivi definiti in sede preliminare tra il cliente e il nostro team di marketing.\n\nGR\n\nGRAFICA",
+        "heading_path": [
+          "Diamo forma alle tue idee.",
+          "GR",
+          "Design emozionale",
+          "Obiettivi misurabili"
+        ],
+        "score": 0.9860000000000002,
+        "fingerprint": "fp_c29ae5887f9bdf5c",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_c79a7662bb862f81",
+        "doc_id": "doc_c3ffbb6eef56ce2c",
+        "text": "Protocolli operativi collaudati negli anni e un team altamente specializzato: ecco gli ingredienti che ci permettono di creare siti web, loghi e grafiche ad altissimo impatto.\n\nIT\n\nSVILUPPO IT",
+        "heading_path": [
+          "Diamo forma alle tue idee.",
+          "GR",
+          "Design emozionale"
+        ],
+        "score": 0.9820000000000002,
+        "fingerprint": "fp_a45729c1bac28361",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_5284f2990b8a7cd9",
+        "doc_id": "doc_c3ffbb6eef56ce2c",
+        "text": "Il nostro reparto IT ha prodotto, negli anni, numerosi software studiati per aiutare le aziende ad ottimizzare i processi di lavoro ed aumentare il livello di fidelizzazione dei propri clienti.\n\nMRK\n\nDIGITAL MARKETING",
+        "heading_path": [
+          "Diamo forma alle tue idee.",
+          "GR",
+          "Innovazione e tecnologia"
+        ],
+        "score": 0.9780000000000002,
+        "fingerprint": "fp_66c2167ab492b755",
+        "confidence": 0.93
+      }
+    ],
+    "sources": [
+      {
+        "document_id": "doc_c3ffbb6eef56ce2c",
+        "url": "https://www.halfpocket.net/",
+        "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+        "chunk_ids": [
+          "chk_63dfed48f75e735f",
+          "chk_565e20e58f3d50c6",
+          "chk_26750800b564fe53",
+          "chk_7207c97d97f3e780",
+          "chk_c79a7662bb862f81",
+          "chk_5284f2990b8a7cd9"
+        ]
+      }
+    ],
+    "outline": [
+      "Diamo forma alle tue idee.",
+      "Diamo forma alle tue idee. \u003e GR \u003e Design emozionale",
+      "Diamo forma alle tue idee. \u003e GR \u003e Design emozionale \u003e Innovazione e tecnologia",
+      "Diamo forma alle tue idee. \u003e GR \u003e Design emozionale \u003e Obiettivi misurabili",
+      "Diamo forma alle tue idee. \u003e GR \u003e Innovazione e tecnologia"
+    ],
+    "links": [
+      "https://www.halfpocket.net/"
+    ],
+    "proof_refs": [
+      "proof_1de86c76e1acc216",
+      "proof_b5b4fc3dee292ff7",
+      "proof_3ba9361b625060cc",
+      "proof_ecc4310529c2d40f",
+      "proof_c45217a8e4f4aee3",
+      "proof_8bd2861e786a5d2b"
+    ],
+    "cost_report": {
+      "latency_ms": 1388,
+      "token_in": 0,
+      "token_out": 0,
+      "lane_path": [
+        0,
+        1
+      ]
+    }
+  },
+  "proof_records": [
+    {
+      "id": "proof_1de86c76e1acc216",
+      "proof": {
+        "chunk_id": "chk_63dfed48f75e735f",
+        "source_span": {
+          "selector": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[3]/div[2]/div[1]/div[1]/div[1]/p[1]",
+          "char_start": 0,
+          "char_end": 635
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "ir_deep_path"
+        ]
+      }
+    },
+    {
+      "id": "proof_b5b4fc3dee292ff7",
+      "proof": {
+        "chunk_id": "chk_565e20e58f3d50c6",
+        "source_span": {
+          "selector": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]",
+          "char_start": 0,
+          "char_end": 175
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "ir_deep_path"
+        ]
+      }
+    },
+    {
+      "id": "proof_3ba9361b625060cc",
+      "proof": {
+        "chunk_id": "chk_26750800b564fe53",
+        "source_span": {
+          "selector": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]",
+          "char_start": 0,
+          "char_end": 193
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "ir_deep_path"
+        ]
+      }
+    },
+    {
+      "id": "proof_ecc4310529c2d40f",
+      "proof": {
+        "chunk_id": "chk_7207c97d97f3e780",
+        "source_span": {
+          "selector": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[2]/div[1]/p[1]",
+          "char_start": 0,
+          "char_end": 184
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "ir_deep_path"
+        ]
+      }
+    },
+    {
+      "id": "proof_c45217a8e4f4aee3",
+      "proof": {
+        "chunk_id": "chk_c79a7662bb862f81",
+        "source_span": {
+          "selector": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[4]/div[1]/div[1]/div[3]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[2]/div[1]/p[1]",
+          "char_start": 0,
+          "char_end": 192
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "ir_deep_path"
+        ]
+      }
+    },
+    {
+      "id": "proof_8bd2861e786a5d2b",
+      "proof": {
+        "chunk_id": "chk_5284f2990b8a7cd9",
+        "source_span": {
+          "selector": "/div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[5]/div[1]/div[1]/div[3]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]/div[1]/p[1] | /div[1]/div[1]/div[1]/div[1]/article[1]/div[1]/div[1]/div[1]/div[6]/div[1]/div[1]/div[2]/div[1]/p[1]",
+          "char_start": 0,
+          "char_end": 217
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "ir_deep_path"
+        ]
+      }
+    }
+  ],
+  "trace": {
+    "run_id": "run_c0b4223f5b3a3821",
+    "trace_id": "trace_51db429906f2a21d",
+    "started_at": "2026-03-30T14:22:21.962720087Z",
+    "finished_at": "2026-03-30T14:22:23.350852351Z",
+    "stages": [
+      {
+        "stage": "acquire",
+        "started_at": "2026-03-30T14:22:21.962720087Z",
+        "completed_at": "2026-03-30T14:22:23.309219344Z",
+        "input_hash": "f05315c2f081d85816614c135d86bf153731fb851c6c5e48faf66cad82b9fd07",
+        "output_hash": "d5b5a5c7016c74be67eb51e68435c401c0872ef62693c281577355da3ac5da60",
+        "item_count": 1,
+        "metadata": {
+          "fetch_mode": "http",
+          "final_url": "https://www.halfpocket.net/"
+        }
+      },
+      {
+        "stage": "reduce",
+        "started_at": "2026-03-30T14:22:23.325018807Z",
+        "completed_at": "2026-03-30T14:22:23.345087775Z",
+        "input_hash": "d5b5a5c7016c74be67eb51e68435c401c0872ef62693c281577355da3ac5da60",
+        "output_hash": "cea5370525bba71d0b528c1884d7a65ae5dc76ddafbc37157e7ccdb5e063dbfe",
+        "item_count": 56,
+        "metadata": {
+          "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "stage": "segment",
+        "started_at": "2026-03-30T14:22:23.346524341Z",
+        "completed_at": "2026-03-30T14:22:23.346786612Z",
+        "input_hash": "cea5370525bba71d0b528c1884d7a65ae5dc76ddafbc37157e7ccdb5e063dbfe",
+        "output_hash": "2867587855c1f0a5ad2a11f255e6d0a3cd183e20a0357991485e7363aedfe891",
+        "item_count": 21
+      },
+      {
+        "stage": "pack",
+        "started_at": "2026-03-30T14:22:23.346976287Z",
+        "completed_at": "2026-03-30T14:22:23.350530749Z",
+        "input_hash": "2867587855c1f0a5ad2a11f255e6d0a3cd183e20a0357991485e7363aedfe891",
+        "output_hash": "23b8fb240155b82e3345dc330dd7d4d6ee3830b61301a3d39fa21ae3b960eb2d",
+        "item_count": 6,
+        "metadata": {
+          "chunks": "6",
+          "delta_class": "changed",
+          "difficulty": "medium",
+          "escalation_count": "21",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "ambiguity_conflict",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "resolve_ambiguity",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "medium",
+          "novel_fp_hits": "6",
+          "page_type": "article",
+          "profile": "standard",
+          "reuse_applied": "0",
+          "reuse_eligible": "0",
+          "reuse_mode": "fresh",
+          "reuse_recomputed": "6",
+          "selected_ir_embedded_hits": "0",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "0",
+          "stable_fp_hits": "0",
+          "substrate_class": "theme_heavy_wordpress",
+          "web_ir_nodes": "56",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "false",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "true",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "stage_started",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:22:21.962720087Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:22:23.309219344Z",
+        "data": {
+          "fetch_mode": "http",
+          "final_url": "https://www.halfpocket.net/"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:22:23.325018807Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:22:23.345087775Z",
+        "data": {
+          "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:22:23.346524341Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:22:23.346786612Z"
+      },
+      {
+        "type": "stage_started",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.346976287Z"
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347482891Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_07d7495961ceb000",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347486022Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_471725e489f11ee3",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347489483Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_1cd3f6ff7619fcb8",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347492656Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_2d82ced902b4f228",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347495055Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_891b3b5fcb20c439",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347497473Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_0cb583309c5efaf2",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.3475Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_c29ae5887f9bdf5c",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347502509Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_66c2167ab492b755",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347504886Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_aee4f89fdeb7924c",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347507304Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_2885c3c9bd374c6a",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347509684Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_22b73511bd0efd4d",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347513159Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_e1d0616201e474e3",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347515549Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_c024eeccc12a3c53",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347518458Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_3a7b2b5d0c185634",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347520788Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_241dbc77c2bb4a67",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347523374Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_dd86308f41197196",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347525827Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_2cada698c4043c81",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347528212Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_6da6a015a9b0880e",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347530591Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_a45729c1bac28361",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347533111Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_9076603bc024f4bf",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.347535448Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_2e61dd347ee05a98",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "model_intervention",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.350155009Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "model task skipped by runtime selection",
+        "lane": 1,
+        "data": {
+          "backend": "noop",
+          "failure_class": "ambiguity_conflict",
+          "latency_ms": "0",
+          "model": "gemma3:1b-it-q8_0",
+          "patch_effect": "backend_disabled",
+          "patch_outcome": "skipped",
+          "task": "resolve_ambiguity",
+          "tokens_in": "0",
+          "tokens_out": "0",
+          "validator_outcome": "skipped"
+        }
+      },
+      {
+        "type": "stage_completed",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:22:23.350530749Z",
+        "data": {
+          "chunks": "6",
+          "delta_class": "changed",
+          "difficulty": "medium",
+          "escalation_count": "21",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "ambiguity_conflict",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "resolve_ambiguity",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "medium",
+          "novel_fp_hits": "6",
+          "page_type": "article",
+          "profile": "standard",
+          "reuse_applied": "0",
+          "reuse_eligible": "0",
+          "reuse_mode": "fresh",
+          "reuse_recomputed": "6",
+          "selected_ir_embedded_hits": "0",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "0",
+          "stable_fp_hits": "0",
+          "substrate_class": "theme_heavy_wordpress",
+          "web_ir_nodes": "56",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "false",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "true",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ]
+  },
+  "replay": {
+    "run_id": "run_c0b4223f5b3a3821",
+    "trace_id": "trace_51db429906f2a21d",
+    "stage_count": 4,
+    "event_count": 30,
+    "completed_stages": [
+      "acquire",
+      "reduce",
+      "segment",
+      "pack"
+    ],
+    "deterministic": true
+  }
+}

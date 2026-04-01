@@ -1,7 +1,10 @@
 package intel
 
 import (
+	"context"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
@@ -13,13 +16,13 @@ type ExtractResult struct {
 	AdditionalRisk []string
 }
 
-func Extract(cfg config.Config, decision Decision, chunk core.Chunk, objective string) ExtractResult {
+func Extract(cfg config.Config, semantic SemanticAligner, decision Decision, chunk core.Chunk, objective, profile string) ExtractResult {
 	if decision.Lane < 2 {
 		return ExtractResult{Text: chunk.Text}
 	}
 
 	text := strings.TrimSpace(chunk.Text)
-	best := bestSentence(text, objective)
+	best := bestFocusSpan(cfg, semantic, text, objective, profile)
 	if best == "" {
 		best = text
 	}
@@ -48,32 +51,82 @@ func Extract(cfg config.Config, decision Decision, chunk core.Chunk, objective s
 	}
 }
 
-func bestSentence(text, objective string) string {
+func bestFocusSpan(cfg config.Config, semantic SemanticAligner, text, objective, profile string) string {
 	sentences := splitSentences(text)
 	if len(sentences) == 0 {
 		return ""
 	}
-	tokens := objectiveTokens(objective)
-	if len(tokens) == 0 {
+	if len(sentences) == 1 || strings.TrimSpace(objective) == "" || semantic == nil {
 		return sentences[0]
 	}
 
-	best := sentences[0]
-	bestScore := -1
-	for _, sentence := range sentences {
-		score := 0
-		haystack := strings.ToLower(sentence)
-		for _, token := range tokens {
-			if strings.Contains(haystack, token) {
-				score++
-			}
-		}
-		if score > bestScore {
-			bestScore = score
-			best = sentence
+	candidates := make([]SemanticCandidate, 0, len(sentences))
+	for idx, sentence := range sentences {
+		candidates = append(candidates, SemanticCandidate{
+			ID:   sentenceID(idx),
+			Text: sentence,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), semanticTimeout(cfg))
+	defer cancel()
+	scores, err := semantic.Score(ctx, objective, candidates)
+	if err != nil || len(scores) == 0 {
+		return sentences[0]
+	}
+
+	byID := make(map[string]float64, len(scores))
+	bestID := ""
+	bestScore := -1.0
+	for _, score := range scores {
+		byID[score.ID] = score.Similarity
+		if score.Similarity > bestScore {
+			bestID = score.ID
+			bestScore = score.Similarity
 		}
 	}
-	return best
+	bestIdx := sentenceIndex(bestID)
+	if bestIdx < 0 || bestIdx >= len(sentences) {
+		return sentences[0]
+	}
+
+	maxSentences := 1
+	if profile == core.ProfileDeep {
+		maxSentences = 3
+	}
+	if maxSentences == 1 {
+		return sentences[bestIdx]
+	}
+
+	selected := []int{bestIdx}
+	for idx := range sentences {
+		if idx == bestIdx || len(selected) == maxSentences {
+			continue
+		}
+		score := byID[sentenceID(idx)]
+		if score >= bestScore-0.08 && score >= 0.55 {
+			selected = append(selected, idx)
+		}
+	}
+	if len(selected) <= 1 {
+		return sentences[bestIdx]
+	}
+	sortInts(selected)
+	out := make([]string, 0, len(selected))
+	for _, idx := range selected {
+		out = append(out, sentences[idx])
+	}
+	return strings.Join(out, ". ")
+}
+
+func sortInts(items []int) {
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			if items[j] < items[i] {
+				items[i], items[j] = items[j], items[i]
+			}
+		}
+	}
 }
 
 func splitSentences(text string) []string {
@@ -94,10 +147,25 @@ func splitSentences(text string) []string {
 	return out
 }
 
-func estimateTokens(text string) int {
-	fields := strings.Fields(strings.TrimSpace(text))
-	if len(fields) == 0 {
-		return 0
+func sentenceID(idx int) string {
+	return "sent_" + strconv.Itoa(idx)
+}
+
+func sentenceIndex(id string) int {
+	if !strings.HasPrefix(id, "sent_") {
+		return -1
 	}
-	return len(fields)
+	idx, err := strconv.Atoi(strings.TrimPrefix(id, "sent_"))
+	if err != nil {
+		return -1
+	}
+	return idx
+}
+
+func semanticTimeout(cfg config.Config) time.Duration {
+	timeout := cfg.Semantic.TimeoutMS
+	if timeout <= 0 {
+		timeout = 250
+	}
+	return time.Duration(timeout) * time.Millisecond
 }

@@ -1,0 +1,105 @@
+{
+  "generated_at_utc": "2026-03-30T11:33:10Z",
+  "compare_enabled": false,
+  "results": [
+    {
+      "name": "carratellire",
+      "url": "https://carratellire.com/",
+      "objective": "company profile",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "Carratelli",
+        "latency_ms": 909,
+        "chunk_count": 6,
+        "keyword_coverage": 0.3333333333333333,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 8,
+        "web_ir_embedded_count": 8,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_applied": 3,
+        "reuse_recomputed": 3,
+        "stable_fp_hits": 4,
+        "novel_fp_hits": 2,
+        "invocations": 18,
+        "interventions": 1,
+        "patch_effects": [
+          "backend_disabled"
+        ]
+      },
+      "compare": {
+        "success": false,
+        "latency_ms": 0,
+        "chunk_count": 0,
+        "keyword_coverage": 0,
+        "noise_hits": 0
+      }
+    },
+    {
+      "name": "cnf",
+      "url": "https://www.cnfsrl.it/",
+      "objective": "capability summary",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "Homepage - Cnf",
+        "latency_ms": 4803,
+        "chunk_count": 6,
+        "keyword_coverage": 0,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 59,
+        "web_ir_short_ratio": 0.4406779661016949,
+        "web_ir_heading_ratio": 0.2711864406779661,
+        "reuse_mode": "delta_aware",
+        "reuse_eligible": 6,
+        "reuse_recomputed": 6,
+        "stable_fp_hits": 1,
+        "novel_fp_hits": 5,
+        "invocations": 12
+      },
+      "compare": {
+        "success": false,
+        "latency_ms": 0,
+        "chunk_count": 0,
+        "keyword_coverage": 0,
+        "noise_hits": 0
+      }
+    },
+    {
+      "name": "halfpocket",
+      "url": "https://halfpocket.net/",
+      "objective": "service offering",
+      "baseline": {
+        "backend": "noop",
+        "success": true,
+        "title": "Half Pocket - Sviluppo siti web, app, hardware e software per il business",
+        "latency_ms": 928,
+        "chunk_count": 6,
+        "keyword_coverage": 1,
+        "noise_hits": 0,
+        "web_ir_version": "web_ir.v1",
+        "web_ir_node_count": 56,
+        "web_ir_short_ratio": 0.5892857142857143,
+        "web_ir_heading_ratio": 0.39285714285714285,
+        "reuse_mode": "fresh",
+        "reuse_recomputed": 6,
+        "novel_fp_hits": 6,
+        "invocations": 18,
+        "interventions": 1,
+        "patch_effects": [
+          "backend_disabled"
+        ]
+      },
+      "compare": {
+        "success": false,
+        "latency_ms": 0,
+        "chunk_count": 0,
+        "keyword_coverage": 0,
+        "noise_hits": 0
+      }
+    }
+  ]
+}

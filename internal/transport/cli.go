@@ -24,24 +24,27 @@ type Runner struct {
 }
 
 func NewRunner() Runner {
+	newService := func(cfg config.Config) (*coreservice.Service, error) {
+		return coreservice.New(cfg, nil)
+	}
 	return Runner{
 		loadConfig: config.Load,
 		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
-			svc, err := coreservice.New(cfg, nil)
+			svc, err := newService(cfg)
 			if err != nil {
 				return coreservice.ReadResponse{}, err
 			}
 			return svc.Read(ctx, req)
 		},
 		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
-			svc, err := coreservice.New(cfg, nil)
+			svc, err := newService(cfg)
 			if err != nil {
 				return coreservice.QueryResponse{}, err
 			}
 			return svc.Query(ctx, req)
 		},
 		crawl: func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error) {
-			svc, err := coreservice.New(cfg, nil)
+			svc, err := newService(cfg)
 			if err != nil {
 				return coreservice.CrawlResponse{}, err
 			}
@@ -71,6 +74,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runDiff(args[1:], stdout, stderr)
 	case "proof":
 		return r.runProof(args[1:], stdout, stderr)
+	case "memory":
+		return r.runMemory(args[1:], stdout, stderr)
 	case "prune":
 		return r.runPrune(args[1:], stdout, stderr)
 	case "mcp":
@@ -94,14 +99,21 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	var profile string
 	var userAgent string
 	var jsonOut bool
+	var jsonMode string
 
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&objective, "objective", "", "optional read objective")
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 
-	if err := fs.Parse(normalizeReadArgs(args)); err != nil {
+	if err := fs.Parse(normalizeArgs(args, readValueFlags)); err != nil {
+		return 2
+	}
+	mode, err := normalizeJSONMode(jsonMode)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
 		return 2
 	}
 	if fs.NArg() != 1 {
@@ -109,9 +121,8 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	cfg, err := r.loadConfig(configPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "load config: %v\n", err)
+	cfg, ok := r.loadConfigOrExit(configPath, stderr)
+	if !ok {
 		return 1
 	}
 
@@ -127,82 +138,44 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if jsonOut {
-		enc := json.NewEncoder(stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(resp); err != nil {
-			fmt.Fprintf(stderr, "encode output: %v\n", err)
-			return 1
+		if mode == jsonModeFull {
+			return writeJSON(stdout, stderr, resp)
 		}
-		return 0
+		return writeJSON(stdout, stderr, compactReadResponse(resp))
 	}
 
-	renderReadText(stdout, resp, artifacts.TracePath, artifacts.ProofPath, artifacts.FingerprintPath)
+	renderReadText(stdout, resp, artifacts)
 	return 0
 }
 
 func writeRootUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle crawl <seed-url> [--json] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]")
-	fmt.Fprintln(w, "  needle query [seed-url] --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
-	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
-	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
-	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
-	fmt.Fprintln(w, "  needle proof <trace-id|chunk-id> [--json]")
-	fmt.Fprintln(w, "  needle prune (--all | --older-than-hours N) [--json]")
-	fmt.Fprintln(w, "  needle mcp")
+	fmt.Fprint(w, `Usage:
+  needle crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]
+  needle query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]
+  needle read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]
+  needle replay <trace-id> [--json]
+  needle diff <trace-a> <trace-b> [--json]
+  needle proof <trace-id|proof-id|chunk-id> [--json]
+  needle memory <stats|search|prune> [args]
+  needle prune (--all | --older-than-hours N) [--json]
+  needle mcp
+`)
 }
 
 func writeQueryUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle query [seed-url] --goal text [--json] [--config path] [--profile name] [--user-agent ua] [--discovery mode]")
-	fmt.Fprintln(w, "  note: when seed-url is omitted, discovery defaults to web_search")
+	writeUsage(w, "needle query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]", "note: when seed-url is omitted, discovery defaults to web_search")
 }
 
 func writeReadUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle read <url> [--json] [--config path] [--objective text] [--profile name] [--user-agent ua]")
+	writeUsage(w, "needle read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 }
 
 func writeReplayUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle replay <trace-id> [--json]")
+	writeUsage(w, "needle replay <trace-id> [--json]")
 }
 
 func writeDiffUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle diff <trace-a> <trace-b> [--json]")
-}
-
-func normalizeReadArgs(args []string) []string {
-	valueFlags := map[string]struct{}{
-		"--config":     {},
-		"-config":      {},
-		"--objective":  {},
-		"-objective":   {},
-		"--profile":    {},
-		"-profile":     {},
-		"--user-agent": {},
-		"-user-agent":  {},
-	}
-
-	flags := make([]string, 0, len(args))
-	positionals := make([]string, 0, len(args))
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if !strings.HasPrefix(arg, "-") {
-			positionals = append(positionals, arg)
-			continue
-		}
-
-		flags = append(flags, arg)
-		if _, ok := valueFlags[arg]; ok && i+1 < len(args) {
-			i++
-			flags = append(flags, args[i])
-		}
-	}
-
-	return append(flags, positionals...)
+	writeUsage(w, "needle diff <trace-a> <trace-b> [--json]")
 }
 
 func (r Runner) runReplay(args []string, stdout, stderr io.Writer) int {
@@ -261,47 +234,32 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func renderReadText(w io.Writer, resp coreservice.ReadResponse, tracePath, proofPath, fingerprintPath string) {
-	title := strings.TrimSpace(resp.Document.Title)
+func renderReadText(w io.Writer, resp coreservice.ReadResponse, artifacts artifactPaths) {
+	compact := compactReadResponse(resp)
+	title := strings.TrimSpace(compact.Title)
 	if title == "" {
 		title = "(untitled)"
 	}
 
+	fmt.Fprintf(w, "Kind: %s\n", compact.Kind)
 	fmt.Fprintf(w, "Title: %s\n", title)
-	fmt.Fprintf(w, "URL: %s\n", resp.Document.FinalURL)
-	fmt.Fprintf(w, "Chunks: %d\n", len(resp.ResultPack.Chunks))
-	fmt.Fprintf(w, "Web IR Nodes: %d\n", resp.WebIR.NodeCount)
-	fmt.Fprintf(w, "Web IR Signals: heading=%.2f short_text=%.2f embedded=%d\n", resp.WebIR.Signals.HeadingRatio, resp.WebIR.Signals.ShortTextRatio, resp.WebIR.Signals.EmbeddedNodeCount)
-	if resp.ResultPack.Profile != "" {
-		fmt.Fprintf(w, "Profile: %s\n", resp.ResultPack.Profile)
+	fmt.Fprintf(w, "URL: %s\n", compact.URL)
+	if compact.Summary != "" {
+		fmt.Fprintf(w, "Summary: %s\n", compact.Summary)
 	}
-	fmt.Fprintf(w, "Proof Records: %d\n", len(resp.ProofRecords))
-	fmt.Fprintf(w, "Stages: %d\n", resp.Replay.StageCount)
-	fmt.Fprintf(w, "Latency: %dms\n", resp.ResultPack.CostReport.LatencyMS)
-	fmt.Fprintf(w, "Trace ID: %s\n", resp.Trace.TraceID)
-	fmt.Fprintf(w, "Trace Path: %s\n", tracePath)
-	fmt.Fprintf(w, "Proof Path: %s\n", proofPath)
-	fmt.Fprintf(w, "Fingerprint Path: %s\n", fingerprintPath)
+	fmt.Fprintf(w, "Uncertainty: %s\n", compact.Uncertainty.Level)
+	fmt.Fprintf(w, "Chunks: %d\n", len(compact.Chunks))
+	renderWebIRSummary(w, resp.WebIR.NodeCount, resp.WebIR.Signals)
+	if compact.Profile != "" {
+		fmt.Fprintf(w, "Profile: %s\n", compact.Profile)
+	}
+	fmt.Fprintf(w, "Latency: %dms\n", compact.CostReport.LatencyMS)
+	fmt.Fprintf(w, "Trace ID: %s\n", compact.TraceID)
+	renderArtifactPaths(w, artifacts)
 	if pack := tracePackMetadata(resp.Trace); len(pack) > 0 {
-		fmt.Fprintf(w, "IR Selection: embedded=%s heading=%s shallow=%s\n", firstNonEmptyValue(pack["selected_ir_embedded_hits"], "0"), firstNonEmptyValue(pack["selected_ir_heading_hits"], "0"), firstNonEmptyValue(pack["selected_ir_shallow_hits"], "0"))
-		fmt.Fprintf(w, "IR Policy: embedded_required=%s embedded_applied=%s heading_required=%s heading_applied=%s noise_swap=%s\n",
-			firstNonEmptyValue(pack["web_ir_policy_embedded_required"], "false"),
-			firstNonEmptyValue(pack["web_ir_policy_embedded_applied"], "false"),
-			firstNonEmptyValue(pack["web_ir_policy_heading_required"], "false"),
-			firstNonEmptyValue(pack["web_ir_policy_heading_applied"], "false"),
-			firstNonEmptyValue(pack["web_ir_policy_noise_swap"], "false"),
-		)
+		renderPackMetadata(w, pack, true)
 	}
-
-	for i, chunk := range resp.ResultPack.Chunks {
-		fmt.Fprintf(w, "\n[%d] ", i+1)
-		if len(chunk.HeadingPath) > 0 {
-			fmt.Fprintln(w, strings.Join(chunk.HeadingPath, " > "))
-		} else {
-			fmt.Fprintln(w, "(no heading)")
-		}
-		fmt.Fprintf(w, "%s\n", chunk.Text)
-	}
+	renderChunkTexts(w, resp.ResultPack.Chunks, true)
 }
 
 func tracePackMetadata(trace proof.RunTrace) map[string]string {
@@ -323,33 +281,60 @@ func firstNonEmptyValue(value, fallback string) string {
 }
 
 func renderReplayText(w io.Writer, report proof.ReplayReport) {
-	fmt.Fprintf(w, "Trace ID: %s\n", report.TraceID)
-	fmt.Fprintf(w, "Run ID: %s\n", report.RunID)
-	fmt.Fprintf(w, "Stages: %d\n", report.StageCount)
-	fmt.Fprintf(w, "Events: %d\n", report.EventCount)
-	fmt.Fprintf(w, "Deterministic: %t\n", report.Deterministic)
+	fmt.Fprintf(w, "Trace ID: %s\nRun ID: %s\nStages: %d\nEvents: %d\nDeterministic: %t\n", report.TraceID, report.RunID, report.StageCount, report.EventCount, report.Deterministic)
 	if len(report.CompletedStages) > 0 {
 		fmt.Fprintf(w, "Completed: %s\n", strings.Join(report.CompletedStages, ", "))
 	}
 }
 
 func renderDiffText(w io.Writer, report proof.DiffReport) {
-	fmt.Fprintf(w, "Trace A: %s\n", report.TraceA)
-	fmt.Fprintf(w, "Trace B: %s\n", report.TraceB)
-	fmt.Fprintf(w, "Changed Stages: %d\n", len(report.ChangedStages))
+	fmt.Fprintf(w, "Trace A: %s\nTrace B: %s\nChanged Stages: %d\n", report.TraceA, report.TraceB, len(report.ChangedStages))
 	for _, stage := range report.ChangedStages {
 		fmt.Fprintf(w, "- %s: %s\n", stage.Stage, stage.Status)
 	}
 }
 
+func renderPackMetadata(w io.Writer, pack map[string]string, includePolicy bool) {
+	fmt.Fprintf(w, "IR Selection: embedded=%s heading=%s shallow=%s\n", firstNonEmptyValue(pack["selected_ir_embedded_hits"], "0"), firstNonEmptyValue(pack["selected_ir_heading_hits"], "0"), firstNonEmptyValue(pack["selected_ir_shallow_hits"], "0"))
+	if includePolicy {
+		fmt.Fprintf(w, "IR Policy: embedded_required=%s embedded_applied=%s heading_required=%s heading_applied=%s noise_swap=%s\n",
+			firstNonEmptyValue(pack["web_ir_policy_embedded_required"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_embedded_applied"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_heading_required"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_heading_applied"], "false"),
+			firstNonEmptyValue(pack["web_ir_policy_noise_swap"], "false"),
+		)
+	}
+}
+
 func writeJSON(stdout, stderr io.Writer, value any) int {
-	enc := json.NewEncoder(stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(value); err != nil {
+	if err := writeIndentedJSON(stdout, value); err != nil {
 		fmt.Fprintf(stderr, "encode output: %v\n", err)
 		return 1
 	}
 	return 0
+}
+
+func writeIndentedJSON(w io.Writer, value any) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(value)
+}
+
+func writeUsage(w io.Writer, lines ...string) {
+	fmt.Fprintln(w, "Usage:")
+	for _, line := range lines {
+		fmt.Fprintf(w, "  %s\n", line)
+	}
+}
+
+func (r Runner) loadConfigOrExit(path string, stderr io.Writer) (config.Config, bool) {
+	cfg, err := r.loadConfig(path)
+	if err != nil {
+		fmt.Fprintf(stderr, "load config: %v\n", err)
+		return config.Config{}, false
+	}
+	return cfg, true
 }
 
 func normalizeArgs(args []string, valueFlags map[string]struct{}) []string {
@@ -374,4 +359,17 @@ func normalizeArgs(args []string, valueFlags map[string]struct{}) []string {
 	}
 
 	return append(flags, positionals...)
+}
+
+var readValueFlags = map[string]struct{}{
+	"--config":     {},
+	"-config":      {},
+	"--json-mode":  {},
+	"-json-mode":   {},
+	"--objective":  {},
+	"-objective":   {},
+	"--profile":    {},
+	"-profile":     {},
+	"--user-agent": {},
+	"-user-agent":  {},
 }

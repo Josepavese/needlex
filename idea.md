@@ -20,6 +20,7 @@ Tesi di rottura:
 2. Il contesto per agenti deve essere verificabile, ripetibile e con costo predicibile.
 3. I modelli grandi non sono il motore: sono edge functions rare per risolvere ambiguita'.
 4. Il vantaggio competitivo non e' "piu' pagine", ma **piu' fedelta' per token**.
+5. L'output primario non deve essere il bundle diagnostico del runtime, ma il **contesto compilato piu' piccolo e utile possibile**.
 
 Posizionamento:
 - "Needle-X compila il web in contesto macchina verificabile."
@@ -146,6 +147,11 @@ Trasformare il web da input entropico a **contesto macchina verificabile** per a
 - maximal extraction fidelity
 - deterministic behavior by default
 
+Conseguenza di prodotto:
+1. `read/query/crawl` devono esporre di default payload compatti agent-facing
+2. proof, trace, replay e artifact completi restano first-class, ma in modalita' esplicita
+3. Needle-X non vince se produce piu' JSON dell'HTML originale; vince se consegna meno token con piu' segnale e provenance sufficiente
+
 ## 6) Architettura Next-Gen (Minimal Basecode)
 
 ### 6.1 Design constraints
@@ -201,6 +207,11 @@ CLI:
 - `needle crawl <url>`
 - `needle replay <trace_id>`
 - `needle diff <trace_a> <trace_b>`
+
+Regola di superficie:
+1. default = contesto compilato compatto
+2. full diagnostics = opt-in esplicito
+3. l'agente deve poter navigare rapidamente senza dover filtrare trace, proof store e WebIR completi
 
 MCP:
 - `web_read`

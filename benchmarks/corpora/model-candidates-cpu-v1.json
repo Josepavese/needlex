@@ -1,0 +1,45 @@
+{
+  "version": "model-candidates-cpu-v1",
+  "candidates": [
+    {
+      "id": "qwen35_0p8_all",
+      "label": "Qwen 3.5 0.8B all roles",
+      "router": "qwen3.5:0.8b",
+      "extractor": "qwen3.5:0.8b",
+      "formatter": "qwen3.5:0.8b",
+      "micro_timeout_ms": 8000,
+      "structured_timeout_ms": 20000,
+      "specialist_timeout_ms": 8000
+    },
+    {
+      "id": "qwen35_2b_all",
+      "label": "Qwen 3.5 2B all roles",
+      "router": "qwen3.5:2b",
+      "extractor": "qwen3.5:2b",
+      "formatter": "qwen3.5:2b",
+      "micro_timeout_ms": 10000,
+      "structured_timeout_ms": 25000,
+      "specialist_timeout_ms": 10000
+    },
+    {
+      "id": "gemma3_1b_all",
+      "label": "Gemma 3 1B all roles",
+      "router": "gemma3:1b-it-q8_0",
+      "extractor": "gemma3:1b-it-q8_0",
+      "formatter": "gemma3:1b-it-q8_0",
+      "micro_timeout_ms": 8000,
+      "structured_timeout_ms": 20000,
+      "specialist_timeout_ms": 8000
+    },
+    {
+      "id": "hybrid_qwen_router_gemma_extract",
+      "label": "Qwen 0.8B router + Gemma 1B extractor",
+      "router": "qwen3.5:0.8b",
+      "extractor": "gemma3:1b-it-q8_0",
+      "formatter": "gemma3:1b-it-q8_0",
+      "micro_timeout_ms": 8000,
+      "structured_timeout_ms": 20000,
+      "specialist_timeout_ms": 8000
+    }
+  ]
+}

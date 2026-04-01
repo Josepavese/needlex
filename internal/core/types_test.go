@@ -1,9 +1,6 @@
 package core
 
-import (
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestResultPackValidateAcceptsCanonicalShape(t *testing.T) {
 	pack := ResultPack{
@@ -86,23 +83,5 @@ func TestProofValidateRejectsInvalidLane(t *testing.T) {
 
 	if err := proof.Validate(); err == nil {
 		t.Fatal("expected invalid lane error")
-	}
-}
-
-func TestRunContextValidateRejectsMissingIDs(t *testing.T) {
-	ctx := RunContext{
-		StartedAt: time.Now().UTC(),
-		LaneMax:   1,
-		Budget: Budget{
-			MaxTokens:    1,
-			MaxLatencyMS: 1,
-			MaxPages:     1,
-			MaxDepth:     1,
-			MaxBytes:     1,
-		},
-	}
-
-	if err := ctx.Validate(); err == nil {
-		t.Fatal("expected invalid run context")
 	}
 }

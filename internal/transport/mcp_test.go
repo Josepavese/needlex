@@ -121,9 +121,63 @@ func TestRunnerMCPReadReplayAndProof(t *testing.T) {
 	if !strings.Contains(string(responses[3]), `"proof"`) {
 		t.Fatalf("expected proof payload, got %s", responses[3])
 	}
-	assertMCPStructuredKeys(t, responses[1], "document", "web_ir", "chunks", "proof_refs", "cost_report")
+	assertMCPStructuredKeys(t, responses[1], "document", "web_ir", "chunks", "agent_context", "proof_refs", "cost_report")
 	assertMCPStructuredKeys(t, responses[2], "replay_report")
 	assertMCPStructuredKeys(t, responses[3], "proof_records")
+}
+
+func TestRunnerMCPProofByID(t *testing.T) {
+	root := t.TempDir()
+	input := framedMessages(
+		t,
+		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+		map[string]any{
+			"jsonrpc": "2.0",
+			"id":      2,
+			"method":  "tools/call",
+			"params": map[string]any{
+				"name": "web_read",
+				"arguments": map[string]any{
+					"url": "https://example.com",
+				},
+			},
+		},
+		map[string]any{
+			"jsonrpc": "2.0",
+			"id":      3,
+			"method":  "tools/call",
+			"params": map[string]any{
+				"name": "web_proof",
+				"arguments": map[string]any{
+					"proof_id": "proof_1",
+				},
+			},
+		},
+	)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	runner := Runner{
+		loadConfig: config.Load,
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			return fakeResponse(), nil
+		},
+		stdin:     strings.NewReader(input),
+		storeRoot: root,
+	}
+
+	code := runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+
+	responses := decodeMCPResponses(t, stdout.Bytes())
+	if len(responses) != 3 {
+		t.Fatalf("expected 3 responses, got %d", len(responses))
+	}
+	if !strings.Contains(string(responses[2]), `"proof_records"`) || !strings.Contains(string(responses[2]), `"trace_id":"trace_1"`) {
+		t.Fatalf("expected proof lookup by proof_id, got %s", responses[2])
+	}
 }
 
 func TestRunnerMCPQuery(t *testing.T) {
@@ -169,7 +223,7 @@ func TestRunnerMCPQuery(t *testing.T) {
 	if !strings.Contains(string(responses[1]), `"result_pack"`) {
 		t.Fatalf("expected query payload, got %s", responses[1])
 	}
-	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "proof_refs", "trace_id")
+	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "agent_context", "proof_refs", "trace_id")
 }
 
 func TestRunnerMCPCrawl(t *testing.T) {

@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
@@ -88,13 +86,17 @@ func completePackStage(recorder *proof.Recorder, req ReadRequest, webIR core.Web
 }
 
 func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest, dom pipeline.SimplifiedDOM, webIR core.WebIR, documentID string, segments []pipeline.Segment) (intel.Summary, []rankedSegment, []executedIntelTask, webIRSelectionPolicyReport, int, int, error) {
-	ranked := rankSegments(documentID, req.Objective, webIR, segments)
+	ranked := s.rankSegments(documentID, req.Objective, webIR, segments)
 	ranked = applyContaminationPenalty(ranked, req.Objective)
+	ranked = applyBoilerplatePenalty(ranked)
+	ranked = applySubordinateFragmentDemotion(ranked)
+	ranked = applyIndexLikeDemotion(ranked)
+	ranked = applyCodeLikeDemotion(ranked)
 	ranked = applyFingerprintNoveltyBias(ranked, req.StableFingerprints)
 	intelSummary := s.analyzeRanked(recorder, req, ranked)
 	selected := selectProfile(ranked, req.Profile)
 	traceCtx := recorder.Trace()
-	selected, taskExecutions, err := s.executeIntelTasks(context.Background(), recorder, req, dom, webIR, selected, intelSummary.Decisions, intel.ModelTraceContext{
+	selected, taskExecutions, err := s.executeIntelTasks(context.Background(), recorder, req, webIR, selected, intelSummary.Decisions, intel.ModelTraceContext{
 		TraceID:    traceCtx.TraceID,
 		RunID:      traceCtx.RunID,
 		ReasonCode: "NX_INTEL_TASK_ROUTED",
@@ -111,6 +113,7 @@ func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest
 	selected = applyStableReadGate(ranked, selected, req.StableFingerprints)
 	selected, reuseEligible, reuseApplied, reusedSet := applyPartialSelectionReuse(ranked, selected, req.StableFingerprints)
 	annotateSelectionReuse(intelSummary.Decisions, selected, reusedSet)
+	sortRankedSegments(selected)
 	return intelSummary, selected, taskExecutions, irPolicy, reuseEligible, reuseApplied, nil
 }
 
@@ -137,32 +140,62 @@ func packStageMetadata(req ReadRequest, webIR core.WebIR, chunks []core.Chunk, s
 	}
 }
 
-func rankSegments(docID, objective string, webIR core.WebIR, segments []pipeline.Segment) []rankedSegment {
+func (s *Service) rankSegments(docID, objective string, webIR core.WebIR, segments []pipeline.Segment) []rankedSegment {
 	irEvidence := buildIRSegmentEvidence(webIR)
+	alignments := s.segmentSemanticAlignment(objective, segments)
 	ranked := make([]rankedSegment, 0, len(segments))
 	for index, segment := range segments {
 		fingerprint := prefixedHash("fp", docID, strings.Join(segment.HeadingPath, "/"), segment.Text)
 		segmentIR := irEvidence.forSegment(segment)
-		score := segmentScore(segment, objective, index, len(segments), segmentIR)
-		confidence := segmentConfidence(segment, objective)
+		contextAlignment := alignments[fingerprint]
+		score := segmentScore(segment, contextAlignment, index, len(segments), segmentIR)
+		confidence := segmentConfidence(segment, contextAlignment)
 		ranked = append(ranked, rankedSegment{
 			segment: segment,
 			index:   index,
 			ir:      segmentIR,
 			chunk: core.Chunk{
-				ID:          prefixedHash("chk", docID, fingerprint),
-				DocID:       docID,
-				Text:        segment.Text,
-				HeadingPath: append([]string{}, segment.HeadingPath...),
-				Score:       score,
-				Fingerprint: fingerprint,
-				Confidence:  confidence,
+				ID:               prefixedHash("chk", docID, fingerprint),
+				DocID:            docID,
+				Text:             segment.Text,
+				HeadingPath:      append([]string{}, segment.HeadingPath...),
+				ContextAlignment: contextAlignment,
+				Score:            score,
+				Fingerprint:      fingerprint,
+				Confidence:       confidence,
 			},
 		})
 	}
 
 	sortRankedSegments(ranked)
 	return ranked
+}
+
+func (s *Service) segmentSemanticAlignment(objective string, segments []pipeline.Segment) map[string]float64 {
+	out := make(map[string]float64, len(segments))
+	objective = strings.TrimSpace(objective)
+	if objective == "" || len(segments) == 0 {
+		return out
+	}
+	candidates := make([]intel.SemanticCandidate, 0, len(segments))
+	for _, segment := range segments {
+		fingerprint := prefixedHash("fp", "", strings.Join(segment.HeadingPath, "/"), segment.Text)
+		candidates = append(candidates, intel.SemanticCandidate{
+			ID:      fingerprint,
+			Heading: append([]string{}, segment.HeadingPath...),
+			Text:    segment.Text,
+		})
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.cfg.Semantic.TimeoutMS)*time.Millisecond)
+	defer cancel()
+	scores, err := s.semantic.Score(ctx, objective, candidates)
+	if err != nil {
+		return out
+	}
+	for _, score := range scores {
+		out[score.ID] = score.Similarity
+	}
+	return out
 }
 
 func selectProfile(ranked []rankedSegment, profile string) []rankedSegment {
@@ -292,15 +325,16 @@ func (s *Service) analyzeRanked(recorder *proof.Recorder, req ReadRequest, ranke
 	inputs := make([]intel.Input, 0, len(ranked))
 	for _, item := range ranked {
 		inputs = append(inputs, intel.Input{
-			Fingerprint: item.chunk.Fingerprint,
-			Text:        item.chunk.Text,
-			HeadingPath: append([]string{}, item.chunk.HeadingPath...),
-			Score:       item.chunk.Score,
-			Confidence:  item.chunk.Confidence,
+			Fingerprint:      item.chunk.Fingerprint,
+			Text:             item.chunk.Text,
+			HeadingPath:      append([]string{}, item.chunk.HeadingPath...),
+			ContextAlignment: item.chunk.ContextAlignment,
+			Score:            item.chunk.Score,
+			Confidence:       item.chunk.Confidence,
 		})
 	}
 
-	summary := intel.New(s.cfg).Analyze(req.Objective, inputs, intel.Hints{
+	summary := intel.New(s.cfg).Analyze(inputs, intel.Hints{
 		ForceLane: req.ForceLane,
 		Profile:   req.Profile,
 	})
@@ -320,24 +354,13 @@ func (s *Service) analyzeRanked(recorder *proof.Recorder, req ReadRequest, ranke
 	return summary
 }
 
-func lanePath(maxLane int) []int {
-	path := []int{0}
-	if maxLane <= 0 {
-		return path
-	}
-	for lane := 1; lane <= maxLane; lane++ {
-		path = append(path, lane)
-	}
-	return path
-}
-
 func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decisions map[string]intel.Decision) []rankedSegment {
 	out := make([]rankedSegment, 0, len(selected))
 	for _, item := range selected {
 		decision := decisions[item.chunk.Fingerprint]
 		decision.RiskFlags = append(decision.RiskFlags, contaminationRiskFlags(item.chunk.Text, req.Objective)...)
 		if decision.Lane >= 2 {
-			extracted := intel.Extract(s.cfg, decision, item.chunk, req.Objective, req.Profile)
+			extracted := intel.Extract(s.cfg, s.semantic, decision, item.chunk, req.Objective, req.Profile)
 			applyIntelTextResult(&item.chunk, &decision, extracted.Text, extracted.Invocation, extracted.AdditionalRisk)
 		}
 		if decision.Lane >= 3 {
@@ -345,7 +368,7 @@ func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decision
 			applyIntelTextResult(&item.chunk, &decision, formatted.Text, formatted.Invocation, formatted.AdditionalRisk)
 		}
 		if req.Profile == core.ProfileTiny {
-			if compacted, changed := compactTinyText(item.chunk.Text, req.Objective); changed {
+			if compacted, changed := s.compactTinyText(item.chunk.Text, req.Objective); changed {
 				item.chunk.Text = compacted
 				decision.RiskFlags = append(decision.RiskFlags, "tiny_compaction")
 				decision.TransformChain = append(decision.TransformChain, "pack:tiny_compact:v1")
@@ -355,27 +378,4 @@ func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decision
 		out = append(out, item)
 	}
 	return out
-}
-
-func fingerprintSet(stable []string) map[string]struct{} {
-	seen := make(map[string]struct{}, len(stable))
-	for _, fp := range stable {
-		seen[fp] = struct{}{}
-	}
-	return seen
-}
-
-func applyIntelTextResult(chunk *core.Chunk, decision *intel.Decision, text string, invocation core.ModelInvocation, additionalRisk []string) {
-	if strings.TrimSpace(text) != "" {
-		chunk.Text = text
-	}
-	if invocation.Model != "" {
-		decision.ModelInvocations = append(decision.ModelInvocations, invocation)
-	}
-	decision.RiskFlags = append(decision.RiskFlags, additionalRisk...)
-}
-
-func prefixedHash(prefix string, parts ...string) string {
-	digest := sha256.Sum256([]byte(strings.Join(parts, "\x00")))
-	return prefix + "_" + hex.EncodeToString(digest[:])[:16]
 }

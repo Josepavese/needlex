@@ -4,7 +4,37 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-go run ./scripts/live_read_eval \
-  --out improvements/live-read-latest.json \
-  --baseline improvements/live-read-baseline.json \
+if [[ "${NEEDLEX_LIVE_READ_USE_BASELINE_MODELS:-0}" == "1" ]]; then
+  source scripts/lib/model_baseline.sh
+  BASE_URL="${NEEDLEX_MODELS_BASE_URL:-$(needlex_model_baseline_jq '.recommended_base_url')}"
+  MODEL_ROUTER="${NEEDLEX_MODELS_ROUTER:-$(needlex_model_baseline_jq '.models.router')}"
+  MODEL_JUDGE="${NEEDLEX_MODELS_JUDGE:-$(needlex_model_baseline_jq '.models.judge')}"
+  MODEL_EXTRACTOR="${NEEDLEX_MODELS_EXTRACTOR:-$(needlex_model_baseline_jq '.models.extractor')}"
+  MODEL_FORMATTER="${NEEDLEX_MODELS_FORMATTER:-$(needlex_model_baseline_jq '.models.formatter')}"
+  MICRO_TIMEOUT="${NEEDLEX_MODELS_MICRO_TIMEOUT_MS:-$(needlex_model_baseline_jq '.timeouts.micro_timeout_ms')}"
+  STRUCTURED_TIMEOUT="${NEEDLEX_MODELS_STRUCTURED_TIMEOUT_MS:-$(needlex_model_baseline_jq '.timeouts.structured_timeout_ms')}"
+  SPECIALIST_TIMEOUT="${NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS:-$(needlex_model_baseline_jq '.timeouts.specialist_timeout_ms')}"
+
+  export NEEDLEX_MODELS_BACKEND="${NEEDLEX_MODELS_BACKEND:-openai-compatible}"
+  export NEEDLEX_MODELS_BASE_URL="$BASE_URL"
+  export NEEDLEX_MODELS_ROUTER="$MODEL_ROUTER"
+  export NEEDLEX_MODELS_JUDGE="$MODEL_JUDGE"
+  export NEEDLEX_MODELS_EXTRACTOR="$MODEL_EXTRACTOR"
+  export NEEDLEX_MODELS_FORMATTER="$MODEL_FORMATTER"
+  export NEEDLEX_MODELS_MICRO_TIMEOUT_MS="$MICRO_TIMEOUT"
+  export NEEDLEX_MODELS_STRUCTURED_TIMEOUT_MS="$STRUCTURED_TIMEOUT"
+  export NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS="$SPECIALIST_TIMEOUT"
+fi
+
+args=(
+  --out "${NEEDLEX_LIVE_READ_OUT:-improvements/live-read-latest.json}"
+  --baseline "${NEEDLEX_LIVE_READ_BASELINE:-improvements/live-read-baseline.json}"
+)
+
+if [[ -n "${NEEDLEX_LIVE_READ_CASES:-}" ]]; then
+  args+=(--cases "${NEEDLEX_LIVE_READ_CASES}")
+fi
+
+go run ./benchmarks/live_read_eval/runner \
+  "${args[@]}" \
   "$@"

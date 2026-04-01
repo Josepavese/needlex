@@ -1,0 +1,141 @@
+{
+  "version": "hard-case-corpus-smoke-v1",
+  "acceptance": {
+    "min_pass_rate": 1.0,
+    "min_lane_lift_rate": 0.5,
+    "min_objective_lift_avg": 0.0,
+    "max_medium_or_high_risk_rate": 0.5,
+    "min_backend_case_rate": 1.0,
+    "min_backend_intervention_rate": 0.3,
+    "min_backend_acceptance_rate": 0.0,
+    "required_families": [
+      "embedded",
+      "forum"
+    ],
+    "require_higher_lane_for": [
+      "embedded",
+      "forum"
+    ],
+    "allow_unclassified": false,
+    "failure_class_map": [
+      {
+        "id": "FC01_PASS_RATE",
+        "description": "overall hard-case pass-rate dropped below acceptance",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "pass_rate"
+        ]
+      },
+      {
+        "id": "FC02_LANE_LIFT",
+        "description": "higher lanes are not producing measurable uplift",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "lane_lift_rate",
+          "higher lane activation"
+        ]
+      },
+      {
+        "id": "FC03_OBJECTIVE_REGRESSION",
+        "description": "objective focus improvement is below required average",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "objective_lift_avg"
+        ]
+      },
+      {
+        "id": "FC04_LOSSINESS_RISK",
+        "description": "medium/high lossiness risk exceeds tolerance",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "medium_or_high_risk_rate"
+        ]
+      },
+      {
+        "id": "FC05_COVERAGE_GAP",
+        "description": "required benchmark family coverage is missing",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "required family missing"
+        ]
+      },
+      {
+        "id": "FC06_BACKEND_COVERAGE",
+        "description": "backend coverage or intervention rate is below required floor",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "backend_case_rate",
+          "backend_intervention_rate"
+        ]
+      },
+      {
+        "id": "FC07_BACKEND_ACCEPTANCE",
+        "description": "backend acceptance quality is below required floor",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "backend_acceptance_rate"
+        ]
+      },
+      {
+        "id": "FC08_BACKEND_TASK_COVERAGE",
+        "description": "required benchmark-proven backend task coverage is missing",
+        "integration_gate": "block_slm_rollout",
+        "match_any": [
+          "required backend task missing"
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "embedded_lane3_vs_lane0",
+      "objective": "company profile",
+      "objective_terms": [
+        "runtime",
+        "agents",
+        "proof",
+        "context"
+      ],
+      "profile": "standard",
+      "compare_force_lane": 3,
+      "min_compare_fidelity": 1.0,
+      "expected_terms": [
+        "Needle-X compiles noisy pages into compact proof-carrying context for agents"
+      ],
+      "html_inline": "<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={\"configuration\":{\"blog\":[{\"title\":\"Needle Runtime\",\"description\":\"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>\"}]}}</script></body></html>",
+      "family": "embedded"
+    },
+    {
+      "name": "forum_lane2_vs_lane0",
+      "objective": "forum replay drift troubleshooting",
+      "objective_terms": [
+        "replay",
+        "hashes",
+        "proof",
+        "deterministic"
+      ],
+      "profile": "deep",
+      "compare_force_lane": 2,
+      "min_compare_fidelity": 0.66,
+      "expected_terms": [
+        "Compare stage hashes first",
+        "inspect proof records by chunk id",
+        "replay became deterministic again"
+      ],
+      "fixture_path": "testdata/golden/forum.html",
+      "family": "forum"
+    }
+  ],
+  "family_thresholds": [
+    {
+      "family": "embedded",
+      "max_avg_lossiness": 0.15,
+      "max_lossiness_risk": 0.3
+    },
+    {
+      "family": "forum",
+      "max_avg_lossiness": 0.35,
+      "max_lossiness_risk": 0.45
+    }
+  ]
+}

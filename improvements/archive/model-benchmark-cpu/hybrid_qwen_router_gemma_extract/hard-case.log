@@ -1,0 +1,75 @@
+=== RUN   TestExportHardCaseMatrix
+[matrix] 12:41:26 matrix start corpus=benchmarks/corpora/hard-case-corpus-benchmark-v1.json version=hard-case-corpus-benchmark-v1 cases=12 live_backend=true
+[matrix] 12:41:26 case 1/12 start name=embedded_lane3_vs_lane0 family=embedded lane=3 profile=standard
+[matrix] 12:41:26   variant=baseline lane=1 fidelity=1.00 objective=0.3000 tokens=10 interventions=1 accepted=0 rejected=0 tasks=interpret_embedded_state
+[matrix] 12:41:28   variant=compare lane=3 fidelity=1.00 objective=0.3000 tokens=10 interventions=1 accepted=0 rejected=1 tasks=interpret_embedded_state
+[matrix] 12:41:28 case 1/12 done name=embedded_lane3_vs_lane0 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=1.00 objective=0.3000 interventions=1 accepted=0 rejected=1
+[matrix] 12:41:28 case 2/12 start name=forum_lane2_vs_lane0 family=forum lane=2 profile=deep
+[matrix] 12:41:28   variant=baseline lane=1 fidelity=1.00 objective=0.0656 tokens=61 interventions=1 accepted=0 rejected=0 tasks=resolve_ambiguity
+[matrix] 12:41:43   variant=compare lane=2 fidelity=0.67 objective=0.0833 tokens=36 interventions=1 accepted=0 rejected=0 tasks=resolve_ambiguity
+[matrix] 12:41:43 case 2/12 done name=forum_lane2_vs_lane0 pass=true compare_backend=openai-compatible compare_lane=2 fidelity=0.67 objective=0.0833 interventions=1 accepted=0 rejected=0
+[matrix] 12:41:43 case 3/12 start name=tiny_lane3_vs_lane0 family=tiny lane=3 profile=tiny
+[matrix] 12:41:43   variant=baseline lane=1 fidelity=1.00 objective=0.2308 tokens=13 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43   variant=compare lane=3 fidelity=1.00 objective=0.2308 tokens=13 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43 case 3/12 done name=tiny_lane3_vs_lane0 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=1.00 objective=0.2308 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:43 case 4/12 start name=embedded_pricing_lane3_vs_lane0 family=compaction lane=3 profile=standard
+[matrix] 12:41:43   variant=baseline lane=1 fidelity=1.00 objective=0.2143 tokens=14 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43   variant=compare lane=3 fidelity=1.00 objective=0.4286 tokens=7 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43 case 4/12 done name=embedded_pricing_lane3_vs_lane0 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=1.00 objective=0.4286 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:43 case 5/12 start name=support_thread_lane2_vs_lane0 family=forum lane=2 profile=deep
+[matrix] 12:41:43   variant=baseline lane=0 fidelity=1.00 objective=0.1176 tokens=34 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43   variant=compare lane=2 fidelity=1.00 objective=0.1429 tokens=28 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43 case 5/12 done name=support_thread_lane2_vs_lane0 pass=true compare_backend=openai-compatible compare_lane=2 fidelity=1.00 objective=0.1429 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:43 case 6/12 start name=tiny_embedded_catalog_lane3_vs_lane0 family=tiny lane=3 profile=tiny
+[matrix] 12:41:43   variant=baseline lane=1 fidelity=1.00 objective=0.3333 tokens=12 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43   variant=compare lane=3 fidelity=1.00 objective=0.3333 tokens=12 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43 case 6/12 done name=tiny_embedded_catalog_lane3_vs_lane0 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=1.00 objective=0.3333 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:43 case 7/12 start name=embedded_release_notes_lane3 family=embedded lane=3 profile=standard
+[matrix] 12:41:43   variant=baseline lane=1 fidelity=1.00 objective=0.3077 tokens=13 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43   variant=compare lane=3 fidelity=0.50 objective=0.5714 tokens=7 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43 case 7/12 done name=embedded_release_notes_lane3 pass=false compare_backend=openai-compatible compare_lane=3 fidelity=0.50 objective=0.5714 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:43 case 8/12 start name=faq_resolution_lane2 family=forum lane=2 profile=deep
+[matrix] 12:41:43   variant=baseline lane=1 fidelity=1.00 objective=0.1538 tokens=26 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43   variant=compare lane=2 fidelity=1.00 objective=0.2857 tokens=14 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:43 case 8/12 done name=faq_resolution_lane2 pass=true compare_backend=openai-compatible compare_lane=2 fidelity=1.00 objective=0.2857 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:43 case 9/12 start name=tiny_pricing_grid_lane3 family=tiny lane=3 profile=tiny
+[matrix] 12:41:43   variant=baseline lane=1 fidelity=1.00 objective=0.2857 tokens=14 interventions=1 accepted=0 rejected=0 tasks=resolve_ambiguity
+[matrix] 12:41:56   variant=compare lane=3 fidelity=1.00 objective=0.2857 tokens=14 interventions=1 accepted=0 rejected=0 tasks=resolve_ambiguity
+[matrix] 12:41:56 case 9/12 done name=tiny_pricing_grid_lane3 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=1.00 objective=0.2857 interventions=1 accepted=0 rejected=0
+[matrix] 12:41:56 case 10/12 start name=comparison_table_lane3 family=compaction lane=3 profile=standard
+[matrix] 12:41:56   variant=baseline lane=1 fidelity=1.00 objective=0.2500 tokens=16 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:56   variant=compare lane=3 fidelity=1.00 objective=0.2500 tokens=16 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:56 case 10/12 done name=comparison_table_lane3 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=1.00 objective=0.2500 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:56 case 11/12 start name=multilingual_company_lane2 family=forum lane=2 profile=deep
+[matrix] 12:41:56   variant=baseline lane=1 fidelity=1.00 objective=0.1667 tokens=24 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:56   variant=compare lane=2 fidelity=1.00 objective=0.4286 tokens=7 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:56 case 11/12 done name=multilingual_company_lane2 pass=true compare_backend=openai-compatible compare_lane=2 fidelity=1.00 objective=0.4286 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:56 case 12/12 start name=appshell_catalog_lane3 family=embedded lane=3 profile=standard
+[matrix] 12:41:56   variant=baseline lane=1 fidelity=0.00 objective=0.0000 tokens=3 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:56   variant=compare lane=3 fidelity=0.00 objective=0.0000 tokens=3 interventions=0 accepted=0 rejected=0 tasks=
+[matrix] 12:41:56 case 12/12 done name=appshell_catalog_lane3 pass=true compare_backend=openai-compatible compare_lane=3 fidelity=0.00 objective=0.0000 interventions=0 accepted=0 rejected=0
+[matrix] 12:41:56 matrix done pass_rate=0.92 lane_lift=0.50 objective_lift=0.0762 backend_case_rate=1.00 backend_acceptance=0.00 passed=true
+    main_test.go:224: embedded_lane3_vs_lane0 family=embedded baseline(backend=noop lane=1 signal=0.1000 objective=0.3000 tokens=10) compare(backend=openai-compatible lane=3 signal=0.1000 objective=0.3000 tokens=10 interventions=1 accepted=0 rejected=1 tasks=interpret_embedded_state) risk=0.000/low pass=true
+    main_test.go:224: forum_lane2_vs_lane0 family=forum baseline(backend=noop lane=1 signal=0.0492 objective=0.0656 tokens=61) compare(backend=openai-compatible lane=2 signal=0.0556 objective=0.0833 tokens=36 interventions=1 accepted=0 rejected=0 tasks=resolve_ambiguity) risk=0.356/medium pass=true
+    main_test.go:224: tiny_lane3_vs_lane0 family=tiny baseline(backend=noop lane=1 signal=0.1538 objective=0.2308 tokens=13) compare(backend=openai-compatible lane=3 signal=0.1538 objective=0.2308 tokens=13 interventions=0 accepted=0 rejected=0 tasks=) risk=0.000/low pass=true
+    main_test.go:224: embedded_pricing_lane3_vs_lane0 family=compaction baseline(backend=noop lane=1 signal=0.0714 objective=0.2143 tokens=14) compare(backend=openai-compatible lane=3 signal=0.1429 objective=0.4286 tokens=7 interventions=0 accepted=0 rejected=0 tasks=) risk=0.150/low pass=true
+    main_test.go:224: support_thread_lane2_vs_lane0 family=forum baseline(backend=noop lane=0 signal=0.0882 objective=0.1176 tokens=34) compare(backend=openai-compatible lane=2 signal=0.1071 objective=0.1429 tokens=28 interventions=0 accepted=0 rejected=0 tasks=) risk=0.053/low pass=true
+    main_test.go:224: tiny_embedded_catalog_lane3_vs_lane0 family=tiny baseline(backend=noop lane=1 signal=0.0833 objective=0.3333 tokens=12) compare(backend=openai-compatible lane=3 signal=0.0833 objective=0.3333 tokens=12 interventions=0 accepted=0 rejected=0 tasks=) risk=0.000/low pass=true
+    main_test.go:224: embedded_release_notes_lane3 family=embedded baseline(backend=noop lane=1 signal=0.1538 objective=0.3077 tokens=13) compare(backend=openai-compatible lane=3 signal=0.1429 objective=0.5714 tokens=7 interventions=0 accepted=0 rejected=0 tasks=) risk=0.499/high pass=false
+    main_test.go:224: faq_resolution_lane2 family=forum baseline(backend=noop lane=1 signal=0.1154 objective=0.1538 tokens=26) compare(backend=openai-compatible lane=2 signal=0.2143 objective=0.2857 tokens=14 interventions=0 accepted=0 rejected=0 tasks=) risk=0.138/low pass=true
+    main_test.go:224: tiny_pricing_grid_lane3 family=tiny baseline(backend=noop lane=1 signal=0.2143 objective=0.2857 tokens=14) compare(backend=openai-compatible lane=3 signal=0.2143 objective=0.2857 tokens=14 interventions=1 accepted=0 rejected=0 tasks=resolve_ambiguity) risk=0.000/low pass=true
+    main_test.go:224: comparison_table_lane3 family=compaction baseline(backend=noop lane=1 signal=0.0625 objective=0.2500 tokens=16) compare(backend=openai-compatible lane=3 signal=0.0625 objective=0.2500 tokens=16 interventions=0 accepted=0 rejected=0 tasks=) risk=0.000/low pass=true
+    main_test.go:224: multilingual_company_lane2 family=forum baseline(backend=noop lane=1 signal=0.0417 objective=0.1667 tokens=24) compare(backend=openai-compatible lane=2 signal=0.1429 objective=0.4286 tokens=7 interventions=0 accepted=0 rejected=0 tasks=) risk=0.212/medium pass=true
+    main_test.go:224: appshell_catalog_lane3 family=embedded baseline(backend=noop lane=1 signal=0.0000 objective=0.0000 tokens=3) compare(backend=openai-compatible lane=3 signal=0.0000 objective=0.0000 tokens=3 interventions=0 accepted=0 rejected=0 tasks=) risk=0.000/low pass=true
+    main_test.go:247: family=embedded cases=3 pass=2 avg_compare_signal=0.0810 avg_compare_objective=0.2905 avg_lossiness=0.166
+    main_test.go:247: family=forum cases=4 pass=4 avg_compare_signal=0.1300 avg_compare_objective=0.2351 avg_lossiness=0.190
+    main_test.go:247: family=tiny cases=3 pass=3 avg_compare_signal=0.1505 avg_compare_objective=0.2833 avg_lossiness=0.000
+    main_test.go:247: family=compaction cases=2 pass=2 avg_compare_signal=0.1027 avg_compare_objective=0.3393 avg_lossiness=0.075
+    main_test.go:261: regression: embedded_release_notes_lane3: signal density regressed 0.1538 -> 0.1429
+    main_test.go:261: regression: support_thread_lane2_vs_lane0 signal density regressed 0.1765 -> 0.1071
+    main_test.go:261: regression: support_thread_lane2_vs_lane0 objective score regressed 0.2353 -> 0.1429
+    main_test.go:263: hard-case matrix regressions detected: 3
+--- FAIL: TestExportHardCaseMatrix (29.76s)
+FAIL
+FAIL	github.com/josepavese/needlex/benchmarks/hard_case_matrix/runner	29.765s
+FAIL

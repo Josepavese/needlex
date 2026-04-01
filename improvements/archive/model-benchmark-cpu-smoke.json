@@ -1,0 +1,30 @@
+{
+  "generated_at_utc": "2026-03-30T10:10:41Z",
+  "candidates_version": "model-candidates-cpu-v1",
+  "hard_case_corpus": "benchmarks/corpora/hard-case-corpus-benchmark-v1.json",
+  "live_cases_file": "benchmarks/corpora/live-sites-cpu-v1.json",
+  "runs": [
+    {
+      "id": "qwen35_0p8_all",
+      "label": "Qwen 3.5 0.8B all roles",
+      "router": "qwen3.5:0.8b",
+      "extractor": "qwen3.5:0.8b",
+      "formatter": "qwen3.5:0.8b",
+      "hard_case_status": 1,
+      "live_status": 0,
+      "hard_case_report": "improvements/model-benchmark-cpu/qwen35_0p8_all/hard-case.json",
+      "live_report": "improvements/model-benchmark-cpu/qwen35_0p8_all/live.json",
+      "hard_case_summary": null,
+      "live_summary": {
+        "case_count": 6,
+        "avg_compare_latency_ms": 13035.5,
+        "avg_compare_keyword_coverage": 0.611111111111111,
+        "runtime_error_sites": [
+          "carratellire",
+          "halfpocket",
+          "sqlite"
+        ]
+      }
+    }
+  ]
+}

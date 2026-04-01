@@ -54,6 +54,7 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 			"document":         resp.Document,
 			"web_ir":           resp.WebIR,
 			"result_pack":      resp.ResultPack,
+			"agent_context":    resp.AgentContext,
 			"proof_refs":       resp.ProofRefs,
 			"trace_id":         resp.TraceID,
 			"trace_path":       artifacts.TracePath,
@@ -81,6 +82,7 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 			"document":         resp.Document,
 			"web_ir":           resp.WebIR,
 			"chunks":           resp.ResultPack.Chunks,
+			"agent_context":    resp.AgentContext,
 			"proof_refs":       resp.ResultPack.ProofRefs,
 			"cost_report":      resp.ResultPack.CostReport,
 			"profile":          resp.ResultPack.Profile,
@@ -103,6 +105,9 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 		return mcpToolResult(map[string]any{"diff_report": report}), nil
 	case "web_proof":
 		lookup := stringArg(call.Arguments, "chunk_id")
+		if lookup == "" {
+			lookup = stringArg(call.Arguments, "proof_id")
+		}
 		if lookup == "" {
 			lookup = stringArg(call.Arguments, "trace_id")
 		}
@@ -205,11 +210,12 @@ func mcpTools() []mcpTool {
 		},
 		{
 			Name:        "web_proof",
-			Description: "Load proof records by trace id or chunk id.",
+			Description: "Load proof records by trace id, proof id, or chunk id.",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"trace_id": map[string]any{"type": "string"},
+					"proof_id": map[string]any{"type": "string"},
 					"chunk_id": map[string]any{"type": "string"},
 				},
 			},

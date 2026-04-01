@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/html"
 
 	"github.com/josepavese/needlex/internal/core"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
@@ -39,18 +40,47 @@ type CrawlResponse struct {
 	Pages     []ReadResponse  `json:"pages"`
 }
 
-type linkCandidate struct {
-	URL   string
-	Label string
-}
+type linkCandidate = discoverycore.LinkCandidate
 
 func (s *Service) Crawl(ctx context.Context, req CrawlRequest) (CrawlResponse, error) {
-	profile, err := resolveProfile(req.Profile)
+	profile, req, err := s.prepareCrawl(req)
 	if err != nil {
 		return CrawlResponse{}, err
 	}
+	state := crawlState{
+		queue:     []crawlNode{{url: req.SeedURL, depth: 0}},
+		visited:   map[string]struct{}{},
+		pages:     make([]ReadResponse, 0, req.MaxPages),
+		documents: make([]core.Document, 0, req.MaxPages),
+	}
+	for len(state.queue) > 0 && len(state.pages) < req.MaxPages {
+		s.crawlNext(ctx, req, profile, &state)
+	}
+	resp := state.response(req)
+	return resp, resp.Validate()
+}
+
+type crawlNode struct {
+	url   string
+	depth int
+}
+
+type crawlState struct {
+	queue           []crawlNode
+	visited         map[string]struct{}
+	pages           []ReadResponse
+	documents       []core.Document
+	chunkCount      int
+	maxDepthReached int
+}
+
+func (s *Service) prepareCrawl(req CrawlRequest) (string, CrawlRequest, error) {
+	profile, err := resolveProfile(req.Profile)
+	if err != nil {
+		return "", CrawlRequest{}, err
+	}
 	if strings.TrimSpace(req.SeedURL) == "" {
-		return CrawlResponse{}, fmt.Errorf("crawl request seed_url must not be empty")
+		return "", CrawlRequest{}, fmt.Errorf("crawl request seed_url must not be empty")
 	}
 	if req.MaxPages <= 0 {
 		req.MaxPages = s.cfg.Runtime.MaxPages
@@ -58,83 +88,90 @@ func (s *Service) Crawl(ctx context.Context, req CrawlRequest) (CrawlResponse, e
 	if req.MaxDepth <= 0 {
 		req.MaxDepth = s.cfg.Runtime.MaxDepth
 	}
+	return profile, req, nil
+}
 
-	type crawlNode struct {
-		url   string
-		depth int
+func (s *Service) crawlNext(ctx context.Context, req CrawlRequest, profile string, state *crawlState) {
+	node := state.queue[0]
+	state.queue = state.queue[1:]
+	if !state.visit(node) {
+		return
 	}
-
-	queue := []crawlNode{{url: req.SeedURL, depth: 0}}
-	visited := map[string]struct{}{}
-	pages := make([]ReadResponse, 0, req.MaxPages)
-	documents := make([]core.Document, 0, req.MaxPages)
-	chunkCount := 0
-	maxDepthReached := 0
-
-	for len(queue) > 0 && len(pages) < req.MaxPages {
-		node := queue[0]
-		queue = queue[1:]
-
-		if _, ok := visited[node.url]; ok {
-			continue
-		}
-		visited[node.url] = struct{}{}
-		if node.depth > maxDepthReached {
-			maxDepthReached = node.depth
-		}
-
-		readResp, err := s.Read(ctx, ReadRequest{
-			URL:            node.url,
-			Objective:      "crawl",
-			Profile:        profile,
-			UserAgent:      req.UserAgent,
-			ForceLane:      req.ForceLane,
-			PruningProfile: req.PruningProfile,
-			RenderHint:     req.RenderHint,
-		})
-		if err != nil {
-			continue
-		}
-
-		pages = append(pages, readResp)
-		documents = append(documents, readResp.Document)
-		chunkCount += len(readResp.ResultPack.Chunks)
-
-		if node.depth >= req.MaxDepth {
-			continue
-		}
-
-		rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-			URL:       readResp.Document.FinalURL,
-			Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-			MaxBytes:  s.cfg.Runtime.MaxBytes,
-			UserAgent: req.UserAgent,
-		})
-		if err != nil {
-			continue
-		}
-
-		links := extractLinks(rawPage.HTML, rawPage.FinalURL, req.SameDomain)
-		for _, next := range links {
-			if _, ok := visited[next]; ok {
-				continue
-			}
-			queue = append(queue, crawlNode{url: next, depth: node.depth + 1})
-		}
+	readResp, ok := s.readCrawlNode(ctx, req, profile, node.url)
+	if !ok {
+		return
 	}
+	state.addPage(node, readResp)
+	if node.depth >= req.MaxDepth {
+		return
+	}
+	state.queue = append(state.queue, s.expandCrawlNode(ctx, req, node, readResp, state.visited)...)
+}
 
-	resp := CrawlResponse{
-		Documents: documents,
+func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, targetURL string) (ReadResponse, bool) {
+	readResp, err := s.Read(ctx, ReadRequest{
+		URL:            targetURL,
+		Objective:      "crawl",
+		Profile:        profile,
+		UserAgent:      req.UserAgent,
+		ForceLane:      req.ForceLane,
+		PruningProfile: req.PruningProfile,
+		RenderHint:     req.RenderHint,
+	})
+	return readResp, err == nil
+}
+
+func (s *Service) expandCrawlNode(ctx context.Context, req CrawlRequest, node crawlNode, readResp ReadResponse, visited map[string]struct{}) []crawlNode {
+	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
+		URL:       readResp.Document.FinalURL,
+		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:  s.cfg.Runtime.MaxBytes,
+		UserAgent: req.UserAgent,
+	})
+	if err != nil {
+		return nil
+	}
+	links := extractLinks(rawPage.HTML, rawPage.FinalURL, req.SameDomain)
+	next := make([]crawlNode, 0, len(links))
+	for _, targetURL := range links {
+		if _, ok := visited[targetURL]; ok {
+			continue
+		}
+		next = append(next, crawlNode{url: targetURL, depth: node.depth + 1})
+	}
+	return next
+}
+
+func (s *crawlState) visit(node crawlNode) bool {
+	if _, ok := s.visited[node.url]; ok {
+		return false
+	}
+	s.visited[node.url] = struct{}{}
+	if node.depth > s.maxDepthReached {
+		s.maxDepthReached = node.depth
+	}
+	return true
+}
+
+func (s *crawlState) addPage(node crawlNode, readResp ReadResponse) {
+	_ = node
+	s.pages = append(s.pages, readResp)
+	s.documents = append(s.documents, readResp.Document)
+	s.chunkCount += len(readResp.ResultPack.Chunks)
+}
+
+func (s crawlState) response(req CrawlRequest) CrawlResponse {
+	return CrawlResponse{
+		Documents: s.documents,
 		Summary: CrawlSummary{
 			SeedURL:         req.SeedURL,
-			PagesVisited:    len(documents),
-			MaxDepthReached: maxDepthReached,
+			PagesVisited:    len(s.documents),
+			MaxDepthReached: s.maxDepthReached,
 			SameDomain:      req.SameDomain,
-			ChunkCount:      chunkCount,
+			ChunkCount:      s.chunkCount,
 		},
-		Pages: pages,
+		Pages: s.pages,
 	}
-	return resp, resp.Validate()
 }
 
 func (r CrawlResponse) Validate() error {

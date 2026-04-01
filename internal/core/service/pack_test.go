@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
@@ -20,7 +21,11 @@ func TestResolveProfileDefaultsToStandard(t *testing.T) {
 }
 
 func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
-	ranked := rankSegments("doc_1", "authentication tokens api keys", core.WebIR{
+	svc, err := New(config.Defaults(), nil)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	ranked := svc.rankSegments("doc_1", "authentication tokens api keys", core.WebIR{
 		Version:   core.WebIRVersion,
 		SourceURL: "https://example.com",
 		NodeCount: 2,
@@ -52,7 +57,11 @@ func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
 }
 
 func TestRankSegmentsUsesWebIREmbeddedEvidence(t *testing.T) {
-	ranked := rankSegments("doc_1", "company profile", core.WebIR{
+	svc, err := New(config.Defaults(), nil)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	ranked := svc.rankSegments("doc_1", "company profile", core.WebIR{
 		Version:   core.WebIRVersion,
 		SourceURL: "https://example.com",
 		NodeCount: 2,
@@ -140,6 +149,94 @@ func TestApplyContaminationPenaltyDemotesSpam(t *testing.T) {
 	}
 }
 
+func TestApplyBoilerplatePenaltyDemotesHeadinglessMenuChunks(t *testing.T) {
+	ranked := []rankedSegment{
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"SQLite Home Page"},
+				Text:        "Home Menu About Documentation Download License Support Purchase Search",
+				NodePaths:   []string{"/nav/a[1]", "/nav/a[2]", "/nav/a[3]", "/nav/a[4]", "/nav/a[5]", "/nav/a[6]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_menu",
+				DocID:       "doc",
+				Text:        "Home Menu About Documentation Download License Support Purchase Search",
+				Score:       0.92,
+				Fingerprint: "fp_menu",
+				Confidence:  0.90,
+			},
+		},
+		{
+			segment: pipeline.Segment{
+				Kind:      "paragraph",
+				Text:      "SQLite is a C-language library that implements a small, fast SQL database engine.",
+				NodePaths: []string{"/article/p[1]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_core",
+				DocID:       "doc",
+				Text:        "SQLite is a C-language library that implements a small, fast SQL database engine.",
+				Score:       0.88,
+				Fingerprint: "fp_core",
+				Confidence:  0.88,
+			},
+		},
+	}
+
+	penalized := applyBoilerplatePenalty(ranked)
+	if penalized[0].chunk.Fingerprint != "fp_core" {
+		t.Fatalf("expected content chunk first after boilerplate penalty, got %#v", penalized[0].chunk)
+	}
+}
+
+func TestApplySubordinateFragmentDemotionDemotesShortDeepTail(t *testing.T) {
+	ranked := []rankedSegment{
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"SQLite Home Page"},
+				Text:        "SQLite is a C-language library that implements a small, fast SQL database engine used across mobile phones and countless applications every day.",
+				NodePaths:   []string{"/article/p[1]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_anchor",
+				DocID:       "doc",
+				Text:        "SQLite is a C-language library that implements a small, fast SQL database engine used across mobile phones and countless applications every day.",
+				Score:       0.92,
+				Fingerprint: "fp_anchor",
+				Confidence:  0.92,
+			},
+			ir: segmentIREvidence{headingBacked: true},
+		},
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"Latest Release", "Common Links", "Sponsors"},
+				Text:        "SQLite is made possible in part by sponsors and consortium members. This page was last updated on 2026-03-16 20:07:10Z.",
+				NodePaths:   []string{"/aside/p[1]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_tail",
+				DocID:       "doc",
+				Text:        "SQLite is made possible in part by sponsors and consortium members. This page was last updated on 2026-03-16 20:07:10Z.",
+				Score:       0.89,
+				Fingerprint: "fp_tail",
+				Confidence:  0.88,
+			},
+		},
+	}
+	originalTailScore := ranked[1].chunk.Score
+
+	penalized := applySubordinateFragmentDemotion(ranked)
+	if penalized[0].chunk.Fingerprint != "fp_anchor" {
+		t.Fatalf("expected explanatory anchor to stay first, got %#v", penalized)
+	}
+	if penalized[1].chunk.Score >= originalTailScore {
+		t.Fatalf("expected subordinate fragment score to drop, got %.2f", penalized[1].chunk.Score)
+	}
+}
+
 func TestApplyFingerprintNoveltyBiasPromotesNovelSegments(t *testing.T) {
 	ranked := []rankedSegment{
 		{index: 0, chunk: core.Chunk{Fingerprint: "fp_stable", Score: 0.90}},
@@ -159,6 +256,120 @@ func TestApplyStableReadGatePreservesStableAnchor(t *testing.T) {
 	selected := applyStableReadGate(ranked, []rankedSegment{{index: 0, chunk: ranked[0].chunk}}, []string{"fp_stable"})
 	if selected[0].chunk.Fingerprint != "fp_stable" {
 		t.Fatalf("expected stable anchor to be preserved, got %#v", selected)
+	}
+}
+
+func TestSortRankedSegmentsOrdersByFinalScore(t *testing.T) {
+	selected := []rankedSegment{
+		{index: 0, chunk: core.Chunk{Fingerprint: "fp_low", Score: 0.64}},
+		{index: 1, chunk: core.Chunk{Fingerprint: "fp_high", Score: 0.90}},
+	}
+	sortRankedSegments(selected)
+	if selected[0].chunk.Fingerprint != "fp_high" {
+		t.Fatalf("expected highest-score chunk first, got %#v", selected)
+	}
+}
+
+func TestApplyIndexLikeDemotionDemotesDocsIndexWhenAnchorExists(t *testing.T) {
+	ranked := []rankedSegment{
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"SQLite Home Page"},
+				Text:        "SQLite is a C-language library that implements a small, fast SQL database engine. It is widely deployed in mobile devices and applications.",
+				NodePaths:   []string{"/article/p[1]", "/article/p[2]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_anchor",
+				DocID:       "doc",
+				Text:        "SQLite is a C-language library that implements a small, fast SQL database engine. It is widely deployed in mobile devices and applications.",
+				Score:       0.95,
+				Fingerprint: "fp_anchor",
+				Confidence:  0.92,
+			},
+		},
+		{
+			segment: pipeline.Segment{
+				Kind:        "list_item",
+				HeadingPath: []string{"Latest Release", "Common Links"},
+				Text:        "Features\nWhen to use SQLite\nGetting Started\nTry it live!\nSQL Syntax\nPragmas\nJSON functions\nFrequently Asked Questions\nNews",
+				NodePaths:   []string{"/ul/li[1]", "/ul/li[2]", "/ul/li[3]", "/ul/li[4]", "/ul/li[5]", "/ul/li[6]", "/ul/li[7]", "/ul/li[8]", "/ul/li[9]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_index",
+				DocID:       "doc",
+				Text:        "Features\nWhen to use SQLite\nGetting Started\nTry it live!\nSQL Syntax\nPragmas\nJSON functions\nFrequently Asked Questions\nNews",
+				Score:       0.90,
+				Fingerprint: "fp_index",
+				Confidence:  0.90,
+			},
+		},
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"Latest Release", "Sponsors"},
+				Text:        "SQLite is made possible in part by sponsors and consortium members.",
+				NodePaths:   []string{"/p[3]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_sponsor",
+				DocID:       "doc",
+				Text:        "SQLite is made possible in part by sponsors and consortium members.",
+				Score:       0.84,
+				Fingerprint: "fp_sponsor",
+				Confidence:  0.86,
+			},
+		},
+	}
+
+	penalized := applyIndexLikeDemotion(ranked)
+	if penalized[0].chunk.Fingerprint != "fp_anchor" {
+		t.Fatalf("expected explanatory anchor to remain first, got %#v", penalized)
+	}
+	if penalized[2].chunk.Fingerprint != "fp_index" {
+		t.Fatalf("expected index-like chunk to be demoted below sponsor chunk, got %#v", penalized)
+	}
+}
+
+func TestApplyCodeLikeDemotionDemotesIdentifierHeavyChunksWhenAnchorExists(t *testing.T) {
+	ranked := []rankedSegment{
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"Usage", "Advantages"},
+				Text:        "Access to high-intelligence coding models and support for multiple coding tools. The plan is designed for practical development workflows and complex task execution.",
+				NodePaths:   []string{"/article/p[1]", "/article/p[2]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_anchor",
+				DocID:       "doc",
+				Text:        "Access to high-intelligence coding models and support for multiple coding tools. The plan is designed for practical development workflows and complex task execution.",
+				Score:       0.92,
+				Fingerprint: "fp_anchor",
+				Confidence:  0.92,
+			},
+		},
+		{
+			segment: pipeline.Segment{
+				Kind:        "paragraph",
+				HeadingPath: []string{"Usage", "How to Switch Models"},
+				Text:        "ANTHROPIC_DEFAULT_OPUS_MODEL : GLM-4.7\nANTHROPIC_DEFAULT_SONNET_MODEL : GLM-4.7\nANTHROPIC_DEFAULT_HAIKU_MODEL : GLM-4.5-Air",
+				NodePaths:   []string{"/ul/li[1]", "/ul/li[2]", "/ul/li[3]"},
+			},
+			chunk: core.Chunk{
+				ID:          "chk_code",
+				DocID:       "doc",
+				Text:        "ANTHROPIC_DEFAULT_OPUS_MODEL : GLM-4.7\nANTHROPIC_DEFAULT_SONNET_MODEL : GLM-4.7\nANTHROPIC_DEFAULT_HAIKU_MODEL : GLM-4.5-Air",
+				Score:       0.95,
+				Fingerprint: "fp_code",
+				Confidence:  0.92,
+			},
+		},
+	}
+
+	penalized := applyCodeLikeDemotion(ranked)
+	if penalized[0].chunk.Fingerprint != "fp_anchor" {
+		t.Fatalf("expected explanatory anchor to outrank code-like chunk, got %#v", penalized)
 	}
 }
 

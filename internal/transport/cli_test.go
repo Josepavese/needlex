@@ -3,6 +3,11 @@ package transport
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"hash/fnv"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -10,9 +15,27 @@ import (
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/intel"
+	"github.com/josepavese/needlex/internal/memory"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/store"
 )
+
+type stubSemanticAligner struct {
+	scores map[string]float64
+}
+
+func (s stubSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (s stubSemanticAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: s.scores[candidate.ID]})
+	}
+	return out, nil
+}
 
 func TestRunnerReadJSON(t *testing.T) {
 	var captured coreservice.ReadRequest
@@ -35,11 +58,38 @@ func TestRunnerReadJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), `"document"`) {
-		t.Fatalf("expected json document payload, got %q", stdout.String())
+	if !strings.Contains(stdout.String(), `"summary"`) || !strings.Contains(stdout.String(), `"uncertainty"`) || !strings.Contains(stdout.String(), `"chunks"`) || strings.Contains(stdout.String(), `"proof_records"`) {
+		t.Fatalf("expected compact json payload, got %q", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), `"kind": "page_read"`) {
+		t.Fatalf("expected page_read kind in compact payload, got %q", stdout.String())
 	}
 	if captured.Profile != "tiny" {
 		t.Fatalf("expected profile to be forwarded, got %q", captured.Profile)
+	}
+}
+
+func TestRunnerReadJSONFull(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			return fakeResponse(), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := runner.Run([]string{"read", "https://example.com", "--json", "--json-mode", "full"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"document"`) || !strings.Contains(stdout.String(), `"proof_records"`) {
+		t.Fatalf("expected full json payload, got %q", stdout.String())
 	}
 }
 
@@ -63,14 +113,40 @@ func TestRunnerQueryJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), `"result_pack"`) {
-		t.Fatalf("expected query json payload, got %q", stdout.String())
+	if !strings.Contains(stdout.String(), `"selected_url"`) || !strings.Contains(stdout.String(), `"selection_why"`) || !strings.Contains(stdout.String(), `"uncertainty"`) || strings.Contains(stdout.String(), `"result_pack"`) {
+		t.Fatalf("expected compact query json payload, got %q", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), `"kind": "goal_query"`) {
+		t.Fatalf("expected goal_query kind in compact payload, got %q", stdout.String())
 	}
 	if captured.Goal != "proof replay deterministic" {
 		t.Fatalf("expected goal to be forwarded, got %q", captured.Goal)
 	}
 	if captured.DiscoveryMode != "" {
 		t.Fatalf("expected default discovery mode passthrough to remain empty, got %q", captured.DiscoveryMode)
+	}
+}
+
+func TestRunnerQueryJSONFull(t *testing.T) {
+	root := t.TempDir()
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "https://example.com", "--goal", "proof replay deterministic", "--json", "--json-mode", "full"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"result_pack"`) || !strings.Contains(stdout.String(), `"proof_records"`) {
+		t.Fatalf("expected full query json payload, got %q", stdout.String())
 	}
 }
 
@@ -159,9 +235,22 @@ func TestRunnerQueryAutoSeedsFromCandidateMemory(t *testing.T) {
 	}
 
 	var captured coreservice.QueryRequest
+	semantic := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/embeddings" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = fmt.Fprint(w, `{"object":"list","data":[{"object":"embedding","index":0,"embedding":[1,0]},{"object":"embedding","index":1,"embedding":[0.95,0.05]}],"model":"cli-semantic"}`)
+	}))
+	defer semantic.Close()
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
-			return config.Defaults(), nil
+			cfg := config.Defaults()
+			cfg.Semantic.Enabled = true
+			cfg.Semantic.Backend = "openai-embeddings"
+			cfg.Semantic.BaseURL = semantic.URL
+			cfg.Semantic.Model = "cli-semantic"
+			return cfg, nil
 		},
 		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
 			captured = req
@@ -196,9 +285,22 @@ func TestRunnerQueryDoesNotAutoSeedWhenDiscoveryOff(t *testing.T) {
 	}
 
 	var captured coreservice.QueryRequest
+	semantic := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/embeddings" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = fmt.Fprint(w, `{"object":"list","data":[{"object":"embedding","index":0,"embedding":[1,0]},{"object":"embedding","index":1,"embedding":[0.95,0.05]}],"model":"cli-semantic"}`)
+	}))
+	defer semantic.Close()
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
-			return config.Defaults(), nil
+			cfg := config.Defaults()
+			cfg.Semantic.Enabled = true
+			cfg.Semantic.Backend = "openai-embeddings"
+			cfg.Semantic.BaseURL = semantic.URL
+			cfg.Semantic.Model = "cli-semantic"
+			return cfg, nil
 		},
 		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
 			captured = req
@@ -286,8 +388,8 @@ func TestRunnerCrawlJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), `"documents"`) {
-		t.Fatalf("expected crawl json payload, got %q", stdout.String())
+	if !strings.Contains(stdout.String(), `"summary"`) || !strings.Contains(stdout.String(), `"kind": "bounded_crawl"`) || strings.Contains(stdout.String(), `"pages"`) {
+		t.Fatalf("expected compact crawl json payload, got %q", stdout.String())
 	}
 }
 
@@ -336,7 +438,9 @@ func TestRunnerReadStoresCandidateMemory(t *testing.T) {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
 
-	matches, err := store.NewCandidateStore(root).Search("needle runtime", 1)
+	matches, err := store.NewCandidateStore(root).Search(context.Background(), "needle runtime", 1, stubSemanticAligner{
+		scores: map[string]float64{"https://example.com": 0.92},
+	})
 	if err != nil {
 		t.Fatalf("search candidate store: %v", err)
 	}
@@ -497,6 +601,85 @@ func TestRunnerPruneAll(t *testing.T) {
 	}
 }
 
+func TestRunnerMemoryStatsAndSearch(t *testing.T) {
+	root := t.TempDir()
+	semantic := newMemoryEmbeddingServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	cfg.Memory.Enabled = true
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "memory-test-embed"
+	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
+	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+
+	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return cfg, nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := runner.Run([]string{"memory", "stats", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("memory stats failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"document_count": 1`) || !strings.Contains(stdout.String(), `"embedding_count": 1`) {
+		t.Fatalf("expected memory stats json, got %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"memory", "search", "playwright installation", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("memory search failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"https://playwright.dev/docs/intro"`) || !strings.Contains(stdout.String(), `"proof_ref": "proof_install"`) {
+		t.Fatalf("expected memory candidate in search output, got %q", stdout.String())
+	}
+}
+
+func TestRunnerMemoryPrune(t *testing.T) {
+	root := t.TempDir()
+	semantic := newMemoryEmbeddingServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	cfg.Memory.Enabled = true
+	cfg.Memory.MaxDocuments = 1
+	cfg.Memory.MaxEmbeddings = 1
+	cfg.Memory.MaxEdges = 1
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "memory-test-embed"
+	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
+	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+
+	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/test-runners", "Test Runners | Playwright", "Integrate Playwright with common test runners and tooling.")
+
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return cfg, nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := runner.Run([]string{"memory", "prune", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("memory prune failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"documents": 1`) || !strings.Contains(stdout.String(), `"embeddings": 1`) {
+		t.Fatalf("expected removed counts in prune output, got %q", stdout.String())
+	}
+}
+
 func TestRunnerReadUsesGenomeForceLane(t *testing.T) {
 	root := t.TempDir()
 	genomeStore := store.NewGenomeStore(root)
@@ -610,6 +793,19 @@ func fakeResponse() coreservice.ReadResponse {
 				LanePath:  []int{0},
 			},
 		},
+		AgentContext: coreservice.AgentContext{
+			URL:   "https://example.com",
+			Title: "Needle Runtime",
+			Chunks: []coreservice.AgentChunk{
+				{
+					ID:          "chk_1",
+					Text:        "Compact context.",
+					HeadingPath: []string{"Needle Runtime"},
+					SourceURL:   "https://example.com",
+					ProofRef:    "proof_1",
+				},
+			},
+		},
 		ProofRecords: []proof.ProofRecord{
 			{
 				ID: "proof_1",
@@ -642,6 +838,105 @@ func fakeResponse() coreservice.ReadResponse {
 	}
 }
 
+func newMemoryEmbeddingServer() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/embeddings" {
+			http.NotFound(w, r)
+			return
+		}
+		var payload struct {
+			Input any `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		inputs := memoryInputsForTest(payload.Input)
+		data := make([]map[string]any, 0, len(inputs))
+		for i, input := range inputs {
+			data = append(data, map[string]any{
+				"object":    "embedding",
+				"index":     i,
+				"embedding": memoryVectorForTest(input),
+			})
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"object": "list",
+			"data":   data,
+			"model":  "memory-test-embed",
+		})
+	}))
+}
+
+func memoryInputsForTest(raw any) []string {
+	switch typed := raw.(type) {
+	case string:
+		return []string{typed}
+	case []any:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if value, ok := item.(string); ok {
+				out = append(out, value)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func memoryVectorForTest(text string) []float64 {
+	const dims = 64
+	vector := make([]float64, dims)
+	for _, token := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
+	}) {
+		if token == "" {
+			continue
+		}
+		h := fnv.New32a()
+		_, _ = h.Write([]byte(token))
+		idx := int(h.Sum32() % dims)
+		vector[idx] += 1
+	}
+	return vector
+}
+
+func seedMemoryDocument(t *testing.T, root string, cfg config.Config, client *http.Client, pageURL, title, text string) {
+	t.Helper()
+	store := memory.NewSQLiteStore(root, cfg.Memory.Path)
+	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, client))
+	err := service.Observe(context.Background(), memory.Observation{
+		Document: core.Document{
+			URL:       pageURL,
+			FinalURL:  pageURL,
+			Title:     title,
+			FetchMode: core.FetchModeHTTP,
+		},
+		ResultPack: core.ResultPack{
+			Profile: core.ProfileStandard,
+			Chunks: []core.Chunk{
+				{
+					ID:          "chk_" + title,
+					DocID:       "doc_" + title,
+					Text:        text,
+					HeadingPath: []string{title},
+					Score:       0.91,
+					Confidence:  0.95,
+				},
+			},
+			ProofRefs: []string{"proof_install"},
+			Links:     []string{pageURL},
+		},
+		ProofRecords: []proof.ProofRecord{{ID: "proof_install"}},
+		TraceID:      "trace_" + title,
+		SourceKind:   "read",
+	})
+	if err != nil {
+		t.Fatalf("seed memory document: %v", err)
+	}
+}
+
 func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 	read := fakeResponse()
 	read.Trace.TraceID = "trace_query"
@@ -667,9 +962,17 @@ func fakeQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
 			},
 			LaneMax: 3,
 		},
-		Document:     read.Document,
-		WebIR:        read.WebIR,
-		ResultPack:   read.ResultPack,
+		Document:   read.Document,
+		WebIR:      read.WebIR,
+		ResultPack: read.ResultPack,
+		AgentContext: coreservice.AgentContext{
+			URL:   read.Document.FinalURL,
+			Title: read.Document.Title,
+			Candidates: []coreservice.AgentCandidate{
+				{URL: firstNonEmpty(req.SeedURL, read.Document.FinalURL), Label: "Example", Reason: []string{"seed_fallback"}},
+			},
+			Chunks: read.AgentContext.Chunks,
+		},
 		ProofRefs:    read.ResultPack.ProofRefs,
 		ProofRecords: read.ProofRecords,
 		Trace:        read.Trace,

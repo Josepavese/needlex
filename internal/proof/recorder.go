@@ -88,6 +88,18 @@ func (r *Recorder) BudgetWarning(stage, reasonCode, message string, data map[str
 	})
 }
 
+func (r *Recorder) ModelIntervention(stage, reasonCode, message string, lane int, data map[string]string, at time.Time) {
+	r.trace.Events = append(r.trace.Events, TraceEvent{
+		Type:       EventModelIntervention,
+		Stage:      stage,
+		Timestamp:  at.UTC(),
+		ReasonCode: reasonCode,
+		Message:    message,
+		Lane:       lane,
+		Data:       cloneMap(data),
+	})
+}
+
 func (r *Recorder) Error(stage, reasonCode, message string, data map[string]string, at time.Time) {
 	r.trace.Events = append(r.trace.Events, TraceEvent{
 		Type:       EventError,

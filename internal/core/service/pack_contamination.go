@@ -1,7 +1,6 @@
 package service
 
 import (
-	"slices"
 	"strings"
 )
 
@@ -29,20 +28,7 @@ func applyContaminationPenalty(ranked []rankedSegment, objective string) []ranke
 		ranked[i].chunk.Confidence = clamp(ranked[i].chunk.Confidence-(0.20*weight), 0, 0.99)
 	}
 
-	slices.SortStableFunc(ranked, func(a, b rankedSegment) int {
-		switch {
-		case a.chunk.Score > b.chunk.Score:
-			return -1
-		case a.chunk.Score < b.chunk.Score:
-			return 1
-		case a.index < b.index:
-			return -1
-		case a.index > b.index:
-			return 1
-		default:
-			return 0
-		}
-	})
+	sortRankedSegments(ranked)
 	return ranked
 }
 

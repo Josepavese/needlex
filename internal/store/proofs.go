@@ -95,6 +95,38 @@ func (s ProofStore) FindProofByChunkID(chunkID string) (proof.ProofRecord, strin
 	return proof.ProofRecord{}, "", fmt.Errorf("%w: %s", ErrProofNotFound, chunkID)
 }
 
+func (s ProofStore) FindProofByID(proofID string) (proof.ProofRecord, string, error) {
+	cleanProofID := strings.TrimSpace(proofID)
+	if cleanProofID == "" {
+		return proof.ProofRecord{}, "", fmt.Errorf("proof id must not be empty")
+	}
+
+	pattern := filepath.Join(s.root, "proofs", "*.json")
+	paths, err := filepath.Glob(pattern)
+	if err != nil {
+		return proof.ProofRecord{}, "", fmt.Errorf("glob proofs: %w", err)
+	}
+
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return proof.ProofRecord{}, "", fmt.Errorf("read proofs: %w", err)
+		}
+		records, err := decodeRecords(data)
+		if err != nil {
+			return proof.ProofRecord{}, "", err
+		}
+		for _, record := range records {
+			if record.ID == cleanProofID {
+				traceID := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+				return record, traceID, nil
+			}
+		}
+	}
+
+	return proof.ProofRecord{}, "", fmt.Errorf("%w: %s", ErrProofNotFound, proofID)
+}
+
 func decodeRecords(data []byte) ([]proof.ProofRecord, error) {
 	var records []proof.ProofRecord
 	if err := json.Unmarshal(data, &records); err != nil {

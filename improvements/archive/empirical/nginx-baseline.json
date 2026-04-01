@@ -1,0 +1,1053 @@
+{
+  "document": {
+    "id": "doc_f19eae8dd7864afe",
+    "url": "https://nginx.org/",
+    "final_url": "https://nginx.org/",
+    "title": "nginx",
+    "fetched_at": "2026-03-30T14:25:09.328431766Z",
+    "fetch_mode": "http",
+    "raw_hash": "sha256_69e621cf4c43e7f2"
+  },
+  "web_ir": {
+    "version": "web_ir.v1",
+    "source_url": "https://nginx.org/",
+    "title": "nginx",
+    "node_count": 24,
+    "nodes": [
+      {
+        "path": "/div[1]/div[2]/h2[1]",
+        "tag": "h2",
+        "kind": "heading",
+        "text": "nginx",
+        "depth": 3,
+        "heading_level": 2
+      },
+      {
+        "path": "/div[1]/div[2]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "nginx (\" engine x \") is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP proxy server, and mail proxy server. Originally written by Igor Sysoev and distributed under the 2-clause BSD License . Enterprise distributions, commercial support and training are available from F5, Inc.",
+        "depth": 3
+      },
+      {
+        "path": "/div[1]/div[2]/p[2]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Docs • Code • Install • Beginner's Guide",
+        "depth": 3
+      },
+      {
+        "path": "/div[1]/div[2]/center[1]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "Latest News",
+        "depth": 4,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[1]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "2026-03-24",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "nginx-1.28.3 stable and nginx-1.29.7 mainline versions have been released, with fixes for buffer overflow vulnerability in the ngx_http_dav_module (CVE-2026-27654), buffer overflow vulnerabilities in the ngx_http_mp4_module (CVE-2026-27784, CVE-2026-32647), mail session authentication vulnerabilities (CVE-2026-27651, CVE-2026-28753) and OCSP result bypass vulnerability in stream (CVE-2026-28755). Additionally, nginx-1.29.7 mainline version introduces support for Multipath TCP and upgrades the default proxy HTTP version to HTTP/1.1 with keep-alive enabled .",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[2]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "nginx-1.28.3 stable and nginx-1.29.7 mainline versions have been released, with fixes for buffer overflow vulnerability in the ngx_http_dav_module (CVE-2026-27654), buffer overflow vulnerabilities in the ngx_http_mp4_module (CVE-2026-27784, CVE-2026-32647), mail session authentication vulnerabilities (CVE-2026-27651, CVE-2026-28753) and OCSP result bypass vulnerability in stream (CVE-2026-28755). Additionally, nginx-1.29.7 mainline version introduces support for Multipath TCP and upgrades the default proxy HTTP version to HTTP/1.1 with keep-alive enabled .",
+        "depth": 7
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[2]/td[1]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "2026-03-10",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[2]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "nginx-1.29.6 mainline version has been released, featuring sticky sessions support for upstreams .",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[2]/td[2]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "nginx-1.29.6 mainline version has been released, featuring sticky sessions support for upstreams .",
+        "depth": 7
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[1]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "2026-03-03",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "njs-0.9.6 version has been released , featuring optional chaining, nullish coalescing assignment ( ??= ), and logical assignment operators ( ||= and \u0026\u0026= ).",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "njs-0.9.6 version has been released , featuring optional chaining, nullish coalescing assignment ( ??= ), and logical assignment operators ( ||= and \u0026\u0026= ).",
+        "depth": 7
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]/p[1]/code[1]",
+        "tag": "code",
+        "kind": "code",
+        "text": "??=",
+        "depth": 8
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]/p[1]/code[2]",
+        "tag": "code",
+        "kind": "code",
+        "text": "||=",
+        "depth": 8
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]/p[1]/code[3]",
+        "tag": "code",
+        "kind": "code",
+        "text": "\u0026\u0026=",
+        "depth": 8
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[4]/td[1]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "2026-02-04",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[4]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "nginx-1.28.2 stable and nginx-1.29.5 mainline versions have been released, with a fix for the SSL upstream injection vulnerability (CVE-2026-1642).",
+        "depth": 6
+      },
+      {
+        "path": "/div[1]/div[2]/table[1]/tbody[1]/tr[4]/td[2]/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "nginx-1.28.2 stable and nginx-1.29.5 mainline versions have been released, with a fix for the SSL upstream injection vulnerability (CVE-2026-1642).",
+        "depth": 7
+      },
+      {
+        "path": "/div[1]/div[2]/p[3]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "Older news",
+        "depth": 3
+      },
+      {
+        "path": "/div[1]/div[2]/center[2]/h4[1]",
+        "tag": "h4",
+        "kind": "heading",
+        "text": "Other NGINX Projects",
+        "depth": 4,
+        "heading_level": 4
+      },
+      {
+        "path": "/div[1]/div[2]/div[1]/table[1]/tbody[1]/tr[1]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "NGINX JavaScript (njs) extends nginx functionality with an ECMAScript-compatible interpreter for HTTP and Stream modules. Docs • Code",
+        "depth": 7
+      },
+      {
+        "path": "/div[1]/div[2]/div[1]/table[2]/tbody[1]/tr[1]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "NGINX Ingress Controller connects Kubernetes apps and services with rock solid request handling, auth, self-service CRDs, and easy debugging. Not to be confused with ingress-nginx, the separate Kubernetes community project. Docs • Code",
+        "depth": 7
+      },
+      {
+        "path": "/div[1]/div[2]/div[1]/table[3]/tbody[1]/tr[1]/td[2]",
+        "tag": "td",
+        "kind": "table_cell",
+        "text": "NGINX Gateway Fabric provides L4 and L7 routing capabilities in Kubernetes, implementing the Gateway API using NGINX as the data plane. Docs • Code",
+        "depth": 7
+      }
+    ],
+    "signals": {
+      "short_text_ratio": 0.5,
+      "heading_ratio": 0.125,
+      "embedded_node_count": 0,
+      "substrate_class": "generic_content"
+    }
+  },
+  "result_pack": {
+    "objective": "web server platform summary",
+    "profile": "standard",
+    "chunks": [
+      {
+        "id": "chk_b073c0a383830e0b",
+        "doc_id": "doc_f19eae8dd7864afe",
+        "text": "nginx (\" engine x \") is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP proxy server, and mail proxy server. Originally written by Igor Sysoev and distributed under the 2-clause BSD License . Enterprise distributions, commercial support and training are available from F5, Inc.\n\nDocs • Code • Install • Beginner's Guide",
+        "heading_path": [
+          "nginx"
+        ],
+        "score": 0.95,
+        "fingerprint": "fp_af94e881f193b73f",
+        "confidence": 0.99
+      },
+      {
+        "id": "chk_3f6988feec6dd99a",
+        "doc_id": "doc_f19eae8dd7864afe",
+        "text": "nginx-1.28.3 stable and nginx-1.29.7 mainline versions have been released, with fixes for buffer overflow vulnerability in the ngx_http_dav_module (CVE-2026-27654), buffer overflow vulnerabilities in the ngx_http_mp4_module (CVE-2026-27784, CVE-2026-32647), mail session authentication vulnerabilities (CVE-2026-27651, CVE-2026-28753) and OCSP result bypass vulnerability in stream (CVE-2026-28755). Additionally, nginx-1.29.7 mainline version introduces support for Multipath TCP and upgrades the default proxy HTTP version to HTTP/1.1 with keep-alive enabled .",
+        "heading_path": [
+          "nginx",
+          "Latest News"
+        ],
+        "score": 0.9440000000000002,
+        "fingerprint": "fp_ac26b5d1e139750e",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_6358aff38518912e",
+        "doc_id": "doc_f19eae8dd7864afe",
+        "text": "nginx-1.29.6 mainline version has been released, featuring sticky sessions support for upstreams .",
+        "heading_path": [
+          "nginx",
+          "Latest News"
+        ],
+        "score": 0.9280000000000002,
+        "fingerprint": "fp_9d893e97551dcd78",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_98bae60384d74795",
+        "doc_id": "doc_f19eae8dd7864afe",
+        "text": "nginx-1.28.2 stable and nginx-1.29.5 mainline versions have been released, with a fix for the SSL upstream injection vulnerability (CVE-2026-1642).\n\nOlder news",
+        "heading_path": [
+          "nginx",
+          "Latest News"
+        ],
+        "score": 0.9880000000000002,
+        "fingerprint": "fp_d32de4b0086a83a4",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_695591c68d0a1fa3",
+        "doc_id": "doc_f19eae8dd7864afe",
+        "text": "2026-03-24\n\nnginx-1.28.3 stable and nginx-1.29.7 mainline versions have been released, with fixes for buffer overflow vulnerability in the ngx_http_dav_module (CVE-2026-27654), buffer overflow vulnerabilities in the ngx_http_mp4_module (CVE-2026-27784, CVE-2026-32647), mail session authentication vulnerabilities (CVE-2026-27651, CVE-2026-28753) and OCSP result bypass vulnerability in stream (CVE-2026-28755). Additionally, nginx-1.29.7 mainline version introduces support for Multipath TCP and upgrades the default proxy HTTP version to HTTP/1.1 with keep-alive enabled .",
+        "heading_path": [
+          "nginx",
+          "Latest News"
+        ],
+        "score": 0.9520000000000002,
+        "fingerprint": "fp_ea0cae754560cf47",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_0de4bf5a846f1271",
+        "doc_id": "doc_f19eae8dd7864afe",
+        "text": "njs-0.9.6 version has been released , featuring optional chaining, nullish coalescing assignment ( ??= ), and logical assignment operators ( ||= and \u0026\u0026= ).",
+        "heading_path": [
+          "nginx",
+          "Latest News"
+        ],
+        "score": 0.9120000000000001,
+        "fingerprint": "fp_79dda5175262d771",
+        "confidence": 0.93
+      }
+    ],
+    "sources": [
+      {
+        "document_id": "doc_f19eae8dd7864afe",
+        "url": "https://nginx.org/",
+        "title": "nginx",
+        "chunk_ids": [
+          "chk_b073c0a383830e0b",
+          "chk_3f6988feec6dd99a",
+          "chk_6358aff38518912e",
+          "chk_98bae60384d74795",
+          "chk_695591c68d0a1fa3",
+          "chk_0de4bf5a846f1271"
+        ]
+      }
+    ],
+    "outline": [
+      "nginx",
+      "nginx \u003e Latest News"
+    ],
+    "links": [
+      "https://nginx.org/"
+    ],
+    "proof_refs": [
+      "proof_5518ec1a304612e1",
+      "proof_e3fd65991aa33aca",
+      "proof_43e1af3138a70fc2",
+      "proof_65d7f1b38a4467f8",
+      "proof_101165b7d871d648",
+      "proof_c936ecf737bcc243"
+    ],
+    "cost_report": {
+      "latency_ms": 482,
+      "token_in": 0,
+      "token_out": 0,
+      "lane_path": [
+        0,
+        1
+      ]
+    }
+  },
+  "proof_records": [
+    {
+      "id": "proof_5518ec1a304612e1",
+      "proof": {
+        "chunk_id": "chk_b073c0a383830e0b",
+        "source_span": {
+          "selector": "/div[1]/div[2]/p[1] | /div[1]/div[2]/p[2]",
+          "char_start": 0,
+          "char_end": 350
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_reused",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_e3fd65991aa33aca",
+      "proof": {
+        "chunk_id": "chk_3f6988feec6dd99a",
+        "source_span": {
+          "selector": "/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[2]/p[1]",
+          "char_start": 0,
+          "char_end": 562
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_reused"
+        ]
+      }
+    },
+    {
+      "id": "proof_43e1af3138a70fc2",
+      "proof": {
+        "chunk_id": "chk_6358aff38518912e",
+        "source_span": {
+          "selector": "/div[1]/div[2]/table[1]/tbody[1]/tr[2]/td[2]/p[1]",
+          "char_start": 0,
+          "char_end": 98
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_reused"
+        ]
+      }
+    },
+    {
+      "id": "proof_65d7f1b38a4467f8",
+      "proof": {
+        "chunk_id": "chk_98bae60384d74795",
+        "source_span": {
+          "selector": "/div[1]/div[2]/table[1]/tbody[1]/tr[4]/td[2]/p[1] | /div[1]/div[2]/p[3]",
+          "char_start": 0,
+          "char_end": 159
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_recomputed"
+        ]
+      }
+    },
+    {
+      "id": "proof_101165b7d871d648",
+      "proof": {
+        "chunk_id": "chk_695591c68d0a1fa3",
+        "source_span": {
+          "selector": "/div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[1] | /div[1]/div[2]/table[1]/tbody[1]/tr[1]/td[2]",
+          "char_start": 0,
+          "char_end": 574
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_recomputed"
+        ]
+      }
+    },
+    {
+      "id": "proof_c936ecf737bcc243",
+      "proof": {
+        "chunk_id": "chk_0de4bf5a846f1271",
+        "source_span": {
+          "selector": "/div[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]/p[1]",
+          "char_start": 0,
+          "char_end": 155
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_recomputed"
+        ]
+      }
+    }
+  ],
+  "trace": {
+    "run_id": "run_d3ba6f21a49f5fb4",
+    "trace_id": "trace_e1f9f24e03ff74dc",
+    "started_at": "2026-03-30T14:25:08.851042595Z",
+    "finished_at": "2026-03-30T14:25:09.3336251Z",
+    "stages": [
+      {
+        "stage": "acquire",
+        "started_at": "2026-03-30T14:25:08.851042595Z",
+        "completed_at": "2026-03-30T14:25:09.328436664Z",
+        "input_hash": "74a17b4fb30108a44fe99a5df679580824937fcb8b92c6ea936e504d874ad0f6",
+        "output_hash": "6dfa17f88daf8d856341983f38541ad2ebe336f09a6d4f59dc55d893ed96edc9",
+        "item_count": 1,
+        "metadata": {
+          "fetch_mode": "http",
+          "final_url": "https://nginx.org/"
+        }
+      },
+      {
+        "stage": "reduce",
+        "started_at": "2026-03-30T14:25:09.330511133Z",
+        "completed_at": "2026-03-30T14:25:09.332209822Z",
+        "input_hash": "6dfa17f88daf8d856341983f38541ad2ebe336f09a6d4f59dc55d893ed96edc9",
+        "output_hash": "0458f5d0f392e2bdc345b3acee9502c9bd3c66934eac2b608b72e74a79c9d739",
+        "item_count": 24,
+        "metadata": {
+          "title": "nginx",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "stage": "segment",
+        "started_at": "2026-03-30T14:25:09.332416554Z",
+        "completed_at": "2026-03-30T14:25:09.332542027Z",
+        "input_hash": "0458f5d0f392e2bdc345b3acee9502c9bd3c66934eac2b608b72e74a79c9d739",
+        "output_hash": "61bc5d4078ef99ac15ea8042baac58251d2d8c2c5f74efbe40b0f77f10d82425",
+        "item_count": 11
+      },
+      {
+        "stage": "pack",
+        "started_at": "2026-03-30T14:25:09.33264724Z",
+        "completed_at": "2026-03-30T14:25:09.333450867Z",
+        "input_hash": "61bc5d4078ef99ac15ea8042baac58251d2d8c2c5f74efbe40b0f77f10d82425",
+        "output_hash": "ce9f065eecb0cc2042cf4b466796669ecac06df2da42143d4981b3c3bb658966",
+        "item_count": 6,
+        "metadata": {
+          "chunks": "6",
+          "delta_class": "mixed",
+          "difficulty": "low",
+          "escalation_count": "11",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "ambiguity_conflict",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "resolve_ambiguity",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "low",
+          "novel_fp_hits": "2",
+          "page_type": "docs",
+          "profile": "standard",
+          "reuse_applied": "3",
+          "reuse_eligible": "6",
+          "reuse_mode": "delta_aware",
+          "reuse_recomputed": "3",
+          "selected_ir_embedded_hits": "0",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "1",
+          "stable_fp_hits": "4",
+          "substrate_class": "generic_content",
+          "web_ir_nodes": "24",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "false",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "false",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "stage_started",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:25:08.851042595Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:25:09.328436664Z",
+        "data": {
+          "fetch_mode": "http",
+          "final_url": "https://nginx.org/"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:25:09.330511133Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:25:09.332209822Z",
+        "data": {
+          "title": "nginx",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:25:09.332416554Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:25:09.332542027Z"
+      },
+      {
+        "type": "stage_started",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.33264724Z"
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333041475Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_af177397bb1ff965",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333045053Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.40",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_a32ced4de14d1366",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_AMBIGUITY_TRIGGERED",
+          "risk_flag_count": "2",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333055431Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_3cf2a068a052cd58",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333058423Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_d32de4b0086a83a4",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333061581Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_ea0cae754560cf47",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333064196Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.00",
+          "coverage_loss": "0.50",
+          "fingerprint": "fp_af94e881f193b73f",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "0",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333066847Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_ac26b5d1e139750e",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333069476Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_9d893e97551dcd78",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333072095Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_388404a50f5e4e59",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333085802Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_79dda5175262d771",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333088468Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_3fd916aa4476b1f4",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "model_intervention",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333217131Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "model task skipped by runtime selection",
+        "lane": 1,
+        "data": {
+          "backend": "noop",
+          "failure_class": "ambiguity_conflict",
+          "latency_ms": "0",
+          "model": "gemma3:1b-it-q8_0",
+          "patch_effect": "backend_disabled",
+          "patch_outcome": "skipped",
+          "task": "resolve_ambiguity",
+          "tokens_in": "0",
+          "tokens_out": "0",
+          "validator_outcome": "skipped"
+        }
+      },
+      {
+        "type": "stage_completed",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.333450867Z",
+        "data": {
+          "chunks": "6",
+          "delta_class": "mixed",
+          "difficulty": "low",
+          "escalation_count": "11",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "ambiguity_conflict",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "resolve_ambiguity",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "low",
+          "novel_fp_hits": "2",
+          "page_type": "docs",
+          "profile": "standard",
+          "reuse_applied": "3",
+          "reuse_eligible": "6",
+          "reuse_mode": "delta_aware",
+          "reuse_recomputed": "3",
+          "selected_ir_embedded_hits": "0",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "1",
+          "stable_fp_hits": "4",
+          "substrate_class": "generic_content",
+          "web_ir_nodes": "24",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "false",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "false",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ]
+  },
+  "replay": {
+    "run_id": "run_d3ba6f21a49f5fb4",
+    "trace_id": "trace_e1f9f24e03ff74dc",
+    "stage_count": 4,
+    "event_count": 20,
+    "completed_stages": [
+      "acquire",
+      "reduce",
+      "segment",
+      "pack"
+    ],
+    "deterministic": true
+  }
+}

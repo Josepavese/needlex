@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -85,7 +86,7 @@ func TestObserveReadResponseWithLocalStatePersistsArtifacts(t *testing.T) {
 
 	ObserveReadResponseWithLocalState(root, req, resp)
 
-	matches, err := store.NewCandidateStore(root).Search("example docs", 1)
+	matches, err := store.NewCandidateStore(root).Search(context.Background(), "example docs", 1, fakeSemanticAligner{suppressed: true})
 	if err != nil {
 		t.Fatalf("search candidates: %v", err)
 	}

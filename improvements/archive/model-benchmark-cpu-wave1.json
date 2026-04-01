@@ -1,0 +1,107 @@
+{
+  "generated_at_utc": "2026-03-30T10:28:43Z",
+  "candidates_version": "model-candidates-cpu-v1",
+  "hard_case_corpus": "benchmarks/corpora/hard-case-corpus-benchmark-v1.json",
+  "live_cases_file": "benchmarks/corpora/live-sites-cpu-v1.json",
+  "runs": [
+    {
+      "id": "qwen35_0p8_all",
+      "label": "Qwen 3.5 0.8B all roles",
+      "router": "qwen3.5:0.8b",
+      "extractor": "qwen3.5:0.8b",
+      "formatter": "qwen3.5:0.8b",
+      "hard_case_status": 0,
+      "live_status": 0,
+      "hard_case_report": "improvements/model-benchmark-cpu/qwen35_0p8_all/hard-case.json",
+      "live_report": "improvements/model-benchmark-cpu/qwen35_0p8_all/live.json",
+      "hard_case_summary": {
+        "pass_rate": 0.9166666666666666,
+        "lane_lift_rate": 0.5,
+        "objective_lift_avg": 0.0762303765558346,
+        "backend_acceptance_rate": 0,
+        "case_count": 12,
+        "avg_compare_latency_ms": 6413.75
+      },
+      "live_summary": {
+        "case_count": 6,
+        "avg_compare_latency_ms": 12938.0,
+        "avg_compare_keyword_coverage": 0.611111111111111,
+        "runtime_error_sites": [
+          "carratellire",
+          "halfpocket",
+          "sqlite"
+        ]
+      }
+    },
+    {
+      "id": "gemma3_1b_all",
+      "label": "Gemma 3 1B all roles",
+      "router": "gemma3:1b-it-q8_0",
+      "extractor": "gemma3:1b-it-q8_0",
+      "formatter": "gemma3:1b-it-q8_0",
+      "hard_case_status": 0,
+      "live_status": 0,
+      "hard_case_report": "improvements/model-benchmark-cpu/gemma3_1b_all/hard-case.json",
+      "live_report": "improvements/model-benchmark-cpu/gemma3_1b_all/live.json",
+      "hard_case_summary": {
+        "pass_rate": 0.9166666666666666,
+        "lane_lift_rate": 0.5,
+        "objective_lift_avg": 0.0762303765558346,
+        "backend_acceptance_rate": 0,
+        "case_count": 12,
+        "avg_compare_latency_ms": 1103.25
+      },
+      "live_summary": {
+        "case_count": 6,
+        "avg_compare_latency_ms": 9920.5,
+        "avg_compare_keyword_coverage": 0.611111111111111,
+        "runtime_error_sites": [
+          "carratellire",
+          "sqlite"
+        ]
+      }
+    },
+    {
+      "id": "hybrid_qwen_router_gemma_extract",
+      "label": "Qwen 0.8B router + Gemma 1B extractor",
+      "router": "qwen3.5:0.8b",
+      "extractor": "gemma3:1b-it-q8_0",
+      "formatter": "gemma3:1b-it-q8_0",
+      "hard_case_status": 0,
+      "live_status": 0,
+      "hard_case_report": "improvements/model-benchmark-cpu/hybrid_qwen_router_gemma_extract/hard-case.json",
+      "live_report": "improvements/model-benchmark-cpu/hybrid_qwen_router_gemma_extract/live.json",
+      "hard_case_summary": {
+        "pass_rate": 0.9166666666666666,
+        "lane_lift_rate": 0.5,
+        "objective_lift_avg": 0.0762303765558346,
+        "backend_acceptance_rate": 0,
+        "case_count": 12,
+        "avg_compare_latency_ms": 2477.9166666666665
+      },
+      "live_summary": {
+        "case_count": 6,
+        "avg_compare_latency_ms": 12427.666666666666,
+        "avg_compare_keyword_coverage": 0.611111111111111,
+        "runtime_error_sites": [
+          "carratellire",
+          "halfpocket",
+          "sqlite"
+        ]
+      }
+    },
+    {
+      "id": "qwen35_2b_all",
+      "label": "Qwen 3.5 2B all roles",
+      "router": "qwen3.5:2b",
+      "extractor": "qwen3.5:2b",
+      "formatter": "qwen3.5:2b",
+      "hard_case_status": 1,
+      "live_status": 1,
+      "hard_case_report": "improvements/model-benchmark-cpu/qwen35_2b_all/hard-case.json",
+      "live_report": "improvements/model-benchmark-cpu/qwen35_2b_all/live.json",
+      "hard_case_summary": null,
+      "live_summary": null
+    }
+  ]
+}

@@ -11,6 +11,8 @@ func TestSchemaFilesContainValidJSON(t *testing.T) {
 	files := []string{
 		"proof.schema.json",
 		"resultpack.schema.json",
+		"slm-task.schema.json",
+		"slm-patch.schema.json",
 	}
 
 	for _, name := range files {

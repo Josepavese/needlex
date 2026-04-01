@@ -320,6 +320,7 @@ func TestReadTraceSkipsModelInterventionWhenCoverageGateSuppressesRoute(t *testi
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	svc.semantic = fakeSemanticAligner{suppressed: true, reason: "semantic_dominance"}
 	svc.now = func() time.Time {
 		return time.Unix(1700000000, 0).UTC()
 	}
@@ -360,7 +361,7 @@ func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 	}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
 
-	seed := rankSegments("doc_seed", "", core.WebIR{}, []pipeline.Segment{{Text: "Needle-X compiles noisy pages into compact context.", HeadingPath: []string{"Needle Runtime"}}})
+	seed := svc.rankSegments("doc_seed", "", core.WebIR{}, []pipeline.Segment{{Text: "Needle-X compiles noisy pages into compact context.", HeadingPath: []string{"Needle Runtime"}}})
 	resp, err := svc.Read(context.Background(), ReadRequest{
 		URL:                server.URL,
 		Profile:            core.ProfileTiny,
@@ -391,60 +392,6 @@ func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected fingerprint stability metadata in pack trace, got %#v", resp.Trace.Stages)
-	}
-}
-
-func TestReadPlansIntelTasksForEmbeddedAndAmbiguityCases(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`)
-	}))
-	defer server.Close()
-
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-
-	resp, err := svc.Read(context.Background(), ReadRequest{
-		URL:       server.URL,
-		Profile:   core.ProfileStandard,
-		Objective: "company profile proof context",
-		ForceLane: 2,
-	})
-	if err != nil {
-		t.Fatalf("read failed: %v", err)
-	}
-
-	foundPackMetadata := false
-	for _, stage := range resp.Trace.Stages {
-		if stage.Stage != "pack" {
-			continue
-		}
-		if stage.Metadata["intel_task_route_count"] == "0" {
-			t.Fatalf("expected planned intel tasks in pack metadata, got %#v", stage.Metadata)
-		}
-		if !strings.Contains(stage.Metadata["intel_task_names"], intel.TaskInterpretEmbedded) {
-			t.Fatalf("expected embedded task in metadata, got %#v", stage.Metadata)
-		}
-		foundPackMetadata = true
-	}
-	if !foundPackMetadata {
-		t.Fatal("expected pack stage metadata")
-	}
-
-	foundTaskMarker := false
-	for _, record := range resp.ProofRecords {
-		for _, step := range record.Proof.TransformChain {
-			if step == "intel:task:"+intel.TaskInterpretEmbedded+":v1" {
-				foundTaskMarker = true
-				break
-			}
-		}
-	}
-	if !foundTaskMarker {
-		t.Fatal("expected planned task transform markers in proof chain")
 	}
 }
 

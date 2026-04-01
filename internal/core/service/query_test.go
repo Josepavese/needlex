@@ -2,14 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/core/queryflow"
+	"github.com/josepavese/needlex/internal/core/queryplan"
 )
 
 func TestQueryBuildsPlanAndResultPack(t *testing.T) {
@@ -19,13 +23,7 @@ func TestQueryBuildsPlanAndResultPack(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newSemanticService(t, server.Client())
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:        "proof replay deterministic",
@@ -54,72 +52,23 @@ func TestQueryBuildsPlanAndResultPack(t *testing.T) {
 	if len(resp.Plan.Compiler.Decisions) < 3 {
 		t.Fatalf("expected compiler decisions, got %d", len(resp.Plan.Compiler.Decisions))
 	}
-	foundWebIRDecision := false
-	foundQualityMode := false
-	foundLanePolicy := false
-	foundExecutionAlignment := false
-	foundPlanDiff := false
-	foundRuntimeEffects := false
-	foundIntentBoundary := false
-	foundExecutionBoundary := false
-	foundBudgetOutcome := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonWebIR {
-			foundWebIRDecision = true
-			if decision.Metadata["node_count"] == "" || decision.Metadata["embedded_node_count"] == "" || decision.Metadata["heading_ratio"] == "" || decision.Metadata["short_text_ratio"] == "" || decision.Metadata["dominant_signal"] == "" {
-				t.Fatalf("expected rich web ir metadata, got %#v", decision.Metadata)
-			}
-		}
-		if decision.ReasonCode == QueryPlanReasonQualityLatencyMode {
-			foundQualityMode = true
-		}
-		if decision.ReasonCode == QueryPlanReasonLanePolicy {
-			foundLanePolicy = true
-		}
-		if decision.ReasonCode == QueryPlanReasonExecutionAligned {
-			foundExecutionAlignment = true
-		}
-		if decision.ReasonCode == QueryPlanReasonPlanDiffObserved {
-			foundPlanDiff = true
-			if decision.Metadata["added_stage_count"] == "" {
-				t.Fatalf("expected plan diff metadata in %#v", decision)
-			}
-		}
-		if decision.ReasonCode == QueryPlanReasonRuntimeEffectsClean || decision.ReasonCode == QueryPlanReasonRuntimeEffectsDetected {
-			foundRuntimeEffects = true
-		}
-		if decision.ReasonCode == QueryPlanReasonIntentBoundary {
-			foundIntentBoundary = true
-		}
-		if decision.ReasonCode == QueryPlanReasonExecutionBoundary {
-			foundExecutionBoundary = true
-		}
-		if decision.ReasonCode == QueryPlanReasonBudgetOutcomeOK || decision.ReasonCode == QueryPlanReasonBudgetOutcomeExceeded {
-			foundBudgetOutcome = true
-		}
+	webIRDecision := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonWebIR, nil)
+	if webIRDecision.Metadata["node_count"] == "" || webIRDecision.Metadata["embedded_node_count"] == "" || webIRDecision.Metadata["heading_ratio"] == "" || webIRDecision.Metadata["short_text_ratio"] == "" || webIRDecision.Metadata["dominant_signal"] == "" {
+		t.Fatalf("expected rich web ir metadata, got %#v", webIRDecision.Metadata)
 	}
-	if !foundWebIRDecision {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonWebIR, resp.Plan.Compiler.Decisions)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonQualityLatencyMode, nil)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonLanePolicy, nil)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonExecutionAligned, nil)
+	planDiff := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonPlanDiffObserved, nil)
+	if planDiff.Metadata["added_stage_count"] == "" {
+		t.Fatalf("expected plan diff metadata in %#v", planDiff)
 	}
-	if !foundQualityMode {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonQualityLatencyMode, resp.Plan.Compiler.Decisions)
-	}
-	if !foundLanePolicy {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonLanePolicy, resp.Plan.Compiler.Decisions)
-	}
-	if !foundExecutionAlignment {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonExecutionAligned, resp.Plan.Compiler.Decisions)
-	}
-	if !foundPlanDiff {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonPlanDiffObserved, resp.Plan.Compiler.Decisions)
-	}
-	if !foundRuntimeEffects {
+	if !hasCompilerDecision(resp.Plan.Compiler.Decisions, QueryPlanReasonRuntimeEffectsClean) && !hasCompilerDecision(resp.Plan.Compiler.Decisions, QueryPlanReasonRuntimeEffectsDetected) {
 		t.Fatalf("expected runtime effects decision in %#v", resp.Plan.Compiler.Decisions)
 	}
-	if !foundIntentBoundary || !foundExecutionBoundary {
-		t.Fatalf("expected intent/execution boundaries in %#v", resp.Plan.Compiler.Decisions)
-	}
-	if !foundBudgetOutcome {
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonIntentBoundary, nil)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonExecutionBoundary, nil)
+	if !hasCompilerDecision(resp.Plan.Compiler.Decisions, QueryPlanReasonBudgetOutcomeOK) && !hasCompilerDecision(resp.Plan.Compiler.Decisions, QueryPlanReasonBudgetOutcomeExceeded) {
 		t.Fatalf("expected budget outcome decision in %#v", resp.Plan.Compiler.Decisions)
 	}
 	if resp.WebIR.Version != core.WebIRVersion {
@@ -127,6 +76,15 @@ func TestQueryBuildsPlanAndResultPack(t *testing.T) {
 	}
 	if resp.TraceID == "" {
 		t.Fatal("expected trace id")
+	}
+	if len(resp.AgentContext.Chunks) == 0 {
+		t.Fatal("expected agent context chunks")
+	}
+	if resp.AgentContext.URL != server.URL {
+		t.Fatalf("expected agent context url %q, got %q", server.URL, resp.AgentContext.URL)
+	}
+	if resp.AgentContext.Chunks[0].SourceURL == "" || resp.AgentContext.Chunks[0].SourceSelector == "" || resp.AgentContext.Chunks[0].ProofRef == "" {
+		t.Fatalf("expected inline provenance in agent context, got %#v", resp.AgentContext.Chunks[0])
 	}
 }
 
@@ -137,10 +95,7 @@ func TestQueryCompilerRecordsForcedLanePolicy(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
+	svc := newSemanticService(t, server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:      "proof replay deterministic",
 		SeedURL:   server.URL,
@@ -150,16 +105,9 @@ func TestQueryCompilerRecordsForcedLanePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
-	found := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonLanePolicy && decision.Choice == "forced_lane" && decision.Metadata["force_lane"] == "2" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected forced lane policy decision in %#v", resp.Plan.Compiler.Decisions)
-	}
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonLanePolicy, func(decision QueryPlanDecision) bool {
+		return decision.Choice == "forced_lane" && decision.Metadata["force_lane"] == "2"
+	})
 }
 
 func TestQueryCompilerRecordsExecutionDriftOnRedirect(t *testing.T) {
@@ -178,10 +126,7 @@ func TestQueryCompilerRecordsExecutionDriftOnRedirect(t *testing.T) {
 	defer server.Close()
 	redirectedURL = server.URL + "/final"
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
+	svc := newSemanticService(t, server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
 		SeedURL:       server.URL,
@@ -191,18 +136,11 @@ func TestQueryCompilerRecordsExecutionDriftOnRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
-	found := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonExecutionDrift && decision.Choice == "drift" {
-			found = true
-			if decision.Metadata["planned_url"] != server.URL || decision.Metadata["final_url"] != redirectedURL {
-				t.Fatalf("unexpected drift metadata %#v", decision.Metadata)
-			}
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected execution drift decision in %#v", resp.Plan.Compiler.Decisions)
+	drift := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonExecutionDrift, func(decision QueryPlanDecision) bool {
+		return decision.Choice == "drift"
+	})
+	if drift.Metadata["planned_url"] != server.URL || drift.Metadata["final_url"] != redirectedURL {
+		t.Fatalf("unexpected drift metadata %#v", drift.Metadata)
 	}
 }
 
@@ -213,10 +151,7 @@ func TestQueryCompilerRecordsRuntimeEffectsDetected(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
+	svc := newTestService(t, config.Defaults(), server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:      "proof replay deterministic",
 		SeedURL:   server.URL,
@@ -226,18 +161,11 @@ func TestQueryCompilerRecordsRuntimeEffectsDetected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
-	found := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonRuntimeEffectsDetected && decision.Stage == "verify.runtime_effects" {
-			found = true
-			if decision.Metadata["escalation_count"] == "" {
-				t.Fatalf("expected escalation_count metadata, got %#v", decision.Metadata)
-			}
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected runtime effects detected decision in %#v", resp.Plan.Compiler.Decisions)
+	runtimeEffects := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonRuntimeEffectsDetected, func(decision QueryPlanDecision) bool {
+		return decision.Stage == "verify.runtime_effects"
+	})
+	if runtimeEffects.Metadata["escalation_count"] == "" {
+		t.Fatalf("expected escalation_count metadata, got %#v", runtimeEffects.Metadata)
 	}
 }
 
@@ -271,13 +199,7 @@ func TestQueryDiscoversHigherSignalCandidate(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newSemanticService(t, server.Client())
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:    "proof replay deterministic",
@@ -314,13 +236,7 @@ func TestQueryDiscoveryOffKeepsSeedURL(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
+	svc := newTestService(t, config.Defaults(), server.Client())
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -337,16 +253,7 @@ func TestQueryDiscoveryOffKeepsSeedURL(t *testing.T) {
 	if len(resp.Plan.CandidateURLs) != 1 || resp.Plan.CandidateURLs[0] != server.URL {
 		t.Fatalf("expected only seed candidate, got %#v", resp.Plan.CandidateURLs)
 	}
-	foundRisk := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonLowCandidateSetRisk {
-			foundRisk = true
-			break
-		}
-	}
-	if !foundRisk {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonLowCandidateSetRisk, resp.Plan.Compiler.Decisions)
-	}
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonLowCandidateSetRisk, nil)
 }
 
 func TestQueryWebSearchUsesCrossSiteDiscovery(t *testing.T) {
@@ -368,14 +275,8 @@ func TestQueryWebSearchUsesCrossSiteDiscovery(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc := newSemanticService(t, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -392,26 +293,8 @@ func TestQueryWebSearchUsesCrossSiteDiscovery(t *testing.T) {
 	if resp.Plan.DiscoveryProvider == "" {
 		t.Fatal("expected discovery provider to be recorded")
 	}
-	foundPlanningWebIR := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonWebIRSelection {
-			foundPlanningWebIR = true
-			break
-		}
-	}
-	if !foundPlanningWebIR {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonWebIRSelection, resp.Plan.Compiler.Decisions)
-	}
-	foundFallback := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonWebBootstrapFallback {
-			foundFallback = true
-			break
-		}
-	}
-	if !foundFallback {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonWebBootstrapFallback, resp.Plan.Compiler.Decisions)
-	}
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonWebIRSelection, nil)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonWebBootstrapFallback, nil)
 }
 
 func TestQueryCompilerAddsStableFingerprintEvidence(t *testing.T) {
@@ -421,10 +304,7 @@ func TestQueryCompilerAddsStableFingerprintEvidence(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
+	svc := newTestService(t, config.Defaults(), server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:        "proof replay deterministic",
 		SeedURL:     server.URL,
@@ -435,18 +315,9 @@ func TestQueryCompilerAddsStableFingerprintEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
-	found := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonStableRegionBias {
-			found = true
-			if decision.Metadata["latest_trace_id"] != "trace_prev" {
-				t.Fatalf("expected latest_trace_id metadata, got %#v", decision.Metadata)
-			}
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonStableRegionBias, resp.Plan.Compiler.Decisions)
+	stable := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonStableRegionBias, nil)
+	if stable.Metadata["latest_trace_id"] != "trace_prev" {
+		t.Fatalf("expected latest_trace_id metadata, got %#v", stable.Metadata)
 	}
 }
 
@@ -457,10 +328,7 @@ func TestQueryCompilerAddsNoveltyAndDeltaRiskEvidence(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
+	svc := newTestService(t, config.Defaults(), server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:        "proof replay deterministic",
 		SeedURL:     server.URL,
@@ -473,68 +341,86 @@ func TestQueryCompilerAddsNoveltyAndDeltaRiskEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
-	foundNovelty := false
-	foundDeltaRisk := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonNoveltyBias {
-			foundNovelty = true
-		}
-		if decision.ReasonCode == QueryPlanReasonDeltaRisk {
-			foundDeltaRisk = true
-		}
-	}
-	if !foundNovelty {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonNoveltyBias, resp.Plan.Compiler.Decisions)
-	}
-	if !foundDeltaRisk {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonDeltaRisk, resp.Plan.Compiler.Decisions)
-	}
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonNoveltyBias, nil)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonDeltaRisk, nil)
 }
 
-func TestRerankQueryCandidatesWithFingerprintEvidencePenalizesStableSeed(t *testing.T) {
-	candidates := rerankQueryCandidatesWithFingerprintEvidence([]DiscoverCandidate{
-		{URL: "https://seed.example", Score: 1.00, Reason: []string{"seed_fallback"}},
-		{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"path_hint"}},
-	}, "https://seed.example", QueryFingerprintEvidence{TraceID: "trace_seed", Stable: 1.0}, nil)
-	if candidates[0].URL != "https://seed.example/docs" {
-		t.Fatalf("expected stable seed penalty to demote seed, got %#v", candidates)
+func TestRerankQueryCandidatesWithFingerprintEvidence(t *testing.T) {
+	tests := []struct {
+		name       string
+		candidates []discoverycore.Candidate
+		seedURL    string
+		evidence   QueryFingerprintEvidence
+		loader     func(string) (QueryFingerprintEvidence, bool)
+		topURL     string
+		reasonURL  string
+		reason     string
+		traceID    string
+	}{
+		{
+			name: "penalizes stable seed",
+			candidates: []discoverycore.Candidate{
+				{URL: "https://seed.example", Score: 1.00, Reason: []string{"seed_fallback"}},
+				{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"path_hint"}},
+			},
+			seedURL:   "https://seed.example",
+			evidence:  QueryFingerprintEvidence{TraceID: "trace_seed", Stable: 1.0},
+			topURL:    "https://seed.example/docs",
+			reasonURL: "https://seed.example",
+			reason:    "stable_seed_penalty",
+		},
+		{
+			name: "boosts novel seed",
+			candidates: []discoverycore.Candidate{
+				{URL: "https://seed.example", Score: 0.95, Reason: []string{"seed_fallback"}},
+				{URL: "https://seed.example/docs", Score: 1.00, Reason: []string{"path_hint"}},
+			},
+			seedURL:   "https://seed.example",
+			evidence:  QueryFingerprintEvidence{TraceID: "trace_seed", Stable: 0.25, Novelty: 0.75, Changed: true},
+			topURL:    "https://seed.example",
+			reasonURL: "https://seed.example",
+			reason:    "novel_seed_bias",
+		},
+		{
+			name: "boosts known novel candidate",
+			candidates: []discoverycore.Candidate{
+				{URL: "https://seed.example", Score: 1.00, Reason: []string{"seed_fallback"}},
+				{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"path_hint"}},
+			},
+			seedURL: "https://seed.example",
+			loader: func(url string) (QueryFingerprintEvidence, bool) {
+				if url != "https://seed.example/docs" {
+					return QueryFingerprintEvidence{}, false
+				}
+				return QueryFingerprintEvidence{TraceID: "trace_docs", Stable: 0.10, Novelty: 0.90, Changed: true}, true
+			},
+			topURL:    "https://seed.example/docs",
+			reasonURL: "https://seed.example/docs",
+			reason:    "novel_candidate_bias",
+			traceID:   "trace_docs",
+		},
 	}
-	if !containsReason(candidates[1].Reason, "stable_seed_penalty") {
-		t.Fatalf("expected stable_seed_penalty reason, got %#v", candidates[1].Reason)
-	}
-}
 
-func TestRerankQueryCandidatesWithFingerprintEvidenceBoostsNovelSeed(t *testing.T) {
-	candidates := rerankQueryCandidatesWithFingerprintEvidence([]DiscoverCandidate{
-		{URL: "https://seed.example", Score: 0.95, Reason: []string{"seed_fallback"}},
-		{URL: "https://seed.example/docs", Score: 1.00, Reason: []string{"path_hint"}},
-	}, "https://seed.example", QueryFingerprintEvidence{TraceID: "trace_seed", Stable: 0.25, Novelty: 0.75, Changed: true}, nil)
-	if candidates[0].URL != "https://seed.example" {
-		t.Fatalf("expected novel seed bias to keep seed on top, got %#v", candidates)
-	}
-	if !containsReason(candidates[0].Reason, "novel_seed_bias") {
-		t.Fatalf("expected novel_seed_bias reason, got %#v", candidates[0].Reason)
-	}
-}
-
-func TestRerankQueryCandidatesWithFingerprintEvidenceBoostsKnownNovelCandidate(t *testing.T) {
-	candidates := rerankQueryCandidatesWithFingerprintEvidence([]DiscoverCandidate{
-		{URL: "https://seed.example", Score: 1.00, Reason: []string{"seed_fallback"}},
-		{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"path_hint"}},
-	}, "https://seed.example", QueryFingerprintEvidence{}, func(url string) (QueryFingerprintEvidence, bool) {
-		if url != "https://seed.example/docs" {
-			return QueryFingerprintEvidence{}, false
-		}
-		return QueryFingerprintEvidence{TraceID: "trace_docs", Stable: 0.10, Novelty: 0.90, Changed: true}, true
-	})
-	if candidates[0].URL != "https://seed.example/docs" {
-		t.Fatalf("expected novel candidate bias to promote docs candidate, got %#v", candidates)
-	}
-	if !containsReason(candidates[0].Reason, "novel_candidate_bias") {
-		t.Fatalf("expected novel_candidate_bias reason, got %#v", candidates[0].Reason)
-	}
-	if candidates[0].Metadata["candidate_latest_trace_id"] != "trace_docs" {
-		t.Fatalf("expected candidate trace metadata, got %#v", candidates[0].Metadata)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			candidates := queryflow.RerankCandidatesWithFingerprintEvidence(tt.candidates, tt.seedURL, tt.evidence, tt.loader)
+			if candidates[0].URL != tt.topURL {
+				t.Fatalf("unexpected top candidate %#v", candidates)
+			}
+			for _, candidate := range candidates {
+				if candidate.URL != tt.reasonURL {
+					continue
+				}
+				if !containsReason(candidate.Reason, tt.reason) {
+					t.Fatalf("expected %s reason, got %#v", tt.reason, candidate.Reason)
+				}
+				if tt.traceID != "" && candidate.Metadata["candidate_latest_trace_id"] != tt.traceID {
+					t.Fatalf("expected candidate trace metadata, got %#v", candidate.Metadata)
+				}
+				return
+			}
+			t.Fatalf("expected reason url %q in %#v", tt.reasonURL, candidates)
+		})
 	}
 }
 
@@ -560,14 +446,8 @@ func TestQueryWebSearchExpandsLandingPageToSelectedChild(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -587,22 +467,16 @@ func TestQueryWebSearchExpandsLandingPageToSelectedChild(t *testing.T) {
 }
 
 func TestQueryRejectsMissingGoal(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	_, err = svc.Query(context.Background(), QueryRequest{SeedURL: "https://example.com"})
+	svc := newTestService(t, config.Defaults(), nil)
+	_, err := svc.Query(context.Background(), QueryRequest{SeedURL: "https://example.com"})
 	if err == nil {
 		t.Fatal("expected missing goal to fail")
 	}
 }
 
 func TestQueryRequiresSeedWhenDiscoveryOff(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	_, err = svc.Query(context.Background(), QueryRequest{
+	svc := newTestService(t, config.Defaults(), nil)
+	_, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
 		DiscoveryMode: QueryDiscoveryOff,
 	})
@@ -624,14 +498,8 @@ func TestQueryWithoutSeedUsesWebDiscovery(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:    "proof replay deterministic",
@@ -643,16 +511,7 @@ func TestQueryWithoutSeedUsesWebDiscovery(t *testing.T) {
 	if resp.Plan.DiscoveryMode != QueryDiscoveryWeb {
 		t.Fatalf("expected default no-seed discovery mode to switch to web, got %q", resp.Plan.DiscoveryMode)
 	}
-	foundSeedlessReason := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonSeedlessDefaultWeb {
-			foundSeedlessReason = true
-			break
-		}
-	}
-	if !foundSeedlessReason {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonSeedlessDefaultWeb, resp.Plan.Compiler.Decisions)
-	}
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonSeedlessDefaultWeb, nil)
 	if resp.Plan.SeedURL != "" {
 		t.Fatalf("expected empty seed in plan, got %q", resp.Plan.SeedURL)
 	}
@@ -677,14 +536,8 @@ func TestQueryRecordsGraphEvidenceForCrossDomainHintSelection(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.now = func() time.Time {
-		return time.Unix(1700000000, 0).UTC()
-	}
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -696,16 +549,7 @@ func TestQueryRecordsGraphEvidenceForCrossDomainHintSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
-	foundGraphEvidence := false
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonGraphEvidence {
-			foundGraphEvidence = true
-			break
-		}
-	}
-	if !foundGraphEvidence {
-		t.Fatalf("expected compiler reason %q in %#v", QueryPlanReasonGraphEvidence, resp.Plan.Compiler.Decisions)
-	}
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonGraphEvidence, nil)
 }
 
 func TestQueryWebSearchLocalSubstrateDoesNotEmitBootstrapFallback(t *testing.T) {
@@ -730,11 +574,8 @@ func TestQueryWebSearchLocalSubstrateDoesNotEmitBootstrapFallback(t *testing.T) 
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), seedServer.Client())
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc := newSemanticService(t, seedServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -748,9 +589,70 @@ func TestQueryWebSearchLocalSubstrateDoesNotEmitBootstrapFallback(t *testing.T) 
 	if resp.Plan.DiscoveryProvider != "local_same_site" {
 		t.Fatalf("expected local_same_site provider, got %q", resp.Plan.DiscoveryProvider)
 	}
-	for _, decision := range resp.Plan.Compiler.Decisions {
-		if decision.ReasonCode == QueryPlanReasonWebBootstrapFallback {
-			t.Fatalf("did not expect bootstrap fallback reason when local substrate resolves, got %#v", resp.Plan.Compiler.Decisions)
+	forbidCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonWebBootstrapFallback)
+}
+
+func TestQuerySeedlessWebSearchUsesRewriteQueries(t *testing.T) {
+	pageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>ASD Charly Brown</title></head><body><article><h1>ASD Charly Brown</h1><p>Scuola di danza a Cassine.</p></article></body></html>`)
+	}))
+	defer pageServer.Close()
+
+	searchHits := []string{}
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits = append(searchHits, r.URL.Query().Get("q"))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if strings.Contains(r.URL.Query().Get("q"), `"ASD Charly Brown"`) {
+			_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/asd-charly-brown">ASD Charly Brown</a></body></html>`, pageServer.URL)
+			return
+		}
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/other-a">Other Dance School</a><a class="result__a" href="%s/other-b">Cassine Events</a></body></html>`, pageServer.URL, pageServer.URL)
+	}))
+	defer searchServer.Close()
+
+	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Messages []struct {
+				Content string `json:"content"`
+			} `json:"messages"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		content := `{"search_queries":["\"ASD Charly Brown\" Alessandria","\"ASD Charly Brown\" scuola di danza"],"canonical_entity":"ASD Charly Brown","locality_hints":["alessandria"],"category_hints":["scuola di danza"],"confidence":0.92}`
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []map[string]any{{"finish_reason": "stop", "message": map[string]any{"content": content}}}, "usage": map[string]any{"prompt_tokens": 32, "completion_tokens": 24}})
+	}))
+	defer modelServer.Close()
+
+	cfg := config.Defaults()
+	cfg.Models.Backend = "openai-compatible"
+	cfg.Models.BaseURL = modelServer.URL
+	cfg.Models.Router = "gemma3:1b-it-q8_0"
+	cfg.Models.MicroTimeoutMS = 1500
+	cfg.Semantic.Enabled = false
+	svc := newTestService(t, cfg, pageServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	resp, err := svc.Query(context.Background(), QueryRequest{Goal: "ASD Charly Brown dance school Alessandria"})
+	if err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if resp.Plan.SelectedURL != pageServer.URL+"/asd-charly-brown" {
+		t.Fatalf("unexpected selected url %q", resp.Plan.SelectedURL)
+	}
+	if len(searchHits) < 2 {
+		t.Fatalf("expected multiple rewritten search hits, got %#v", searchHits)
+	}
+	rewrite := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, queryplan.QueryPlanReasonRewrite, nil)
+	if rewrite.Metadata["query_count"] == "" {
+		t.Fatalf("missing rewrite metadata %#v", rewrite.Metadata)
+	}
+}
+
+func hasCompilerDecision(decisions []QueryPlanDecision, reason string) bool {
+	for _, decision := range decisions {
+		if decision.ReasonCode == reason {
+			return true
 		}
 	}
+	return false
 }

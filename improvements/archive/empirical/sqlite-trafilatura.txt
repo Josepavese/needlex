@@ -1,0 +1,4 @@
+SQLite is a C-language library that implements a small, fast, self-contained, high-reliability, full-featured, SQL database engine. SQLite is the most used database engine in the world. SQLite is built into all mobile phones and most computers and comes bundled inside countless other applications that people use every day. More Information...
+SQLite source code is in the public-domain and is free to everyone to use for any purpose.
+SQLite is made possible in part by sponsors and SQLite Consortium members, including:
+This page was last updated on 2026-03-16 20:07:10Z

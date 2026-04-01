@@ -1,0 +1,489 @@
+{
+  "version": "seeded-corpus-v1",
+  "cases": [
+    {
+      "id": "zai-coding-plan",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.z.ai/guides/overview/quick-start",
+      "task_type": "same_site_query_routing",
+      "goal": "coding plan",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "expected_domain": "docs.z.ai",
+      "must_contain_facts": [
+        "supports coding tools",
+        "lists supported models or plans"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from quick-start to the coding plan page."
+    },
+    {
+      "id": "sqlite-release-history",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "same_site_query_routing",
+      "goal": "release history",
+      "expected_url": "https://sqlite.org/chronology.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "lists historical releases",
+        "shows version chronology"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from the SQLite homepage to release history."
+    },
+    {
+      "id": "sqlite-download-page",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "same_site_query_routing",
+      "goal": "download",
+      "expected_url": "https://sqlite.org/download.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "download artifacts",
+        "release package references"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from SQLite homepage to download page."
+    },
+    {
+      "id": "python-virtual-environments",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/tutorial/index.html",
+      "task_type": "same_site_query_routing",
+      "goal": "virtual environments",
+      "expected_url": "https://docs.python.org/3/tutorial/venv.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "explains virtual environments",
+        "contains venv setup guidance"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from Python tutorial index to the virtual environments chapter."
+    },
+    {
+      "id": "python-installing-packages",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/index.html",
+      "task_type": "same_site_query_routing",
+      "goal": "installing packages",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "explains package installation",
+        "references pip or packaging workflow"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from Python docs home to the installing modules guide."
+    },
+    {
+      "id": "mdn-js-guide-en",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "task_type": "same_site_query_routing",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript guide page",
+        "guide-oriented content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from MDN JavaScript landing page to the guide."
+    },
+    {
+      "id": "mdn-js-guide-fr",
+      "family": "same_site_query",
+      "language": "fr",
+      "seed_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript",
+      "task_type": "same_site_query_routing",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript guide page",
+        "guide-oriented content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from localized MDN JavaScript landing page to the guide."
+    },
+    {
+      "id": "playwright-installation-from-home",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://playwright.dev",
+      "task_type": "same_site_query_routing",
+      "goal": "installation",
+      "expected_url": "https://playwright.dev/docs/intro",
+      "expected_domain": "playwright.dev",
+      "must_contain_facts": [
+        "installation guidance",
+        "getting started with Playwright"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from Playwright home to installation docs."
+    },
+
+    {
+      "id": "playwright-home-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://playwright.dev",
+      "task_type": "read_page_understanding",
+      "goal": "understand what Playwright offers",
+      "expected_url": "https://playwright.dev",
+      "expected_domain": "playwright.dev",
+      "must_contain_facts": [
+        "cross-browser testing",
+        "tooling or reliability claims"
+      ],
+      "must_expose_proof": true,
+      "notes": "Homepage understanding for a modern docs/product site."
+    },
+    {
+      "id": "sqlite-home-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "read_page_understanding",
+      "goal": "understand what SQLite is",
+      "expected_url": "https://sqlite.org",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "SQL database engine",
+        "small or self-contained"
+      ],
+      "must_expose_proof": true,
+      "notes": "Homepage understanding for a legacy technical site."
+    },
+    {
+      "id": "sqlite-chronology-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/chronology.html",
+      "task_type": "read_page_understanding",
+      "goal": "understand what this page contains",
+      "expected_url": "https://www.sqlite.org/chronology.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "release history",
+        "version chronology"
+      ],
+      "must_expose_proof": true,
+      "notes": "List-heavy technical page."
+    },
+    {
+      "id": "zai-devpack-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.z.ai/devpack/overview",
+      "task_type": "read_then_answer",
+      "goal": "understand the coding plan page",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "expected_domain": "docs.z.ai",
+      "must_contain_facts": [
+        "coding tools support",
+        "plans or supported models"
+      ],
+      "must_expose_proof": true,
+      "notes": "Docs page with marketing plus plan details."
+    },
+    {
+      "id": "python-tutorial-index-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/tutorial/index.html",
+      "task_type": "read_page_understanding",
+      "goal": "understand the Python tutorial entry page",
+      "expected_url": "https://docs.python.org/3/tutorial/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "python tutorial",
+        "chapter or learning structure"
+      ],
+      "must_expose_proof": true,
+      "notes": "Docs index page understanding."
+    },
+    {
+      "id": "python-installing-index-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/installing/index.html",
+      "task_type": "read_then_answer",
+      "goal": "understand how Python package installation is documented",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "package installation",
+        "pip or installing modules"
+      ],
+      "must_expose_proof": true,
+      "notes": "Package installation docs overview."
+    },
+    {
+      "id": "mdn-en-javascript-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language",
+        "references guides or references"
+      ],
+      "must_expose_proof": true,
+      "notes": "Dense docs landing page."
+    },
+    {
+      "id": "go-doc-home-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://go.dev/doc/",
+      "task_type": "read_page_understanding",
+      "goal": "understand the Go documentation home",
+      "expected_url": "https://go.dev/doc/",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "go documentation",
+        "references guides or manuals"
+      ],
+      "must_expose_proof": true,
+      "notes": "Technical documentation hub."
+    },
+
+    {
+      "id": "halfpocket-home",
+      "family": "corporate",
+      "language": "it",
+      "seed_url": "https://halfpocket.net",
+      "task_type": "read_then_answer",
+      "goal": "understand what Half Pocket does",
+      "expected_url": "https://halfpocket.net",
+      "expected_domain": "halfpocket.net",
+      "must_contain_facts": [
+        "digital services for businesses",
+        "web or software development"
+      ],
+      "must_expose_proof": true,
+      "notes": "Italian corporate homepage."
+    },
+    {
+      "id": "mozilla-home",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.mozilla.org/en-US/",
+      "task_type": "read_then_answer",
+      "goal": "understand what Mozilla presents on its homepage",
+      "expected_url": "https://www.mozilla.org/en-US/",
+      "expected_domain": "mozilla.org",
+      "must_contain_facts": [
+        "mozilla organization",
+        "products or mission"
+      ],
+      "must_expose_proof": true,
+      "notes": "Large corporate/mission homepage."
+    },
+    {
+      "id": "vercel-home",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://vercel.com",
+      "task_type": "read_then_answer",
+      "goal": "understand what Vercel offers",
+      "expected_url": "https://vercel.com",
+      "expected_domain": "vercel.com",
+      "must_contain_facts": [
+        "developer platform",
+        "deployment or application platform"
+      ],
+      "must_expose_proof": true,
+      "notes": "Modern product homepage."
+    },
+    {
+      "id": "netlify-home",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.netlify.com/",
+      "task_type": "read_then_answer",
+      "goal": "understand what Netlify offers",
+      "expected_url": "https://www.netlify.com/",
+      "expected_domain": "netlify.com",
+      "must_contain_facts": [
+        "web platform",
+        "deployment or site/app tooling"
+      ],
+      "must_expose_proof": true,
+      "notes": "Modern product homepage with strong marketing surface."
+    },
+
+    {
+      "id": "sqlite-home-legacy",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "read_page_understanding",
+      "goal": "understand this legacy homepage",
+      "expected_url": "https://sqlite.org",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "what SQLite is",
+        "legacy technical homepage"
+      ],
+      "must_expose_proof": true,
+      "notes": "Legacy homepage with menu/index noise."
+    },
+    {
+      "id": "sqlite-chronology-list-like",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/chronology.html",
+      "task_type": "read_page_understanding",
+      "goal": "understand a list-like release page",
+      "expected_url": "https://www.sqlite.org/chronology.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "release history",
+        "long chronology list"
+      ],
+      "must_expose_proof": true,
+      "notes": "List-like legacy page where the list is the content."
+    },
+    {
+      "id": "nginx-home",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://nginx.org/en/",
+      "task_type": "read_then_answer",
+      "goal": "understand what nginx offers from the homepage",
+      "expected_url": "https://nginx.org/en/",
+      "expected_domain": "nginx.org",
+      "must_contain_facts": [
+        "web server or application delivery",
+        "homepage overview"
+      ],
+      "must_expose_proof": true,
+      "notes": "Legacy product homepage."
+    },
+    {
+      "id": "lua-home",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://www.lua.org/",
+      "task_type": "read_page_understanding",
+      "goal": "understand what Lua is from the homepage",
+      "expected_url": "https://www.lua.org/",
+      "expected_domain": "lua.org",
+      "must_contain_facts": [
+        "programming language",
+        "homepage overview"
+      ],
+      "must_expose_proof": true,
+      "notes": "Older language homepage with simple structure."
+    },
+
+    {
+      "id": "mdn-zh-javascript",
+      "family": "multilingual",
+      "language": "zh-CN",
+      "seed_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Chinese MDN JavaScript page."
+    },
+    {
+      "id": "mdn-de-javascript",
+      "family": "multilingual",
+      "language": "de",
+      "seed_url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "German MDN JavaScript page."
+    },
+    {
+      "id": "mdn-ru-javascript",
+      "family": "multilingual",
+      "language": "ru",
+      "seed_url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Russian MDN JavaScript page."
+    },
+    {
+      "id": "mdn-ja-javascript",
+      "family": "multilingual",
+      "language": "ja",
+      "seed_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Japanese MDN JavaScript page."
+    },
+    {
+      "id": "mdn-fr-javascript-guide",
+      "family": "multilingual",
+      "language": "fr",
+      "seed_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript guide page",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript guide",
+        "localized guide content"
+      ],
+      "must_expose_proof": true,
+      "notes": "French MDN JavaScript guide page."
+    },
+    {
+      "id": "mdn-es-javascript",
+      "family": "multilingual",
+      "language": "es",
+      "seed_url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Spanish MDN JavaScript page."
+    }
+  ]
+}

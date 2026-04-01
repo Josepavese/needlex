@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/config"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 )
 
 func TestExtractLinkCandidatesPreservesLabels(t *testing.T) {
@@ -47,7 +48,14 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "discover-test-embed"
+	svc, err := New(cfg, server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -69,11 +77,11 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 }
 
 func TestScoreDiscoveryCandidatesBoostsDomainHint(t *testing.T) {
-	candidates := scoreDiscoveryCandidates(
+	candidates := discoverycore.ScoreCandidates(
 		"official studio profile",
 		"",
 		"",
-		[]linkCandidate{
+		[]discoverycore.LinkCandidate{
 			{URL: "https://other.example.com/company", Label: "Official site"},
 			{URL: "https://preferred.example.com/company", Label: "Official site"},
 		},
@@ -91,7 +99,7 @@ func TestScoreDiscoveryCandidatesBoostsDomainHint(t *testing.T) {
 }
 
 func TestExtractSearchResultsResolvesRedirectTargets(t *testing.T) {
-	results := extractSearchResults(
+	results := discoverycore.ExtractSearchResults(
 		`<html><body><a class="result__a" href="/l/?uddg=https%3A%2F%2Fdocs.example.com%2Freplay">Replay Docs</a></body></html>`,
 		"https://html.duckduckgo.com/html/?q=replay",
 	)
@@ -103,6 +111,32 @@ func TestExtractSearchResultsResolvesRedirectTargets(t *testing.T) {
 	}
 	if results[0].Label != "Replay Docs" {
 		t.Fatalf("unexpected label %q", results[0].Label)
+	}
+}
+
+func TestExtractSearchResultsIgnoresNonResultAnchors(t *testing.T) {
+	results := discoverycore.ExtractSearchResults(
+		`<html><body><a href="https://duckduckgo.com/duckduckgo-help-pages/company/contact-us">Contact</a><a class="result__a" href="/l/?uddg=https%3A%2F%2Ftangotoday.net%2Fscuole%2Fasd-charly-brown%2F">ASD Charly Brown - TangoToday</a><a href="https://duckduckgo.com/duckduckgo-help-pages/resources/opt-out-guides">Opt out</a></body></html>`,
+		"https://html.duckduckgo.com/html/?q=asd+charly+brown",
+	)
+	if len(results) != 1 {
+		t.Fatalf("expected only one real result, got %d: %#v", len(results), results)
+	}
+	if results[0].URL != "https://tangotoday.net/scuole/asd-charly-brown/" {
+		t.Fatalf("unexpected resolved url %q", results[0].URL)
+	}
+}
+
+func TestExtractSearchResultsParsesLiteRedirectResults(t *testing.T) {
+	results := discoverycore.ExtractSearchResults(
+		`<html><body><a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fprolocosantagostino.it%2Fasd%2Dcharly%2Dbrown%2F&amp;rut=abc">ASD Charly Brown - Cassine, Provincia di Alessandria</a><a href="/lite/?q=next">Next Page</a></body></html>`,
+		"https://lite.duckduckgo.com/lite/?q=asd+charly+brown",
+	)
+	if len(results) != 1 {
+		t.Fatalf("expected one lite result, got %d: %#v", len(results), results)
+	}
+	if results[0].URL != "https://prolocosantagostino.it/asd-charly-brown/" {
+		t.Fatalf("unexpected lite resolved url %q", results[0].URL)
 	}
 }
 
@@ -125,12 +159,19 @@ func TestDiscoverWebChoosesBestCrossSiteCandidate(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = true
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "discover-test-embed"
+	svc, err := New(cfg, searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
 		Goal:          "proof replay deterministic",
@@ -167,12 +208,19 @@ func TestDiscoverWebReranksUsingFetchedPageTitle(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = true
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "discover-test-embed"
+	svc, err := New(cfg, searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
 		Goal:          "proof replay deterministic",
@@ -226,7 +274,7 @@ func TestDiscoverWebExpandsLandingPageToBetterChild(t *testing.T) {
 		t.Fatalf("new service: %v", err)
 	}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
 		Goal:          "proof replay deterministic",
@@ -269,12 +317,19 @@ func TestDiscoverWebMergesMultipleProviders(t *testing.T) {
 	}))
 	defer searchTwo.Close()
 
-	svc, err := New(config.Defaults(), searchOne.Client())
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = true
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "discover-test-embed"
+	svc, err := New(cfg, searchOne.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
-	svc.webDiscoverBaseURL = searchOne.URL + "," + searchTwo.URL
+	svc.SetWebDiscoverBaseURL(searchOne.URL + "," + searchTwo.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
 		Goal:          "proof replay deterministic",
@@ -287,7 +342,7 @@ func TestDiscoverWebMergesMultipleProviders(t *testing.T) {
 	if resp.SelectedURL != docsServer.URL {
 		t.Fatalf("expected merged providers to surface docs candidate, got %q", resp.SelectedURL)
 	}
-	if !strings.Contains(resp.Provider, discoverProviderName(searchOne.URL)) || !strings.Contains(resp.Provider, discoverProviderName(searchTwo.URL)) {
+	if !strings.Contains(resp.Provider, discoverycore.ProviderName(searchOne.URL)) || !strings.Contains(resp.Provider, discoverycore.ProviderName(searchTwo.URL)) {
 		t.Fatalf("expected combined provider names, got %q", resp.Provider)
 	}
 }
@@ -309,11 +364,18 @@ func TestDiscoverWebUsesLocalSubstrateBeforeWebBootstrap(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), seedServer.Client())
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = true
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "discover-test-embed"
+	svc, err := New(cfg, seedServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
-	svc.webDiscoverBaseURL = searchServer.URL
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
 		Goal:          "proof replay deterministic",

@@ -1,0 +1,1028 @@
+{
+  "generated_at_utc": "2026-03-31T21:47:13Z",
+  "corpus_version": "competitive-corpus-v1",
+  "competitors": [
+    {
+      "competitor": "firecrawl",
+      "category": "market_reference",
+      "case_count": 12,
+      "configured": true,
+      "supported_rate": 1,
+      "runtime_success_rate": 1,
+      "quality_pass_rate": 0.3333333333333333,
+      "selected_url_pass_rate": 0.8333333333333334,
+      "proof_usability_rate": 0,
+      "fact_coverage_rate": 0.4583333333333333,
+      "avg_latency_ms": 0,
+      "avg_packet_bytes": 72292,
+      "skipped_cases": 0
+    },
+    {
+      "competitor": "jina",
+      "category": "simple_baseline",
+      "case_count": 12,
+      "configured": true,
+      "supported_rate": 0.5833333333333334,
+      "runtime_success_rate": 1,
+      "quality_pass_rate": 0.7142857142857143,
+      "selected_url_pass_rate": 1,
+      "proof_usability_rate": 0,
+      "fact_coverage_rate": 0.8571428571428571,
+      "avg_latency_ms": 0,
+      "avg_packet_bytes": 29431,
+      "skipped_cases": 5
+    },
+    {
+      "competitor": "needlex",
+      "category": "product",
+      "case_count": 12,
+      "configured": true,
+      "supported_rate": 1,
+      "runtime_success_rate": 1,
+      "quality_pass_rate": 0.16666666666666666,
+      "selected_url_pass_rate": 0.75,
+      "proof_usability_rate": 1,
+      "fact_coverage_rate": 0.375,
+      "avg_latency_ms": 229,
+      "avg_packet_bytes": 4436,
+      "skipped_cases": 0
+    }
+  ],
+  "cases": [
+    {
+      "id": "zai-coding-plan",
+      "family": "same_site_query",
+      "language": "en",
+      "task_type": "same_site_query_routing",
+      "seed_url": "https://docs.z.ai/guides/overview/quick-start",
+      "goal": "coding plan",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://docs.z.ai/devpack/overview",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "supports coding tools",
+            "lists supported models or plans"
+          ],
+          "packet_bytes": 6950,
+          "chunk_count": 4,
+          "latency_ms": 164,
+          "selection_why": [
+            "path_hint",
+            "domain_hint_match",
+            "goal_label_alignment",
+            "novel_candidate_bias"
+          ],
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": false,
+          "skipped": true,
+          "skip_reason": "unsupported_task",
+          "runtime_ok": false,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "summary_present": false,
+          "fact_coverage": 0,
+          "packet_bytes": 0,
+          "chunk_count": 0,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://docs.z.ai/devpack/overview",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "supports coding tools",
+            "lists supported models or plans"
+          ],
+          "packet_bytes": 53104,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sqlite-release-history",
+      "family": "same_site_query",
+      "language": "en",
+      "task_type": "same_site_query_routing",
+      "seed_url": "https://sqlite.org",
+      "goal": "release history",
+      "expected_url": "https://sqlite.org/chronology.html",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": true,
+          "actual_url": "https://sqlite.org",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "prior releases"
+          ],
+          "missing_facts": [
+            "release history"
+          ],
+          "packet_bytes": 4102,
+          "chunk_count": 2,
+          "latency_ms": 331,
+          "selection_why": [
+            "seed_fallback",
+            "domain_hint_match",
+            "stable_seed_penalty"
+          ],
+          "failure_classes": [
+            "wrong_selected_url",
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": false,
+          "skipped": true,
+          "skip_reason": "unsupported_task",
+          "runtime_ok": false,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "summary_present": false,
+          "fact_coverage": 0,
+          "packet_bytes": 0,
+          "chunk_count": 0,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "actual_url": "https://www.sqlite.org/changes.html",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "release history",
+            "prior releases"
+          ],
+          "packet_bytes": 547148,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "wrong_selected_url",
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "python-installing-packages",
+      "family": "same_site_query",
+      "language": "en",
+      "task_type": "same_site_query_routing",
+      "seed_url": "https://docs.python.org/3/index.html",
+      "goal": "installing packages",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://docs.python.org/3/installing/index.html",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "pip"
+          ],
+          "missing_facts": [
+            "installing packages"
+          ],
+          "packet_bytes": 5897,
+          "chunk_count": 5,
+          "latency_ms": 62,
+          "selection_why": [
+            "path_hint",
+            "domain_hint_match",
+            "goal_label_alignment",
+            "novel_candidate_bias"
+          ],
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": false,
+          "skipped": true,
+          "skip_reason": "unsupported_task",
+          "runtime_ok": false,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "summary_present": false,
+          "fact_coverage": 0,
+          "packet_bytes": 0,
+          "chunk_count": 0,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://docs.python.org/3/installing/index.html",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "installing packages",
+            "pip"
+          ],
+          "packet_bytes": 68853,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mdn-js-guide-en",
+      "family": "same_site_query",
+      "language": "en",
+      "task_type": "same_site_query_routing",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": true,
+          "actual_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "javascript"
+          ],
+          "missing_facts": [
+            "guide"
+          ],
+          "packet_bytes": 2771,
+          "chunk_count": 1,
+          "latency_ms": 79,
+          "selection_why": [
+            "seed_fallback",
+            "path_hint",
+            "domain_hint_match",
+            "goal_label_alignment",
+            "stable_seed_penalty"
+          ],
+          "failure_classes": [
+            "wrong_selected_url",
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": false,
+          "skipped": true,
+          "skip_reason": "unsupported_task",
+          "runtime_ok": false,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "summary_present": false,
+          "fact_coverage": 0,
+          "packet_bytes": 0,
+          "chunk_count": 0,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "guide",
+            "javascript"
+          ],
+          "packet_bytes": 55712,
+          "chunk_count": 1,
+          "latency_ms": 0
+        }
+      ]
+    },
+    {
+      "id": "playwright-installation-from-home",
+      "family": "same_site_query",
+      "language": "en",
+      "task_type": "same_site_query_routing",
+      "seed_url": "https://playwright.dev",
+      "goal": "installation",
+      "expected_url": "https://playwright.dev/docs/intro",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": true,
+          "actual_url": "https://playwright.dev",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "install",
+            "getting started"
+          ],
+          "packet_bytes": 7762,
+          "chunk_count": 5,
+          "latency_ms": 53,
+          "selection_why": [
+            "seed_fallback",
+            "domain_hint_match",
+            "stable_seed_penalty"
+          ],
+          "failure_classes": [
+            "wrong_selected_url",
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": false,
+          "skipped": true,
+          "skip_reason": "unsupported_task",
+          "runtime_ok": false,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "summary_present": false,
+          "fact_coverage": 0,
+          "packet_bytes": 0,
+          "chunk_count": 0,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": false,
+          "proof_usable": false,
+          "actual_url": "https://playwright.dev/docs/clock",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "install",
+            "getting started"
+          ],
+          "packet_bytes": 35499,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "wrong_selected_url",
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "playwright-home-overview",
+      "family": "docs",
+      "language": "en",
+      "task_type": "read_page_understanding",
+      "seed_url": "https://playwright.dev",
+      "expected_url": "https://playwright.dev",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://playwright.dev",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "end-to-end testing",
+            "web apps"
+          ],
+          "packet_bytes": 6510,
+          "chunk_count": 5,
+          "latency_ms": 187,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://playwright.dev",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "end-to-end testing",
+            "web apps"
+          ],
+          "packet_bytes": 3427,
+          "chunk_count": 1,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://playwright.dev/",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "end-to-end testing",
+            "web apps"
+          ],
+          "packet_bytes": 6624,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zai-devpack-overview",
+      "family": "docs",
+      "language": "en",
+      "task_type": "read_then_answer",
+      "seed_url": "https://docs.z.ai/devpack/overview",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://docs.z.ai/devpack/overview",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "coding model",
+            "supported tools"
+          ],
+          "packet_bytes": 7506,
+          "chunk_count": 5,
+          "latency_ms": 356
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://docs.z.ai/devpack/overview",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "coding model",
+            "supported tools"
+          ],
+          "packet_bytes": 3727,
+          "chunk_count": 1,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://docs.z.ai/devpack/overview",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "coding model"
+          ],
+          "missing_facts": [
+            "supported tools"
+          ],
+          "packet_bytes": 15283,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "python-installing-index-overview",
+      "family": "docs",
+      "language": "en",
+      "task_type": "read_then_answer",
+      "seed_url": "https://docs.python.org/3/installing/index.html",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://docs.python.org/3/installing/index.html",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "pip",
+            "installing packages"
+          ],
+          "packet_bytes": 4170,
+          "chunk_count": 5,
+          "latency_ms": 239,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://docs.python.org/3/installing/index.html",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "pip",
+            "installing packages"
+          ],
+          "packet_bytes": 9133,
+          "chunk_count": 1,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://docs.python.org/3/installing/index.html",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "pip",
+            "installing packages"
+          ],
+          "packet_bytes": 17419,
+          "chunk_count": 1,
+          "latency_ms": 0
+        }
+      ]
+    },
+    {
+      "id": "halfpocket-home",
+      "family": "corporate",
+      "language": "it",
+      "task_type": "read_then_answer",
+      "seed_url": "https://www.halfpocket.net/",
+      "expected_url": "https://www.halfpocket.net/",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://www.halfpocket.net/",
+          "summary_present": true,
+          "fact_coverage": 0,
+          "missing_facts": [
+            "agency",
+            "design"
+          ],
+          "packet_bytes": 4034,
+          "chunk_count": 5,
+          "latency_ms": 354,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://www.halfpocket.net/",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "design"
+          ],
+          "missing_facts": [
+            "agency"
+          ],
+          "packet_bytes": 11108,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://www.halfpocket.net/",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "agency",
+            "design"
+          ],
+          "packet_bytes": 18690,
+          "chunk_count": 1,
+          "latency_ms": 0
+        }
+      ]
+    },
+    {
+      "id": "vercel-home",
+      "family": "corporate",
+      "language": "en",
+      "task_type": "read_then_answer",
+      "seed_url": "https://vercel.com",
+      "expected_url": "https://vercel.com",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://vercel.com",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "deploy"
+          ],
+          "missing_facts": [
+            "frontend cloud"
+          ],
+          "packet_bytes": 1156,
+          "chunk_count": 1,
+          "latency_ms": 528,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://vercel.com",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "deploy"
+          ],
+          "missing_facts": [
+            "frontend cloud"
+          ],
+          "packet_bytes": 19117,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://vercel.com/",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "deploy"
+          ],
+          "missing_facts": [
+            "frontend cloud"
+          ],
+          "packet_bytes": 13649,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mdn-ja-javascript",
+      "family": "multilingual",
+      "language": "ja",
+      "task_type": "read_then_answer",
+      "seed_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "expected_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "javascript"
+          ],
+          "missing_facts": [
+            "overview"
+          ],
+          "packet_bytes": 1129,
+          "chunk_count": 1,
+          "latency_ms": 216,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "javascript",
+            "overview"
+          ],
+          "packet_bytes": 78582,
+          "chunk_count": 1,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": false,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+          "summary_present": true,
+          "fact_coverage": 0.5,
+          "covered_facts": [
+            "javascript"
+          ],
+          "missing_facts": [
+            "overview"
+          ],
+          "packet_bytes": 19300,
+          "chunk_count": 1,
+          "latency_ms": 0,
+          "failure_classes": [
+            "missing_facts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mdn-fr-javascript-guide",
+      "family": "multilingual",
+      "language": "fr",
+      "task_type": "read_then_answer",
+      "seed_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "results": [
+        {
+          "competitor": "needlex",
+          "category": "product",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": true,
+          "actual_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "guide",
+            "javascript"
+          ],
+          "packet_bytes": 1253,
+          "chunk_count": 1,
+          "latency_ms": 186
+        },
+        {
+          "competitor": "jina",
+          "category": "simple_baseline",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "guide",
+            "javascript"
+          ],
+          "packet_bytes": 80927,
+          "chunk_count": 1,
+          "latency_ms": 0
+        },
+        {
+          "competitor": "firecrawl",
+          "category": "market_reference",
+          "configured": true,
+          "supported": true,
+          "skipped": false,
+          "runtime_ok": true,
+          "quality_pass": true,
+          "selected_url_pass": true,
+          "proof_usable": false,
+          "actual_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+          "summary_present": true,
+          "fact_coverage": 1,
+          "covered_facts": [
+            "guide",
+            "javascript"
+          ],
+          "packet_bytes": 16234,
+          "chunk_count": 1,
+          "latency_ms": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "name": "carratellire",
+    "family": "corporate",
+    "url": "https://carratellire.com/",
+    "timeout_ms": 12000,
+    "objective": "company profile"
+  },
+  {
+    "name": "cnf",
+    "family": "corporate",
+    "url": "https://www.cnfsrl.it/",
+    "timeout_ms": 12000,
+    "objective": "capability summary"
+  },
+  {
+    "name": "halfpocket",
+    "family": "corporate",
+    "url": "https://halfpocket.net/",
+    "timeout_ms": 12000,
+    "objective": "service offering"
+  },
+  {
+    "name": "sqlite",
+    "family": "embedded-heavy",
+    "url": "https://www.sqlite.org/index.html",
+    "timeout_ms": 12000,
+    "objective": "database engine summary"
+  },
+  {
+    "name": "nginx",
+    "family": "app-shell",
+    "url": "https://nginx.org/",
+    "timeout_ms": 12000,
+    "objective": "web server platform summary"
+  }
+]

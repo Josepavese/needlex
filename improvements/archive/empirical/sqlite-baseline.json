@@ -1,0 +1,924 @@
+{
+  "document": {
+    "id": "doc_a6d5c536963dfe54",
+    "url": "https://sqlite.org/",
+    "final_url": "https://sqlite.org/",
+    "title": "SQLite Home Page",
+    "fetched_at": "2026-03-30T14:25:09.70937022Z",
+    "fetch_mode": "http",
+    "raw_hash": "sha256_da25401a0aa6a706"
+  },
+  "web_ir": {
+    "version": "web_ir.v1",
+    "source_url": "https://sqlite.org/",
+    "title": "SQLite Home Page",
+    "node_count": 43,
+    "nodes": [
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[1]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Home",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[2]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Menu",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[3]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "About",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[4]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Documentation",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[5]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Download",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[6]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "License",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[7]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Support",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[8]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Purchase",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[3]/ul[1]/li[9]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Search",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[4]/ul[1]/li[1]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "About",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[4]/ul[1]/li[2]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Documentation",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[4]/ul[1]/li[3]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Download",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[4]/ul[1]/li[4]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Support",
+        "depth": 4
+      },
+      {
+        "path": "/div[1]/div[4]/ul[1]/li[5]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Purchase",
+        "depth": 4
+      },
+      {
+        "path": "/p[1]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "SQLite is a C-language library that implements a small , fast , self-contained , high-reliability , full-featured , SQL database engine. SQLite is the most used database engine in the world. SQLite is built into all mobile phones and most computers and comes bundled inside countless other applications that people use every day. More Information...",
+        "depth": 1
+      },
+      {
+        "path": "/p[2]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "SQLite source code is in the public-domain and is free to everyone to use for any purpose.",
+        "depth": 1
+      },
+      {
+        "path": "/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Latest Release",
+        "depth": 1,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[2]/h3[1]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Common Links",
+        "depth": 2,
+        "heading_level": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[1]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Features",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[2]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "When to use SQLite",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[3]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Getting Started",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[4]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Try it live!",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "SQL Syntax Pragmas SQL functions Date \u0026 time functions Aggregate functions Window functions Math functions JSON functions",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[1]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Pragmas",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[2]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "SQL functions",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[3]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Date \u0026 time functions",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[4]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Aggregate functions",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[5]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Window functions",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[6]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Math functions",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[5]/ul[1]/li[7]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "JSON functions",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[6]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "C/C++ Interface Spec Introduction List of C-language APIs",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[6]/ul[1]/li[1]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Introduction",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[6]/ul[1]/li[2]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "List of C-language APIs",
+        "depth": 5
+      },
+      {
+        "path": "/div[2]/ul[1]/li[7]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "The TCL Interface Spec",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[8]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Quirks and Gotchas",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[9]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Frequently Asked Questions",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[10]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Commit History",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[11]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Prior Releases",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[12]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "Bugs",
+        "depth": 3
+      },
+      {
+        "path": "/div[2]/ul[1]/li[13]",
+        "tag": "li",
+        "kind": "list_item",
+        "text": "News",
+        "depth": 3
+      },
+      {
+        "path": "/h3[2]",
+        "tag": "h3",
+        "kind": "heading",
+        "text": "Sponsors",
+        "depth": 1,
+        "heading_level": 3
+      },
+      {
+        "path": "/p[3]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "SQLite is made possible in part by sponsors and SQLite Consortium members, including:",
+        "depth": 1
+      },
+      {
+        "path": "/p[4]",
+        "tag": "p",
+        "kind": "paragraph",
+        "text": "This page was last updated on 2026-03-16 20:07:10Z",
+        "depth": 1
+      }
+    ],
+    "signals": {
+      "short_text_ratio": 0.8604651162790697,
+      "heading_ratio": 0.06976744186046512,
+      "embedded_node_count": 0,
+      "substrate_class": "generic_content"
+    }
+  },
+  "result_pack": {
+    "objective": "database engine summary",
+    "profile": "standard",
+    "chunks": [
+      {
+        "id": "chk_69087fe6d5bb1e5b",
+        "doc_id": "doc_a6d5c536963dfe54",
+        "text": "SQLite is a C-language library that implements a small , fast , self-contained , high-reliability , full-featured , SQL database engine. SQLite is the most used database engine in the world. SQLite is built into all mobile phones and most computers and comes bundled inside countless other applications that people use every day. More Information...\n\nSQLite source code is in the public-domain and is free to everyone to use for any purpose.",
+        "heading_path": [
+          "SQLite Home Page"
+        ],
+        "score": 0.95,
+        "fingerprint": "fp_b7a09d17bd542d39",
+        "confidence": 0.99
+      },
+      {
+        "id": "chk_0978c9a33c4ef2a0",
+        "doc_id": "doc_a6d5c536963dfe54",
+        "text": "Home\n\nMenu\n\nAbout\n\nDocumentation\n\nDownload\n\nLicense\n\nSupport\n\nPurchase\n\nSearch\n\nAbout\n\nDocumentation\n\nDownload\n\nSupport\n\nPurchase",
+        "heading_path": [
+          "SQLite Home Page"
+        ],
+        "score": 0.9199999999999999,
+        "fingerprint": "fp_f138fef0d4354ae4",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_1bc86da2f82630dd",
+        "doc_id": "doc_a6d5c536963dfe54",
+        "text": "SQLite is made possible in part by sponsors and SQLite Consortium members, including:\n\nThis page was last updated on 2026-03-16 20:07:10Z",
+        "heading_path": [
+          "Latest Release",
+          "Common Links",
+          "Sponsors"
+        ],
+        "score": 0.9000000000000001,
+        "fingerprint": "fp_b07b6217de5e7eec",
+        "confidence": 0.93
+      },
+      {
+        "id": "chk_11b566992b1928da",
+        "doc_id": "doc_a6d5c536963dfe54",
+        "text": "Features\n\nWhen to use SQLite\n\nGetting Started\n\nTry it live!\n\nSQL Syntax Pragmas SQL functions Date \u0026 time functions Aggregate functions Window functions Math functions JSON functions\n\nPragmas\n\nSQL functions\n\nDate \u0026 time functions\n\nAggregate functions\n\nWindow functions\n\nMath functions\n\nJSON functions\n\nC/C++ Interface Spec Introduction List of C-language APIs\n\nIntroduction\n\nList of C-language APIs\n\nThe TCL Interface Spec\n\nQuirks and Gotchas\n\nFrequently Asked Questions\n\nCommit History\n\nPrior Releases\n\nBugs\n\nNews",
+        "heading_path": [
+          "Latest Release",
+          "Common Links"
+        ],
+        "score": 0.8666666666666667,
+        "fingerprint": "fp_93b0b77c32ef9cd5",
+        "confidence": 0.93
+      }
+    ],
+    "sources": [
+      {
+        "document_id": "doc_a6d5c536963dfe54",
+        "url": "https://sqlite.org/",
+        "title": "SQLite Home Page",
+        "chunk_ids": [
+          "chk_69087fe6d5bb1e5b",
+          "chk_0978c9a33c4ef2a0",
+          "chk_1bc86da2f82630dd",
+          "chk_11b566992b1928da"
+        ]
+      }
+    ],
+    "outline": [
+      "SQLite Home Page",
+      "Latest Release \u003e Common Links \u003e Sponsors",
+      "Latest Release \u003e Common Links"
+    ],
+    "links": [
+      "https://sqlite.org/"
+    ],
+    "proof_refs": [
+      "proof_4c22158955d4749e",
+      "proof_48a2de1669857d62",
+      "proof_984cdb49ae76db0c",
+      "proof_901272f5d869dfa1"
+    ],
+    "cost_report": {
+      "latency_ms": 832,
+      "token_in": 0,
+      "token_out": 0,
+      "lane_path": [
+        0,
+        1
+      ]
+    }
+  },
+  "proof_records": [
+    {
+      "id": "proof_4c22158955d4749e",
+      "proof": {
+        "chunk_id": "chk_69087fe6d5bb1e5b",
+        "source_span": {
+          "selector": "/p[1] | /p[2]",
+          "char_start": 0,
+          "char_end": 441
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_reused",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_48a2de1669857d62",
+      "proof": {
+        "chunk_id": "chk_0978c9a33c4ef2a0",
+        "source_span": {
+          "selector": "/div[1]/div[3]/ul[1]/li[1] | /div[1]/div[3]/ul[1]/li[2] | /div[1]/div[3]/ul[1]/li[3] | /div[1]/div[3]/ul[1]/li[4] | /div[1]/div[3]/ul[1]/li[5] | /div[1]/div[3]/ul[1]/li[6] | /div[1]/div[3]/ul[1]/li[7] | /div[1]/div[3]/ul[1]/li[8] | /div[1]/div[3]/ul[1]/li[9] | /div[1]/div[4]/ul[1]/li[1] | /div[1]/div[4]/ul[1]/li[2] | /div[1]/div[4]/ul[1]/li[3] | /div[1]/div[4]/ul[1]/li[4] | /div[1]/div[4]/ul[1]/li[5]",
+          "char_start": 0,
+          "char_end": 129
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "pack:reuse:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_reused",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_984cdb49ae76db0c",
+      "proof": {
+        "chunk_id": "chk_1bc86da2f82630dd",
+        "source_span": {
+          "selector": "/p[3] | /p[4]",
+          "char_start": 0,
+          "char_end": 137
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_recomputed",
+          "ir_shallow_depth"
+        ]
+      }
+    },
+    {
+      "id": "proof_901272f5d869dfa1",
+      "proof": {
+        "chunk_id": "chk_11b566992b1928da",
+        "source_span": {
+          "selector": "/div[2]/ul[1]/li[1] | /div[2]/ul[1]/li[2] | /div[2]/ul[1]/li[3] | /div[2]/ul[1]/li[4] | /div[2]/ul[1]/li[5] | /div[2]/ul[1]/li[5]/ul[1]/li[1] | /div[2]/ul[1]/li[5]/ul[1]/li[2] | /div[2]/ul[1]/li[5]/ul[1]/li[3] | /div[2]/ul[1]/li[5]/ul[1]/li[4] | /div[2]/ul[1]/li[5]/ul[1]/li[5] | /div[2]/ul[1]/li[5]/ul[1]/li[6] | /div[2]/ul[1]/li[5]/ul[1]/li[7] | /div[2]/ul[1]/li[6] | /div[2]/ul[1]/li[6]/ul[1]/li[1] | /div[2]/ul[1]/li[6]/ul[1]/li[2] | /div[2]/ul[1]/li[7] | /div[2]/ul[1]/li[8] | /div[2]/ul[1]/li[9] | /div[2]/ul[1]/li[10] | /div[2]/ul[1]/li[11] | /div[2]/ul[1]/li[12] | /div[2]/ul[1]/li[13]",
+          "char_start": 0,
+          "char_end": 514
+        },
+        "transform_chain": [
+          "acquire:v1",
+          "reduce:v1",
+          "segment:v1",
+          "web_ir:v1",
+          "intel:route:v1",
+          "intel:judge:v1",
+          "intel:task:resolve_ambiguity:v1",
+          "intel:patch:resolve_ambiguity:skipped:v1",
+          "web_ir:kind_match:v1",
+          "web_ir:depth:shallow:v1",
+          "web_ir:evidence:strong:v1"
+        ],
+        "lane": 1,
+        "model_invocations": [
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "route_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "purpose": "judge_policy",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0
+          },
+          {
+            "model": "gemma3:1b-it-q8_0",
+            "backend": "noop",
+            "task": "resolve_ambiguity",
+            "purpose": "typed_patch_gate",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "latency_ms": 0,
+            "patch_effect": "backend_disabled",
+            "validator_outcome": "skipped"
+          }
+        ],
+        "risk_flags": [
+          "coverage_gap",
+          "task_resolve_ambiguity_planned",
+          "intel_patch_skipped",
+          "selection_recomputed",
+          "ir_shallow_depth"
+        ]
+      }
+    }
+  ],
+  "trace": {
+    "run_id": "run_2dad6a0365726478",
+    "trace_id": "trace_a7d8ed27c4494fb1",
+    "started_at": "2026-03-30T14:25:08.881111123Z",
+    "finished_at": "2026-03-30T14:25:09.714088381Z",
+    "stages": [
+      {
+        "stage": "acquire",
+        "started_at": "2026-03-30T14:25:08.881111123Z",
+        "completed_at": "2026-03-30T14:25:09.70943288Z",
+        "input_hash": "6551a07973cf98bc4c3678d1c09587ec8672d4cf5127825dff212a9cca0679e1",
+        "output_hash": "9313dd1994de48407c9cf08a1a5c3aa84730ca938053fde1017e4527e9236ce0",
+        "item_count": 1,
+        "metadata": {
+          "fetch_mode": "http",
+          "final_url": "https://sqlite.org/"
+        }
+      },
+      {
+        "stage": "reduce",
+        "started_at": "2026-03-30T14:25:09.711366233Z",
+        "completed_at": "2026-03-30T14:25:09.712858349Z",
+        "input_hash": "9313dd1994de48407c9cf08a1a5c3aa84730ca938053fde1017e4527e9236ce0",
+        "output_hash": "a01734e218d648275f8d3a5efda653e84ba48f2e319fc9102e2452b02790dd50",
+        "item_count": 43,
+        "metadata": {
+          "title": "SQLite Home Page",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "stage": "segment",
+        "started_at": "2026-03-30T14:25:09.713115527Z",
+        "completed_at": "2026-03-30T14:25:09.713266456Z",
+        "input_hash": "a01734e218d648275f8d3a5efda653e84ba48f2e319fc9102e2452b02790dd50",
+        "output_hash": "4bc6b3d3672deb05a04e852733b73c7a8cb7ed5ca9dc1314aca91b248bea9758",
+        "item_count": 4
+      },
+      {
+        "stage": "pack",
+        "started_at": "2026-03-30T14:25:09.713346575Z",
+        "completed_at": "2026-03-30T14:25:09.713902145Z",
+        "input_hash": "4bc6b3d3672deb05a04e852733b73c7a8cb7ed5ca9dc1314aca91b248bea9758",
+        "output_hash": "dd28be8ffc4b42a69abae7cce2d44fd76ae30d83eda0256c7703980b951a9ff5",
+        "item_count": 4,
+        "metadata": {
+          "chunks": "4",
+          "delta_class": "stable",
+          "difficulty": "low",
+          "escalation_count": "4",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "ambiguity_conflict",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "resolve_ambiguity",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "low",
+          "novel_fp_hits": "0",
+          "page_type": "docs",
+          "profile": "standard",
+          "reuse_applied": "2",
+          "reuse_eligible": "4",
+          "reuse_mode": "delta_aware",
+          "reuse_recomputed": "2",
+          "selected_ir_embedded_hits": "0",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "4",
+          "stable_fp_hits": "4",
+          "substrate_class": "generic_content",
+          "web_ir_nodes": "43",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "false",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "false",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "stage_started",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:25:08.881111123Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "acquire",
+        "timestamp": "2026-03-30T14:25:09.70943288Z",
+        "data": {
+          "fetch_mode": "http",
+          "final_url": "https://sqlite.org/"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:25:09.711366233Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "reduce",
+        "timestamp": "2026-03-30T14:25:09.712858349Z",
+        "data": {
+          "title": "SQLite Home Page",
+          "web_ir_version": "web_ir.v1"
+        }
+      },
+      {
+        "type": "stage_started",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:25:09.713115527Z"
+      },
+      {
+        "type": "stage_completed",
+        "stage": "segment",
+        "timestamp": "2026-03-30T14:25:09.713266456Z"
+      },
+      {
+        "type": "stage_started",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.713346575Z"
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.713534635Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_93b0b77c32ef9cd5",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.71353806Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.00",
+          "coverage_loss": "0.33",
+          "fingerprint": "fp_b7a09d17bd542d39",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "0",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.713543186Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_f138fef0d4354ae4",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "escalation_triggered",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.7135461Z",
+        "reason_code": "NX_COVERAGE_TRIGGERED",
+        "message": "lane escalation triggered by local ambiguity policy",
+        "lane": 1,
+        "data": {
+          "ambiguity_score": "0.28",
+          "coverage_loss": "1.00",
+          "fingerprint": "fp_b07b6217de5e7eec",
+          "invocation_count": "2",
+          "lane": "1",
+          "reason_code": "NX_COVERAGE_TRIGGERED",
+          "risk_flag_count": "1",
+          "task_route_count": "0"
+        }
+      },
+      {
+        "type": "model_intervention",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.713681009Z",
+        "reason_code": "NX_AMBIGUITY_TRIGGERED",
+        "message": "model task skipped by runtime selection",
+        "lane": 1,
+        "data": {
+          "backend": "noop",
+          "failure_class": "ambiguity_conflict",
+          "latency_ms": "0",
+          "model": "gemma3:1b-it-q8_0",
+          "patch_effect": "backend_disabled",
+          "patch_outcome": "skipped",
+          "task": "resolve_ambiguity",
+          "tokens_in": "0",
+          "tokens_out": "0",
+          "validator_outcome": "skipped"
+        }
+      },
+      {
+        "type": "stage_completed",
+        "stage": "pack",
+        "timestamp": "2026-03-30T14:25:09.713902145Z",
+        "data": {
+          "chunks": "4",
+          "delta_class": "stable",
+          "difficulty": "low",
+          "escalation_count": "4",
+          "intel_task_accepted_count": "0",
+          "intel_task_failure_classes": "ambiguity_conflict",
+          "intel_task_intervention_live": "false",
+          "intel_task_names": "resolve_ambiguity",
+          "intel_task_rejected_count": "0",
+          "intel_task_route_count": "1",
+          "intel_task_skipped_count": "1",
+          "noise_level": "low",
+          "novel_fp_hits": "0",
+          "page_type": "docs",
+          "profile": "standard",
+          "reuse_applied": "2",
+          "reuse_eligible": "4",
+          "reuse_mode": "delta_aware",
+          "reuse_recomputed": "2",
+          "selected_ir_embedded_hits": "0",
+          "selected_ir_heading_hits": "0",
+          "selected_ir_shallow_hits": "4",
+          "stable_fp_hits": "4",
+          "substrate_class": "generic_content",
+          "web_ir_nodes": "43",
+          "web_ir_policy_embedded_applied": "false",
+          "web_ir_policy_embedded_required": "false",
+          "web_ir_policy_heading_applied": "false",
+          "web_ir_policy_heading_required": "false",
+          "web_ir_policy_noise_swap": "false"
+        }
+      }
+    ]
+  },
+  "replay": {
+    "run_id": "run_2dad6a0365726478",
+    "trace_id": "trace_a7d8ed27c4494fb1",
+    "stage_count": 4,
+    "event_count": 13,
+    "completed_stages": [
+      "acquire",
+      "reduce",
+      "segment",
+      "pack"
+    ],
+    "deterministic": true
+  }
+}

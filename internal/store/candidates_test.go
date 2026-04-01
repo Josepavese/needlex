@@ -1,10 +1,29 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/josepavese/needlex/internal/intel"
 )
+
+type stubSemanticAligner struct {
+	scores map[string]float64
+}
+
+func (s stubSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (s stubSemanticAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: s.scores[candidate.ID]})
+	}
+	return out, nil
+}
 
 func TestCandidateStoreObserveAndSearch(t *testing.T) {
 	root := t.TempDir()
@@ -44,7 +63,9 @@ func TestCandidateStoreObserveAndSearch(t *testing.T) {
 		t.Fatalf("expected latest title update, got %q", record.Title)
 	}
 
-	matches, err := store.Search("halfpocket studio", 3)
+	matches, err := store.Search(context.Background(), "halfpocket studio", 3, stubSemanticAligner{
+		scores: map[string]float64{"https://halfpocket.net/about": 0.91},
+	})
 	if err != nil {
 		t.Fatalf("search candidates: %v", err)
 	}
@@ -61,7 +82,7 @@ func TestCandidateStoreObserveAndSearch(t *testing.T) {
 
 func TestCandidateStoreSearchMissing(t *testing.T) {
 	store := NewCandidateStore(t.TempDir())
-	matches, err := store.Search("needle runtime", 1)
+	matches, err := store.Search(context.Background(), "needle runtime", 1, stubSemanticAligner{})
 	if err != nil {
 		t.Fatalf("search candidates: %v", err)
 	}

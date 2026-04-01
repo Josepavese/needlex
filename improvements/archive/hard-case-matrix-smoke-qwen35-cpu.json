@@ -1,0 +1,175 @@
+{
+  "generated_at_utc": "2026-03-29T22:28:29Z",
+  "corpus_version": "hard-case-corpus-smoke-v1",
+  "rows": [
+    {
+      "name": "embedded_lane3_vs_lane0",
+      "family": "embedded",
+      "objective": "company profile",
+      "profile": "standard",
+      "expected_terms": [
+        "Needle-X compiles noisy pages into compact proof-carrying context for agents"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "invocations": 3,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "interpret_embedded_state"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.1,
+        "objective_score": 0.3,
+        "tokens": 10,
+        "packed_text": "Needle-X compiles noisy pages into compact proof-carrying context for agents."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "invocations": 4,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "interpret_embedded_state"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.1,
+        "objective_score": 0.3,
+        "tokens": 10,
+        "packed_text": "Needle-X compiles noisy pages into compact proof-carrying context for agents."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "forum_lane2_vs_lane0",
+      "family": "forum",
+      "objective": "forum replay drift troubleshooting",
+      "profile": "deep",
+      "expected_terms": [
+        "Compare stage hashes first",
+        "inspect proof records by chunk id",
+        "replay became deterministic again"
+      ],
+      "compare_force_lane": 2,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "invocations": 9,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.04918032786885246,
+        "objective_score": 0.06557377049180328,
+        "tokens": 61,
+        "packed_text": "A user reports that the replay stage changed after a docs site updated its hero block.\nCompare stage hashes first. If only reduce changed, the issue is usually harmless layout churn.\n\nIf pack changed too, inspect proof records by chunk id and confirm selector stability.\nThe team pinned a new reduce rule and replay became deterministic again on the next run."
+      },
+      "compare": {
+        "max_lane": 2,
+        "lane_path": [
+          0,
+          1,
+          2
+        ],
+        "backend": "openai-compatible",
+        "invocations": 9,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
+        "fidelity": 0.6666666666666666,
+        "signal_density": 0.05555555555555555,
+        "objective_score": 0.08333333333333333,
+        "tokens": 36,
+        "packed_text": "A user reports that the replay stage changed after a docs site updated its hero block\nCompare stage hashes first\nThe team pinned a new reduce rule and replay became deterministic again on the next run"
+      },
+      "lossiness_risk": 0.35628415300546445,
+      "lossiness_level": "medium",
+      "pass": true
+    }
+  ],
+  "family_summary": [
+    {
+      "family": "embedded",
+      "case_count": 1,
+      "pass_count": 1,
+      "avg_baseline_signal": 0.1,
+      "avg_compare_signal": 0.1,
+      "avg_baseline_objective": 0.3,
+      "avg_compare_objective": 0.3,
+      "avg_lossiness_risk": 0,
+      "max_lossiness_risk": 0
+    },
+    {
+      "family": "forum",
+      "case_count": 1,
+      "pass_count": 1,
+      "avg_baseline_signal": 0.04918032786885246,
+      "avg_compare_signal": 0.05555555555555555,
+      "avg_baseline_objective": 0.06557377049180328,
+      "avg_compare_objective": 0.08333333333333333,
+      "avg_lossiness_risk": 0.35628415300546445,
+      "max_lossiness_risk": 0.35628415300546445
+    }
+  ],
+  "selection": [
+    {
+      "backend": "openai-compatible",
+      "holdout_tasks": [
+        "resolve_ambiguity",
+        "interpret_embedded_state",
+        "diagnose_drift",
+        "repair_evidence_graph",
+        "guard_compression"
+      ],
+      "reason": "no benchmark-proven tasks yet"
+    }
+  ],
+  "acceptance": {
+    "passed": true,
+    "pass_rate": 1,
+    "lane_lift_rate": 0.5,
+    "objective_lift_avg": 0.008879781420765023,
+    "medium_or_high_risk_rate": 0.5,
+    "backend_case_rate": 1,
+    "backend_intervention_rate": 1,
+    "backend_acceptance_rate": 0,
+    "thresholds": {
+      "min_pass_rate": 1,
+      "min_lane_lift_rate": 0.5,
+      "min_objective_lift_avg": 0,
+      "max_medium_or_high_risk_rate": 0.5,
+      "min_backend_case_rate": 1,
+      "min_backend_intervention_rate": 0.3
+    }
+  },
+  "alerts": [
+    "forum avg lossiness 0.356 \u003e 0.350"
+  ]
+}

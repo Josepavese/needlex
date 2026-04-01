@@ -1,0 +1,724 @@
+{
+  "generated_at_utc": "2026-03-30T10:41:56Z",
+  "corpus_version": "hard-case-corpus-benchmark-v1",
+  "rows": [
+    {
+      "name": "embedded_lane3_vs_lane0",
+      "family": "embedded",
+      "objective": "company profile",
+      "profile": "standard",
+      "expected_terms": [
+        "Needle-X compiles noisy pages into compact proof-carrying context for agents"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 3,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "interpret_embedded_state"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.1,
+        "objective_score": 0.3,
+        "tokens": 10,
+        "packed_text": "Needle-X compiles noisy pages into compact proof-carrying context for agents."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 1960,
+        "invocations": 5,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 1,
+        "tasks": [
+          "interpret_embedded_state"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.1,
+        "objective_score": 0.3,
+        "tokens": 10,
+        "packed_text": "Needle-X compiles noisy pages into compact proof-carrying context for agents."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "forum_lane2_vs_lane0",
+      "family": "forum",
+      "objective": "forum replay drift troubleshooting",
+      "profile": "deep",
+      "expected_terms": [
+        "Compare stage hashes first",
+        "inspect proof records by chunk id",
+        "replay became deterministic again"
+      ],
+      "compare_force_lane": 2,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 1,
+        "invocations": 9,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.04918032786885246,
+        "objective_score": 0.06557377049180328,
+        "tokens": 61,
+        "packed_text": "A user reports that the replay stage changed after a docs site updated its hero block.\nCompare stage hashes first. If only reduce changed, the issue is usually harmless layout churn.\n\nIf pack changed too, inspect proof records by chunk id and confirm selector stability.\nThe team pinned a new reduce rule and replay became deterministic again on the next run."
+      },
+      "compare": {
+        "max_lane": 2,
+        "lane_path": [
+          0,
+          1,
+          2
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 14582,
+        "invocations": 12,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
+        "fidelity": 0.6666666666666666,
+        "signal_density": 0.05555555555555555,
+        "objective_score": 0.08333333333333333,
+        "tokens": 36,
+        "packed_text": "A user reports that the replay stage changed after a docs site updated its hero block\nCompare stage hashes first\nThe team pinned a new reduce rule and replay became deterministic again on the next run"
+      },
+      "lossiness_risk": 0.35628415300546445,
+      "lossiness_level": "medium",
+      "pass": true
+    },
+    {
+      "name": "tiny_lane3_vs_lane0",
+      "family": "tiny",
+      "objective": "company profile",
+      "profile": "tiny",
+      "expected_terms": [
+        "Needle-X compiles noisy public pages compact context agents",
+        "proof replay auditable operators"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.15384615384615385,
+        "objective_score": 0.23076923076923078,
+        "tokens": 13,
+        "packed_text": "Needle-X compiles noisy public pages compact context agents keeps proof replay auditable operators."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.15384615384615385,
+        "objective_score": 0.23076923076923078,
+        "tokens": 13,
+        "packed_text": "Needle-X compiles noisy public pages compact context agents keeps proof replay auditable operators."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "embedded_pricing_lane3_vs_lane0",
+      "family": "compaction",
+      "objective": "pricing model summary",
+      "profile": "standard",
+      "expected_terms": [
+        "Starter includes local replay and trace export"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.07142857142857142,
+        "objective_score": 0.21428571428571427,
+        "tokens": 14,
+        "packed_text": "Starter includes local replay and trace export.\n\nEnterprise adds audit streams and operator snapshots."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.14285714285714285,
+        "objective_score": 0.42857142857142855,
+        "tokens": 7,
+        "packed_text": "Starter includes local replay and trace export."
+      },
+      "lossiness_risk": 0.15,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "support_thread_lane2_vs_lane0",
+      "family": "forum",
+      "objective": "operator remediation checklist",
+      "profile": "deep",
+      "expected_terms": [
+        "freeze the crawler rollout",
+        "restore the previous selector pack",
+        "compare fresh snapshots before reopening traffic"
+      ],
+      "compare_force_lane": 2,
+      "baseline": {
+        "max_lane": 0,
+        "lane_path": [
+          0
+        ],
+        "backend": "noop",
+        "latency_ms": 1,
+        "invocations": 0,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.08823529411764706,
+        "objective_score": 0.11764705882352941,
+        "tokens": 34,
+        "packed_text": "Operator checklist: freeze the crawler rollout, restore the previous selector pack, compare fresh snapshots before reopening traffic.\n\nOperators noticed drift after a rollout.\n\nSeveral replies discuss unrelated tooling but the remediation stayed the same."
+      },
+      "compare": {
+        "max_lane": 2,
+        "lane_path": [
+          0,
+          1,
+          2
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 3,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.10714285714285714,
+        "objective_score": 0.14285714285714285,
+        "tokens": 28,
+        "packed_text": "Operator checklist: freeze the crawler rollout, restore the previous selector pack, compare fresh snapshots before reopening traffic. Several replies discuss unrelated tooling but the remediation stayed the same"
+      },
+      "lossiness_risk": 0.052941176470588235,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "tiny_embedded_catalog_lane3_vs_lane0",
+      "family": "tiny",
+      "objective": "capability summary",
+      "profile": "tiny",
+      "expected_terms": [
+        "Capture pages locally Proof every chunk Diff every rerun Search minimal tokens"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.08333333333333333,
+        "objective_score": 0.3333333333333333,
+        "tokens": 12,
+        "packed_text": "Capture pages locally Proof every chunk Diff every rerun Search minimal tokens."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.08333333333333333,
+        "objective_score": 0.3333333333333333,
+        "tokens": 12,
+        "packed_text": "Capture pages locally Proof every chunk Diff every rerun Search minimal tokens."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "embedded_release_notes_lane3",
+      "family": "embedded",
+      "objective": "release summary",
+      "profile": "standard",
+      "expected_terms": [
+        "Delta export now keeps selector proof snapshots",
+        "Faster replay diff for changed pages"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.15384615384615385,
+        "objective_score": 0.3076923076923077,
+        "tokens": 13,
+        "packed_text": "Delta export now keeps selector proof snapshots.\n\nFaster replay diff for changed pages."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 0.5,
+        "signal_density": 0.14285714285714285,
+        "objective_score": 0.5714285714285714,
+        "tokens": 7,
+        "packed_text": "Delta export now keeps selector proof snapshots."
+      },
+      "lossiness_risk": 0.49945054945054945,
+      "lossiness_level": "high",
+      "pass": false,
+      "reasons": [
+        "signal density regressed 0.1538 -\u003e 0.1429"
+      ]
+    },
+    {
+      "name": "faq_resolution_lane2",
+      "family": "forum",
+      "objective": "support resolution summary",
+      "profile": "deep",
+      "expected_terms": [
+        "clear the stale cache",
+        "replay the failing trace",
+        "retry the acquisition step"
+      ],
+      "compare_force_lane": 2,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.11538461538461539,
+        "objective_score": 0.15384615384615385,
+        "tokens": 26,
+        "packed_text": "First clear the stale cache, replay the failing trace, then retry the acquisition step.\n\nSecondary notes mention browser plugins and office wifi, but those are incidental."
+      },
+      "compare": {
+        "max_lane": 2,
+        "lane_path": [
+          0,
+          1,
+          2
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 3,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.21428571428571427,
+        "objective_score": 0.2857142857142857,
+        "tokens": 14,
+        "packed_text": "First clear the stale cache, replay the failing trace, then retry the acquisition step"
+      },
+      "lossiness_risk": 0.13846153846153847,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "tiny_pricing_grid_lane3",
+      "family": "tiny",
+      "objective": "pricing summary",
+      "profile": "tiny",
+      "expected_terms": [
+        "Starter local read",
+        "Team shared traces",
+        "Audit proof exports"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 6,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.21428571428571427,
+        "objective_score": 0.2857142857142857,
+        "tokens": 14,
+        "packed_text": "Starter local read.\nPlan Feature Starter local read Team shared traces Audit proof exports."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 13193,
+        "invocations": 10,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
+        "fidelity": 1,
+        "signal_density": 0.21428571428571427,
+        "objective_score": 0.2857142857142857,
+        "tokens": 14,
+        "packed_text": "Starter local read.\nPlan Feature Starter local read Team shared traces Audit proof exports."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "comparison_table_lane3",
+      "family": "compaction",
+      "objective": "feature comparison",
+      "profile": "standard",
+      "expected_terms": [
+        "Replay and proof available on Pro"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.0625,
+        "objective_score": 0.25,
+        "tokens": 16,
+        "packed_text": "Plan\n\nFeature\n\nBasic\n\nRead only\n\nPro\n\nReplay and proof available on Pro\n\nOps\n\nCrawl diff streams"
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.0625,
+        "objective_score": 0.25,
+        "tokens": 16,
+        "packed_text": "Plan Feature Basic Read only Pro Replay and proof available on Pro Ops Crawl diff streams."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    },
+    {
+      "name": "multilingual_company_lane2",
+      "family": "forum",
+      "objective": "company profile",
+      "profile": "deep",
+      "expected_terms": [
+        "Piattaforma locale per proof e contesto operativo"
+      ],
+      "compare_force_lane": 2,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 1,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.041666666666666664,
+        "objective_score": 0.16666666666666666,
+        "tokens": 24,
+        "packed_text": "Piattaforma locale per proof e contesto operativo.\n\nNeedle-X compiles web context for agents and operators.\n\nLe sezioni successive ripetono slogan di marketing meno utili."
+      },
+      "compare": {
+        "max_lane": 2,
+        "lane_path": [
+          0,
+          1,
+          2
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 3,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 1,
+        "signal_density": 0.14285714285714285,
+        "objective_score": 0.42857142857142855,
+        "tokens": 7,
+        "packed_text": "Piattaforma locale per proof e contesto operativo"
+      },
+      "lossiness_risk": 0.2125,
+      "lossiness_level": "medium",
+      "pass": true
+    },
+    {
+      "name": "appshell_catalog_lane3",
+      "family": "embedded",
+      "objective": "service offering",
+      "profile": "standard",
+      "expected_terms": [
+        "Read Query Crawl Proof exports"
+      ],
+      "compare_force_lane": 3,
+      "baseline": {
+        "max_lane": 1,
+        "lane_path": [
+          0,
+          1
+        ],
+        "backend": "noop",
+        "latency_ms": 0,
+        "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 0,
+        "signal_density": 0,
+        "objective_score": 0,
+        "tokens": 3,
+        "packed_text": "Local runtime services."
+      },
+      "compare": {
+        "max_lane": 3,
+        "lane_path": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "backend": "openai-compatible",
+        "latency_ms": 0,
+        "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "fidelity": 0,
+        "signal_density": 0,
+        "objective_score": 0,
+        "tokens": 3,
+        "packed_text": "Local runtime services."
+      },
+      "lossiness_risk": 0,
+      "lossiness_level": "low",
+      "pass": true
+    }
+  ],
+  "family_summary": [
+    {
+      "family": "embedded",
+      "case_count": 3,
+      "pass_count": 2,
+      "avg_baseline_signal": 0.0846153846153846,
+      "avg_compare_signal": 0.08095238095238096,
+      "avg_baseline_objective": 0.2025641025641026,
+      "avg_compare_objective": 0.2904761904761905,
+      "avg_lossiness_risk": 0.16648351648351647,
+      "max_lossiness_risk": 0.49945054945054945
+    },
+    {
+      "family": "forum",
+      "case_count": 4,
+      "pass_count": 4,
+      "avg_baseline_signal": 0.0736167260094454,
+      "avg_compare_signal": 0.12996031746031744,
+      "avg_baseline_objective": 0.1259334124570383,
+      "avg_compare_objective": 0.23511904761904762,
+      "avg_lossiness_risk": 0.1900467169843978,
+      "max_lossiness_risk": 0.35628415300546445
+    },
+    {
+      "family": "tiny",
+      "case_count": 3,
+      "pass_count": 3,
+      "avg_baseline_signal": 0.15048840048840048,
+      "avg_compare_signal": 0.15048840048840048,
+      "avg_baseline_objective": 0.28327228327228327,
+      "avg_compare_objective": 0.28327228327228327,
+      "avg_lossiness_risk": 0,
+      "max_lossiness_risk": 0
+    },
+    {
+      "family": "compaction",
+      "case_count": 2,
+      "pass_count": 2,
+      "avg_baseline_signal": 0.06696428571428571,
+      "avg_compare_signal": 0.10267857142857142,
+      "avg_baseline_objective": 0.23214285714285715,
+      "avg_compare_objective": 0.3392857142857143,
+      "avg_lossiness_risk": 0.075,
+      "max_lossiness_risk": 0.15
+    }
+  ],
+  "selection": [
+    {
+      "backend": "openai-compatible",
+      "holdout_tasks": [
+        "resolve_ambiguity",
+        "interpret_embedded_state",
+        "diagnose_drift",
+        "repair_evidence_graph",
+        "guard_compression"
+      ],
+      "reason": "no benchmark-proven tasks yet"
+    }
+  ],
+  "acceptance": {
+    "passed": true,
+    "pass_rate": 0.9166666666666666,
+    "lane_lift_rate": 0.5,
+    "objective_lift_avg": 0.0762303765558346,
+    "medium_or_high_risk_rate": 0.25,
+    "backend_case_rate": 1,
+    "backend_intervention_rate": 0.25,
+    "backend_acceptance_rate": 0,
+    "thresholds": {
+      "min_pass_rate": 0,
+      "min_lane_lift_rate": 0,
+      "min_objective_lift_avg": -1,
+      "max_medium_or_high_risk_rate": 1
+    }
+  },
+  "regressions": [
+    "embedded_release_notes_lane3: signal density regressed 0.1538 -\u003e 0.1429",
+    "support_thread_lane2_vs_lane0 signal density regressed 0.1765 -\u003e 0.1071",
+    "support_thread_lane2_vs_lane0 objective score regressed 0.2353 -\u003e 0.1429"
+  ]
+}

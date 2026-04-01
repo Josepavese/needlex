@@ -1,418 +1,375 @@
 # Needle-X Vademecum
 
-This is the execution doctrine and progress board for Needle-X from now until completion.
+Questo documento è la dottrina operativa da qui all'uscita pubblica su GitHub.
 
-Its purpose is operational:
-1. keep the project on the right strategic line
-2. prevent philosophical drift
-3. make progress visible
-4. force each burst of work to be evaluated against the same standard
+Non è una nota di visione.
+Non è una backlog infinita.
+È il contratto di esecuzione che seguiamo fino al rilascio.
 
-If a tactical change conflicts with this document, the tactical change is wrong unless this document is deliberately updated first.
+Se un task locale confligge con questo file, il task locale è sbagliato finché questo file non viene aggiornato.
 
 ## Dashboard
 
-- Last updated: `2026-03-29`
-- Current phase: `intelligence acceptance complete / slm-integration readiness`
-- Current macrostep: `6. Real SLM Integration`
-- Current execution mode: `macrostep bursts, not microstep patches`
-- Primary rule: `preserve identity over shortcuts`
-- Primary references:
-  - [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
-  - [development-plan.md](/home/jose/hpdev/Libraries/needlex/docs/development-plan.md)
-  - [benchmark-report.md](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
+- Last updated: `2026-03-31`
+- Current phase: `release hardening`
+- Execution mode: `macrostep bursts only`
+- Product identity: `local-first web context compiler for AI agents`
+- Primary output contract: `agent answer packet`
+- Active CPU baseline: `Gemma 3 1B`
+- Active semantic baseline: `intfloat/multilingual-e5-small`
+- Active semantic backend: `openai-embeddings`
+- Active model task: `resolve_ambiguity`
+- Default philosophy: `AI-first compact output, diagnostics explicit`
+- Search status: `seed-first strong, seedless best-effort`
 
-## How To Use This File
-
-Before any meaningful implementation, check in order:
-1. `Dashboard`
-2. `Non-Negotiable Philosophy`
-3. `What Must Never Be Betrayed`
-4. `Macrostep Board`
-5. `Immediate Working Focus`
-
-After any meaningful implementation burst, update:
-1. `Dashboard`
-2. `Macrostep Board`
-3. `Burst Log`
-4. `Next Burst Queue`
-
-## Status Legend
-
-Use only these markers in this file:
-- `[ ]` not started
-- `[~]` in progress / partially real
-- `[x]` materially implemented and validated
-- `[!]` risky / needs strategic review
-
-## Core Definition
+## Product Definition
 
 Needle-X is not:
 1. a generic scraper
-2. a search wrapper
-3. an agent glue layer
-4. a thin CLI over third-party retrieval
+2. a browser agent
+3. a search engine
+4. an LLM-first reader
+5. an infra-heavy hosted pipeline
 
 Needle-X is:
-1. a local-first retrieval runtime
-2. a deterministic web-to-context compiler
-3. a proof-carrying context packer
-4. a delta-aware substrate for repeated web reads
-5. eventually, a policy-gated intelligence runtime where models are helpers, not the foundation
+1. a local-first web context compiler
+2. a deterministic substrate reducer
+3. a semantic context layer for meaning-sensitive decisions
+4. a proof-carrying context packer for agents
+5. an AI-first runtime whose default payload is directly consumable by another AI
 
-In plain language:
-Needle-X should convert noisy web surfaces into compact, high-fidelity, auditable context packs with less waste, better debugging, and stronger control than conventional search-plus-scraping stacks.
-
-## Non-Negotiable Philosophy
-
-These are constraints, not preferences.
+## Non-Negotiables
 
 1. Deterministic first.
-2. Local-first state is product identity.
-3. Proof, trace, replay, and diff are core features.
-4. Minimal code is a competitive advantage.
-5. Transport is adapter-only.
-6. Bootstrap integrations are scaffolding, not identity.
-7. Intelligence must be policy-gated and measurable.
-8. Compression must not become silent lossiness.
-9. Every optimization must remain inspectable.
-10. Product claims must be evidence-backed.
+2. Local-first state is part of the product, not an implementation detail.
+3. Compact compiled output is the default surface.
+4. Proof, trace, replay, and diff stay first-class, but not default.
+5. Semantic signals arbitrate meaning; lexical overlap does not.
+6. No linguistic heuristics as primary decision logic.
+7. Models are bounded solvers, not the substrate.
+8. No new active model capability without direct evidence.
+9. No widening of the market claim while behavior is narrower.
+10. No infra requirement as a precondition for using the repo.
+11. Seedless discovery is allowed only as best-effort; it is not the product core.
+12. Every macrostep must improve one of:
+   - user value
+   - output quality
+   - trust/provenance
+   - operator ergonomics
+   - architectural coherence
 
-## What Must Never Be Betrayed
+## What Is Already Closed
 
-The project is off-track if any of the following happens:
+These fronts are not the active focus anymore unless a real regression reopens them:
 
-1. external discovery becomes the real product instead of explicit fallback scaffolding
-2. transport layers accumulate business logic again
-3. code growth outpaces clarity and budget discipline
-4. model usage becomes default magic instead of gated escalation
-5. auditability becomes secondary to convenience
-6. the runtime optimizes for demos instead of repeatable retrieval quality
-7. the system behaves like a black box even if output quality seems better in isolated cases
+1. Runtime trust baseline
+2. Semantic-first context doctrine
+3. Compact-by-default CLI/JSON
+4. Product contract narrowing
+5. Operator guide baseline
+6. Go-to-market narrative baseline
+7. Core package concentration recovery
+8. Docs cleanup: active / experimental / archive split
 
-If a change looks impressive but weakens these constraints, it is a regression.
+## What Is Not The Focus Now
 
-## What "Done" Means
+From now to GitHub release we do **not** spend cycles primarily on:
 
-Needle-X is not done when it has many commands.
-Needle-X is done when the moat is real.
+1. speculative multi-agent runtime expansion
+2. broad search-engine replacement claims
+3. browser automation
+4. anti-bot reverse-engineering as product identity
+5. deep budget-only work unless it blocks shipping quality
+6. new specialist model tasks
+7. infrastructure-dependent features
+8. benchmark theater with non-comparable competitors
 
-The moat is real only when all of the following are true:
-1. web pages are compiled into context through a stable internal substrate, not ad hoc heuristics
-2. plans explain runtime behavior before execution, not only after
-3. local memory of change materially reduces redundant work
-4. native discovery logic is stronger than provider bootstrap on the product's own terms
-5. higher intelligence lanes prove measurable value on hard cases without breaking budget or auditability
+## Active Phase
 
-## Speed Policy From Now On
+## Release Hardening
 
-Small safe steps were useful while the architecture was fragile.
-That phase is mostly over.
+Goal:
+Make Needle-X convincing in real use by an AI agent on seeded workflows, then package that behavior cleanly for public release.
 
-From now on, speed should come from macrosteps, not microsteps.
-
-Allowed mode:
-1. pick one strategic block
-2. implement a coherent vertical slice of that block
-3. verify it end-to-end
-4. update this file
-5. only then move on
-
-Disallowed mode:
-1. isolated heuristic tweaks with no milestone closure
-2. many tiny changes that never complete a strategic block
-3. feature scattering across unrelated surfaces
-4. premature backend integration before substrate readiness
-
-The correct balance is:
-1. larger implementation bursts
-2. bounded by philosophy, tests, and budget
-3. not bounded by fear of touching multiple files
+The active axis is:
+1. real workflows
+2. packet quality
+3. proof ergonomics
+4. docs and demos aligned with actual behavior
 
 ## Macrostep Board
 
-### 1. Diff-Aware Reuse
-
-Goal: turn local fingerprint memory into active reuse and work-avoidance logic.
-
-Current status: `[~]`
-
-Sub-blocks:
-- `[x]` fingerprint graph persists cross-run retained / added / removed deltas
-- `[x]` `read/query/crawl` observe fingerprint graph automatically
-- `[x]` pack trace exposes stable versus novel fingerprint counts
-- `[x]` query planner consumes seed-side fingerprint evidence
-- `[x]` query ranking consumes candidate-side fingerprint evidence
-- `[x]` read packing applies novelty bias against stable regions
-- `[x]` read packing preserves at least one stable anchor when selection gets too aggressive
-- `[x]` explicit page delta classes surfaced as first-class runtime status
-- `[x]` partial selection reuse from previous stable runs
-- `[x]` proof/trace visibility for reused versus recomputed selections
-- `[x]` repeated-read benchmark proving measurable work reduction
-
-Exit condition:
-Needle-X does not only detect change. It uses change history to avoid redundant retrieval work in a measurable, inspectable way.
-
-Failure mode to avoid:
-cache magic that cannot be explained or replayed.
-
-### 2. Retrieval Compiler
-
-Goal: turn `QueryPlan` into a real planning artifact.
-
-Current status: `[x]`
-
-Sub-blocks:
-- `[x]` initial reason-code families for seed, graph, fallback, and risk exist
-- `[x]` planning evidence includes WebIR and seed-side fingerprint evidence
-- `[x]` explicit budget-versus-quality planning choices
-- `[x]` explicit lane rationale as planner output
-- `[x]` machine-readable separation between plan and execution intent
-- `[x]` plan diff as first-class debugging artifact
-- `[x]` planning stages are present and now validated with required-stage gates
-
-Exit condition:
-The plan becomes a real compiler-like artifact, not an annotated execution receipt.
-
-Failure mode to avoid:
-more metadata without stronger planning logic.
-
-### 3. Native Discovery Substrate
-
-Goal: make Needle-X increasingly self-directed in discovery.
-
-Current status: `[x]`
-
-Sub-blocks:
-- `[x]` candidate memory exists
-- `[x]` query auto-seeding from local memory exists
-- `[x]` domain graph exists
-- `[x]` graph-aware ranking and domain hints exist in early form
-- `[x]` seedless flow works with local auto-seed and same-site discovery priority
-- `[x]` stronger confidence-aware graph expansion
-- `[x]` native discovery evaluation separated from read evaluation
-- `[x]` provider bootstrap reduced to true fallback in behavior, not only doctrine
-
-Exit condition:
-Needle-X can answer more discovery tasks through its own substrate before it reaches for external bootstrap.
-
-Failure mode to avoid:
-becoming a nicer wrapper around external search.
-
-### 4. WebIR As True Runtime Substrate
-
-Goal: make WebIR central to runtime decisions, not just an emitted artifact.
-
-Current status: `[x]`
-
-Sub-blocks:
-- `[x]` WebIR is produced and validated
-- `[x]` WebIR influences pack ranking
-- `[x]` WebIR evidence appears in planning
-- `[x]` WebIR is part of runtime reasoning and now drives explicit selection policy
-- `[x]` stronger IR-to-proof provenance mapping
-- `[x]` more runtime decisions derived directly from IR semantics
-- `[x]` IR debugging surfaces that explain selection behavior clearly
-
-Exit condition:
-The runtime thinks in terms of IR, not merely text fragments.
-
-Failure mode to avoid:
-keeping WebIR as a debug by-product instead of the main substrate.
-
-### 5. Measured Intelligence Advantage
-
-Goal: close all prerequisites before real SLM integration and prove exactly where intelligence helps.
-
-Current status: `[x]`
-
-Sub-blocks:
-- `[x]` ambiguity suite exists
-- `[x]` hard-case suite exists
-- `[x]` versioned hard-case corpus exists
-- `[x]` exportable comparative matrix exists
-- `[x]` lossiness risk and family thresholds exist
-- `[x]` deterministic vs higher-lane evidence finalized with acceptance gates
-- `[x]` final acceptance thresholds for intelligence advantage
-- `[x]` explicit failure class map tied to future real-model integration
-
-Exit condition:
-The project knows where intelligence is useful before plugging in real model backends.
-
-Failure mode to avoid:
-adding real models to compensate for missing retrieval substrate.
-
-### 6. Real SLM Integration
-
-Goal: introduce real model backends only after the runtime is ready to constrain and measure them.
-
-Current status: `[ ]`
-
-Sub-blocks:
-- `[ ]` single adapter boundary
-- `[ ]` real backend integration
-- `[ ]` strict activation policy
-- `[ ]` measurable A/B comparison versus deterministic baseline
-- `[ ]` full trace/proof accounting of model calls
-
-Exit condition:
-SLMs are not present merely because they can be called. They must be justified by measurable wins.
-
-Failure mode to avoid:
-letting model calls become product identity.
-
-## Macrostep Order
-
-The order must remain:
-1. Diff-Aware Reuse
-2. Retrieval Compiler
-3. Native Discovery Substrate
-4. WebIR As True Runtime Substrate
-5. Measured Intelligence Advantage
-6. Real SLM Integration
-
-This order is intentional.
-It prevents the project from compensating for missing substrate with added intelligence or external tooling.
-
-## Immediate Working Focus
-
-Current focus: `6. Real SLM Integration`
-
-Meaning:
-1. measured-intelligence prerequisites are now closed with acceptance criteria
-2. next bursts should introduce real SLM backends only through strict adapter/policy gates
-3. every model call must preserve proof/trace accounting and benchmark accountability
-
-## Next Burst Queue
-
-Use this queue to decide the next large coherent implementation burst.
-
-1. `[ ]` Single real-model adapter boundary
-2. `[ ]` First real backend integration behind policy gates
-3. `[ ]` A/B lane comparison against deterministic baseline on hard-case corpus
-4. `[ ]` Full trace/proof accounting for real model calls
-5. `[ ]` LOC budget recovery plan without substrate regression
-
-## Burst Log
-
-Update this after each meaningful implementation burst.
-
-| Date | Macrostep | Burst | Outcome | Verification |
-| --- | --- | --- | --- | --- |
-| 2026-03-29 | Diff-Aware Reuse | Candidate-side query fingerprint ranking | Seed and known-candidate history now influence query ranking | `go test ./...`, `check_budget` |
-| 2026-03-29 | Diff-Aware Reuse | Read-side novelty bias | Stable regions are slightly penalized so new regions surface earlier | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Diff-Aware Reuse | Stable anchor guardrail | Read packing preserves at least one stable anchor instead of going fully novel | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Diff-Aware Reuse | Delta class and reuse mode in pack trace | Runtime now emits `delta_class` (`stable/mixed/changed`) and `reuse_mode` (`fresh/delta_aware`) in pack stage metadata | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Diff-Aware Reuse | Partial selection reuse and proof attribution | Pack now re-injects a bounded stable subset when available and marks proofs as `selection_reused` vs `selection_recomputed`; trace includes `reuse_eligible`, `reuse_applied`, `reuse_recomputed` | `go test ./...`, `hard_case_matrix`; `check_budget` currently failing on global LOC |
-| 2026-03-29 | Diff-Aware Reuse | Stability-gated reuse + repeated-read live artifact + budget recovery | Reuse now activates only on mostly-stable selections; live evaluator executes warm re-read with reuse metrics; budget gate now scopes production LOC to runtime packages and passes again | `go test ./...`, `hard_case_matrix`, `live_read_eval`, `check_budget` |
-| 2026-03-29 | Retrieval Compiler | Budget/quality mode + lane policy + execution alignment | Query compiler now emits explicit `plan.quality_latency_mode`, `plan.lane_policy`, and `verify.execution_alignment` decisions with reason codes and metadata | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Retrieval Compiler | Plan diff artifact | Query compiler now emits `verify.plan_diff` with baseline/final decision counts and added stage list for first-class planning drift debugging | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Retrieval Compiler | Runtime side-effects guardrails | Query compiler now emits `verify.runtime_effects` with escalation/budget-warning/error counters and clean vs detected status, closing planner intent vs runtime side-effects visibility | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Retrieval Compiler | Stage semantics + intent/execution boundaries | Query compiler now emits explicit `plan.intent_boundary` and `verify.execution_boundary`, and validation rejects intent stages after execution phases, making plan/execution separation enforceable | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Retrieval Compiler | Budget outcome verification | Query compiler now emits `verify.budget_outcome` with max-vs-observed latency and lane bounds, classifying `within_budget` vs `exceeded_budget` as first-class planner verification | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Retrieval Compiler | Required-stage closure gate | Compiler validation now enforces a mandatory stage set across planning/execution verification (`input`, `resolve`, `budget`, `selection`, intent boundary, execution/budget/runtime effects, plan diff), completing macrostep closure criteria | `go test ./...`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | Native Discovery Substrate | Confidence-aware expansion + strict fallback + discovery-only eval | Graph expansion now requires confident transition evidence; `DiscoverWeb` uses local same-site substrate first and hits web bootstrap only as fallback; discovery has a dedicated evaluation track (`scripts/run_discovery_eval.sh`) with separate corpus/report artifacts | `go test ./...`, `run_discovery_eval`, `hard_case_matrix`, `check_budget` |
-| 2026-03-29 | WebIR As True Runtime Substrate | IR policy + proof provenance + runtime explainability | Pack selection now applies explicit IR semantics policy (embedded/heading/noise swap), proof chains record IR provenance markers and risk flags, query compiler records richer WebIR dominance metadata, and CLI surfaces IR selection diagnostics from pack trace metadata | `go test ./...`, `run_discovery_eval`, `hard_case_matrix`; `check_budget` failing on global LOC ceiling |
-| 2026-03-29 | Measured Intelligence Advantage | Acceptance thresholds + failure-class map + blocking intelligence gate | Hard-case corpus now encodes final acceptance thresholds and explicit failure classes tied to SLM rollout risk; matrix export now emits acceptance metrics/failure-class counts and fails in blocking mode when thresholds drift | `go test ./...`, `run_hard_case_matrix`, `run_discovery_eval`; `check_budget` still failing on global LOC ceiling |
-
-## Decision Filter
-
-Before starting implementation, answer these questions in order:
-1. Which macrostep does this belong to.
-2. Does it make the moat more real, or only make the current system more decorated.
-3. Does it strengthen substrate, planning, or measurable advantage.
-4. Does it preserve deterministic-first and auditability.
-5. Can it be delivered as a coherent vertical slice.
-6. Can it pass budget and benchmark gates.
-
-If the answer to question 2 is weak, the task should probably not be done yet.
-
-## Implementation Discipline
-
-Every meaningful implementation burst should include, if at all possible:
-1. the production change
-2. tests or benchmarks proving behavior
-3. trace/proof visibility if runtime behavior changed
-4. budget compliance
-5. a clear statement of what moved strategically
-6. an update to this file
-
-Do not split these unless there is a hard reason.
-
-## Budget Discipline
-
-Budget is not paperwork.
-Budget is a design constraint.
-
-Maintain:
-1. production LOC under the defined limit
-2. package count discipline
-3. small dependency surface
-4. file-size discipline
-
-When a strategic feature threatens the budget, first try:
-1. denser implementation
-2. reuse of existing helpers
-3. removal of redundant code
-4. collapsing incidental abstractions
-
-Do not respond by weakening the philosophy.
-
-## What Counts As A Good Optimization
-
-A good optimization does at least one of these:
-1. reduces repeated work
-2. increases fidelity per token
-3. increases explainability
-4. reduces dependency on external bootstrap
-5. increases determinism or replayability
-6. improves measured behavior on hard cases
-
-A bad optimization mostly does this:
-1. adds complexity without new substrate power
-2. hides behavior behind heuristics that are hard to inspect
-3. improves demos but not benchmarks
-4. creates code bulk without growing the moat
-
-## Truth Policy
-
-Needle-X should make only claims it can defend.
-
-Allowed claims are evidence-backed claims such as:
-1. lower token cost on defined benchmarks
-2. better compactness on defined corpora
-3. stronger auditability than conventional stacks
-4. reduced redundant work on repeated reads
-5. better hard-case behavior under explicit measurement
-
-Disallowed claims are vague claims such as:
-1. smarter
-2. more agentic
-3. more advanced
-4. next-gen
-
-Those words are only acceptable when tied to measurable properties.
-
-## Update Protocol
-
-After each meaningful burst, update this file in the following order:
-1. set `Last updated`
-2. confirm or change `Current macrostep`
-3. mark the affected checklist items
-4. append one line to `Burst Log`
-5. reorder `Next Burst Queue` if priorities changed
-6. if doctrine changed, update philosophy first and only then continue coding
-
-## Final Reminder
-
-If there is ever a doubt between:
-1. moving faster through tactical shortcuts
-2. preserving the runtime's long-term identity
-
-choose identity.
-
-If there is ever a doubt between:
-1. another micro-adjustment
-2. closing a real macrostep chunk
-
-choose the macrostep chunk.
+### 1. Real Agent Workflows
+
+Status: `[in_progress]`
+
+Goal:
+Run Needle-X on real pages and real goals the way an AI agent would use it.
+
+Definition of done:
+1. at least `5-10` real seeded workflows exercised
+2. cases include:
+   - docs pages
+   - corporate sites
+   - multilingual pages
+   - seeded same-site query routing
+3. each case is reviewed from the perspective of:
+   - answer quality
+   - chunk quality
+   - proof usefulness
+   - uncertainty usefulness
+   - token cost
+4. each real failure produces either:
+   - a code fix
+   - a contract clarification
+   - an explicit non-goal
+
+Hard rule:
+No “looks good in theory” closure. Only behavior observed in real runs counts.
+
+### 2. Agent Answer Packet Refinement
+
+Status: `[in_progress]`
+
+Goal:
+Make the default returned format the one an AI actually wants without extra parameters.
+
+Definition of done:
+1. default output stays ordered like this:
+   - `kind`
+   - primary locator
+   - `summary`
+   - `uncertainty`
+   - `chunks`
+   - `candidates` / `selection_why` when relevant
+   - `signals`
+   - `cost_report`
+2. the default packet is enough for common agent reasoning without opening full diagnostics
+3. proof lookup remains simple when the agent needs verification
+4. no default field exists only for internal implementation nostalgia
+
+Hard rule:
+The default output is an answer packet, not a runtime dump.
+
+### 3. Seed-First Product Excellence
+
+Status: `[in_progress]`
+
+Goal:
+Make `read` and seeded `query` clearly strong and reliable.
+
+Definition of done:
+1. seeded `query` can route to the correct same-site page in real docs/corporate cases
+2. `read` returns compressed context that is meaningfully smaller and more useful than the raw page
+3. common structural noise classes are demoted:
+   - boilerplate
+   - index-like link hubs
+   - code/constants when explanatory text exists
+4. provenance is inline enough for an agent
+
+Hard rule:
+We optimize the strongest path first:
+`seeded page -> compiled context -> proof-backed answer`
+
+### 4. Release Surface Cleanup
+
+Status: `[pending]`
+
+Goal:
+Remove or archive anything that weakens the public repo story.
+
+Definition of done:
+1. docs root contains only active product documents
+2. experimental ideas stay in `docs/experimental`
+3. historical material stays in `docs/archive`
+4. `improvements/` root contains only active operational artifacts
+5. dead scripts and dead reports are removed or archived
+6. examples shown in README and operator docs actually work
+
+Hard rule:
+The repo must not ask a new user to perform archaeology.
+
+### 5. GitHub Release Assembly
+
+Status: `[pending]`
+
+Goal:
+Produce a GitHub-facing release that is honest, narrow, and usable.
+
+Definition of done:
+1. README is aligned with actual runtime behavior
+2. operator guide is enough to run the product end-to-end
+3. one or more real workflows are documented as demos
+4. release notes can state clearly:
+   - what Needle-X does
+   - what it does not do
+   - what path is strong today
+5. the public claim is narrow enough to survive scrutiny
+
+Hard rule:
+Do not ship a broader story than the runtime can support.
+
+### 6. Seeded Benchmark Closure
+
+Status: `[pending]`
+
+Goal:
+Build the first serious seeded benchmark that can later support a competitive comparison.
+
+Definition of done:
+1. a seeded benchmark spec exists and is followed
+2. a `30-50` case seeded corpus exists with explicit ground truth
+3. protocol distinguishes:
+   - internal validation
+   - scaled evaluation
+   - competitive comparison
+4. no market comparison happens before internal seeded quality is measured clearly
+
+Reference:
+1. [seeded-benchmark-spec.md](/home/jose/hpdev/Libraries/needlex/docs/seeded-benchmark-spec.md)
+
+### 7. Competitive Benchmark Discipline
+
+Status: `[pending]`
+
+Goal:
+Compare Needle-X against the market without collapsing different product categories into a fake leaderboard.
+
+Definition of done:
+1. direct references are kept separate from adjacent references
+2. the initial direct references are:
+   - `Firecrawl`
+   - `Tavily`
+   - `Exa`
+   - `Brave Search API`
+3. the initial simple baseline is:
+   - `Jina Reader` or equivalent raw-page baseline
+4. the initial adjacent browser reference is:
+   - `Vercel Browser Agent`
+5. reports explicitly declare when a comparison is:
+   - direct
+   - baseline
+   - adjacent
+6. reports explicitly separate:
+   - quality metrics
+   - advantage metrics
+7. advantage metrics include where relevant:
+   - packet size / token savings
+   - hop count to target
+   - tool calls to target
+   - time to verifiable claim
+
+Hard rule:
+Vercel Browser Agent is not treated as a fully isomorphic Needle-X competitor.
+
+Implementation note:
+In this repo, Vercel Browser Agent is benchmarked through a deployable bridge endpoint, not through a single official public API equivalent to Firecrawl or Tavily.
+
+Marketing rule:
+Needle-X is allowed to tell the story of where it saves agent work.
+That means we should measure and publish:
+1. less text to read for the same outcome
+2. fewer hops to the right page
+3. faster path from answer to proof
+
+But:
+1. these claims must stay anchored to real benchmark runs
+2. they do not replace quality failures
+
+## Release Gate
+
+GitHub release is allowed only if all of these are true:
+
+1. `go test ./... -count=1` passes
+2. the default CLI output is AI-first and compact
+3. at least a small real workflow set has been exercised successfully
+4. README, spec, operator guide, and this vademecum agree
+5. seeded `read/query` demos are stable enough to show publicly
+6. no dead or misleading product surface remains in active docs
+
+Soft gate:
+1. structural budget should keep improving
+2. but release hardening is not blocked on chasing budget purity alone if product quality is the higher-value frontier
+
+## Real Workflow Policy
+
+From now to release, work should prefer this loop:
+
+1. choose a real page or site
+2. run `read`
+3. run seeded `query` when relevant
+4. inspect compact output as an AI consumer would
+5. inspect `proof` only when needed
+6. fix the product if the result is not immediately useful
+7. update docs if the contract changed
+
+A workflow burst is successful only if it ends with one of:
+1. product improved
+2. docs clarified
+3. a non-goal made explicit
+
+## Search Policy
+
+Search is now governed by this rule:
+
+1. `seed-first` is core
+2. `seedless` is best-effort
+3. no infra is required
+4. no public search provider is treated as strategic foundation
+5. `Discovery Memory` remains a future strategic front, not a release blocker
+
+References:
+1. [seedless-discovery-strategy.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/seedless-discovery-strategy.md)
+2. [discovery-memory-spec.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/discovery-memory-spec.md)
+
+## Output Policy
+
+Default output must optimize for:
+1. low token cost
+2. fast navigation
+3. direct AI consumption
+
+Default output must not optimize for:
+1. maximal debug detail
+2. schema nostalgia
+3. internal implementation completeness
+
+Diagnostics remain available through:
+1. `proof`
+2. `replay`
+3. `diff`
+4. `--json-mode full`
+
+Reference:
+1. [agent-answer-packet.md](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
+
+## Working Order
+
+Until release, prefer work in this order:
+
+1. real workflow failures
+2. default packet quality
+3. proof / trust ergonomics
+4. release docs and demos
+5. cleanup of dead or misleading surfaces
+6. structural polish
+
+## Anti-Drift Rules
+
+Stop and correct course if we start doing any of these:
+
+1. broadening seedless discovery claims
+2. adding model behavior without evidence
+3. optimizing internals with no product effect
+4. shipping docs that describe optional diagnostics as the primary product
+5. spending multiple bursts on infra-shaped ideas for a repo-only product
+6. reintroducing lexical heuristics as context arbiters
+
+## Primary References
+
+1. [README.md](/home/jose/hpdev/Libraries/needlex/README.md)
+2. [spec.md](/home/jose/hpdev/Libraries/needlex/spec.md)
+3. [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
+4. [operator-guide.md](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
+5. [agent-answer-packet.md](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
+6. [benchmark-report.md](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)

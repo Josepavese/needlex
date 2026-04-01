@@ -1,0 +1,981 @@
+{
+  "generated_at_utc": "2026-03-31T23:32:55Z",
+  "corpus_version": "seeded-corpus-v1",
+  "binary_path": "/tmp/needlex-memory-benchmark-1702219268/needle",
+  "summary": {
+    "case_count": 30,
+    "cold_runtime_success_rate": 0,
+    "warm_runtime_success_rate": 1,
+    "cold_selected_pass_rate": 0,
+    "warm_selected_pass_rate": 1,
+    "warm_memory_provider_rate": 1,
+    "improvement_rate": 1,
+    "avg_cold_latency_ms": 0,
+    "avg_warm_latency_ms": 547,
+    "avg_cold_packet_bytes": 0,
+    "avg_warm_packet_bytes": 6335,
+    "avg_warm_memory_documents": 1
+  },
+  "results": [
+    {
+      "id": "zai-coding-plan",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "coding plan",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://docs.z.ai/devpack/overview",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 6108,
+        "latency_ms": 365,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "sqlite-release-history",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "release history",
+      "expected_url": "https://sqlite.org/chronology.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://sqlite.org/chronology.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 28173,
+        "latency_ms": 1486,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "sqlite-download-page",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "download",
+      "expected_url": "https://sqlite.org/download.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://sqlite.org/download.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 7750,
+        "latency_ms": 784,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "python-virtual-environments",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "virtual environments",
+      "expected_url": "https://docs.python.org/3/tutorial/venv.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://docs.python.org/3/tutorial/venv.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 5342,
+        "latency_ms": 193,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "python-installing-packages",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "installing packages",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://docs.python.org/3/installing/index.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 5032,
+        "latency_ms": 178,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-js-guide-en",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1622,
+        "latency_ms": 219,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-js-guide-fr",
+      "family": "same_site_query",
+      "language": "fr",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1643,
+        "latency_ms": 223,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "playwright-installation-from-home",
+      "family": "same_site_query",
+      "language": "en",
+      "goal": "installation",
+      "expected_url": "https://playwright.dev/docs/intro",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://playwright.dev/docs/intro",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 4260,
+        "latency_ms": 194,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "playwright-home-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand what Playwright offers",
+      "expected_url": "https://playwright.dev",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://playwright.dev",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 6943,
+        "latency_ms": 195,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "sqlite-home-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand what SQLite is",
+      "expected_url": "https://sqlite.org",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://sqlite.org",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 3462,
+        "latency_ms": 1038,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "sqlite-chronology-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand what this page contains",
+      "expected_url": "https://www.sqlite.org/chronology.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://www.sqlite.org/chronology.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 28224,
+        "latency_ms": 1179,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "zai-devpack-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand the coding plan page",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://docs.z.ai/devpack/overview",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 6128,
+        "latency_ms": 353,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "python-tutorial-index-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand the Python tutorial entry page",
+      "expected_url": "https://docs.python.org/3/tutorial/index.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://docs.python.org/3/tutorial/index.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 9041,
+        "latency_ms": 195,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "python-installing-index-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand how Python package installation is documented",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://docs.python.org/3/installing/index.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 5069,
+        "latency_ms": 201,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-en-javascript-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1471,
+        "latency_ms": 211,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "go-doc-home-overview",
+      "family": "docs",
+      "language": "en",
+      "goal": "understand the Go documentation home",
+      "expected_url": "https://go.dev/doc/",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://go.dev/doc/",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 4224,
+        "latency_ms": 351,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "halfpocket-home",
+      "family": "corporate",
+      "language": "it",
+      "goal": "understand what Half Pocket does",
+      "expected_url": "https://halfpocket.net",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://www.halfpocket.net/",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 5575,
+        "latency_ms": 354,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mozilla-home",
+      "family": "corporate",
+      "language": "en",
+      "goal": "understand what Mozilla presents on its homepage",
+      "expected_url": "https://www.mozilla.org/en-US/",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://www.mozilla.org/en-US/",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 6524,
+        "latency_ms": 219,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "vercel-home",
+      "family": "corporate",
+      "language": "en",
+      "goal": "understand what Vercel offers",
+      "expected_url": "https://vercel.com",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://vercel.com",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1418,
+        "latency_ms": 513,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "netlify-home",
+      "family": "corporate",
+      "language": "en",
+      "goal": "understand what Netlify offers",
+      "expected_url": "https://www.netlify.com/",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://www.netlify.com/",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 4212,
+        "latency_ms": 338,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "sqlite-home-legacy",
+      "family": "legacy_homepage",
+      "language": "en",
+      "goal": "understand this legacy homepage",
+      "expected_url": "https://sqlite.org",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://sqlite.org",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 3351,
+        "latency_ms": 658,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "sqlite-chronology-list-like",
+      "family": "legacy_homepage",
+      "language": "en",
+      "goal": "understand a list-like release page",
+      "expected_url": "https://www.sqlite.org/chronology.html",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://www.sqlite.org/chronology.html",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 28225,
+        "latency_ms": 1017,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "nginx-home",
+      "family": "legacy_homepage",
+      "language": "en",
+      "goal": "understand what nginx offers from the homepage",
+      "expected_url": "https://nginx.org/en/",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://nginx.org/en/",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 5537,
+        "latency_ms": 4452,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "lua-home",
+      "family": "legacy_homepage",
+      "language": "en",
+      "goal": "understand what Lua is from the homepage",
+      "expected_url": "https://www.lua.org/",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://www.lua.org/",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1732,
+        "latency_ms": 212,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-zh-javascript",
+      "family": "multilingual",
+      "language": "zh-CN",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1471,
+        "latency_ms": 222,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-de-javascript",
+      "family": "multilingual",
+      "language": "de",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1475,
+        "latency_ms": 227,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-ru-javascript",
+      "family": "multilingual",
+      "language": "ru",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1459,
+        "latency_ms": 201,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-ja-javascript",
+      "family": "multilingual",
+      "language": "ja",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1459,
+        "latency_ms": 203,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-fr-javascript-guide",
+      "family": "multilingual",
+      "language": "fr",
+      "goal": "understand the JavaScript guide page",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1663,
+        "latency_ms": 207,
+        "memory_docs": 1
+      },
+      "improved": true
+    },
+    {
+      "id": "mdn-es-javascript",
+      "family": "multilingual",
+      "language": "es",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+      "cold": {
+        "runtime_ok": false,
+        "selected_pass": false,
+        "summary_present": false,
+        "proof_usable": false,
+        "packet_bytes": 0,
+        "latency_ms": 0,
+        "memory_docs": 0,
+        "failure_classes": [
+          "runtime_error"
+        ],
+        "error": "query failed: duckduckgo provider blocked by anti-bot challenge"
+      },
+      "warm": {
+        "runtime_ok": true,
+        "selected_url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+        "provider": "discovery_memory",
+        "selected_pass": true,
+        "summary_present": true,
+        "proof_usable": true,
+        "packet_bytes": 1459,
+        "latency_ms": 228,
+        "memory_docs": 1
+      },
+      "improved": true
+    }
+  ]
+}

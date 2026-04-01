@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-03-29T15:43:31Z",
+  "generated_at_utc": "2026-03-29T19:23:15Z",
   "corpus_version": "hard-case-corpus-v2",
   "rows": [
     {
@@ -17,7 +17,14 @@
           0,
           1
         ],
-        "invocations": 2,
+        "backend": "noop",
+        "invocations": 3,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "interpret_embedded_state"
+        ],
         "fidelity": 1,
         "signal_density": 0.1,
         "objective_score": 0.3,
@@ -32,7 +39,14 @@
           2,
           3
         ],
-        "invocations": 4,
+        "backend": "openai-compatible",
+        "invocations": 5,
+        "intervention_count": 1,
+        "accepted_interventions": 1,
+        "rejected_interventions": 0,
+        "tasks": [
+          "interpret_embedded_state"
+        ],
         "fidelity": 1,
         "signal_density": 0.1,
         "objective_score": 0.3,
@@ -60,7 +74,14 @@
           0,
           1
         ],
-        "invocations": 2,
+        "backend": "noop",
+        "invocations": 9,
+        "intervention_count": 1,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
         "fidelity": 1,
         "signal_density": 0.04918032786885246,
         "objective_score": 0.06557377049180328,
@@ -74,7 +95,14 @@
           1,
           2
         ],
-        "invocations": 3,
+        "backend": "openai-compatible",
+        "invocations": 12,
+        "intervention_count": 1,
+        "accepted_interventions": 1,
+        "rejected_interventions": 0,
+        "tasks": [
+          "resolve_ambiguity"
+        ],
         "fidelity": 0.6666666666666666,
         "signal_density": 0.05555555555555555,
         "objective_score": 0.08333333333333333,
@@ -101,7 +129,11 @@
           0,
           1
         ],
+        "backend": "noop",
         "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.15384615384615385,
         "objective_score": 0.23076923076923078,
@@ -116,7 +148,11 @@
           2,
           3
         ],
+        "backend": "openai-compatible",
         "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.15384615384615385,
         "objective_score": 0.23076923076923078,
@@ -142,7 +178,11 @@
           0,
           1
         ],
+        "backend": "noop",
         "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.07142857142857142,
         "objective_score": 0.21428571428571427,
@@ -157,7 +197,11 @@
           2,
           3
         ],
+        "backend": "openai-compatible",
         "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.14285714285714285,
         "objective_score": 0.42857142857142855,
@@ -184,7 +228,11 @@
         "lane_path": [
           0
         ],
+        "backend": "noop",
         "invocations": 0,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.08823529411764706,
         "objective_score": 0.11764705882352941,
@@ -198,7 +246,11 @@
           1,
           2
         ],
+        "backend": "openai-compatible",
         "invocations": 3,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.17647058823529413,
         "objective_score": 0.23529411764705882,
@@ -224,7 +276,11 @@
           0,
           1
         ],
+        "backend": "noop",
         "invocations": 2,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.08333333333333333,
         "objective_score": 0.3333333333333333,
@@ -239,7 +295,11 @@
           2,
           3
         ],
+        "backend": "openai-compatible",
         "invocations": 4,
+        "intervention_count": 0,
+        "accepted_interventions": 0,
+        "rejected_interventions": 0,
         "fidelity": 1,
         "signal_density": 0.08333333333333333,
         "objective_score": 0.3333333333333333,
@@ -297,17 +357,38 @@
       "max_lossiness_risk": 0.15
     }
   ],
+  "selection": [
+    {
+      "backend": "openai-compatible",
+      "enabled_tasks": [
+        "interpret_embedded_state",
+        "resolve_ambiguity"
+      ],
+      "holdout_tasks": [
+        "diagnose_drift",
+        "repair_evidence_graph",
+        "guard_compression"
+      ],
+      "reason": "keep only tasks with accepted backend interventions on the hard-case matrix"
+    }
+  ],
   "acceptance": {
     "passed": true,
     "pass_rate": 1,
     "lane_lift_rate": 0.5,
     "objective_lift_avg": 0.058282055991795624,
     "medium_or_high_risk_rate": 0.16666666666666666,
+    "backend_case_rate": 1,
+    "backend_intervention_rate": 0.3333333333333333,
+    "backend_acceptance_rate": 1,
     "thresholds": {
       "min_pass_rate": 1,
       "min_lane_lift_rate": 0.5,
       "min_objective_lift_avg": 0.05,
-      "max_medium_or_high_risk_rate": 0.2
+      "max_medium_or_high_risk_rate": 0.2,
+      "min_backend_case_rate": 1,
+      "min_backend_intervention_rate": 0.3,
+      "min_backend_acceptance_rate": 1
     }
   }
 }

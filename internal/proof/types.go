@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ const (
 	EventStageCompleted      = "stage_completed"
 	EventEscalationTriggered = "escalation_triggered"
 	EventBudgetWarning       = "budget_warning"
+	EventModelIntervention   = "model_intervention"
 	EventError               = "error"
 )
 
@@ -107,40 +107,34 @@ func BuildProofRecord(input BuildInput) (ProofRecord, error) {
 }
 
 func (r ProofRecord) Validate() error {
-	errs := []error{
-		requireNonEmpty("proof_record.id", r.ID),
-		r.Proof.Validate(),
-	}
-	return errors.Join(filterErrors(errs...)...)
+	return core.JoinErrors(core.RequireNonEmpty("proof_record.id", r.ID), r.Proof.Validate())
 }
 
 func (e TraceEvent) Validate() error {
 	errs := []error{
-		requireNonEmpty("trace_event.type", e.Type),
-		requireNonEmpty("trace_event.stage", e.Stage),
+		core.RequireNonEmpty("trace_event.type", e.Type),
+		core.RequireNonEmpty("trace_event.stage", e.Stage),
 	}
 	if e.Timestamp.IsZero() {
 		errs = append(errs, fmt.Errorf("trace_event.timestamp is required"))
 	}
+	switch e.Type {
+	case EventStageStarted, EventStageCompleted, EventEscalationTriggered, EventBudgetWarning, EventModelIntervention, EventError:
+	default:
+		errs = append(errs, fmt.Errorf("trace_event.type %q is not supported", e.Type))
+	}
 	if e.Lane != 0 {
-		if err := validateLane("trace_event.lane", e.Lane); err != nil {
+		if err := core.ValidateLane("trace_event.lane", e.Lane); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	for key, value := range e.Data {
-		if strings.TrimSpace(key) == "" {
-			errs = append(errs, fmt.Errorf("trace_event.data key must not be empty"))
-		}
-		if strings.TrimSpace(value) == "" {
-			errs = append(errs, fmt.Errorf("trace_event.data[%s] must not be empty", key))
-		}
-	}
-	return errors.Join(filterErrors(errs...)...)
+	errs = append(errs, validateStringMap("trace_event.data", e.Data)...)
+	return core.JoinErrors(errs...)
 }
 
 func (s StageSnapshot) Validate() error {
 	errs := []error{
-		requireNonEmpty("stage_snapshot.stage", s.Stage),
+		core.RequireNonEmpty("stage_snapshot.stage", s.Stage),
 	}
 	if s.StartedAt.IsZero() {
 		errs = append(errs, fmt.Errorf("stage_snapshot.started_at is required"))
@@ -148,16 +142,14 @@ func (s StageSnapshot) Validate() error {
 	if !s.CompletedAt.IsZero() && s.CompletedAt.Before(s.StartedAt) {
 		errs = append(errs, fmt.Errorf("stage_snapshot.completed_at must be >= started_at"))
 	}
-	if s.ItemCount < 0 {
-		errs = append(errs, fmt.Errorf("stage_snapshot.item_count must be >= 0"))
-	}
-	return errors.Join(filterErrors(errs...)...)
+	errs = append(errs, core.RequireNonNegative("stage_snapshot.item_count", s.ItemCount))
+	return core.JoinErrors(errs...)
 }
 
 func (r RunTrace) Validate() error {
 	errs := []error{
-		requireNonEmpty("run_trace.run_id", r.RunID),
-		requireNonEmpty("run_trace.trace_id", r.TraceID),
+		core.RequireNonEmpty("run_trace.run_id", r.RunID),
+		core.RequireNonEmpty("run_trace.trace_id", r.TraceID),
 	}
 	if r.StartedAt.IsZero() {
 		errs = append(errs, fmt.Errorf("run_trace.started_at is required"))
@@ -165,17 +157,9 @@ func (r RunTrace) Validate() error {
 	if !r.FinishedAt.IsZero() && r.FinishedAt.Before(r.StartedAt) {
 		errs = append(errs, fmt.Errorf("run_trace.finished_at must be >= started_at"))
 	}
-	for i, stage := range r.Stages {
-		if err := stage.Validate(); err != nil {
-			errs = append(errs, fmt.Errorf("run_trace.stages[%d]: %w", i, err))
-		}
-	}
-	for i, event := range r.Events {
-		if err := event.Validate(); err != nil {
-			errs = append(errs, fmt.Errorf("run_trace.events[%d]: %w", i, err))
-		}
-	}
-	return errors.Join(filterErrors(errs...)...)
+	errs = append(errs, core.ValidateIndexed("run_trace.stages", r.Stages, func(stage StageSnapshot) error { return stage.Validate() })...)
+	errs = append(errs, core.ValidateIndexed("run_trace.events", r.Events, func(event TraceEvent) error { return event.Validate() })...)
+	return core.JoinErrors(errs...)
 }
 
 func (r RunTrace) ReplayReport() (ReplayReport, error) {
@@ -301,26 +285,15 @@ func stageOrder(left, right map[string]StageSnapshot) []string {
 	return ordered
 }
 
-func validateLane(field string, lane int) error {
-	if lane < 0 || lane > core.MaxLane {
-		return fmt.Errorf("%s must be between 0 and %d", field, core.MaxLane)
-	}
-	return nil
-}
-
-func requireNonEmpty(field, value string) error {
-	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("%s must not be empty", field)
-	}
-	return nil
-}
-
-func filterErrors(errs ...error) []error {
-	filtered := make([]error, 0, len(errs))
-	for _, err := range errs {
-		if err != nil {
-			filtered = append(filtered, err)
+func validateStringMap(field string, values map[string]string) []error {
+	errs := make([]error, 0, len(values))
+	for key, value := range values {
+		if strings.TrimSpace(key) == "" {
+			errs = append(errs, fmt.Errorf("%s key must not be empty", field))
+		}
+		if strings.TrimSpace(value) == "" {
+			errs = append(errs, fmt.Errorf("%s[%s] must not be empty", field, key))
 		}
 	}
-	return filtered
+	return errs
 }

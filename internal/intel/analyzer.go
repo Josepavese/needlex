@@ -9,19 +9,24 @@ import (
 )
 
 const (
-	ReasonAmbiguityTriggered = "NX_AMBIGUITY_TRIGGERED"
-	ReasonCoverageTriggered  = "NX_COVERAGE_TRIGGERED"
-	ReasonDomainForceLane    = "NX_DOMAIN_FORCE_LANE"
-	ReasonExtractorTriggered = "NX_EXTRACTOR_TRIGGERED"
-	ReasonFormatterTriggered = "NX_FORMATTER_TRIGGERED"
+	ReasonAmbiguityTriggered   = "NX_AMBIGUITY_TRIGGERED"
+	ReasonCoverageTriggered    = "NX_COVERAGE_TRIGGERED"
+	ReasonDomainForceLane      = "NX_DOMAIN_FORCE_LANE"
+	ReasonEmbeddedWorthiness   = "NX_EMBEDDED_WORTHINESS_TRIGGERED"
+	ReasonExtractorTriggered   = "NX_EXTRACTOR_TRIGGERED"
+	ReasonFormatterTriggered   = "NX_FORMATTER_TRIGGERED"
+	ReasonDriftTriggered       = "NX_DRIFT_TRIGGERED"
+	ReasonGraphTriggered       = "NX_GRAPH_TRIGGERED"
+	ReasonCompressionTriggered = "NX_COMPRESSION_TRIGGERED"
 )
 
 type Input struct {
-	Fingerprint string
-	Text        string
-	HeadingPath []string
-	Score       float64
-	Confidence  float64
+	Fingerprint      string
+	Text             string
+	HeadingPath      []string
+	ContextAlignment float64
+	Score            float64
+	Confidence       float64
 }
 
 type Decision struct {
@@ -31,6 +36,7 @@ type Decision struct {
 	AmbiguityScore   float64
 	CoverageLoss     float64
 	RiskFlags        []string
+	TaskRoutes       []TaskRoute
 	ModelInvocations []core.ModelInvocation
 	TransformChain   []string
 }
@@ -57,89 +63,8 @@ func New(cfg config.Config) Analyzer {
 	return Analyzer{cfg: cfg}
 }
 
-func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary {
-	decisions := make(map[string]Decision, len(inputs))
-	maxLane := 0
-	escalations := 0
-
-	for _, input := range inputs {
-		coverage := tokenCoverage(input, objective)
-		coverageLoss := clamp(1-coverage, 0, 1)
-		ambiguity := ambiguityScore(input, coverage)
-		lane := 0
-		reasonCode := ""
-		riskFlags := buildRiskFlags(input, coverageLoss, ambiguity)
-		modelInvocations := []core.ModelInvocation{}
-		transformChain := []string{"intel:route:v1", "intel:judge:v1"}
-
-		if a.cfg.Runtime.LaneMax >= 1 {
-			switch {
-			case ambiguity > a.cfg.Policy.ThresholdAmbiguity:
-				lane = 1
-				reasonCode = ReasonAmbiguityTriggered
-			case coverageLoss > a.cfg.Policy.ThresholdCoverage:
-				lane = 1
-				reasonCode = ReasonCoverageTriggered
-			}
-		}
-		if hints.ForceLane > lane {
-			lane = min(hints.ForceLane, a.cfg.Runtime.LaneMax)
-			if lane > 0 {
-				reasonCode = ReasonDomainForceLane
-			}
-		}
-		if lane < 2 && a.cfg.Runtime.LaneMax >= 2 {
-			if ambiguity >= 0.85 || (coverageLoss >= 0.90 && input.Confidence < 0.70) {
-				lane = 2
-				reasonCode = ReasonExtractorTriggered
-			}
-		}
-		if lane < 3 && a.cfg.Runtime.LaneMax >= 3 {
-			if hints.Profile == core.ProfileTiny && (lane >= 2 || ambiguity >= 0.60) {
-				lane = 3
-				reasonCode = ReasonFormatterTriggered
-			}
-		}
-
-		if lane > 0 {
-			escalations++
-			maxLane = max(maxLane, lane)
-			modelInvocations = append(modelInvocations,
-				core.ModelInvocation{
-					Model:     a.cfg.Models.Router,
-					Purpose:   "route_policy",
-					TokensIn:  0,
-					TokensOut: 0,
-					LatencyMS: 0,
-				},
-				core.ModelInvocation{
-					Model:     a.cfg.Models.Judge,
-					Purpose:   "judge_policy",
-					TokensIn:  0,
-					TokensOut: 0,
-					LatencyMS: 0,
-				},
-			)
-		}
-		if lane >= 2 {
-			transformChain = append(transformChain, "intel:extract_slm:v1")
-		}
-		if lane >= 3 {
-			transformChain = append(transformChain, "intel:formatter:v1")
-		}
-
-		decisions[input.Fingerprint] = Decision{
-			Fingerprint:      input.Fingerprint,
-			Lane:             lane,
-			ReasonCode:       reasonCode,
-			AmbiguityScore:   ambiguity,
-			CoverageLoss:     coverageLoss,
-			RiskFlags:        riskFlags,
-			ModelInvocations: modelInvocations,
-			TransformChain:   transformChain,
-		}
-	}
-
+func (a Analyzer) Analyze(inputs []Input, hints Hints) Summary {
+	decisions, maxLane, escalations := a.analyzeInputs(inputs, hints)
 	return Summary{
 		PageType:        classifyPageType(inputs),
 		Difficulty:      classifyDifficulty(decisions),
@@ -150,20 +75,97 @@ func (a Analyzer) Analyze(objective string, inputs []Input, hints Hints) Summary
 	}
 }
 
-func tokenCoverage(input Input, objective string) float64 {
-	tokens := objectiveTokens(objective)
-	if len(tokens) == 0 {
-		return 1
-	}
+func (a Analyzer) analyzeInputs(inputs []Input, hints Hints) (map[string]Decision, int, int) {
+	decisions := make(map[string]Decision, len(inputs))
+	maxLane := 0
+	escalations := 0
 
-	haystack := strings.ToLower(strings.Join(input.HeadingPath, " ") + " " + input.Text)
-	matches := 0
-	for _, token := range tokens {
-		if strings.Contains(haystack, token) {
-			matches++
+	for _, input := range inputs {
+		decision := a.decisionForInput(input, hints)
+		if decision.Lane > 0 {
+			escalations++
+			maxLane = max(maxLane, decision.Lane)
+		}
+		decisions[input.Fingerprint] = decision
+	}
+	return decisions, maxLane, escalations
+}
+
+func (a Analyzer) decisionForInput(input Input, hints Hints) Decision {
+	coverage := clamp(input.ContextAlignment, 0, 1)
+	coverageLoss := clamp(1-coverage, 0, 1)
+	ambiguity := ambiguityScore(input, coverage)
+	lane, reasonCode := a.resolveLane(ambiguity, coverageLoss, input.Confidence, hints)
+	return Decision{
+		Fingerprint:      input.Fingerprint,
+		Lane:             lane,
+		ReasonCode:       reasonCode,
+		AmbiguityScore:   ambiguity,
+		CoverageLoss:     coverageLoss,
+		RiskFlags:        buildRiskFlags(input, coverageLoss, ambiguity),
+		ModelInvocations: routeInvocations(a.cfg, lane),
+		TransformChain:   transformChainForLane(lane),
+	}
+}
+
+func (a Analyzer) resolveLane(ambiguity, coverageLoss, confidence float64, hints Hints) (int, string) {
+	lane, reasonCode := baseLaneDecision(a.cfg, ambiguity, coverageLoss)
+	if hints.ForceLane > lane {
+		lane = min(hints.ForceLane, a.cfg.Runtime.LaneMax)
+		if lane > 0 {
+			reasonCode = ReasonDomainForceLane
 		}
 	}
-	return clamp(float64(matches)/float64(len(tokens)), 0, 1)
+	if lane < 2 && a.cfg.Runtime.LaneMax >= 2 && shouldExtract(ambiguity, coverageLoss, confidence) {
+		lane, reasonCode = 2, ReasonExtractorTriggered
+	}
+	if lane < 3 && a.cfg.Runtime.LaneMax >= 3 && shouldFormat(hints.Profile, lane, ambiguity) {
+		lane, reasonCode = 3, ReasonFormatterTriggered
+	}
+	return lane, reasonCode
+}
+
+func baseLaneDecision(cfg config.Config, ambiguity, coverageLoss float64) (int, string) {
+	if cfg.Runtime.LaneMax < 1 {
+		return 0, ""
+	}
+	switch {
+	case ambiguity > cfg.Policy.ThresholdAmbiguity:
+		return 1, ReasonAmbiguityTriggered
+	case coverageLoss > cfg.Policy.ThresholdCoverage:
+		return 1, ReasonCoverageTriggered
+	default:
+		return 0, ""
+	}
+}
+
+func shouldExtract(ambiguity, coverageLoss, confidence float64) bool {
+	return ambiguity >= 0.85 || (coverageLoss >= 0.90 && confidence < 0.70)
+}
+
+func shouldFormat(profile string, lane int, ambiguity float64) bool {
+	return profile == core.ProfileTiny && (lane >= 2 || ambiguity >= 0.60)
+}
+
+func routeInvocations(cfg config.Config, lane int) []core.ModelInvocation {
+	if lane <= 0 {
+		return nil
+	}
+	return []core.ModelInvocation{
+		{Model: cfg.Models.Router, Purpose: "route_policy"},
+		{Model: cfg.Models.Judge, Purpose: "judge_policy"},
+	}
+}
+
+func transformChainForLane(lane int) []string {
+	chain := []string{"intel:route:v1", "intel:judge:v1"}
+	if lane >= 2 {
+		chain = append(chain, "intel:extract_slm:v1")
+	}
+	if lane >= 3 {
+		chain = append(chain, "intel:formatter:v1")
+	}
+	return chain
 }
 
 func ambiguityScore(input Input, coverage float64) float64 {
@@ -259,24 +261,6 @@ func classifyNoise(inputs []Input) string {
 	}
 }
 
-func objectiveTokens(input string) []string {
-	fields := strings.Fields(strings.ToLower(input))
-	out := make([]string, 0, len(fields))
-	seen := map[string]struct{}{}
-	for _, field := range fields {
-		token := strings.Trim(field, ".,:;!?()[]{}\"'")
-		if len(token) < 3 {
-			continue
-		}
-		if _, ok := seen[token]; ok {
-			continue
-		}
-		seen[token] = struct{}{}
-		out = append(out, token)
-	}
-	return out
-}
-
 func clamp(value, lower, upper float64) float64 {
 	switch {
 	case value < lower:
@@ -303,13 +287,22 @@ func min(left, right int) int {
 }
 
 func (d Decision) Metadata() map[string]string {
-	return map[string]string{
+	taskNames := make([]string, 0, len(d.TaskRoutes))
+	for _, route := range d.TaskRoutes {
+		taskNames = append(taskNames, route.Task)
+	}
+	out := map[string]string{
 		"fingerprint":      d.Fingerprint,
 		"lane":             fmt.Sprintf("%d", d.Lane),
 		"reason_code":      d.ReasonCode,
 		"ambiguity_score":  fmt.Sprintf("%.2f", d.AmbiguityScore),
 		"coverage_loss":    fmt.Sprintf("%.2f", d.CoverageLoss),
 		"risk_flag_count":  fmt.Sprintf("%d", len(d.RiskFlags)),
+		"task_route_count": fmt.Sprintf("%d", len(d.TaskRoutes)),
 		"invocation_count": fmt.Sprintf("%d", len(d.ModelInvocations)),
 	}
+	if len(taskNames) > 0 {
+		out["task_names"] = strings.Join(taskNames, ",")
+	}
+	return out
 }

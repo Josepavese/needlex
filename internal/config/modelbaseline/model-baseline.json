@@ -1,0 +1,46 @@
+{
+  "version": "model-baseline-v1",
+  "cpu_baseline_id": "gemma3_1b_all",
+  "recommended_backend": "openai-compatible",
+  "recommended_base_url": "http://127.0.0.1:11434/v1",
+  "discovery": {
+    "recommended_provider_chain": "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
+  },
+  "semantic": {
+    "recommended_backend": "openai-embeddings",
+    "recommended_base_url": "http://127.0.0.1:18180",
+    "model": "intfloat/multilingual-e5-small",
+    "timeout_ms": 1200
+  },
+  "models": {
+    "router": "gemma3:1b-it-q8_0",
+    "judge": "gemma3:1b-it-q8_0",
+    "extractor": "gemma3:1b-it-q8_0",
+    "formatter": "gemma3:1b-it-q8_0"
+  },
+  "timeouts": {
+    "micro_timeout_ms": 8000,
+    "structured_timeout_ms": 20000,
+    "specialist_timeout_ms": 8000
+  },
+  "override_env": [
+    "NEEDLEX_MODELS_BACKEND",
+    "NEEDLEX_MODELS_BASE_URL",
+    "NEEDLEX_MODELS_ROUTER",
+    "NEEDLEX_MODELS_JUDGE",
+    "NEEDLEX_MODELS_EXTRACTOR",
+    "NEEDLEX_MODELS_FORMATTER",
+    "NEEDLEX_MODELS_MICRO_TIMEOUT_MS",
+    "NEEDLEX_MODELS_STRUCTURED_TIMEOUT_MS",
+    "NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS",
+    "NEEDLEX_DISCOVERY_PROVIDER_CHAIN",
+    "NEEDLEX_SEMANTIC_ENABLED",
+    "NEEDLEX_SEMANTIC_BACKEND",
+    "NEEDLEX_SEMANTIC_BASE_URL",
+    "NEEDLEX_SEMANTIC_MODEL",
+    "NEEDLEX_SEMANTIC_TIMEOUT_MS",
+    "NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD",
+    "NEEDLEX_SEMANTIC_DOMINANCE_DELTA",
+    "NEEDLEX_SEMANTIC_MAX_CANDIDATES"
+  ]
+}

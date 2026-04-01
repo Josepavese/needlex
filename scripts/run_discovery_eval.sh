@@ -6,7 +6,7 @@ cd "$ROOT"
 
 export NEEDLEX_DISCOVERY_EVAL_OUT="${NEEDLEX_DISCOVERY_EVAL_OUT:-improvements/discovery-eval-latest.json}"
 export NEEDLEX_DISCOVERY_EVAL_BASELINE="${NEEDLEX_DISCOVERY_EVAL_BASELINE:-improvements/discovery-eval-baseline.json}"
-export NEEDLEX_DISCOVERY_EVAL_CORPUS="${NEEDLEX_DISCOVERY_EVAL_CORPUS:-testdata/benchmark/discovery-corpus-v1.json}"
+export NEEDLEX_DISCOVERY_EVAL_CORPUS="${NEEDLEX_DISCOVERY_EVAL_CORPUS:-benchmarks/corpora/discovery-corpus-v1.json}"
 export NEEDLEX_DISCOVERY_EVAL_UPDATE_BASELINE="${NEEDLEX_DISCOVERY_EVAL_UPDATE_BASELINE:-0}"
 
 for arg in "$@"; do
@@ -15,4 +15,4 @@ for arg in "$@"; do
   fi
 done
 
-go test ./scripts/discovery_eval -run TestExportDiscoveryEval -count=1 -v
+go test ./benchmarks/discovery_eval/runner -run TestExportDiscoveryEval -count=1 -v

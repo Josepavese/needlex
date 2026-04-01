@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/josepavese/needlex/internal/intel"
 )
 
 var ErrCandidatesNotFound = errors.New("candidates not found")
@@ -98,7 +101,7 @@ func (s CandidateStore) Observe(observation CandidateObservation) (CandidateReco
 	return updated, path, nil
 }
 
-func (s CandidateStore) Search(goal string, limit int) ([]CandidateMatch, error) {
+func (s CandidateStore) Search(ctx context.Context, goal string, limit int, semantic intel.SemanticAligner) ([]CandidateMatch, error) {
 	records, err := s.loadAll()
 	if err != nil {
 		if errors.Is(err, ErrCandidatesNotFound) {
@@ -109,14 +112,28 @@ func (s CandidateStore) Search(goal string, limit int) ([]CandidateMatch, error)
 	if limit <= 0 {
 		limit = 5
 	}
-	goalTokens := candidateTokens(goal)
-	if len(goalTokens) == 0 {
+	if strings.TrimSpace(goal) == "" || semantic == nil {
 		return nil, nil
+	}
+	candidates := make([]intel.SemanticCandidate, 0, len(records))
+	for _, record := range records {
+		candidates = append(candidates, intel.SemanticCandidate{
+			ID:   record.URL,
+			Text: strings.TrimSpace(record.Title + " " + record.URL),
+		})
+	}
+	scores, err := semantic.Score(ctx, goal, candidates)
+	if err != nil {
+		return nil, err
+	}
+	byURL := make(map[string]float64, len(scores))
+	for _, score := range scores {
+		byURL[score.ID] = score.Similarity
 	}
 
 	matches := make([]CandidateMatch, 0, len(records))
 	for _, record := range records {
-		score, reasons := scoreCandidate(goalTokens, record)
+		score, reasons := scoreCandidate(record, byURL[record.URL])
 		if score <= 0 {
 			continue
 		}
@@ -179,57 +196,16 @@ func (s CandidateStore) saveAll(records []CandidateRecord) (string, error) {
 	return path, nil
 }
 
-func scoreCandidate(goalTokens []string, record CandidateRecord) (float64, []string) {
-	recordTokens := candidateTokens(record.Title + " " + record.URL)
-	if len(recordTokens) == 0 {
+func scoreCandidate(record CandidateRecord, similarity float64) (float64, []string) {
+	if similarity <= 0 {
 		return 0, nil
 	}
-	matches := overlapCount(goalTokens, recordTokens)
-	if matches == 0 {
-		return 0, nil
-	}
-	score := float64(matches) + float64(min(record.SeenCount, 5))*0.15
-	reasons := []string{"goal_token_overlap"}
+	score := similarity*3 + float64(min(record.SeenCount, 5))*0.15
+	reasons := []string{"semantic_goal_alignment"}
 	if record.SeenCount > 1 {
 		reasons = append(reasons, "local_history")
 	}
 	return score, reasons
-}
-
-func candidateTokens(text string) []string {
-	raw := strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
-		return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
-	})
-	out := make([]string, 0, len(raw))
-	seen := map[string]struct{}{}
-	for _, item := range raw {
-		if len(item) < 3 {
-			continue
-		}
-		if _, ok := seen[item]; ok {
-			continue
-		}
-		seen[item] = struct{}{}
-		out = append(out, item)
-	}
-	return out
-}
-
-func overlapCount(left, right []string) int {
-	if len(left) == 0 || len(right) == 0 {
-		return 0
-	}
-	set := make(map[string]struct{}, len(right))
-	for _, token := range right {
-		set[token] = struct{}{}
-	}
-	count := 0
-	for _, token := range left {
-		if _, ok := set[token]; ok {
-			count++
-		}
-	}
-	return count
 }
 
 func appendUnique(existing []string, values ...string) []string {
