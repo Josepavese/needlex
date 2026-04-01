@@ -3,32 +3,16 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+source scripts/lib/ollama.sh
 
 MODEL="${NEEDLEX_QWEN_MODEL:-qwen3.5:0.8b}"
 BASE_URL="${NEEDLEX_MODELS_BASE_URL:-http://127.0.0.1:11434/v1}"
 REPORT_OUT="${NEEDLEX_HARD_CASE_MATRIX_OUT:-improvements/hard-case-matrix-live-qwen35-cpu.json}"
 OLLAMA_BIN="${OLLAMA_BIN:-ollama}"
 
-if ! command -v "${OLLAMA_BIN}" >/dev/null 2>&1; then
-  echo "ollama binary not found: ${OLLAMA_BIN}" >&2
-  exit 1
-fi
-
-if ! curl -fsS "${BASE_URL%/v1}/api/tags" >/dev/null 2>&1; then
-  echo "starting ollama serve on background session"
-  "${OLLAMA_BIN}" serve >/tmp/needlex-ollama.log 2>&1 &
-  OLLAMA_PID=$!
-  trap 'kill ${OLLAMA_PID:-0} >/dev/null 2>&1 || true' EXIT
-  for _ in $(seq 1 30); do
-    if curl -fsS "${BASE_URL%/v1}/api/tags" >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-fi
-
-echo "ensuring model ${MODEL} is available"
-"${OLLAMA_BIN}" pull "${MODEL}"
+needlex_ollama_ensure_ready "$OLLAMA_BIN" "$BASE_URL"
+trap needlex_ollama_cleanup EXIT
+needlex_ollama_pull_unique "$OLLAMA_BIN" "$MODEL"
 
 export NEEDLEX_HARD_CASE_MATRIX_USE_LIVE_BACKEND=1
 export NEEDLEX_HARD_CASE_MATRIX_OUT="${REPORT_OUT}"

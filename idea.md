@@ -9,7 +9,7 @@ Documenti operativi:
 - `README.md`
 - `docs/architecture.md`
 - `docs/folder-tree.md`
-- `docs/development-plan.md`
+- `docs/vademecum.md`
 
 ## 1) Executive Thesis (2 Generazioni Avanti)
 Needle-X non deve essere solo un altro scraper per LLM.

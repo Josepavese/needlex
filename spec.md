@@ -8,7 +8,6 @@ Related docs:
 - `docs/architecture.md`
 - `docs/agent-answer-packet.md`
 - `docs/folder-tree.md`
-- `docs/development-plan.md`
 - `docs/semantic-alignment-gate.md`
 - `docs/model-baseline.md`
 - `docs/experimental/discovery-memory-spec.md`
@@ -545,7 +544,6 @@ needlex/
   docs/
     architecture.md
     folder-tree.md
-    development-plan.md
   internal/
     config/
     core/

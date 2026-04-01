@@ -145,7 +145,6 @@ go run ./cmd/needle mcp
 - [benchmark-report.md](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
 - [model-baseline.md](/home/jose/hpdev/Libraries/needlex/docs/model-baseline.md)
 - [semantic-alignment-gate.md](/home/jose/hpdev/Libraries/needlex/docs/semantic-alignment-gate.md)
-- [development-plan.md](/home/jose/hpdev/Libraries/needlex/docs/development-plan.md)
 - [operator-guide.md](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
 - [go-to-market.md](/home/jose/hpdev/Libraries/needlex/docs/go-to-market.md)
 
