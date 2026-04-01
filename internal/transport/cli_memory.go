@@ -48,7 +48,7 @@ type compactMemoryCandidate struct {
 }
 
 func writeMemoryUsage(w io.Writer) {
-	writeUsage(w, "needle memory <stats|search|prune> [args]", "subcommands: stats, search, prune")
+	writeUsage(w, "needlex memory <stats|search|prune> [args]", "subcommands: stats, search, prune")
 }
 
 func (r Runner) runMemory(args []string, stdout, stderr io.Writer) int {
@@ -84,7 +84,7 @@ func (r Runner) runMemoryStats(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		writeUsage(stderr, "needle memory stats [--json] [--config path]")
+		writeUsage(stderr, "needlex memory stats [--json] [--config path]")
 		return 2
 	}
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)
@@ -124,7 +124,7 @@ func (r Runner) runMemorySearch(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		writeUsage(stderr, "needle memory search <query> [--json] [--config path] [--limit N] [--domain-hints host1,host2]")
+		writeUsage(stderr, "needlex memory search <query> [--json] [--config path] [--limit N] [--domain-hints host1,host2]")
 		return 2
 	}
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)
@@ -169,7 +169,7 @@ func (r Runner) runMemoryPrune(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		writeUsage(stderr, "needle memory prune [--json] [--config path]")
+		writeUsage(stderr, "needlex memory prune [--json] [--config path]")
 		return 2
 	}
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)

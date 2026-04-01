@@ -151,32 +151,32 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 func writeRootUsage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
-  needle crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]
-  needle query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]
-  needle read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]
-  needle replay <trace-id> [--json]
-  needle diff <trace-a> <trace-b> [--json]
-  needle proof <trace-id|proof-id|chunk-id> [--json]
-  needle memory <stats|search|prune> [args]
-  needle prune (--all | --older-than-hours N) [--json]
-  needle mcp
+  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]
+  needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]
+  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]
+  needlex replay <trace-id> [--json]
+  needlex diff <trace-a> <trace-b> [--json]
+  needlex proof <trace-id|proof-id|chunk-id> [--json]
+  needlex memory <stats|search|prune> [args]
+  needlex prune (--all | --older-than-hours N) [--json]
+  needlex mcp
 `)
 }
 
 func writeQueryUsage(w io.Writer) {
-	writeUsage(w, "needle query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]", "note: when seed-url is omitted, discovery defaults to web_search")
+	writeUsage(w, "needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]", "note: when seed-url is omitted, discovery defaults to web_search")
 }
 
 func writeReadUsage(w io.Writer) {
-	writeUsage(w, "needle read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]")
+	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]")
 }
 
 func writeReplayUsage(w io.Writer) {
-	writeUsage(w, "needle replay <trace-id> [--json]")
+	writeUsage(w, "needlex replay <trace-id> [--json]")
 }
 
 func writeDiffUsage(w io.Writer) {
-	writeUsage(w, "needle diff <trace-a> <trace-b> [--json]")
+	writeUsage(w, "needlex diff <trace-a> <trace-b> [--json]")
 }
 
 func (r Runner) runReplay(args []string, stdout, stderr io.Writer) int {

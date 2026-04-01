@@ -136,11 +136,10 @@ L’install test locale non è opzionale.
 
 Bisogna verificare:
 1. wrapper `needlex`
-2. alias `needle`
-3. `NEEDLEX_HOME`
-4. cartelle state create
-5. esecuzione CLI
-6. esecuzione MCP stdio
+2. `NEEDLEX_HOME`
+3. cartelle state create
+4. esecuzione CLI
+5. esecuzione MCP stdio
 
 ## Test Manuale CLI
 

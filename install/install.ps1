@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $Repo = if ($env:NEEDLEX_REPO) { $env:NEEDLEX_REPO } else { "Josepavese/needlex" }
 $Version = if ($env:NEEDLEX_VERSION) { $env:NEEDLEX_VERSION } else { "latest" }
 $ReleaseBaseUrl = if ($env:NEEDLEX_RELEASE_BASE_URL) { $env:NEEDLEX_RELEASE_BASE_URL } else { "" }
+$SkipPathUpdate = if ($env:NEEDLEX_INSTALL_SKIP_PATH_UPDATE) { $env:NEEDLEX_INSTALL_SKIP_PATH_UPDATE } else { "0" }
 
 $arch = $env:PROCESSOR_ARCHITECTURE
 switch ($arch.ToUpperInvariant()) {
@@ -25,7 +26,6 @@ $BinDir = Join-Path $InstallRoot "bin"
 $StateRoot = if ($env:NEEDLEX_HOME) { $env:NEEDLEX_HOME } else { Join-Path $env:LOCALAPPDATA "NeedleX" }
 $RealExe = Join-Path $BinDir "needlex-real.exe"
 $NeedlexCmd = Join-Path $BinDir "needlex.cmd"
-$NeedleCmd = Join-Path $BinDir "needle.cmd"
 
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "traces") | Out-Null
@@ -45,13 +45,28 @@ try {
 
   $cmd = "@echo off`r`nset NEEDLEX_HOME=$StateRoot`r`n`"$RealExe`" %*`r`n"
   Set-Content -Path $NeedlexCmd -Value $cmd -Encoding ascii
-  Set-Content -Path $NeedleCmd -Value "@echo off`r`n`"$NeedlexCmd`" %*`r`n" -Encoding ascii
 }
 finally {
   Remove-Item -Recurse -Force $tempDir
 }
 
+if ($SkipPathUpdate -ne "1") {
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  $parts = @()
+  if (-not [string]::IsNullOrWhiteSpace($userPath)) {
+    $parts = $userPath.Split(';') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  }
+  if (-not ($parts -contains $BinDir)) {
+    $newPath = if ($parts.Count -eq 0) { $BinDir } else { ($parts + $BinDir) -join ';' }
+    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+  }
+}
+
 Write-Host ""
 Write-Host "Installed needlex to $NeedlexCmd"
-Write-Host "Compatibility alias: $NeedleCmd"
 Write-Host "State root: $StateRoot"
+if ($SkipPathUpdate -eq "1") {
+  Write-Host "User PATH update skipped."
+} else {
+  Write-Host "Restart your shell to pick up PATH changes."
+}

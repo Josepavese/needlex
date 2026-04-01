@@ -46,19 +46,19 @@ Canonical reference:
 Use `read` when you want one page compiled into compact context.
 
 ```bash
-go run ./cmd/needle read https://example.com --json
+needlex read https://example.com --json
 ```
 
 Use full diagnostics only when needed:
 
 ```bash
-go run ./cmd/needle read https://example.com --json --json-mode full
+needlex read https://example.com --json --json-mode full
 ```
 
 Use `--profile tiny` when you want a tighter pack:
 
 ```bash
-go run ./cmd/needle read https://example.com --profile tiny --json
+needlex read https://example.com --profile tiny --json
 ```
 
 ### Query
@@ -68,19 +68,19 @@ Use `query` when you have a goal and optionally a seed URL.
 Seeded query:
 
 ```bash
-go run ./cmd/needle query https://example.com --goal "company profile" --json
+needlex query https://example.com --goal "company profile" --json
 ```
 
 Full diagnostic query payload:
 
 ```bash
-go run ./cmd/needle query https://example.com --goal "company profile" --json --json-mode full
+needlex query https://example.com --goal "company profile" --json --json-mode full
 ```
 
 Unseeded query with bootstrap discovery:
 
 ```bash
-go run ./cmd/needle query --goal "company profile" --json
+needlex query --goal "company profile" --json
 ```
 
 Bootstrap discovery provider order is SSOT-driven. Current default chain:
@@ -95,7 +95,7 @@ export NEEDLEX_DISCOVERY_PROVIDER_CHAIN='https://lite.duckduckgo.com/lite/,https
 Strict single-page query:
 
 ```bash
-go run ./cmd/needle query https://example.com --goal "company profile" --discovery off --json
+needlex query https://example.com --goal "company profile" --discovery off --json
 ```
 
 ### Crawl
@@ -103,13 +103,13 @@ go run ./cmd/needle query https://example.com --goal "company profile" --discove
 Use `crawl` when you want bounded exploration from a seed page.
 
 ```bash
-go run ./cmd/needle crawl https://example.com --max-pages 5 --max-depth 1 --same-domain --json
+needlex crawl https://example.com --max-pages 5 --max-depth 1 --same-domain --json
 ```
 
 Full diagnostic crawl payload:
 
 ```bash
-go run ./cmd/needle crawl https://example.com --max-pages 5 --max-depth 1 --same-domain --json --json-mode full
+needlex crawl https://example.com --max-pages 5 --max-depth 1 --same-domain --json --json-mode full
 ```
 
 ## How To Read The Output
@@ -164,9 +164,9 @@ Use it to answer:
 Load proof by trace id, proof ref, or chunk id:
 
 ```bash
-go run ./cmd/needle proof trace_123 --json
-go run ./cmd/needle proof proof_123 --json
-go run ./cmd/needle proof chk_123 --json
+needlex proof trace_123 --json
+needlex proof proof_123 --json
+needlex proof chk_123 --json
 ```
 
 Look at:
@@ -182,13 +182,13 @@ Use proof when you need provenance and trust.
 Replay a run:
 
 ```bash
-go run ./cmd/needle replay trace_123 --json
+needlex replay trace_123 --json
 ```
 
 Diff two runs:
 
 ```bash
-go run ./cmd/needle diff trace_a trace_b --json
+needlex diff trace_a trace_b --json
 ```
 
 Use trace when you need to answer:
@@ -218,19 +218,19 @@ Use `memory` when you want to inspect or control the local discovery store.
 Stats:
 
 ```bash
-go run ./cmd/needle memory stats --json
+needlex memory stats --json
 ```
 
 Search local memory directly:
 
 ```bash
-go run ./cmd/needle memory search "playwright installation" --json
+needlex memory search "playwright installation" --json
 ```
 
 Prune the local discovery store using configured limits:
 
 ```bash
-go run ./cmd/needle memory prune --json
+needlex memory prune --json
 ```
 
 Operator rule:

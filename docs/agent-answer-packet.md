@@ -140,6 +140,6 @@ Il packet di default non deve includere:
 
 Questi artifact restano disponibili tramite:
 1. `--json-mode full`
-2. `needle proof <trace-id|proof-ref|chunk-id>`
-3. `needle replay`
-4. `needle diff`
+2. `needlex proof <trace-id|proof-ref|chunk-id>`
+3. `needlex replay`
+4. `needlex diff`

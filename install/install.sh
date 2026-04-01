@@ -4,6 +4,7 @@ set -euo pipefail
 REPO="${NEEDLEX_REPO:-Josepavese/needlex}"
 VERSION="${NEEDLEX_VERSION:-latest}"
 RELEASE_BASE_URL="${NEEDLEX_RELEASE_BASE_URL:-}"
+SKIP_SHELL_HOOKS="${NEEDLEX_INSTALL_SKIP_SHELL_HOOKS:-0}"
 
 needlex_platform() {
   local os arch
@@ -44,7 +45,7 @@ needlex_state_root() {
 
 add_path_hook() {
   local file="$1"
-  local line='export PATH="$HOME/.local/bin:$PATH"'
+  local line="export PATH=\"${BIN_DIR}:\$PATH\""
   local marker='# needlex-path'
   mkdir -p "$(dirname "${file}")"
   touch "${file}"
@@ -88,16 +89,16 @@ exec "${REAL_BIN}" "\$@"
 EOF
 chmod 0755 "${BIN_DIR}/needlex"
 
-cat > "${BIN_DIR}/needle" <<EOF
-#!/usr/bin/env bash
-exec "${BIN_DIR}/needlex" "\$@"
-EOF
-chmod 0755 "${BIN_DIR}/needle"
-
-add_path_hook "${HOME}/.bashrc"
-add_path_hook "${HOME}/.zshrc"
+if [[ "${SKIP_SHELL_HOOKS}" != "1" ]]; then
+  add_path_hook "${HOME}/.bashrc"
+  add_path_hook "${HOME}/.zshrc"
+  add_path_hook "${HOME}/.profile"
+fi
 
 printf '\nInstalled needlex to %s\n' "${BIN_DIR}/needlex"
-printf 'Compatibility alias: %s\n' "${BIN_DIR}/needle"
 printf 'State root: %s\n' "${STATE_ROOT}"
-printf 'Restart your shell or run: source ~/.bashrc\n'
+if [[ "${SKIP_SHELL_HOOKS}" == "1" ]]; then
+  printf 'Shell PATH hooks skipped.\n'
+else
+  printf 'Restart your shell or run: source ~/.bashrc\n'
+fi

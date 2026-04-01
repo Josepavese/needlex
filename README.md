@@ -74,9 +74,9 @@ Default output is AI-first:
 ## Tiny Demo
 
 ```bash
-go run ./cmd/needle read https://example.com --json
-go run ./cmd/needle query https://example.com --goal "pricing" --json
-go run ./cmd/needle proof proof_1 --json
+needlex read https://example.com --json
+needlex query https://example.com --goal "pricing" --json
+needlex proof proof_1 --json
 ```
 
 ## Install
@@ -95,7 +95,6 @@ irm https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.ps
 
 Installed command:
 1. `needlex`
-2. compatibility alias: `needle`
 
 This installer downloads the right release binary. Full details:
 1. [Install Guide](/home/jose/hpdev/Libraries/needlex/docs/install.md)

@@ -6,7 +6,8 @@ Needle-X must deliver a full Day 1 runtime without turning into a sprawling code
 
 ## Runtime Topology
 
-1. One binary: `cmd/needle`
+1. One public command: `needlex`
+2. Internal entrypoint: `cmd/needle`
 2. One runtime process
 3. One core execution pipeline
 4. One transport-neutral service API reused by CLI and MCP

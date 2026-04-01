@@ -4,7 +4,7 @@ import "testing"
 
 func TestResultPackValidateAcceptsCanonicalShape(t *testing.T) {
 	pack := ResultPack{
-		Query:   "needle x architecture",
+		Query:   "needlex architecture",
 		Profile: ProfileStandard,
 		Chunks: []Chunk{
 			{
@@ -40,7 +40,7 @@ func TestResultPackValidateAcceptsCanonicalShape(t *testing.T) {
 
 func TestResultPackValidateRejectsUnknownProfile(t *testing.T) {
 	pack := ResultPack{
-		Query:   "needle x architecture",
+		Query:   "needlex architecture",
 		Profile: "weird",
 		Chunks: []Chunk{
 			{

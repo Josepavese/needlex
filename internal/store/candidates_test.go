@@ -82,7 +82,7 @@ func TestCandidateStoreObserveAndSearch(t *testing.T) {
 
 func TestCandidateStoreSearchMissing(t *testing.T) {
 	store := NewCandidateStore(t.TempDir())
-	matches, err := store.Search(context.Background(), "needle runtime", 1, stubSemanticAligner{})
+	matches, err := store.Search(context.Background(), "needlex runtime", 1, stubSemanticAligner{})
 	if err != nil {
 		t.Fatalf("search candidates: %v", err)
 	}

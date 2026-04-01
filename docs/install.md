@@ -12,7 +12,6 @@ Needle-X is installable today, but the honest current story is:
 
 Installed command:
 1. `needlex`
-2. compatibility alias: `needle`
 
 ## Quick install
 
@@ -25,14 +24,13 @@ curl -fsSL https://raw.githubusercontent.com/Josepavese/needlex/main/install/ins
 What it does:
 1. downloads the latest release binary for your OS and architecture
 2. installs a user-local wrapper command `needlex`
-3. installs a compatibility alias `needle`
-4. creates the local state root and subdirectories
-5. sets `NEEDLEX_HOME` to an OS-appropriate state directory
+3. creates the local state root and subdirectories
+4. sets `NEEDLEX_HOME` to an OS-appropriate state directory
+5. updates PATH persistence for future shells or terminals
 
 Default paths:
 1. binary wrapper: `~/.local/bin/needlex`
-2. compatibility alias: `~/.local/bin/needle`
-3. real binary: `~/.local/lib/needlex/needlex-real`
+2. real binary: `~/.local/lib/needlex/needlex-real`
 3. state root:
    Linux: `~/.local/share/needlex`
    macOS: `~/Library/Application Support/NeedleX`
@@ -45,9 +43,8 @@ irm https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.ps
 
 Default paths:
 1. binary wrapper: `%LOCALAPPDATA%\NeedleX\bin\needlex.cmd`
-2. compatibility alias: `%LOCALAPPDATA%\NeedleX\bin\needle.cmd`
-3. real binary: `%LOCALAPPDATA%\NeedleX\bin\needlex-real.exe`
-4. state root: `%LOCALAPPDATA%\NeedleX`
+2. real binary: `%LOCALAPPDATA%\NeedleX\bin\needlex-real.exe`
+3. state root: `%LOCALAPPDATA%\NeedleX`
 
 ## Build from source
 

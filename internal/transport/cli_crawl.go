@@ -13,7 +13,7 @@ type crawlArtifacts struct {
 }
 
 func writeCrawlUsage(w io.Writer) {
-	writeUsage(w, "needle crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]")
+	writeUsage(w, "needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]")
 }
 
 func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {

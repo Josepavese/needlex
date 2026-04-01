@@ -626,12 +626,12 @@ Suggested retention policy:
 ## 18. Operator Controls
 
 Future CLI should expose:
-1. `needle memory stats`
-2. `needle memory search --goal "..."`
-3. `needle memory prune`
-4. `needle memory export`
-5. `needle memory import`
-6. `needle memory rebuild-index`
+1. `needlex memory stats`
+2. `needlex memory search --goal "..."`
+3. `needlex memory prune`
+4. `needlex memory export`
+5. `needlex memory import`
+6. `needlex memory rebuild-index`
 
 Future MCP should expose equivalent tools.
 

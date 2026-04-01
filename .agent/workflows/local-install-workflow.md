@@ -14,7 +14,7 @@ Questo workflow esiste per evitare:
 - test eseguiti sul binary del repo invece che su quello installato
 - stato locale sporco che maschera problemi
 - wrapper vecchi in PATH
-- mismatch tra `needle`, `needlex` e `NEEDLEX_HOME`
+- mismatch tra `needlex` e `NEEDLEX_HOME`
 
 ## Regola
 
@@ -29,7 +29,6 @@ Quando si testa l’installazione:
 
 Wrapper:
 1. `~/.local/bin/needlex`
-2. `~/.local/bin/needle`
 
 Binary reale:
 1. `~/.local/lib/needlex/needlex-real`
@@ -41,7 +40,6 @@ State root:
 
 Wrapper:
 1. `~/.local/bin/needlex`
-2. `~/.local/bin/needle`
 
 Binary reale:
 1. `~/.local/lib/needlex/needlex-real`
@@ -53,7 +51,6 @@ State root:
 
 Wrapper:
 1. `%LOCALAPPDATA%\NeedleX\bin\needlex.cmd`
-2. `%LOCALAPPDATA%\NeedleX\bin\needle.cmd`
 
 Binary reale:
 1. `%LOCALAPPDATA%\NeedleX\bin\needlex-real.exe`
@@ -71,15 +68,14 @@ Controllare:
 
 ```bash
 command -v needlex || true
-command -v needle || true
-ls -la ~/.local/bin/needlex ~/.local/bin/needle 2>/dev/null || true
+ls -la ~/.local/bin/needlex 2>/dev/null || true
 ls -la ~/.local/lib/needlex 2>/dev/null || true
 ```
 
 Se serve install pulita:
 
 ```bash
-rm -f ~/.local/bin/needlex ~/.local/bin/needle
+rm -f ~/.local/bin/needlex
 rm -rf ~/.local/lib/needlex
 ```
 
@@ -101,14 +97,12 @@ Controllare:
 
 ```powershell
 Get-Command needlex -ErrorAction SilentlyContinue
-Get-Command needle -ErrorAction SilentlyContinue
 ```
 
 Se serve install pulita:
 
 ```powershell
 Remove-Item "$env:LOCALAPPDATA\\NeedleX\\bin\\needlex.cmd" -Force -ErrorAction SilentlyContinue
-Remove-Item "$env:LOCALAPPDATA\\NeedleX\\bin\\needle.cmd" -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:LOCALAPPDATA\\NeedleX\\bin\\needlex-real.exe" -Force -ErrorAction SilentlyContinue
 ```
 
@@ -158,6 +152,7 @@ export NEEDLEX_RELEASE_BASE_URL=http://127.0.0.1:8765
 export NEEDLEX_INSTALL_BIN_DIR=/tmp/needlex-install/bin
 export NEEDLEX_INSTALL_LIB_DIR=/tmp/needlex-install/lib
 export NEEDLEX_HOME=/tmp/needlex-install/state
+export NEEDLEX_INSTALL_SKIP_SHELL_HOOKS=1
 bash install/install.sh
 ```
 
@@ -169,16 +164,14 @@ Questo è il test corretto prima del primo tag release.
 
 ```bash
 command -v needlex
-command -v needle
 echo "$NEEDLEX_HOME"
-ls -la ~/.local/bin/needlex ~/.local/bin/needle
+ls -la ~/.local/bin/needlex
 ```
 
 ### Windows
 
 ```powershell
 Get-Command needlex
-Get-Command needle
 ```
 
 ## Verifica State Root
@@ -231,7 +224,6 @@ Linux e macOS:
 
 ```bash
 which needlex
-which needle
 ```
 
 Windows:
@@ -264,7 +256,6 @@ Install Closure:
 - clean_install:
 - binary_verified:
 - wrapper_verified:
-- alias_verified:
 - state_root_verified:
 - cli_tested:
 - mcp_tested:

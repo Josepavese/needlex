@@ -11,7 +11,7 @@ import (
 
 func writePruneUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  needle prune (--all | --older-than-hours N) [--json]")
+	fmt.Fprintln(w, "  needlex prune (--all | --older-than-hours N) [--json]")
 }
 
 func (r Runner) runPrune(args []string, stdout, stderr io.Writer) int {

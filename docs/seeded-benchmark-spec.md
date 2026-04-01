@@ -238,7 +238,7 @@ Per i primi `N` chunk del packet:
 
 Misura:
 1. il packet espone `proof_ref`
-2. `needle proof <proof_ref>` funziona
+2. `needlex proof <proof_ref>` funziona
 3. il proof contiene selector e transform chain utili
 
 Scoring:

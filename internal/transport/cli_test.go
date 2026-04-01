@@ -438,7 +438,7 @@ func TestRunnerReadStoresCandidateMemory(t *testing.T) {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
 
-	matches, err := store.NewCandidateStore(root).Search(context.Background(), "needle runtime", 1, stubSemanticAligner{
+	matches, err := store.NewCandidateStore(root).Search(context.Background(), "needlex runtime", 1, stubSemanticAligner{
 		scores: map[string]float64{"https://example.com": 0.92},
 	})
 	if err != nil {
@@ -475,7 +475,7 @@ func TestRunnerHelpListsDayOneCommands(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	for _, command := range []string{"needle crawl", "needle query", "needle read", "needle mcp"} {
+	for _, command := range []string{"needlex crawl", "needlex query", "needlex read", "needlex mcp"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Fatalf("expected help to include %q, got %q", command, stdout.String())
 		}

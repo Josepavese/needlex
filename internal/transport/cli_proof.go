@@ -16,7 +16,7 @@ type proofLookupResult struct {
 }
 
 func writeProofUsage(w io.Writer) {
-	writeUsage(w, "needle proof <trace-id|proof-id|chunk-id> [--json]")
+	writeUsage(w, "needlex proof <trace-id|proof-id|chunk-id> [--json]")
 }
 
 func (r Runner) runProof(args []string, stdout, stderr io.Writer) int {
