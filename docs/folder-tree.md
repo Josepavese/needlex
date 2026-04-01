@@ -27,6 +27,7 @@ needlex/
     vercel-browser-agent-bridge.md
     archive/
     experimental/
+    wiki/
   improvements/
     README.md
     archive/
@@ -106,3 +107,11 @@ Strategic but non-active specs only.
 2. No benchmark harness code under `internal/`.
 3. No active docs with historical planning content in root `docs/`.
 4. No one-off reports in root `improvements/`.
+
+## Docs Surface
+
+Primary entrypoints:
+1. [README](/home/jose/hpdev/Libraries/needlex/README.md)
+2. [Wiki Home](/home/jose/hpdev/Libraries/needlex/docs/wiki/Home.md)
+3. [Operator Guide](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
+4. [Tool Calling](/home/jose/hpdev/Libraries/needlex/docs/tool-calling.md)

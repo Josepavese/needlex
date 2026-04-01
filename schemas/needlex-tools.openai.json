@@ -1,0 +1,127 @@
+{
+  "provider": "openai",
+  "strict": false,
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "web_crawl",
+        "description": "Traverse linked pages starting from one seed URL.",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "seed_url": { "type": "string" },
+            "profile": { "type": "string" },
+            "user_agent": { "type": "string" },
+            "max_pages": { "type": "integer" },
+            "max_depth": { "type": "integer" },
+            "same_domain": { "type": "boolean" }
+          },
+          "required": ["seed_url"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_query",
+        "description": "Plan and execute a goal-oriented query with optional seed URL and discovery (same-site or web-search).",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal": { "type": "string" },
+            "seed_url": { "type": "string" },
+            "profile": { "type": "string" },
+            "user_agent": { "type": "string" },
+            "discovery_mode": { "type": "string" },
+            "lane_max": { "type": "integer" }
+          },
+          "required": ["goal"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_read",
+        "description": "Read a web page into compact proof-carrying context.",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "profile": { "type": "string" },
+            "objective": { "type": "string" },
+            "user_agent": { "type": "string" },
+            "lane_max": { "type": "integer" }
+          },
+          "required": ["url"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_replay",
+        "description": "Replay a stored trace and report deterministic stage completion.",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "trace_id": { "type": "string" }
+          },
+          "required": ["trace_id"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_diff",
+        "description": "Compare two stored traces and report changed stages.",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "trace_a": { "type": "string" },
+            "trace_b": { "type": "string" }
+          },
+          "required": ["trace_a", "trace_b"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_proof",
+        "description": "Load proof records by trace id, proof id, or chunk id.",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "trace_id": { "type": "string" },
+            "proof_id": { "type": "string" },
+            "chunk_id": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_prune",
+        "description": "Prune local traces, proofs, fingerprints, and genome files.",
+        "strict": false,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "all": { "type": "boolean" },
+            "older_than_hours": { "type": "integer" }
+          }
+        }
+      }
+    }
+  ]
+}

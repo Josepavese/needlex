@@ -9,6 +9,8 @@ import (
 
 func TestSchemaFilesContainValidJSON(t *testing.T) {
 	files := []string{
+		"needlex-tools.anthropic.json",
+		"needlex-tools.openai.json",
 		"proof.schema.json",
 		"resultpack.schema.json",
 		"slm-task.schema.json",
