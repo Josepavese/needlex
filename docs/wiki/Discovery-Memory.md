@@ -39,5 +39,5 @@ needlex memory prune --json
 
 ## Full Reference
 
-1. [Benchmark Report](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
-2. [Discovery Memory Spec](/home/jose/hpdev/Libraries/needlex/docs/experimental/discovery-memory-spec.md)
+1. [Benchmark Report](../benchmark-report.md)
+2. [Discovery Memory Spec](../experimental/discovery-memory-spec.md)

@@ -111,7 +111,7 @@ Strategic but non-active specs only.
 ## Docs Surface
 
 Primary entrypoints:
-1. [README](/home/jose/hpdev/Libraries/needlex/README.md)
-2. [Wiki Home](/home/jose/hpdev/Libraries/needlex/docs/wiki/Home.md)
-3. [Operator Guide](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
-4. [Tool Calling](/home/jose/hpdev/Libraries/needlex/docs/tool-calling.md)
+1. [README](../README.md)
+2. [Wiki Home](wiki/Home.md)
+3. [Operator Guide](operator-guide.md)
+4. [Tool Calling](tool-calling.md)

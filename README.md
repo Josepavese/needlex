@@ -101,7 +101,7 @@ Installed command:
 1. `needlex`
 
 This installer downloads the right release binary. Full details:
-1. [Install Guide](/home/jose/hpdev/Libraries/needlex/docs/install.md)
+1. [Install Guide](docs/install.md)
 
 ## What It Is Not
 
@@ -112,10 +112,10 @@ This installer downloads the right release binary. Full details:
 
 ## Read More
 
-1. [Wiki Home](/home/jose/hpdev/Libraries/needlex/docs/wiki/Home.md)
-2. [Operator Guide](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
-3. [Benchmark Report](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
-4. [Go-To-Market](/home/jose/hpdev/Libraries/needlex/docs/go-to-market.md)
-5. [Tool Calling](/home/jose/hpdev/Libraries/needlex/docs/tool-calling.md)
-6. [Spec](/home/jose/hpdev/Libraries/needlex/spec.md)
-7. [Agent Answer Packet](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
+1. [Wiki Home](docs/wiki/README.md)
+2. [Operator Guide](docs/operator-guide.md)
+3. [Benchmark Report](docs/benchmark-report.md)
+4. [Go-To-Market](docs/go-to-market.md)
+5. [Tool Calling](docs/tool-calling.md)
+6. [Spec](spec.md)
+7. [Agent Answer Packet](docs/agent-answer-packet.md)

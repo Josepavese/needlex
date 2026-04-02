@@ -38,5 +38,5 @@ Default JSON is compact and AI-first:
 
 ## Full Reference
 
-1. [Operator Guide](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
-2. [Agent Answer Packet](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
+1. [Operator Guide](../operator-guide.md)
+2. [Agent Answer Packet](../agent-answer-packet.md)

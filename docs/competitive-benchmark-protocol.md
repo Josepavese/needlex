@@ -133,7 +133,7 @@ Vercel Browser Agent:
 ## Initial Corpus
 
 Path:
-1. [competitive-corpus-v1.json](/home/jose/hpdev/Libraries/needlex/benchmarks/corpora/competitive-corpus-v1.json)
+1. [competitive-corpus-v1.json](../benchmarks/corpora/competitive-corpus-v1.json)
 
 Shape:
 1. `12` casi
@@ -282,7 +282,7 @@ Expected bridge response shape:
 5. optional `latency_ms`
 
 Reference:
-1. [vercel-browser-agent-bridge.md](/home/jose/hpdev/Libraries/needlex/docs/vercel-browser-agent-bridge.md)
+1. [vercel-browser-agent-bridge.md](vercel-browser-agent-bridge.md)
 
 ## Decision Rule
 

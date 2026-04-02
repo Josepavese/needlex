@@ -48,4 +48,4 @@ needlex tool-catalog --provider anthropic
 
 ## Full Reference
 
-1. [Tool Calling](/home/jose/hpdev/Libraries/needlex/docs/tool-calling.md)
+1. [Tool Calling](../tool-calling.md)

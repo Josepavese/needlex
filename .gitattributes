@@ -1,0 +1,20 @@
+# Exclude non-core fixtures, corpora, assets, and archived artifacts from
+# GitHub Linguist language stats. Keep product code and active benchmark
+# runners counted.
+
+# HTML test fixtures and empirical captures
+testdata/golden/*.html linguist-generated=true
+improvements/archive/empirical/* linguist-generated=true
+
+# Benchmark datasets are input data, not product code
+benchmarks/corpora/* linguist-generated=true
+
+# Generated/archived benchmark artifacts
+improvements/*.json linguist-generated=true
+improvements/archive/** linguist-generated=true
+
+# README and documentation artwork
+docs/assets/* linguist-generated=true
+
+# Historical wrapper scripts
+scripts/archive/* linguist-generated=true

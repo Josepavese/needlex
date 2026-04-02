@@ -3,7 +3,7 @@
 This document defines the current SSOT model configuration for Needle-X.
 
 SSOT file:
-- [model-baseline.json](/home/jose/hpdev/Libraries/needlex/internal/config/modelbaseline/model-baseline.json)
+- [model-baseline.json](../internal/config/modelbaseline/model-baseline.json)
 
 ## Active CPU Baseline
 

@@ -5,12 +5,12 @@ Owner: Needle-X core doctrine
 Phase: Post-wave benchmark / future macrostep
 
 Related docs:
-- [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
-- [vademecum.md](/home/jose/hpdev/Libraries/needlex/docs/vademecum.md)
-- [slm-strategic-revision.md](/home/jose/hpdev/Libraries/needlex/docs/archive/slm-strategic-revision.md)
-- [slm-execution-plan.md](/home/jose/hpdev/Libraries/needlex/docs/archive/slm-execution-plan.md)
-- [first-real-slm-test.md](/home/jose/hpdev/Libraries/needlex/docs/archive/first-real-slm-test.md)
-- [spec.md](/home/jose/hpdev/Libraries/needlex/spec.md)
+- [project-context.md](../project-context.md)
+- [vademecum.md](../vademecum.md)
+- [slm-strategic-revision.md](../archive/slm-strategic-revision.md)
+- [slm-execution-plan.md](../archive/slm-execution-plan.md)
+- [first-real-slm-test.md](../archive/first-real-slm-test.md)
+- [spec.md](../../spec.md)
 
 ## Purpose
 

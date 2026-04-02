@@ -5,11 +5,11 @@ Version: `0.3`
 Scope: local-first seedless discovery support without mandatory infrastructure
 
 Primary references:
-- [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
-- [vademecum.md](/home/jose/hpdev/Libraries/needlex/docs/vademecum.md)
-- [semantic-alignment-gate.md](/home/jose/hpdev/Libraries/needlex/docs/semantic-alignment-gate.md)
-- [model-baseline.md](/home/jose/hpdev/Libraries/needlex/docs/model-baseline.md)
-- [spec.md](/home/jose/hpdev/Libraries/needlex/spec.md)
+- [project-context.md](../project-context.md)
+- [vademecum.md](../vademecum.md)
+- [semantic-alignment-gate.md](../semantic-alignment-gate.md)
+- [model-baseline.md](../model-baseline.md)
+- [spec.md](../../spec.md)
 - SQLite `vec1`: <https://sqlite.org/vec1>
 - `sqlite-vec`: <https://github.com/asg017/sqlite-vec>
 - DuckDB `vss`: <https://duckdb.org/docs/stable/core_extensions/vss.html>

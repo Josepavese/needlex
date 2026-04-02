@@ -33,8 +33,8 @@ Start here if you want:
 
 ## Primary References
 
-1. [README](/home/jose/hpdev/Libraries/needlex/README.md)
-2. [Install Guide](/home/jose/hpdev/Libraries/needlex/docs/install.md)
-3. [Operator Guide](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
-4. [Tool Calling](/home/jose/hpdev/Libraries/needlex/docs/tool-calling.md)
-5. [Benchmark Report](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
+1. [README](../../README.md)
+2. [Install Guide](../install.md)
+3. [Operator Guide](../operator-guide.md)
+4. [Tool Calling](../tool-calling.md)
+5. [Benchmark Report](../benchmark-report.md)

@@ -28,16 +28,16 @@ Needle-X currently exposes these MCP tools:
 7. `web_prune`
 
 Runtime reference:
-- [mcp_tools.go](/home/jose/hpdev/Libraries/needlex/internal/transport/mcp_tools.go)
+- [mcp_tools.go](../internal/transport/mcp_tools.go)
 
 Protocol reference:
-- [mcp.go](/home/jose/hpdev/Libraries/needlex/internal/transport/mcp.go)
+- [mcp.go](../internal/transport/mcp.go)
 
 ## Provider Catalogs
 
 Machine-readable catalogs live in:
-1. [needlex-tools.openai.json](/home/jose/hpdev/Libraries/needlex/schemas/needlex-tools.openai.json)
-2. [needlex-tools.anthropic.json](/home/jose/hpdev/Libraries/needlex/schemas/needlex-tools.anthropic.json)
+1. [needlex-tools.openai.json](../schemas/needlex-tools.openai.json)
+2. [needlex-tools.anthropic.json](../schemas/needlex-tools.anthropic.json)
 
 Installed binary export:
 

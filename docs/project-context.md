@@ -1,18 +1,18 @@
 # Project Context
 
 Primary execution doctrine:
-1. [vademecum.md](/home/jose/hpdev/Libraries/needlex/docs/vademecum.md)
+1. [vademecum.md](vademecum.md)
 
 Baseline SSOT:
-1. [model-baseline.md](/home/jose/hpdev/Libraries/needlex/docs/model-baseline.md)
-2. [semantic-alignment-gate.md](/home/jose/hpdev/Libraries/needlex/docs/semantic-alignment-gate.md)
+1. [model-baseline.md](model-baseline.md)
+2. [semantic-alignment-gate.md](semantic-alignment-gate.md)
 
 Strategic but non-active specs:
-1. [discovery-memory-spec.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/discovery-memory-spec.md)
-2. [seedless-discovery-strategy.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/seedless-discovery-strategy.md)
+1. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
+2. [seedless-discovery-strategy.md](experimental/seedless-discovery-strategy.md)
 
 Historical material:
-1. [archive/README.md](/home/jose/hpdev/Libraries/needlex/docs/archive/README.md)
+1. [archive/README.md](archive/README.md)
 
 ## Product Shape
 

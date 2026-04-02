@@ -5,10 +5,10 @@ Version: `0.1`
 Scope: Needle-X-compatible bootstrap discovery without mandatory infrastructure
 
 Primary references:
-- [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
-- [vademecum.md](/home/jose/hpdev/Libraries/needlex/docs/vademecum.md)
-- [discovery-memory-spec.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/discovery-memory-spec.md)
-- [model-baseline.md](/home/jose/hpdev/Libraries/needlex/docs/model-baseline.md)
+- [project-context.md](../project-context.md)
+- [vademecum.md](../vademecum.md)
+- [discovery-memory-spec.md](discovery-memory-spec.md)
+- [model-baseline.md](../model-baseline.md)
 
 ## 1. Problem
 

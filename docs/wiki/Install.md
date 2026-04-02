@@ -34,4 +34,4 @@ Installed command:
 
 ## Full Reference
 
-1. [Install Guide](/home/jose/hpdev/Libraries/needlex/docs/install.md)
+1. [Install Guide](../install.md)

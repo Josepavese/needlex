@@ -37,7 +37,7 @@ Operational rule:
 5. `uncertainty` is part of the default packet and should be read before opening full diagnostics
 
 Canonical reference:
-- [agent-answer-packet.md](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
+- [agent-answer-packet.md](agent-answer-packet.md)
 
 ## Core Commands
 
@@ -284,9 +284,9 @@ NEEDLEX_LIVE_READ_OUT=improvements/live-semantic-global-eval-latest.json \
 ```
 
 Active reports usually land in:
-1. [live-read-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/live-read-latest.json)
-2. [hard-case-matrix-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/hard-case-matrix-latest.json)
-3. [discovery-eval-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-eval-latest.json)
+1. [live-read-latest.json](../improvements/live-read-latest.json)
+2. [hard-case-matrix-latest.json](../improvements/hard-case-matrix-latest.json)
+3. [discovery-eval-latest.json](../improvements/discovery-eval-latest.json)
 
 ## Recommended Operator Workflow
 

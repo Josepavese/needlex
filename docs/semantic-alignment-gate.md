@@ -45,7 +45,7 @@ Current implementation supports:
 - `openai-like /v1/embeddings`
 
 The semantic gate follows SSOT defaults from:
-- [model-baseline.json](/home/jose/hpdev/Libraries/needlex/internal/config/modelbaseline/model-baseline.json)
+- [model-baseline.json](../internal/config/modelbaseline/model-baseline.json)
 
 Current SSOT semantic baseline:
 
@@ -133,7 +133,7 @@ This is the stronger direction for a product that aims to compile the web rather
 
 Needle-X now ships a local CPU upstream for the SSOT semantic baseline:
 
-- [run_semantic_embed_upstream.py](/home/jose/hpdev/Libraries/needlex/scripts/run_semantic_embed_upstream.py)
+- [run_semantic_embed_upstream.py](../scripts/run_semantic_embed_upstream.py)
 
 It exposes:
 

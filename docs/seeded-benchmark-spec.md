@@ -446,7 +446,7 @@ Ordine corretto:
 ## Initial Corpus
 
 Current seeded corpus path:
-1. [seeded-corpus-v1.json](/home/jose/hpdev/Libraries/needlex/benchmarks/corpora/seeded-corpus-v1.json)
+1. [seeded-corpus-v1.json](../benchmarks/corpora/seeded-corpus-v1.json)
 
 Current shape:
 1. `30` casi

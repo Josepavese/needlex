@@ -89,8 +89,8 @@ Important:
 
 ## Where To Look Next
 
-1. [seeded-benchmark-spec.md](/home/jose/hpdev/Libraries/needlex/docs/seeded-benchmark-spec.md)
-2. [competitive-benchmark-protocol.md](/home/jose/hpdev/Libraries/needlex/docs/competitive-benchmark-protocol.md)
-3. [seeded-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/seeded-benchmark-latest.json)
-4. [competitive-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/competitive-benchmark-latest.json)
-5. [discovery-memory-benchmark-latest.json](/home/jose/hpdev/Libraries/needlex/improvements/discovery-memory-benchmark-latest.json)
+1. [seeded-benchmark-spec.md](seeded-benchmark-spec.md)
+2. [competitive-benchmark-protocol.md](competitive-benchmark-protocol.md)
+3. [seeded-benchmark-latest.json](../improvements/seeded-benchmark-latest.json)
+4. [competitive-benchmark-latest.json](../improvements/competitive-benchmark-latest.json)
+5. [discovery-memory-benchmark-latest.json](../improvements/discovery-memory-benchmark-latest.json)

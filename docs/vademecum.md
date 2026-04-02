@@ -226,7 +226,7 @@ Definition of done:
 4. no market comparison happens before internal seeded quality is measured clearly
 
 Reference:
-1. [seeded-benchmark-spec.md](/home/jose/hpdev/Libraries/needlex/docs/seeded-benchmark-spec.md)
+1. [seeded-benchmark-spec.md](seeded-benchmark-spec.md)
 
 ### 7. Competitive Benchmark Discipline
 
@@ -319,8 +319,8 @@ Search is now governed by this rule:
 5. `Discovery Memory` remains a future strategic front, not a release blocker
 
 References:
-1. [seedless-discovery-strategy.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/seedless-discovery-strategy.md)
-2. [discovery-memory-spec.md](/home/jose/hpdev/Libraries/needlex/docs/experimental/discovery-memory-spec.md)
+1. [seedless-discovery-strategy.md](experimental/seedless-discovery-strategy.md)
+2. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
 
 ## Output Policy
 
@@ -341,7 +341,7 @@ Diagnostics remain available through:
 4. `--json-mode full`
 
 Reference:
-1. [agent-answer-packet.md](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
+1. [agent-answer-packet.md](agent-answer-packet.md)
 
 ## Working Order
 
@@ -367,9 +367,9 @@ Stop and correct course if we start doing any of these:
 
 ## Primary References
 
-1. [README.md](/home/jose/hpdev/Libraries/needlex/README.md)
-2. [spec.md](/home/jose/hpdev/Libraries/needlex/spec.md)
-3. [project-context.md](/home/jose/hpdev/Libraries/needlex/docs/project-context.md)
-4. [operator-guide.md](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
-5. [agent-answer-packet.md](/home/jose/hpdev/Libraries/needlex/docs/agent-answer-packet.md)
-6. [benchmark-report.md](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
+1. [README.md](../README.md)
+2. [spec.md](../spec.md)
+3. [project-context.md](project-context.md)
+4. [operator-guide.md](operator-guide.md)
+5. [agent-answer-packet.md](agent-answer-packet.md)
+6. [benchmark-report.md](benchmark-report.md)

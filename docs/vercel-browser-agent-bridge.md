@@ -51,7 +51,7 @@ Campi accettati:
 ## File esempio
 
 Bridge stub di esempio:
-1. [vercel_browser_agent_bridge_example.ts](/home/jose/hpdev/Libraries/needlex/benchmarks/competitive/runner/vercel_browser_agent_bridge_example.ts)
+1. [vercel_browser_agent_bridge_example.ts](../benchmarks/competitive/runner/vercel_browser_agent_bridge_example.ts)
 
 ## Regola
 

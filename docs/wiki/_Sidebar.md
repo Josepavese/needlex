@@ -9,7 +9,7 @@
 
 ## Primary Docs
 
-- [README](/home/jose/hpdev/Libraries/needlex/README.md)
-- [Operator Guide](/home/jose/hpdev/Libraries/needlex/docs/operator-guide.md)
-- [Tool Calling](/home/jose/hpdev/Libraries/needlex/docs/tool-calling.md)
-- [Benchmark Report](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
+- [README](../../README.md)
+- [Operator Guide](../operator-guide.md)
+- [Tool Calling](../tool-calling.md)
+- [Benchmark Report](../benchmark-report.md)

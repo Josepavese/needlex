@@ -39,6 +39,6 @@ Read it as:
 
 ## Full Reference
 
-1. [Benchmark Report](/home/jose/hpdev/Libraries/needlex/docs/benchmark-report.md)
-2. [Competitive Benchmark Protocol](/home/jose/hpdev/Libraries/needlex/docs/competitive-benchmark-protocol.md)
-3. [Seeded Benchmark Spec](/home/jose/hpdev/Libraries/needlex/docs/seeded-benchmark-spec.md)
+1. [Benchmark Report](../benchmark-report.md)
+2. [Competitive Benchmark Protocol](../competitive-benchmark-protocol.md)
+3. [Seeded Benchmark Spec](../seeded-benchmark-spec.md)
