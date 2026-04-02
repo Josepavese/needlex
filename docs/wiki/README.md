@@ -1,5 +1,7 @@
 # Needle-X Wiki
 
+This is the primary docs entrypoint after the README.
+
 Start here:
 1. [Home](./Home.md)
 2. [Install](./Install.md)
@@ -8,7 +10,7 @@ Start here:
 5. [Discovery Memory](./Discovery-Memory.md)
 6. [Benchmarks](./Benchmarks.md)
 
-Primary docs:
+Deep reference:
 1. [README](../../README.md)
 2. [Install Guide](../install.md)
 3. [Operator Guide](../operator-guide.md)

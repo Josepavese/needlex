@@ -1,5 +1,6 @@
 # Wiki
 
+- [Wiki Entry](./README.md)
 - [Home](./Home.md)
 - [Install](./Install.md)
 - [CLI](./CLI.md)
@@ -7,7 +8,7 @@
 - [Discovery Memory](./Discovery-Memory.md)
 - [Benchmarks](./Benchmarks.md)
 
-## Primary Docs
+## Deep Reference
 
 - [README](../../README.md)
 - [Operator Guide](../operator-guide.md)

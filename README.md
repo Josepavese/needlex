@@ -101,7 +101,7 @@ Installed command:
 1. `needlex`
 
 This installer downloads the right release binary. Full details:
-1. [Install Guide](docs/install.md)
+1. [Install](docs/wiki/Install.md)
 
 ## What It Is Not
 
@@ -113,9 +113,8 @@ This installer downloads the right release binary. Full details:
 ## Read More
 
 1. [Wiki Home](docs/wiki/README.md)
-2. [Operator Guide](docs/operator-guide.md)
-3. [Benchmark Report](docs/benchmark-report.md)
-4. [Go-To-Market](docs/go-to-market.md)
-5. [Tool Calling](docs/tool-calling.md)
-6. [Spec](spec.md)
-7. [Agent Answer Packet](docs/agent-answer-packet.md)
+2. [Install](docs/wiki/Install.md)
+3. [CLI](docs/wiki/CLI.md)
+4. [MCP And Tool Calling](docs/wiki/MCP-And-Tool-Calling.md)
+5. [Discovery Memory](docs/wiki/Discovery-Memory.md)
+6. [Benchmarks](docs/wiki/Benchmarks.md)
