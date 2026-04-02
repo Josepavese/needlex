@@ -12,6 +12,16 @@ Start the stdio server with:
 needlex mcp
 ```
 
+Transport compatibility:
+1. accepts standard `Content-Length` framing
+2. accepts raw newline-delimited JSON-RPC
+3. replies in the same framing style used by the client
+
+State and logging:
+1. MCP uses `NEEDLEX_HOME` when set
+2. otherwise it falls back to a stable absolute PAL-aware state root
+3. session logs go to `${NEEDLEX_MCP_LOG:-/tmp/needlex-mcp.log}`
+
 Current MCP tool set:
 1. `web_read`
 2. `web_query`

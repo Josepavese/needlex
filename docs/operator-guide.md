@@ -61,6 +61,17 @@ Use `--profile tiny` when you want a tighter pack:
 needlex read https://example.com --profile tiny --json
 ```
 
+Fetch profile rule:
+1. product default is `browser_like`
+2. retry default is `hardened`
+3. use `standard` only for benchmark/debug comparability
+
+Example benchmark override:
+
+```bash
+NEEDLEX_FETCH_PROFILE=standard NEEDLEX_FETCH_RETRY_PROFILE=standard needlex read https://example.com --json
+```
+
 ### Query
 
 Use `query` when you have a goal and optionally a seed URL.
@@ -202,6 +213,11 @@ Needle-X persists local state under `.needlex/` by default.
 
 Installed setups can override the state root with `NEEDLEX_HOME`.
 
+For `needlex mcp`, the runtime uses a stable absolute state root:
+1. `NEEDLEX_HOME` when set
+2. otherwise the PAL-aware installed state root
+3. never a relative cwd-dependent root during MCP session handling
+
 Important paths:
 1. `.needlex/traces/`
 2. `.needlex/proofs/`
@@ -210,6 +226,35 @@ Important paths:
 5. `.needlex/discovery/discovery.db`
 
 This is local-first product state, not disposable cache.
+
+## MCP Transport
+
+Start the server with:
+
+```bash
+needlex mcp
+```
+
+Transport behavior:
+1. accepts standard MCP `Content-Length` framing
+2. also accepts raw newline-delimited JSON-RPC
+3. replies in the same framing style used by the client
+
+Operational rules:
+1. use raw JSON for clients like OpenCode or simple local wrappers
+2. use framed stdio for strict MCP clients
+3. do not write wrapper noise to stdout around `needlex mcp`
+
+Example raw initialize:
+
+```bash
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{},"protocolVersion":"2024-11-05","clientInfo":{"name":"test","version":"1.0"}}}\n' | needlex mcp
+```
+
+Logging:
+1. MCP session logging goes to `${NEEDLEX_MCP_LOG:-/tmp/needlex-mcp.log}`
+2. stdout is reserved for protocol output
+3. stderr should stay quiet except for fatal startup failures
 
 ## Discovery Memory
 

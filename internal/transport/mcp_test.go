@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -38,6 +40,9 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 	if !strings.Contains(string(responses[0]), `"protocolVersion":"2024-11-05"`) {
 		t.Fatalf("expected initialize response, got %s", responses[0])
 	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr noise, got %q", stderr.String())
+	}
 	if !strings.Contains(string(responses[1]), `"web_crawl"`) {
 		t.Fatalf("expected tools list to include web_crawl, got %s", responses[1])
 	}
@@ -45,6 +50,64 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 		if !strings.Contains(string(responses[1]), tool) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
+	}
+}
+
+func TestRunnerMCPInitializeAndToolsListRawJSON(t *testing.T) {
+	input := rawMessages(
+		t,
+		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+	)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	runner := NewRunner()
+	runner.stdin = strings.NewReader(input)
+
+	code := runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	if strings.Contains(stdout.String(), "Content-Length:") {
+		t.Fatalf("expected raw json output, got %q", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr noise, got %q", stderr.String())
+	}
+	responses := decodeRawMCPResponses(t, stdout.Bytes())
+	if len(responses) != 2 {
+		t.Fatalf("expected 2 responses, got %d", len(responses))
+	}
+	if !strings.Contains(string(responses[0]), `"protocolVersion":"2024-11-05"`) {
+		t.Fatalf("expected initialize response, got %s", responses[0])
+	}
+	if !strings.Contains(string(responses[1]), `"web_query"`) {
+		t.Fatalf("expected tools list to include web_query, got %s", responses[1])
+	}
+}
+
+func TestRunnerMCPCreateStableStateRootWhenUnset(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_DATA_HOME", "")
+	t.Setenv("NEEDLEX_HOME", "")
+	t.Setenv("NEEDLEX_MCP_LOG", filepath.Join(t.TempDir(), "needlex-mcp.log"))
+	input := rawMessages(t, map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	runner := NewRunner()
+	runner.stdin = strings.NewReader(input)
+	runner.storeRoot = ".needlex"
+
+	code := runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	wantRoot := filepath.Join(home, ".local", "share", "needlex")
+	if _, err := os.Stat(wantRoot); err != nil {
+		t.Fatalf("expected stable store root %q to exist: %v", wantRoot, err)
 	}
 }
 
@@ -290,6 +353,20 @@ func framedMessages(t *testing.T, messages ...map[string]any) string {
 	return buf.String()
 }
 
+func rawMessages(t *testing.T, messages ...map[string]any) string {
+	t.Helper()
+	var buf bytes.Buffer
+	for _, message := range messages {
+		data, err := json.Marshal(message)
+		if err != nil {
+			t.Fatalf("marshal message: %v", err)
+		}
+		buf.Write(data)
+		buf.WriteByte('\n')
+	}
+	return buf.String()
+}
+
 func decodeMCPResponses(t *testing.T, data []byte) [][]byte {
 	t.Helper()
 
@@ -305,6 +382,24 @@ func decodeMCPResponses(t *testing.T, data []byte) [][]byte {
 			t.Fatalf("read frame: %v", err)
 		}
 		out = append(out, frame)
+	}
+	return out
+}
+
+func decodeRawMCPResponses(t *testing.T, data []byte) [][]byte {
+	t.Helper()
+	lines := bytes.Split(bytes.TrimSpace(data), []byte{'\n'})
+	out := make([][]byte, 0, len(lines))
+	for _, line := range lines {
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(line, &payload); err != nil {
+			t.Fatalf("decode raw response: %v line=%q", err, line)
+		}
+		out = append(out, line)
 	}
 	return out
 }

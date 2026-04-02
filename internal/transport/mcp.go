@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 type mcpRequest struct {
@@ -40,6 +44,62 @@ type mcpToolCall struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
+type mcpFramingMode string
+
+const (
+	mcpFramingUnknown mcpFramingMode = "unknown"
+	mcpFramingLSP     mcpFramingMode = "content-length"
+	mcpFramingRaw     mcpFramingMode = "raw-json"
+)
+
+type mcpConn struct {
+	reader  *bufio.Reader
+	writer  io.Writer
+	decoder *json.Decoder
+	mode    mcpFramingMode
+}
+
+func newMCPConn(stdin io.Reader, stdout io.Writer) *mcpConn {
+	return &mcpConn{reader: bufio.NewReader(stdin), writer: stdout, mode: mcpFramingUnknown}
+}
+
+func (c *mcpConn) ReadPayload() ([]byte, error) {
+	if c.mode == mcpFramingUnknown {
+		mode, err := detectMCPFraming(c.reader)
+		if err != nil {
+			return nil, err
+		}
+		c.mode = mode
+		if mode == mcpFramingRaw {
+			c.decoder = json.NewDecoder(c.reader)
+			c.decoder.UseNumber()
+		}
+	}
+	if c.mode == mcpFramingLSP {
+		return readMCPFrame(c.reader)
+	}
+	var raw json.RawMessage
+	if err := c.decoder.Decode(&raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func (c *mcpConn) WriteResponse(value any) error {
+	if c.mode == mcpFramingRaw {
+		data, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		if _, err := c.writer.Write(data); err != nil {
+			return err
+		}
+		_, err = c.writer.Write([]byte("\n"))
+		return err
+	}
+	return writeMCPFrame(c.writer, value)
+}
+
 func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 	if len(args) != 0 {
 		fmt.Fprintln(stderr, "mcp does not accept positional arguments")
@@ -49,25 +109,33 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "mcp stdin is not configured")
 		return 1
 	}
+	logf, closeLog, err := openMCPLog()
+	if err != nil {
+		fmt.Fprintf(stderr, "mcp log setup failed: %v\n", err)
+		return 1
+	}
+	defer closeLog()
 
-	reader := bufio.NewReader(r.stdin)
+	r.storeRoot = resolveMCPStoreRoot(r.storeRoot)
+	if err := os.MkdirAll(r.storeRoot, 0o755); err != nil {
+		fmt.Fprintf(stderr, "mcp state root setup failed: %v\n", err)
+		return 1
+	}
+	conn := newMCPConn(r.stdin, stdout)
 	for {
-		payload, err := readMCPFrame(reader)
+		payload, err := conn.ReadPayload()
 		if err != nil {
 			if err == io.EOF {
 				return 0
 			}
-			fmt.Fprintf(stderr, "mcp read failed: %v\n", err)
+			mcpLogf(logf, "read failed: %v", err)
 			return 1
 		}
 
 		var req mcpRequest
 		if err := json.Unmarshal(payload, &req); err != nil {
-			if err := writeMCPFrame(stdout, mcpResponse{
-				JSONRPC: "2.0",
-				Error:   &mcpError{Code: -32700, Message: "invalid json"},
-			}); err != nil {
-				fmt.Fprintf(stderr, "mcp write failed: %v\n", err)
+			if err := conn.WriteResponse(mcpResponse{JSONRPC: "2.0", Error: &mcpError{Code: -32700, Message: "invalid json"}}); err != nil {
+				mcpLogf(logf, "write parse error failed: %v", err)
 				return 1
 			}
 			continue
@@ -77,11 +145,41 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 		if !respond {
 			continue
 		}
-		if err := writeMCPFrame(stdout, resp); err != nil {
-			fmt.Fprintf(stderr, "mcp write failed: %v\n", err)
+		if err := conn.WriteResponse(resp); err != nil {
+			mcpLogf(logf, "write failed: %v", err)
 			return 1
 		}
 	}
+}
+
+func resolveMCPStoreRoot(root string) string {
+	root = strings.TrimSpace(root)
+	if root != "" && filepath.IsAbs(root) {
+		return root
+	}
+	return platform.StableStateRoot()
+}
+
+func openMCPLog() (io.Writer, func(), error) {
+	path := strings.TrimSpace(os.Getenv("NEEDLEX_MCP_LOG"))
+	if path == "" {
+		path = filepath.Join(os.TempDir(), "needlex-mcp.log")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, nil, err
+	}
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return nil, nil, err
+	}
+	return file, func() { _ = file.Close() }, nil
+}
+
+func mcpLogf(w io.Writer, format string, args ...any) {
+	if w == nil {
+		return
+	}
+	_, _ = fmt.Fprintf(w, "%s %s\n", time.Now().UTC().Format(time.RFC3339), fmt.Sprintf(format, args...))
 }
 
 func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
@@ -93,7 +191,7 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 			"protocolVersion": "2024-11-05",
 			"serverInfo": map[string]any{
 				"name":    "needlex",
-				"version": "0.1.0",
+				"version": "0.1.2",
 			},
 			"capabilities": map[string]any{
 				"tools": map[string]any{},
@@ -124,14 +222,42 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 	}
 }
 
+func detectMCPFraming(reader *bufio.Reader) (mcpFramingMode, error) {
+	for {
+		peek, err := reader.Peek(1)
+		if err != nil {
+			return mcpFramingUnknown, err
+		}
+		if !isMCPWhitespace(peek[0]) {
+			break
+		}
+		if _, err := reader.ReadByte(); err != nil {
+			return mcpFramingUnknown, err
+		}
+	}
+	peek, err := reader.Peek(32)
+	if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
+		return mcpFramingUnknown, err
+	}
+	lower := strings.ToLower(string(peek))
+	if strings.HasPrefix(lower, "content-length:") {
+		return mcpFramingLSP, nil
+	}
+	return mcpFramingRaw, nil
+}
+
+func isMCPWhitespace(b byte) bool {
+	switch b {
+	case ' ', '\t', '\r', '\n':
+		return true
+	default:
+		return false
+	}
+}
+
 func mcpToolResult(payload map[string]any) map[string]any {
 	return map[string]any{
-		"content": []map[string]any{
-			{
-				"type": "text",
-				"text": mustJSON(payload),
-			},
-		},
+		"content":           []map[string]any{{"type": "text", "text": mustJSON(payload)}},
 		"structuredContent": payload,
 		"isError":           false,
 	}
@@ -232,6 +358,4 @@ func durationHours(hours int) time.Duration {
 	return time.Duration(hours) * time.Hour
 }
 
-func timeNowUTC() time.Time {
-	return time.Now().UTC()
-}
+func timeNowUTC() time.Time { return time.Now().UTC() }

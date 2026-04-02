@@ -98,6 +98,11 @@ Use MCP when the client can speak:
 2. `tools/list`
 3. `tools/call`
 
+Transport note:
+1. `needlex mcp` accepts both standard `Content-Length` framed stdio and raw newline-delimited JSON-RPC
+2. responses follow the same framing style used by the client
+3. this is intentional for compatibility with Claude Desktop-style framed clients and simpler raw-JSON clients
+
 This remains the best standard integration surface for Needle-X itself.
 
 ## Practical Recommendation
@@ -252,10 +257,24 @@ Minimal request sequence:
 2. `tools/list`
 3. `tools/call`
 
-Example JSON-RPC payloads:
+Example raw JSON payloads:
 
 ```json
 {"jsonrpc":"2.0","id":1,"method":"initialize"}
+```
+
+Raw stdio example:
+
+```bash
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{},"protocolVersion":"2024-11-05","clientInfo":{"name":"test","version":"1.0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n' | needlex mcp
+```
+
+Framed stdio example:
+
+```text
+Content-Length: 58
+
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
 ```
 
 ```json
@@ -276,7 +295,10 @@ Example JSON-RPC payloads:
 }
 ```
 
-MCP framing uses `Content-Length` headers because the transport is stdio JSON-RPC.
+Operational note:
+1. if `NEEDLEX_HOME` is unset, MCP falls back to a stable PAL-aware absolute state root
+2. session logging goes to `${NEEDLEX_MCP_LOG:-/tmp/needlex-mcp.log}`
+3. do not mix human-readable wrapper output into stdout while the MCP server is running
 
 ### Mapping Rule
 

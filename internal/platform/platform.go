@@ -17,7 +17,33 @@ func DefaultStateRoot() string {
 }
 
 func InstalledStateRoot() string {
-	return installedStateRootFor(runtime.GOOS, os.Getenv("HOME"), os.Getenv("XDG_DATA_HOME"), os.Getenv("LOCALAPPDATA"))
+	home := os.Getenv("HOME")
+	if strings.TrimSpace(home) == "" {
+		if userHome, err := os.UserHomeDir(); err == nil {
+			home = userHome
+		}
+	}
+	return installedStateRootFor(runtime.GOOS, home, os.Getenv("XDG_DATA_HOME"), os.Getenv("LOCALAPPDATA"))
+}
+
+func StableStateRoot() string {
+	if root := strings.TrimSpace(os.Getenv(EnvHome)); root != "" {
+		return root
+	}
+	root := strings.TrimSpace(InstalledStateRoot())
+	if root != "" && filepath.IsAbs(root) {
+		return root
+	}
+	home, err := os.UserHomeDir()
+	if err == nil && strings.TrimSpace(home) != "" {
+		switch runtime.GOOS {
+		case "windows":
+			return strings.ReplaceAll(filepath.Join(home, "AppData", "Local", "NeedleX"), "/", `\`)
+		default:
+			return filepath.Join(home, ".needlex")
+		}
+	}
+	return DefaultStateRoot()
 }
 
 func installedStateRootFor(goos, home, xdgDataHome, localAppData string) string {

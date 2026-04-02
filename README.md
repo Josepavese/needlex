@@ -74,6 +74,8 @@ Default output is AI-first:
 1. compact packet first
 2. proof inline when useful
 3. full diagnostics only on demand
+4. browser-like fetch by default for real-world targets
+5. MCP server accepts both standard `Content-Length` framing and raw newline-delimited JSON
 
 ## Tiny Demo
 
