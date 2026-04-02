@@ -2,6 +2,7 @@ package config
 
 type Config struct {
 	Runtime   RuntimeConfig   `json:"runtime"`
+	Fetch     FetchConfig     `json:"fetch,omitempty"`
 	Policy    PolicyConfig    `json:"policy"`
 	Budget    BudgetConfig    `json:"budget"`
 	Models    ModelsConfig    `json:"models"`
@@ -16,6 +17,11 @@ type RuntimeConfig struct {
 	TimeoutMS int64 `json:"timeout_ms"`
 	MaxBytes  int64 `json:"max_bytes"`
 	LaneMax   int   `json:"lane_max"`
+}
+
+type FetchConfig struct {
+	Profile      string `json:"profile,omitempty"`
+	RetryProfile string `json:"retry_profile,omitempty"`
 }
 
 type PolicyConfig struct {
@@ -45,6 +51,7 @@ type ModelsConfig struct {
 
 type DiscoveryConfig struct {
 	ProviderChain string `json:"provider_chain,omitempty"`
+	BraveAPIKey   string `json:"brave_api_key,omitempty"`
 }
 
 type SemanticConfig struct {

@@ -57,6 +57,8 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		key    string
 		target *string
 	}{
+		{"NEEDLEX_FETCH_PROFILE", &c.Fetch.Profile},
+		{"NEEDLEX_FETCH_RETRY_PROFILE", &c.Fetch.RetryProfile},
 		{"NEEDLEX_MODELS_BACKEND", &c.Models.Backend},
 		{"NEEDLEX_MODELS_BASE_URL", &c.Models.BaseURL},
 		{"NEEDLEX_MODELS_API_KEY", &c.Models.APIKey},
@@ -65,6 +67,7 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		{"NEEDLEX_MODELS_EXTRACTOR", &c.Models.Extractor},
 		{"NEEDLEX_MODELS_FORMATTER", &c.Models.Formatter},
 		{"NEEDLEX_DISCOVERY_PROVIDER_CHAIN", &c.Discovery.ProviderChain},
+		{"BRAVE_SEARCH_API_KEY", &c.Discovery.BraveAPIKey},
 		{"NEEDLEX_SEMANTIC_BACKEND", &c.Semantic.Backend},
 		{"NEEDLEX_SEMANTIC_BASE_URL", &c.Semantic.BaseURL},
 		{"NEEDLEX_SEMANTIC_MODEL", &c.Semantic.Model},

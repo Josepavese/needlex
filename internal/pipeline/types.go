@@ -3,20 +3,23 @@ package pipeline
 import "time"
 
 type AcquireInput struct {
-	URL       string
-	Timeout   time.Duration
-	MaxBytes  int64
-	UserAgent string
+	URL          string
+	Timeout      time.Duration
+	MaxBytes     int64
+	UserAgent    string
+	Profile      string
+	RetryProfile string
 }
 
 type RawPage struct {
-	URL         string
-	FinalURL    string
-	StatusCode  int
-	ContentType string
-	HTML        string
-	FetchMode   string
-	FetchedAt   time.Time
+	URL          string
+	FinalURL     string
+	StatusCode   int
+	ContentType  string
+	HTML         string
+	FetchMode    string
+	FetchProfile string
+	FetchedAt    time.Time
 }
 
 type SimplifiedNode struct {

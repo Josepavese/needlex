@@ -9,6 +9,7 @@ import (
 func (c Config) Validate() error {
 	errs := []error{}
 	errs = append(errs, validateRuntime(c.Runtime)...)
+	errs = append(errs, validateFetch(c.Fetch)...)
 	errs = append(errs, validatePolicy(c.Policy)...)
 	errs = append(errs, validateBudget(c.Budget)...)
 	errs = append(errs, validateModels(c.Models)...)
@@ -20,6 +21,21 @@ func (c Config) Validate() error {
 		return nil
 	}
 	return errorsJoin(errs...)
+}
+
+func validateFetch(fetch FetchConfig) []error {
+	errs := []error{}
+	for field, value := range map[string]string{
+		"fetch.profile":       fetch.Profile,
+		"fetch.retry_profile": fetch.RetryProfile,
+	} {
+		switch strings.TrimSpace(value) {
+		case "", "standard", "browser_like", "hardened":
+		default:
+			errs = append(errs, fmt.Errorf("%s must be one of standard, browser_like, hardened", field))
+		}
+	}
+	return errs
 }
 
 func validateRuntime(runtime RuntimeConfig) []error {

@@ -1,0 +1,45 @@
+{
+  "version": "seedless-ddg-corpus-v1",
+  "cases": [
+    {
+      "id": "openai-api-pricing",
+      "goal": "OpenAI API pricing",
+      "expected_domain": "openai.com"
+    },
+    {
+      "id": "sqlite-official-site",
+      "goal": "official site for sqlite database engine",
+      "expected_domain": "sqlite.org"
+    },
+    {
+      "id": "playwright-official-site",
+      "goal": "official site for playwright browser automation",
+      "expected_domain": "playwright.dev"
+    },
+    {
+      "id": "nginx-official-site",
+      "goal": "official site for nginx web server",
+      "expected_domain": "nginx.org"
+    },
+    {
+      "id": "lua-official-site",
+      "goal": "official site for lua programming language",
+      "expected_domain": "lua.org"
+    },
+    {
+      "id": "python-packaging",
+      "goal": "python packaging guide official docs",
+      "expected_domain": "python.org"
+    },
+    {
+      "id": "mdn-js-guide",
+      "goal": "MDN JavaScript guide",
+      "expected_domain": "developer.mozilla.org"
+    },
+    {
+      "id": "coni-official-site",
+      "goal": "official site for Comitato Olimpico Nazionale Italiano",
+      "expected_domain": "coni.it"
+    }
+  ]
+}

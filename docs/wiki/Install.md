@@ -27,6 +27,16 @@ Installed command:
 4. wires `NEEDLEX_HOME`
 5. prepares the same runtime surface for CLI and MCP
 
+## Fetch Defaults
+
+Needle-X defaults to a browser-like fetch profile.
+
+Current defaults:
+1. `browser_like`
+2. retry with `hardened`
+
+Use `standard` only when you need benchmark/debug comparability.
+
 ## Next
 
 1. [CLI](./CLI.md)
@@ -35,3 +45,4 @@ Installed command:
 ## Full Reference
 
 1. [Install Guide](../install.md)
+2. [Fetch Profiles](../fetch-profiles.md)

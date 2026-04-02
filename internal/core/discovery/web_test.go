@@ -19,3 +19,9 @@ func TestIsDuckDuckGoProvider(t *testing.T) {
 		t.Fatal("did not expect non-duckduckgo provider")
 	}
 }
+
+func TestProviderNameRecognizesAPIProviders(t *testing.T) {
+	if ProviderName("brave://search") != "brave" {
+		t.Fatalf("unexpected brave provider name")
+	}
+}

@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -81,5 +82,81 @@ func TestAcquireRetriesOnceOnTimeout(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&calls); got < 2 {
 		t.Fatalf("expected retry call, got %d requests", got)
+	}
+}
+
+func TestAcquireUsesBrowserLikeProfileByDefault(t *testing.T) {
+	var seenUserAgent string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenUserAgent = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = fmt.Fprint(w, "<html><body><p>ok</p></body></html>")
+	}))
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:      server.URL,
+		Timeout:  2 * time.Second,
+		MaxBytes: 4096,
+	})
+	if err != nil {
+		t.Fatalf("acquire failed: %v", err)
+	}
+	if page.FetchProfile != "browser_like" {
+		t.Fatalf("expected browser_like fetch profile, got %q", page.FetchProfile)
+	}
+	if !strings.Contains(seenUserAgent, "Mozilla/5.0") {
+		t.Fatalf("expected browser-like user agent, got %q", seenUserAgent)
+	}
+}
+
+func TestAcquireRetriesWithRetryProfileOnBlockedStatus(t *testing.T) {
+	var calls int32
+	var seenUserAgents []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenUserAgents = append(seenUserAgents, r.Header.Get("User-Agent"))
+		call := atomic.AddInt32(&calls, 1)
+		if call == 1 {
+			http.Error(w, "blocked", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = fmt.Fprint(w, "<html><body><p>ok</p></body></html>")
+	}))
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:          server.URL,
+		Timeout:      2 * time.Second,
+		MaxBytes:     4096,
+		Profile:      "standard",
+		RetryProfile: "browser_like",
+	})
+	if err != nil {
+		t.Fatalf("expected blocked retry to recover, got %v", err)
+	}
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf("expected exactly 2 attempts, got %d", got)
+	}
+	if page.FetchProfile != "browser_like" {
+		t.Fatalf("expected retry profile to win, got %q", page.FetchProfile)
+	}
+	if len(seenUserAgents) != 2 {
+		t.Fatalf("expected 2 user agents, got %d", len(seenUserAgents))
+	}
+	if seenUserAgents[0] != defaultUserAgent {
+		t.Fatalf("expected standard user agent first, got %q", seenUserAgents[0])
+	}
+	if !strings.Contains(seenUserAgents[1], "Mozilla/5.0") {
+		t.Fatalf("expected browser-like user agent on retry, got %q", seenUserAgents[1])
+	}
+}
+
+func TestShouldFallbackToHTTP(t *testing.T) {
+	if !shouldFallbackToHTTP(errors.New(`fetch page: Get "https://sqlite.org/about.html": http2: unexpected ALPN protocol ""; want "h2"`)) {
+		t.Fatal("expected ALPN mismatch to trigger HTTP fallback")
+	}
+	if shouldFallbackToHTTP(errors.New("fetch page: context deadline exceeded")) {
+		t.Fatal("did not expect timeout to trigger HTTP fallback")
 	}
 }

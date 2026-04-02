@@ -4,7 +4,7 @@
   "recommended_backend": "openai-compatible",
   "recommended_base_url": "http://127.0.0.1:11434/v1",
   "discovery": {
-    "recommended_provider_chain": "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
+    "recommended_provider_chain": "brave://search,https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
   },
   "semantic": {
     "recommended_backend": "openai-embeddings",
@@ -34,6 +34,7 @@
     "NEEDLEX_MODELS_STRUCTURED_TIMEOUT_MS",
     "NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS",
     "NEEDLEX_DISCOVERY_PROVIDER_CHAIN",
+    "BRAVE_SEARCH_API_KEY",
     "NEEDLEX_SEMANTIC_ENABLED",
     "NEEDLEX_SEMANTIC_BACKEND",
     "NEEDLEX_SEMANTIC_BASE_URL",

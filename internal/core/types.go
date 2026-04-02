@@ -10,6 +10,8 @@ import (
 
 const (
 	FetchModeHTTP   = "http"
+	FetchModeReq    = "req"
+	FetchModeRender = "render"
 	MaxLane         = 4
 	ProfileTiny     = "tiny"
 	ProfileStandard = "standard"
@@ -236,10 +238,12 @@ func RequireNonEmpty(field, value string) error {
 }
 
 func validateFetchMode(mode string) error {
-	if mode == FetchModeHTTP {
+	switch mode {
+	case FetchModeHTTP, FetchModeReq, FetchModeRender:
 		return nil
+	default:
+		return fmt.Errorf("document.fetch_mode must be one of %q, %q, %q", FetchModeHTTP, FetchModeReq, FetchModeRender)
 	}
-	return fmt.Errorf("document.fetch_mode must be %q", FetchModeHTTP)
 }
 
 func ValidateLane(field string, lane int) error {

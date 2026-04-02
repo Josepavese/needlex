@@ -33,6 +33,7 @@ type ReadResponse struct {
 
 type Service struct {
 	cfg                config.Config
+	httpClient         *http.Client
 	acquirer           pipeline.Acquirer
 	reducer            pipeline.Reducer
 	segmenter          pipeline.Segmenter
@@ -47,9 +48,10 @@ func New(cfg config.Config, client *http.Client) (*Service, error) {
 		return nil, err
 	}
 	return &Service{
-		cfg:      cfg,
-		acquirer: pipeline.Acquirer{Client: client},
-		reducer:  pipeline.Reducer{},
+		cfg:        cfg,
+		httpClient: client,
+		acquirer:   pipeline.Acquirer{Client: client},
+		reducer:    pipeline.Reducer{},
 		segmenter: pipeline.Segmenter{
 			MaxSegmentChars: 1200,
 		},
@@ -156,10 +158,12 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 	}
 
 	page, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       req.URL,
-		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: effectiveUserAgent(req.UserAgent, req.RenderHint),
+		URL:          req.URL,
+		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:     s.cfg.Runtime.MaxBytes,
+		UserAgent:    effectiveUserAgent(req.UserAgent, req.RenderHint),
+		Profile:      s.cfg.Fetch.Profile,
+		RetryProfile: s.cfg.Fetch.RetryProfile,
 	})
 	if err != nil {
 		recorder.Error(stage, "NX_FETCH_FAILED", err.Error(), nil, s.now().UTC())
@@ -167,8 +171,9 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 	}
 
 	if err := recorder.StageCompleted(stage, page, 1, map[string]string{
-		"fetch_mode": page.FetchMode,
-		"final_url":  page.FinalURL,
+		"fetch_mode":    page.FetchMode,
+		"fetch_profile": page.FetchProfile,
+		"final_url":     page.FinalURL,
 	}, s.now().UTC()); err != nil {
 		return pipeline.RawPage{}, err
 	}

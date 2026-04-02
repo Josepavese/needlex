@@ -19,6 +19,13 @@ func TestDefaultsUseOperatorGradeRuntimeTimeout(t *testing.T) {
 	}
 }
 
+func TestDefaultsUseBrowserLikeFetchProfile(t *testing.T) {
+	cfg := Defaults()
+	if cfg.Fetch.Profile != "browser_like" || cfg.Fetch.RetryProfile != "hardened" {
+		t.Fatalf("unexpected fetch defaults: %+v", cfg.Fetch)
+	}
+}
+
 func TestLoadMergesJSONWithDefaults(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "needlex.json")
@@ -46,6 +53,8 @@ func TestLoadMergesJSONWithDefaults(t *testing.T) {
 func TestApplyEnvOverridesValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
+		"NEEDLEX_FETCH_PROFILE":             "standard",
+		"NEEDLEX_FETCH_RETRY_PROFILE":       "browser_like",
 		"NEEDLEX_MODELS_BACKEND":            "openai-compatible",
 		"NEEDLEX_MODELS_BASE_URL":           "http://localhost:11434/v1",
 		"NEEDLEX_RUNTIME_MAX_DEPTH":         "7",
@@ -59,6 +68,9 @@ func TestApplyEnvOverridesValues(t *testing.T) {
 	}
 	if cfg.Runtime.MaxDepth != 7 {
 		t.Fatalf("expected runtime.max_depth=7, got %d", cfg.Runtime.MaxDepth)
+	}
+	if cfg.Fetch.Profile != "standard" || cfg.Fetch.RetryProfile != "browser_like" {
+		t.Fatalf("unexpected fetch override: %+v", cfg.Fetch)
 	}
 	if cfg.Policy.ThresholdConflict != 0.65 {
 		t.Fatalf("expected threshold conflict override, got %f", cfg.Policy.ThresholdConflict)
@@ -105,7 +117,7 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Semantic.Enabled {
 		t.Fatal("expected semantic gate disabled by default")
 	}
-	if cfg.Discovery.ProviderChain != "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/" {
+	if cfg.Discovery.ProviderChain != "brave://search,https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/" {
 		t.Fatalf("unexpected discovery SSOT defaults: %+v", cfg.Discovery)
 	}
 	if cfg.Memory.Backend != "sqlite" || cfg.Memory.Path != "discovery/discovery.db" || cfg.Memory.EmbeddingBackend != "openai-embeddings" || cfg.Memory.EmbeddingModel != "intfloat/multilingual-e5-small" || cfg.Memory.VectorEngine != "sqlite-vec" {
@@ -140,12 +152,16 @@ func TestApplyEnvOverridesDiscoveryValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
 		"NEEDLEX_DISCOVERY_PROVIDER_CHAIN": "https://example.com/search,https://backup.example/search",
+		"BRAVE_SEARCH_API_KEY":             "brave-test",
 	}
 	if err := cfg.ApplyEnv(env); err != nil {
 		t.Fatalf("apply env: %v", err)
 	}
 	if cfg.Discovery.ProviderChain != "https://example.com/search,https://backup.example/search" {
 		t.Fatalf("unexpected discovery override: %+v", cfg.Discovery)
+	}
+	if cfg.Discovery.BraveAPIKey != "brave-test" {
+		t.Fatalf("unexpected discovery api key override: %+v", cfg.Discovery)
 	}
 }
 

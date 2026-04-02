@@ -1,8 +1,13 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -10,6 +15,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
@@ -61,6 +67,9 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		for _, query := range queries {
 			bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req, query)
 			if err != nil {
+				if isProviderUnavailable(err) {
+					continue
+				}
 				lastErr = err
 				continue
 			}
@@ -78,6 +87,9 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		for _, providerBaseURL := range providers {
 			bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req, req.Goal)
 			if err != nil {
+				if isProviderUnavailable(err) {
+					continue
+				}
 				lastErr = err
 				continue
 			}
@@ -99,6 +111,8 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 	}
 	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, candidates.Sorted(), req.MaxCandidates)
 	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Limited(req.MaxCandidates)
+	filtered = canonicalizeCandidateFamilies(filtered)
+	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
 	if len(filtered) == 0 {
 		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
 	}
@@ -110,6 +124,128 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		DiscoveryURL: discoveryURL,
 		Candidates:   filtered,
 	}, nil
+}
+
+func canonicalizeCandidateFamilies(candidates []DiscoverCandidate) []DiscoverCandidate {
+	if len(candidates) < 2 {
+		return candidates
+	}
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := range out {
+		for j := range out {
+			if i == j {
+				continue
+			}
+			left := out[i]
+			right := out[j]
+			if !sameCandidateFamily(left.URL, right.URL) {
+				continue
+			}
+			leftDepth := discoverycore.URLPathDepth(left.URL)
+			rightDepth := discoverycore.URLPathDepth(right.URL)
+			if rightDepth >= leftDepth {
+				continue
+			}
+			if left.Score-right.Score > 0.35 {
+				continue
+			}
+			boost := 0.12
+			reason := "same_family_shallow_preference"
+			if sameDiscoverHost(left.URL, right.URL) && rightDepth == 0 {
+				boost = 0.28
+				reason = "same_host_canonical_root"
+			} else if rightDepth == 0 {
+				boost = 0.18
+				reason = "same_family_canonical_root"
+			}
+			out[j].Score += boost
+			out[j].Reason = discoverycore.AppendUniqueReason(out[j].Reason, reason)
+		}
+	}
+	discoverycore.SortCandidates(out)
+	return out
+}
+
+func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
+	if len(candidates) < 2 || strings.TrimSpace(goal) == "" {
+		return candidates
+	}
+	families := make(map[string][]DiscoverCandidate)
+	order := make([]string, 0)
+	for _, candidate := range candidates {
+		family, err := discoverycore.RegistrableDomain(candidate.URL)
+		if err != nil || strings.TrimSpace(family) == "" {
+			family = strings.TrimSpace(candidate.URL)
+		}
+		if _, ok := families[family]; !ok {
+			order = append(order, family)
+		}
+		families[family] = append(families[family], candidate)
+	}
+	if len(order) < 2 {
+		return candidates
+	}
+	top := candidates[0]
+	second := candidates[1]
+	if top.Score-second.Score > 0.25 {
+		return candidates
+	}
+
+	semanticCandidates := make([]intel.SemanticCandidate, 0, len(order))
+	for _, family := range order {
+		group := families[family]
+		var texts []string
+		limit := min(len(group), 3)
+		for i := 0; i < limit; i++ {
+			texts = append(texts, discoverycore.JoinNonEmpty(
+				group[i].Metadata["host_root_title"],
+				group[i].Metadata["page_title"],
+				group[i].Label,
+				discoverycore.HostTokenText(group[i].URL),
+				family,
+			))
+		}
+		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
+			ID:   family,
+			Text: discoverycore.JoinNonEmpty(texts...),
+		})
+	}
+	scored, err := s.semantic.Score(ctx, goal, semanticCandidates)
+	if err != nil || len(scored) == 0 {
+		return candidates
+	}
+	byFamily := make(map[string]float64, len(scored))
+	for _, item := range scored {
+		byFamily[item.ID] = item.Similarity
+	}
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := range out {
+		family, err := discoverycore.RegistrableDomain(out[i].URL)
+		if err != nil || strings.TrimSpace(family) == "" {
+			family = strings.TrimSpace(out[i].URL)
+		}
+		if similarity, ok := byFamily[family]; ok && similarity > 0 {
+			out[i].Score += similarity * 0.90
+			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_family_alignment")
+		}
+	}
+	discoverycore.SortCandidates(out)
+	return out
+}
+
+func sameCandidateFamily(leftURL, rightURL string) bool {
+	leftDomain, leftErr := discoverycore.RegistrableDomain(leftURL)
+	rightDomain, rightErr := discoverycore.RegistrableDomain(rightURL)
+	if leftErr != nil || rightErr != nil {
+		return false
+	}
+	return leftDomain == rightDomain
+}
+
+func sameDiscoverHost(leftURL, rightURL string) bool {
+	leftHost, leftOK := discoverycore.Hostname(leftURL)
+	rightHost, rightOK := discoverycore.Hostname(rightURL)
+	return leftOK && rightOK && leftHost == rightHost
 }
 
 func (s *Service) discoverWebLocalFirst(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, bool) {
@@ -129,20 +265,28 @@ func localSubstrateResolved(candidate DiscoverCandidate) bool {
 	if candidate.Score >= 1.8 {
 		return true
 	}
-	return slices.Contains(candidate.Reason, "semantic_goal_alignment") || slices.Contains(candidate.Reason, "path_hint")
+	return slices.Contains(candidate.Reason, "semantic_goal_alignment") ||
+		slices.Contains(candidate.Reason, "structure_hint") ||
+		slices.Contains(candidate.Reason, "host_goal_coherence")
 }
 
 func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {
+	switch {
+	case discoverycore.IsBraveProvider(baseURL):
+		return s.discoverWebBootstrapBrave(ctx, req, query)
+	}
 	searchURL, err := discoverycore.WebSearchURL(baseURL, query)
 	if err != nil {
 		return nil, "", err
 	}
 
 	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       searchURL,
-		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: effectiveUserAgent(req.UserAgent, true),
+		URL:          searchURL,
+		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:     s.cfg.Runtime.MaxBytes,
+		UserAgent:    effectiveUserAgent(req.UserAgent, true),
+		Profile:      s.cfg.Fetch.Profile,
+		RetryProfile: s.cfg.Fetch.RetryProfile,
 	})
 	if err != nil {
 		if discoverycore.IsDuckDuckGoProvider(baseURL) && (strings.Contains(err.Error(), "unexpected status code 403") || strings.Contains(err.Error(), "unexpected status code 202")) {
@@ -156,6 +300,84 @@ func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req 
 
 	results := discoverycore.ExtractSearchResults(rawPage.HTML, rawPage.FinalURL)
 	return discoverycore.ScoreCandidates(req.Goal, req.SeedURL, "", results, req.DomainHints), rawPage.FinalURL, nil
+}
+
+type providerUnavailableError struct{ reason string }
+
+func (e providerUnavailableError) Error() string {
+	if strings.TrimSpace(e.reason) == "" {
+		return "provider unavailable"
+	}
+	return e.reason
+}
+
+func isProviderUnavailable(err error) bool {
+	_, ok := err.(providerUnavailableError)
+	return ok
+}
+
+func (s *Service) discoverWebBootstrapBrave(ctx context.Context, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {
+	if strings.TrimSpace(s.cfg.Discovery.BraveAPIKey) == "" {
+		return nil, "", providerUnavailableError{reason: "brave api key not configured"}
+	}
+	endpoint := "https://api.search.brave.com/res/v1/web/search?q=" + url.QueryEscape(strings.TrimSpace(query)) + "&count=" + strconv.Itoa(max(req.MaxCandidates, webProbeLimit))
+	respBody, finalURL, err := s.doBootstrapJSON(ctx, http.MethodGet, endpoint, map[string]string{"Accept": "application/json", "X-Subscription-Token": strings.TrimSpace(s.cfg.Discovery.BraveAPIKey)}, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	var payload struct {
+		Web struct {
+			Results []struct {
+				URL   string `json:"url"`
+				Title string `json:"title"`
+			} `json:"results"`
+		} `json:"web"`
+	}
+	if err := json.Unmarshal(respBody, &payload); err != nil {
+		return nil, "", fmt.Errorf("decode brave search response: %w", err)
+	}
+	links := make([]discoverycore.LinkCandidate, 0, len(payload.Web.Results))
+	for _, item := range payload.Web.Results {
+		if strings.TrimSpace(item.URL) == "" {
+			continue
+		}
+		links = append(links, discoverycore.LinkCandidate{URL: strings.TrimSpace(item.URL), Label: strings.TrimSpace(item.Title)})
+	}
+	return discoverycore.ScoreCandidates(req.Goal, req.SeedURL, "", links, req.DomainHints), finalURL, nil
+}
+
+func (s *Service) doBootstrapJSON(ctx context.Context, method, endpoint string, headers map[string]string, body []byte) ([]byte, string, error) {
+	client := s.httpClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Runtime.TimeoutMS)*time.Millisecond)
+	defer cancel()
+	request, err := http.NewRequestWithContext(reqCtx, method, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, "", err
+	}
+	for key, value := range headers {
+		if strings.TrimSpace(value) != "" {
+			request.Header.Set(key, value)
+		}
+	}
+	resp, err := client.Do(request)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", fmt.Errorf("bootstrap provider returned %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, s.cfg.Runtime.MaxBytes+1))
+	if err != nil {
+		return nil, "", err
+	}
+	if int64(len(data)) > s.cfg.Runtime.MaxBytes {
+		return nil, "", fmt.Errorf("bootstrap provider response exceeds max bytes budget")
+	}
+	return data, resp.Request.URL.String(), nil
 }
 
 func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAgent string, domainHints []string, candidates []DiscoverCandidate, maxCandidates int) []DiscoverCandidate {
@@ -180,10 +402,12 @@ func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAg
 
 func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidate DiscoverCandidate) ([]DiscoverCandidate, error) {
 	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       candidate.URL,
-		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: effectiveUserAgent(userAgent, true),
+		URL:          candidate.URL,
+		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:     s.cfg.Runtime.MaxBytes,
+		UserAgent:    effectiveUserAgent(userAgent, true),
+		Profile:      s.cfg.Fetch.Profile,
+		RetryProfile: s.cfg.Fetch.RetryProfile,
 	})
 	if err != nil {
 		return nil, err
@@ -197,6 +421,23 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 
 	refined := refineWebCandidate(goal, candidate, rawPage.FinalURL, dom.Title, webIR, domainHints)
 	out := []DiscoverCandidate{refined}
+	if hostProbe, err := s.probeHostRootIdentity(ctx, goal, userAgent, rawPage.FinalURL); err == nil {
+		if hostProbe.Score > 0 {
+			refined.Score += hostProbe.Score
+			refined.Reason = discoverycore.AppendUniqueReason(refined.Reason, hostProbe.Reasons...)
+			refined.Metadata = discoverycore.MergeMetadata(refined.Metadata, hostProbe.Metadata)
+			out[0] = refined
+		}
+		if strings.TrimSpace(hostProbe.URL) != "" && strings.TrimSpace(hostProbe.URL) != strings.TrimSpace(refined.URL) && hostProbe.Score > 0 {
+			out = append(out, DiscoverCandidate{
+				URL:      hostProbe.URL,
+				Label:    discoverycore.FirstNonEmpty(hostProbe.Title, hostProbe.URL),
+				Score:    hostProbe.Score + 0.20,
+				Reason:   discoverycore.AppendUniqueReason(hostProbe.Reasons, "host_root_candidate"),
+				Metadata: discoverycore.MergeMetadata(nil, hostProbe.Metadata),
+			})
+		}
+	}
 
 	expanded := extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, true)
 	expandedScored := discoverycore.ScoreCandidates(goal, "", "", expanded, domainHints)
@@ -209,11 +450,77 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 	return out, nil
 }
 
+type hostRootIdentityProbe struct {
+	URL      string
+	Title    string
+	Score    float64
+	Reasons  []string
+	Metadata map[string]string
+}
+
+func (s *Service) probeHostRootIdentity(ctx context.Context, goal, userAgent, rawURL string) (hostRootIdentityProbe, error) {
+	rootURL, ok := hostRootURL(rawURL)
+	if !ok || strings.TrimSpace(rootURL) == strings.TrimSpace(rawURL) {
+		return hostRootIdentityProbe{}, nil
+	}
+
+	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
+		URL:          rootURL,
+		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:     s.cfg.Runtime.MaxBytes,
+		UserAgent:    effectiveUserAgent(userAgent, true),
+		Profile:      s.cfg.Fetch.Profile,
+		RetryProfile: s.cfg.Fetch.RetryProfile,
+	})
+	if err != nil {
+		return hostRootIdentityProbe{}, err
+	}
+	dom, err := s.reducer.Reduce(rawPage)
+	if err != nil {
+		return hostRootIdentityProbe{}, err
+	}
+	if strings.TrimSpace(dom.Title) == "" {
+		return hostRootIdentityProbe{
+			URL: strings.TrimSpace(rawPage.FinalURL),
+		}, nil
+	}
+
+	identityScore, reasons := discoverycore.ScoreURL(goal, rawPage.FinalURL, dom.Title, false, nil)
+	if identityScore <= 0 {
+		return hostRootIdentityProbe{
+			URL:   strings.TrimSpace(rawPage.FinalURL),
+			Title: strings.TrimSpace(dom.Title),
+			Metadata: map[string]string{
+				"host_root_url":   strings.TrimSpace(rawPage.FinalURL),
+				"host_root_title": strings.TrimSpace(dom.Title),
+			},
+		}, nil
+	}
+
+	return hostRootIdentityProbe{
+		URL:   strings.TrimSpace(rawPage.FinalURL),
+		Title: strings.TrimSpace(dom.Title),
+		Score: identityScore * 0.65,
+		Reasons: discoverycore.AppendUniqueReason(
+			reasons,
+			"host_root_identity_probe",
+		),
+		Metadata: map[string]string{
+			"host_root_url":   strings.TrimSpace(rawPage.FinalURL),
+			"host_root_title": strings.TrimSpace(dom.Title),
+		},
+	}, nil
+}
+
 func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, pageTitle string, webIR core.WebIR, domainHints []string) DiscoverCandidate {
 	score, reasons := discoverycore.ScoreURL(goal, finalURL, discoverycore.JoinNonEmpty(pageTitle, candidate.Label), false, domainHints)
 	if strings.TrimSpace(pageTitle) != "" {
 		score += 0.35
 		reasons = append(reasons, "page_title_probe")
+	}
+	if hostBoost := discoverycore.HostTitleCoherenceBoost(pageTitle, finalURL); hostBoost > 0 {
+		score += hostBoost
+		reasons = append(reasons, "host_page_coherence")
 	}
 	if webIR.NodeCount > 0 {
 		score += 0.10
@@ -226,13 +533,31 @@ func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, page
 	if strings.TrimSpace(finalURL) != "" && finalURL != candidate.URL {
 		reasons = append(reasons, "redirect_resolved")
 	}
+	metadata := discoverycore.MergeMetadata(candidate.Metadata, webIRDiscoveryMetadata(webIR))
+	if metadata == nil {
+		metadata = map[string]string{}
+	}
+	if strings.TrimSpace(pageTitle) != "" {
+		metadata["page_title"] = strings.TrimSpace(pageTitle)
+	}
+	if host, ok := discoverycore.Hostname(finalURL); ok {
+		metadata["final_host"] = host
+	}
 	return DiscoverCandidate{
 		URL:      finalURL,
 		Label:    discoverycore.FirstNonEmpty(pageTitle, candidate.Label),
 		Score:    max(score, candidate.Score),
 		Reason:   discoverycore.AppendUniqueReason(append([]string{}, candidate.Reason...), reasons...),
-		Metadata: discoverycore.MergeMetadata(candidate.Metadata, webIRDiscoveryMetadata(webIR)),
+		Metadata: metadata,
 	}
+}
+
+func hostRootURL(rawURL string) (string, bool) {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || strings.TrimSpace(parsed.Scheme) == "" || strings.TrimSpace(parsed.Host) == "" {
+		return "", false
+	}
+	return (&url.URL{Scheme: parsed.Scheme, Host: parsed.Host, Path: "/"}).String(), true
 }
 
 func webIRDiscoveryMetadata(webIR core.WebIR) map[string]string {

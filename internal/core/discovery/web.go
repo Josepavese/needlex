@@ -43,11 +43,19 @@ func WebSearchProviders(raw string) []string {
 }
 
 func ProviderName(baseURL string) string {
+	switch strings.TrimSpace(baseURL) {
+	case "brave://search":
+		return "brave"
+	}
 	parsed, err := url.Parse(baseURL)
 	if err != nil || parsed.Hostname() == "" {
 		return "web_search_bootstrap"
 	}
 	return parsed.Hostname()
+}
+
+func IsBraveProvider(baseURL string) bool {
+	return strings.EqualFold(strings.TrimSpace(baseURL), "brave://search")
 }
 
 func IsDuckDuckGoProvider(baseURL string) bool {

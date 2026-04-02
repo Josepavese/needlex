@@ -1,12 +1,16 @@
 package discovery
 
 import (
+	"fmt"
 	"net/url"
 	"path"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 type LinkCandidate struct {
@@ -146,13 +150,28 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 		score += 0.35
 		reasons = append(reasons, "seed_fallback")
 	}
-	if strings.Contains(strings.ToLower(rawURL), "docs") || strings.Contains(strings.ToLower(rawURL), "guide") {
-		score += 0.20
-		reasons = append(reasons, "path_hint")
+	if pathBoost := urlStructureBoost(rawURL); pathBoost != 0 {
+		score += pathBoost
+		switch {
+		case pathBoost > 0:
+			reasons = append(reasons, "structure_hint")
+		default:
+			reasons = append(reasons, "structure_penalty")
+		}
 	}
 	if host, ok := Hostname(rawURL); ok && slices.Contains(domainHints, host) {
 		score += 1.10
 		reasons = append(reasons, "domain_hint_match")
+	}
+	if hostBoost := hostGoalCoherenceBoost(goal, rawURL); hostBoost > 0 {
+		score += hostBoost
+		reasons = append(reasons, "host_goal_coherence")
+	}
+	if compactness := HostCompactnessBoost(rawURL); compactness != 0 {
+		score += compactness
+		if compactness > 0 {
+			reasons = append(reasons, "host_compactness")
+		}
 	}
 	if labelBoost := goalLabelAlignmentBoost(goal, label); labelBoost > 0 {
 		score += labelBoost
@@ -258,4 +277,158 @@ func URLTokenText(rawURL string) string {
 		return rawURL
 	}
 	return strings.Join([]string{parsed.Hostname(), parsed.Path, path.Base(parsed.Path)}, " ")
+}
+
+func HostTokenText(rawURL string) string {
+	host, ok := Hostname(rawURL)
+	if !ok {
+		return rawURL
+	}
+	tokens := strings.FieldsFunc(host, func(r rune) bool {
+		return !(unicode.IsLetter(r) || unicode.IsNumber(r))
+	})
+	if len(tokens) == 0 {
+		return host
+	}
+	return strings.Join(tokens, " ")
+}
+
+func hostGoalCoherenceBoost(goal, rawURL string) float64 {
+	return tokenOverlapBoost(goal, HostTokenText(rawURL))
+}
+
+func HostTitleCoherenceBoost(title, rawURL string) float64 {
+	return tokenOverlapBoost(title, HostTokenText(rawURL))
+}
+
+func HostCompactnessBoost(rawURL string) float64 {
+	host, ok := Hostname(rawURL)
+	if !ok {
+		return 0
+	}
+	registrable, err := RegistrableDomain(rawURL)
+	if err != nil {
+		return 0
+	}
+	hostLabels := strings.Split(host, ".")
+	baseLabels := strings.Split(registrable, ".")
+	extra := len(hostLabels) - len(baseLabels)
+	switch {
+	case extra <= 0:
+		return 0.20
+	case extra == 1:
+		return 0.02
+	default:
+		return -0.06
+	}
+}
+
+func RegistrableDomain(rawURL string) (string, error) {
+	host, ok := Hostname(rawURL)
+	if !ok {
+		return "", fmt.Errorf("missing hostname")
+	}
+	return publicsuffix.EffectiveTLDPlusOne(host)
+}
+
+func URLPathDepth(rawURL string) int {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return 0
+	}
+	trimmedPath := strings.Trim(parsed.EscapedPath(), "/")
+	if trimmedPath == "" {
+		return 0
+	}
+	return len(strings.FieldsFunc(trimmedPath, func(r rune) bool { return r == '/' }))
+}
+
+func tokenOverlapBoost(left, right string) float64 {
+	overlap := tokenOverlapRatio(left, right)
+	switch {
+	case overlap >= 0.50:
+		return 0.65
+	case overlap >= 0.34:
+		return 0.40
+	case overlap > 0:
+		return 0.18
+	default:
+		return 0
+	}
+}
+
+func tokenOverlapRatio(left, right string) float64 {
+	leftTokens := textTokens(normalizeText(left))
+	rightTokens := textTokens(normalizeText(right))
+	if len(leftTokens) == 0 || len(rightTokens) == 0 {
+		return 0
+	}
+	leftSet := make(map[string]struct{}, len(leftTokens))
+	for _, token := range leftTokens {
+		leftSet[token] = struct{}{}
+	}
+	rightSet := make(map[string]struct{}, len(rightTokens))
+	for _, token := range rightTokens {
+		rightSet[token] = struct{}{}
+	}
+	shared := 0
+	for token := range leftSet {
+		if _, ok := rightSet[token]; ok {
+			shared++
+		}
+	}
+	if shared == 0 {
+		return 0
+	}
+	return float64(shared) / float64(max(len(leftSet), len(rightSet)))
+}
+
+func urlStructureBoost(rawURL string) float64 {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return 0
+	}
+	trimmedPath := strings.Trim(parsed.EscapedPath(), "/")
+	if trimmedPath == "" {
+		return 0.22
+	}
+	segments := strings.FieldsFunc(trimmedPath, func(r rune) bool { return r == '/' })
+	depth := len(segments)
+	score := 0.0
+	switch {
+	case depth == 1:
+		score += 0.16
+	case depth == 2:
+		score += 0.08
+	case depth == 3:
+		score -= 0.04
+	case depth >= 4:
+		score -= 0.20
+	}
+	if parsed.RawQuery == "" {
+		score += 0.03
+	}
+	last := strings.ToLower(strings.TrimSpace(segments[len(segments)-1]))
+	switch {
+	case strings.HasPrefix(last, "class-"):
+		score -= 0.10
+	case strings.HasPrefix(last, "tag-"):
+		score -= 0.10
+	case strings.HasPrefix(last, "category-"):
+		score -= 0.10
+	}
+	for _, segment := range segments {
+		segment = strings.ToLower(strings.TrimSpace(segment))
+		if _, err := strconv.Atoi(segment); err == nil {
+			score -= 0.08
+			continue
+		}
+		if len(segment) >= 18 && strings.Count(segment, "-") >= 2 {
+			score -= 0.08
+		}
+		if strings.Contains(segment, ".html") || strings.Contains(segment, ".htm") {
+			score -= 0.04
+		}
+	}
+	return score
 }

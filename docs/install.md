@@ -75,6 +75,30 @@ If unset, the current repo-local default remains:
 
 That preserves the current operator workflow while giving installed setups a clean platform-specific home.
 
+## Fetch profiles
+
+Needle-X now defaults to a browser-like fetch profile for real-world targets.
+
+Current defaults:
+1. `fetch.profile = browser_like`
+2. `fetch.retry_profile = hardened`
+
+Why:
+1. the product default should maximize successful acquisition on the noisy web
+2. benchmark/debug mode can still force a stricter transport profile
+
+Operator overrides:
+
+```bash
+export NEEDLEX_FETCH_PROFILE=standard
+export NEEDLEX_FETCH_RETRY_PROFILE=browser_like
+```
+
+Accepted values:
+1. `standard`
+2. `browser_like`
+3. `hardened`
+
 ## Release packaging
 
 Release archives are built with:

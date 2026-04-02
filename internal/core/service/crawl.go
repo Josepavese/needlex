@@ -123,10 +123,12 @@ func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, 
 
 func (s *Service) expandCrawlNode(ctx context.Context, req CrawlRequest, node crawlNode, readResp ReadResponse, visited map[string]struct{}) []crawlNode {
 	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:       readResp.Document.FinalURL,
-		Timeout:   time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:  s.cfg.Runtime.MaxBytes,
-		UserAgent: req.UserAgent,
+		URL:          readResp.Document.FinalURL,
+		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
+		MaxBytes:     s.cfg.Runtime.MaxBytes,
+		UserAgent:    req.UserAgent,
+		Profile:      s.cfg.Fetch.Profile,
+		RetryProfile: s.cfg.Fetch.RetryProfile,
 	})
 	if err != nil {
 		return nil

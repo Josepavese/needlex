@@ -40,3 +40,4 @@ Default JSON is compact and AI-first:
 
 1. [Operator Guide](../operator-guide.md)
 2. [Agent Answer Packet](../agent-answer-packet.md)
+3. [Fetch Profiles](../fetch-profiles.md)

@@ -18,6 +18,10 @@ func Defaults() Config {
 			MaxBytes:  4_000_000,
 			LaneMax:   3,
 		},
+		Fetch: FetchConfig{
+			Profile:      "browser_like",
+			RetryProfile: "hardened",
+		},
 		Policy: PolicyConfig{
 			ThresholdConflict:   0.42,
 			ThresholdAmbiguity:  0.37,
