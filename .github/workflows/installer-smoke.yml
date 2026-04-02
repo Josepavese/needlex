@@ -14,6 +14,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.sh | bash
 
       - name: Verify installed command and state root
         shell: bash
@@ -23,12 +24,24 @@ jobs:
           source "${HOME}/.bashrc" >/dev/null 2>&1 || true
           command -v needlex
           test -x "${HOME}/.local/bin/needlex"
-          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex"
-          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/traces"
-          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/proofs"
-          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/fingerprints"
-          test -d "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/genome"
-          test -f "${XDG_DATA_HOME:-$HOME/.local/share}/needlex/discovery/discovery.db"
+          state_root="${HOME}/.local/share/needlex"
+          test -d "${state_root}"
+          test -d "${state_root}/traces"
+          test -d "${state_root}/proofs"
+          test -d "${state_root}/fingerprints"
+          test -d "${state_root}/genome"
+          test -d "${state_root}/candidates"
+          test -d "${state_root}/domain_graph"
+          test -d "${state_root}/fingerprint_graph"
+          test -f "${state_root}/discovery/discovery.db"
+          test ! -e "${HOME}/.local/bin/needle"
+          python3 - <<'PY'
+          from pathlib import Path
+          profile = Path.home() / ".profile"
+          text = profile.read_text() if profile.exists() else ""
+          assert text.count("# needlex-path") == 1, text
+          print("path hook deduped")
+          PY
 
       - name: Smoke CLI
         shell: bash

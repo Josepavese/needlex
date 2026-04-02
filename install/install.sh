@@ -32,26 +32,71 @@ needlex_platform() {
   printf '%s %s\n' "${os}" "${arch}"
 }
 
+needlex_linux_data_home() {
+  local candidate="${XDG_DATA_HOME:-}"
+  if [[ -n "${candidate}" && "${candidate}" == *"/snap/"* && "${candidate}" != "${HOME}/"* ]]; then
+    printf '%s\n' "${HOME}/.local/share"
+    return
+  fi
+  if [[ -n "${candidate}" && "${candidate}" == "${HOME}/snap/"* ]]; then
+    printf '%s\n' "${HOME}/.local/share"
+    return
+  fi
+  printf '%s\n' "${candidate:-$HOME/.local/share}"
+}
+
 needlex_state_root() {
   case "$(uname -s)" in
     Darwin)
       printf '%s\n' "${HOME}/Library/Application Support/NeedleX"
       ;;
     *)
-      printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/needlex"
+      printf '%s\n' "$(needlex_linux_data_home)/needlex"
       ;;
   esac
 }
 
-add_path_hook() {
+reconcile_path_hook() {
   local file="$1"
   local line="export PATH=\"${BIN_DIR}:\$PATH\""
   local marker='# needlex-path'
+  local tmp
   mkdir -p "$(dirname "${file}")"
   touch "${file}"
-  if ! grep -Fq "${marker}" "${file}"; then
-    printf '\n%s\n%s\n' "${marker}" "${line}" >> "${file}"
-  fi
+  tmp="$(mktemp)"
+  awk -v marker="${marker}" -v line="${line}" '
+    BEGIN { skip=0 }
+    skip == 1 { skip=0; next }
+    $0 == marker { skip=1; next }
+    $0 == line { next }
+    { print }
+  ' "${file}" > "${tmp}"
+  mv "${tmp}" "${file}"
+  printf '\n%s\n%s\n' "${marker}" "${line}" >> "${file}"
+}
+
+capture_existing_state_root() {
+  local wrapper="$1"
+  [[ -f "${wrapper}" ]] || return 0
+  sed -n 's/^export NEEDLEX_HOME="\(.*\)"$/\1/p' "${wrapper}" | head -n1
+}
+
+cleanup_legacy_wrapper_artifacts() {
+  rm -f "${BIN_DIR}/needle"
+  rm -f "${LIB_DIR}/needle-real"
+}
+
+create_state_tree() {
+  mkdir -p \
+    "${STATE_ROOT}/traces" \
+    "${STATE_ROOT}/proofs" \
+    "${STATE_ROOT}/fingerprints" \
+    "${STATE_ROOT}/genome" \
+    "${STATE_ROOT}/discovery" \
+    "${STATE_ROOT}/candidates" \
+    "${STATE_ROOT}/domain_graph" \
+    "${STATE_ROOT}/fingerprint_graph"
+  touch "${STATE_ROOT}/discovery/discovery.db"
 }
 
 read -r GOOS GOARCH < <(needlex_platform)
@@ -69,9 +114,12 @@ BIN_DIR="${NEEDLEX_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 LIB_DIR="${NEEDLEX_INSTALL_LIB_DIR:-$HOME/.local/lib/needlex}"
 STATE_ROOT="${NEEDLEX_HOME:-$(needlex_state_root)}"
 REAL_BIN="${LIB_DIR}/needlex-real"
+WRAPPER_PATH="${BIN_DIR}/needlex"
+PREVIOUS_STATE_ROOT="$(capture_existing_state_root "${WRAPPER_PATH}")"
 
-mkdir -p "${BIN_DIR}" "${LIB_DIR}" "${STATE_ROOT}/traces" "${STATE_ROOT}/proofs" "${STATE_ROOT}/fingerprints" "${STATE_ROOT}/genome" "${STATE_ROOT}/discovery"
-touch "${STATE_ROOT}/discovery/discovery.db"
+mkdir -p "${BIN_DIR}" "${LIB_DIR}"
+cleanup_legacy_wrapper_artifacts
+create_state_tree
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
@@ -81,22 +129,25 @@ tar -xzf "${TMP_DIR}/needlex.tar.gz" -C "${TMP_DIR}"
 cp "${TMP_DIR}/needlex" "${REAL_BIN}"
 chmod 0755 "${REAL_BIN}"
 
-cat > "${BIN_DIR}/needlex" <<EOF
+cat > "${WRAPPER_PATH}" <<EOF2
 #!/usr/bin/env bash
 set -euo pipefail
 export NEEDLEX_HOME="${STATE_ROOT}"
 exec "${REAL_BIN}" "\$@"
-EOF
-chmod 0755 "${BIN_DIR}/needlex"
+EOF2
+chmod 0755 "${WRAPPER_PATH}"
 
 if [[ "${SKIP_SHELL_HOOKS}" != "1" ]]; then
-  add_path_hook "${HOME}/.bashrc"
-  add_path_hook "${HOME}/.zshrc"
-  add_path_hook "${HOME}/.profile"
+  reconcile_path_hook "${HOME}/.bashrc"
+  reconcile_path_hook "${HOME}/.zshrc"
+  reconcile_path_hook "${HOME}/.profile"
 fi
 
-printf '\nInstalled needlex to %s\n' "${BIN_DIR}/needlex"
+printf '\nInstalled needlex to %s\n' "${WRAPPER_PATH}"
 printf 'State root: %s\n' "${STATE_ROOT}"
+if [[ -n "${PREVIOUS_STATE_ROOT}" && "${PREVIOUS_STATE_ROOT}" != "${STATE_ROOT}" ]]; then
+  printf 'Previous state root preserved: %s\n' "${PREVIOUS_STATE_ROOT}"
+fi
 if [[ "${SKIP_SHELL_HOOKS}" == "1" ]]; then
   printf 'Shell PATH hooks skipped.\n'
 else

@@ -3,6 +3,7 @@ set -euo pipefail
 
 OUT_DIR="${1:-dist}"
 mkdir -p "${OUT_DIR}"
+OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
 
 build_one() {
   local goos="$1"
@@ -21,7 +22,7 @@ build_one() {
   if [[ "${goos}" == "windows" ]]; then
     (
       cd "${work_dir}"
-      zip -q "${OLDPWD}/${OUT_DIR}/${archive_name}.zip" "${bin_name}"
+      zip -q "${OUT_DIR}/${archive_name}.zip" "${bin_name}"
     )
   else
     tar -C "${work_dir}" -czf "${OUT_DIR}/${archive_name}.tar.gz" "${bin_name}"

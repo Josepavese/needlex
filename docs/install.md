@@ -27,6 +27,8 @@ What it does:
 3. creates the local state root and subdirectories
 4. sets `NEEDLEX_HOME` to an OS-appropriate state directory
 5. updates PATH persistence for future shells or terminals
+6. reconciles a previous install without duplicating PATH hooks
+7. removes legacy `needle` wrapper artifacts if they exist
 
 Default paths:
 1. binary wrapper: `~/.local/bin/needlex`
@@ -34,6 +36,10 @@ Default paths:
 3. state root:
    Linux: `~/.local/share/needlex`
    macOS: `~/Library/Application Support/NeedleX`
+
+Linux note:
+1. the installer prefers `~/.local/share/needlex`
+2. if `XDG_DATA_HOME` comes from a Snap-scoped shell such as VS Code Snap, the installer ignores that Snap path and keeps using the user-local default
 
 ### Windows
 
@@ -45,6 +51,23 @@ Default paths:
 1. binary wrapper: `%LOCALAPPDATA%\NeedleX\bin\needlex.cmd`
 2. real binary: `%LOCALAPPDATA%\NeedleX\bin\needlex-real.exe`
 3. state root: `%LOCALAPPDATA%\NeedleX`
+
+## Re-running the installer
+
+The installer is designed to converge, not just append.
+
+Unix:
+1. reuses the same wrapper path and real binary path
+2. rewrites the `needlex` wrapper deterministically
+3. keeps a single `# needlex-path` block in shell startup files
+4. removes legacy `needle` wrapper artifacts
+5. preserves old state roots on disk if you intentionally switch to a new one
+
+Windows:
+1. rewrites `needlex.cmd` deterministically
+2. deduplicates the user PATH before appending the install directory
+3. removes legacy `needle` command artifacts
+4. preserves old state roots on disk if you intentionally switch to a new one
 
 ## Build from source
 
