@@ -86,6 +86,30 @@ cleanup_legacy_wrapper_artifacts() {
   rm -f "${LIB_DIR}/needle-real"
 }
 
+install_real_binary() {
+  local source_bin="$1"
+  local target_bin="$2"
+  local tmp_bin="${target_bin}.tmp.$$"
+  cp "${source_bin}" "${tmp_bin}"
+  chmod 0755 "${tmp_bin}"
+  mv -f "${tmp_bin}" "${target_bin}"
+}
+
+install_wrapper() {
+  local wrapper_path="$1"
+  local real_bin="$2"
+  local state_root="$3"
+  local tmp_wrapper="${wrapper_path}.tmp.$$"
+  cat > "${tmp_wrapper}" <<EOF2
+#!/usr/bin/env bash
+set -euo pipefail
+export NEEDLEX_HOME="${state_root}"
+exec "${real_bin}" "\$@"
+EOF2
+  chmod 0755 "${tmp_wrapper}"
+  mv -f "${tmp_wrapper}" "${wrapper_path}"
+}
+
 create_state_tree() {
   mkdir -p \
     "${STATE_ROOT}/traces" \
@@ -126,16 +150,8 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 curl -fsSL "${ASSET_URL}" -o "${TMP_DIR}/needlex.tar.gz"
 tar -xzf "${TMP_DIR}/needlex.tar.gz" -C "${TMP_DIR}"
-cp "${TMP_DIR}/needlex" "${REAL_BIN}"
-chmod 0755 "${REAL_BIN}"
-
-cat > "${WRAPPER_PATH}" <<EOF2
-#!/usr/bin/env bash
-set -euo pipefail
-export NEEDLEX_HOME="${STATE_ROOT}"
-exec "${REAL_BIN}" "\$@"
-EOF2
-chmod 0755 "${WRAPPER_PATH}"
+install_real_binary "${TMP_DIR}/needlex" "${REAL_BIN}"
+install_wrapper "${WRAPPER_PATH}" "${REAL_BIN}" "${STATE_ROOT}"
 
 if [[ "${SKIP_SHELL_HOOKS}" != "1" ]]; then
   reconcile_path_hook "${HOME}/.bashrc"
