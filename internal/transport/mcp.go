@@ -191,7 +191,7 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 			"protocolVersion": "2024-11-05",
 			"serverInfo": map[string]any{
 				"name":    "needlex",
-				"version": "0.1.2",
+				"version": "0.1.3",
 			},
 			"capabilities": map[string]any{
 				"tools": map[string]any{},

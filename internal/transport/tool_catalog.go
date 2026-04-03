@@ -57,11 +57,7 @@ func buildAnthropicToolCatalog() anthropicToolCatalog {
 	tools := mcpTools()
 	out := make([]anthropicToolDefinition, 0, len(tools))
 	for _, tool := range tools {
-		out = append(out, anthropicToolDefinition{
-			Name:        tool.Name,
-			Description: tool.Description,
-			InputSchema: tool.InputSchema,
-		})
+		out = append(out, anthropicToolDefinition(tool))
 	}
 	return anthropicToolCatalog{
 		Provider: "anthropic",

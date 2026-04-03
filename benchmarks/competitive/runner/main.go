@@ -430,6 +430,7 @@ func (j jinaAdapter) Availability() (bool, string) { return true, "" }
 func (j jinaAdapter) Supports(item seededCase) bool {
 	return item.TaskType != "same_site_query_routing"
 }
+
 func (j jinaAdapter) Run(_ context.Context, item seededCase) competitorResult {
 	res := competitorResult{ProofUsable: !item.MustExposeProof}
 	resp, err := http.DefaultClient.Get("https://r.jina.ai/http://" + strings.TrimPrefix(item.SeedURL, "https://"))
@@ -480,6 +481,7 @@ func (a firecrawlAdapter) Availability() (bool, string) {
 	}
 	return true, ""
 }
+
 func (a firecrawlAdapter) Supports(item seededCase) bool {
 	switch item.TaskType {
 	case "same_site_query_routing", "read_page_understanding", "read_then_answer":
@@ -488,6 +490,7 @@ func (a firecrawlAdapter) Supports(item seededCase) bool {
 		return false
 	}
 }
+
 func (a firecrawlAdapter) Run(ctx context.Context, item seededCase) competitorResult {
 	switch item.TaskType {
 	case "same_site_query_routing":
@@ -510,6 +513,7 @@ func (a tavilyAdapter) Availability() (bool, string) {
 	}
 	return true, ""
 }
+
 func (a tavilyAdapter) Supports(item seededCase) bool {
 	switch item.TaskType {
 	case "same_site_query_routing", "read_page_understanding", "read_then_answer":
@@ -518,6 +522,7 @@ func (a tavilyAdapter) Supports(item seededCase) bool {
 		return false
 	}
 }
+
 func (a tavilyAdapter) Run(ctx context.Context, item seededCase) competitorResult {
 	switch item.TaskType {
 	case "same_site_query_routing":
@@ -540,6 +545,7 @@ func (a exaAdapter) Availability() (bool, string) {
 	}
 	return true, ""
 }
+
 func (a exaAdapter) Supports(item seededCase) bool {
 	switch item.TaskType {
 	case "same_site_query_routing", "read_page_understanding", "read_then_answer":
@@ -548,6 +554,7 @@ func (a exaAdapter) Supports(item seededCase) bool {
 		return false
 	}
 }
+
 func (a exaAdapter) Run(ctx context.Context, item seededCase) competitorResult {
 	switch item.TaskType {
 	case "same_site_query_routing":
@@ -570,9 +577,11 @@ func (a braveAdapter) Availability() (bool, string) {
 	}
 	return true, ""
 }
+
 func (a braveAdapter) Supports(item seededCase) bool {
 	return item.TaskType == "same_site_query_routing"
 }
+
 func (a braveAdapter) Run(ctx context.Context, item seededCase) competitorResult {
 	return a.runSearch(ctx, item)
 }
@@ -588,6 +597,7 @@ func (a vercelBrowserAgentAdapter) Availability() (bool, string) {
 	}
 	return true, ""
 }
+
 func (a vercelBrowserAgentAdapter) Supports(item seededCase) bool {
 	switch item.TaskType {
 	case "same_site_query_routing", "read_page_understanding", "read_then_answer":
@@ -596,6 +606,7 @@ func (a vercelBrowserAgentAdapter) Supports(item seededCase) bool {
 		return false
 	}
 }
+
 func (a vercelBrowserAgentAdapter) Run(ctx context.Context, item seededCase) competitorResult {
 	body := map[string]any{
 		"id":                 item.ID,
@@ -1474,7 +1485,8 @@ func enrichDerivedMetrics(item seededCase, res *competitorResult) {
 
 func joinChunkTexts(chunks []struct {
 	Text string `json:"text"`
-}) string {
+},
+) string {
 	parts := make([]string, 0, len(chunks))
 	for _, chunk := range chunks {
 		if trimmed := strings.TrimSpace(chunk.Text); trimmed != "" {

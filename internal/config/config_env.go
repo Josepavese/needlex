@@ -8,7 +8,27 @@ import (
 )
 
 func (c *Config) ApplyEnv(env map[string]string) error {
-	if err := applyIntEnv(env, []struct {
+	if err := c.applyIntEnv(env); err != nil {
+		return err
+	}
+	if err := c.applyInt64Env(env); err != nil {
+		return err
+	}
+	if err := c.applyFloat64Env(env); err != nil {
+		return err
+	}
+	c.applyStringEnv(env)
+	if err := applyBool(env, "NEEDLEX_SEMANTIC_ENABLED", &c.Semantic.Enabled); err != nil {
+		return err
+	}
+	if err := applyBool(env, "NEEDLEX_MEMORY_ENABLED", &c.Memory.Enabled); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Config) applyIntEnv(env map[string]string) error {
+	return applyIntEnv(env, []struct {
 		key    string
 		target *int
 	}{
@@ -20,11 +40,11 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		{"NEEDLEX_MEMORY_MAX_DOCUMENTS", &c.Memory.MaxDocuments},
 		{"NEEDLEX_MEMORY_MAX_EDGES", &c.Memory.MaxEdges},
 		{"NEEDLEX_MEMORY_MAX_EMBEDDINGS", &c.Memory.MaxEmbeddings},
-	}); err != nil {
-		return err
-	}
+	})
+}
 
-	if err := applyInt64Env(env, []struct {
+func (c *Config) applyInt64Env(env map[string]string) error {
+	return applyInt64Env(env, []struct {
 		key    string
 		target *int64
 	}{
@@ -35,11 +55,11 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		{"NEEDLEX_MODELS_STRUCTURED_TIMEOUT_MS", &c.Models.StructuredTimeoutMS},
 		{"NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS", &c.Models.SpecialistTimeoutMS},
 		{"NEEDLEX_SEMANTIC_TIMEOUT_MS", &c.Semantic.TimeoutMS},
-	}); err != nil {
-		return err
-	}
+	})
+}
 
-	if err := applyFloat64Env(env, []struct {
+func (c *Config) applyFloat64Env(env map[string]string) error {
+	return applyFloat64Env(env, []struct {
 		key    string
 		target *float64
 	}{
@@ -49,10 +69,10 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		{"NEEDLEX_POLICY_THRESHOLD_CONFIDENCE", &c.Policy.ThresholdConfidence},
 		{"NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD", &c.Semantic.SimilarityThreshold},
 		{"NEEDLEX_SEMANTIC_DOMINANCE_DELTA", &c.Semantic.DominanceDelta},
-	}); err != nil {
-		return err
-	}
+	})
+}
 
+func (c *Config) applyStringEnv(env map[string]string) {
 	applyStringEnv(env, []struct {
 		key    string
 		target *string
@@ -79,13 +99,6 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		{"NEEDLEX_MEMORY_VECTOR_ENGINE", &c.Memory.VectorEngine},
 		{"NEEDLEX_MEMORY_PRUNE_POLICY", &c.Memory.PrunePolicy},
 	})
-	if err := applyBool(env, "NEEDLEX_SEMANTIC_ENABLED", &c.Semantic.Enabled); err != nil {
-		return err
-	}
-	if err := applyBool(env, "NEEDLEX_MEMORY_ENABLED", &c.Memory.Enabled); err != nil {
-		return err
-	}
-	return nil
 }
 
 func applyIntEnv(env map[string]string, setters []struct {
