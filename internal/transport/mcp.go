@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/internal/buildinfo"
 	"github.com/josepavese/needlex/internal/platform"
 )
 
@@ -191,7 +192,7 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 			"protocolVersion": "2024-11-05",
 			"serverInfo": map[string]any{
 				"name":    "needlex",
-				"version": "0.1.3",
+				"version": buildinfo.Version,
 			},
 			"capabilities": map[string]any{
 				"tools": map[string]any{},

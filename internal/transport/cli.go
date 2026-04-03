@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/buildinfo"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/platform"
@@ -83,6 +84,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runMCP(args[1:], stdout, stderr)
 	case "tool-catalog":
 		return r.runToolCatalog(args[1:], stdout, stderr)
+	case "version":
+		return r.runVersion(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeRootUsage(stdout)
 		return 0
@@ -163,7 +166,17 @@ func writeRootUsage(w io.Writer) {
   needlex prune (--all | --older-than-hours N) [--json]
   needlex mcp
   needlex tool-catalog --provider openai|anthropic [--strict]
+  needlex version
 `)
+}
+
+func (r Runner) runVersion(args []string, stdout, stderr io.Writer) int {
+	if len(args) != 0 {
+		fmt.Fprintln(stderr, "version does not accept positional arguments")
+		return 2
+	}
+	_, _ = fmt.Fprintln(stdout, buildinfo.Version)
+	return 0
 }
 
 func writeQueryUsage(w io.Writer) {

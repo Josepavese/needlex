@@ -475,10 +475,27 @@ func TestRunnerHelpListsDayOneCommands(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	for _, command := range []string{"needlex crawl", "needlex query", "needlex read", "needlex mcp"} {
+	for _, command := range []string{"needlex crawl", "needlex query", "needlex read", "needlex mcp", "needlex version"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Fatalf("expected help to include %q, got %q", command, stdout.String())
 		}
+	}
+}
+
+func TestRunnerVersion(t *testing.T) {
+	runner := NewRunner()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := runner.Run([]string{"version"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	if strings.TrimSpace(stdout.String()) == "" {
+		t.Fatal("expected non-empty version output")
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr, got %q", stderr.String())
 	}
 }
 

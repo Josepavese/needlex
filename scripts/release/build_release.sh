@@ -4,6 +4,7 @@ set -euo pipefail
 OUT_DIR="${1:-dist}"
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
+VERSION="${NEEDLEX_VERSION:-dev}"
 
 build_one() {
   local goos="$1"
@@ -17,7 +18,7 @@ build_one() {
     bin_name="needlex.exe"
   fi
 
-  GOOS="${goos}" GOARCH="${goarch}" go build -o "${work_dir}/${bin_name}" ./cmd/needle
+  GOOS="${goos}" GOARCH="${goarch}" go build -ldflags "-X github.com/josepavese/needlex/internal/buildinfo.Version=${VERSION}" -o "${work_dir}/${bin_name}" ./cmd/needle
 
   if [[ "${goos}" == "windows" ]]; then
     (

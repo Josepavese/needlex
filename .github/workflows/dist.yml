@@ -50,11 +50,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist work
+          VERSION="${GITHUB_REF_NAME}"
+          if [[ "${VERSION}" == "" || "${VERSION}" == "main" ]]; then
+            VERSION="dev"
+          fi
           BIN="needlex"
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
             BIN="needlex.exe"
           fi
-          GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" go build -o "work/${BIN}" ./cmd/needle
+          GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" go build -ldflags "-X github.com/josepavese/needlex/internal/buildinfo.Version=${VERSION}" -o "work/${BIN}" ./cmd/needle
           BASE="needlex_${{ matrix.goos }}_${{ matrix.goarch }}"
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
             (cd work && zip -q "../dist/${BASE}.zip" "${BIN}")
