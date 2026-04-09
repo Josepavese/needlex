@@ -74,3 +74,27 @@ func TestEnsureMinimumDOMSynthesizesTitleNodes(t *testing.T) {
 		t.Fatalf("expected synthetic dom to produce valid web ir, got %v", err)
 	}
 }
+
+func TestBuildWebIRSupportsPlainTextSubstrate(t *testing.T) {
+	dom := pipeline.SimplifiedDOM{
+		URL:            "https://raw.githubusercontent.com/openai/codex/main/codex-rs/protocol/src/lib.rs",
+		Title:          "lib.rs",
+		SubstrateClass: "plain_text",
+		Nodes: []pipeline.SimplifiedNode{
+			{
+				Path:  "/pre[1]",
+				Tag:   "pre",
+				Kind:  "code",
+				Text:  "pub fn answer() -> i32 { 42 }",
+				Depth: 1,
+			},
+		},
+	}
+	ir := buildWebIR(dom)
+	if ir.Signals.SubstrateClass != "plain_text" {
+		t.Fatalf("expected plain_text substrate class, got %q", ir.Signals.SubstrateClass)
+	}
+	if err := ir.Validate(); err != nil {
+		t.Fatalf("expected plain_text web ir to validate, got %v", err)
+	}
+}

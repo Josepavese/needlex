@@ -149,3 +149,26 @@ func TestReduceClassifiesThemeHeavyWordPressSubstrate(t *testing.T) {
 		t.Fatalf("expected theme_heavy_wordpress substrate, got %q", dom.SubstrateClass)
 	}
 }
+
+func TestReduceProfileBuildsSyntheticDOMForPlainTextCode(t *testing.T) {
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		FinalURL:    "https://raw.githubusercontent.com/openai/codex/main/codex-rs/protocol/src/lib.rs",
+		ContentType: "text/plain; charset=utf-8",
+		HTML:        "pub fn answer() -> i32 {\n    42\n}\n",
+	}, "standard")
+	if err != nil {
+		t.Fatalf("reduce plain text: %v", err)
+	}
+	if dom.Title != "lib.rs" {
+		t.Fatalf("expected synthetic title from path, got %q", dom.Title)
+	}
+	if dom.SubstrateClass != "plain_text" {
+		t.Fatalf("expected plain_text substrate, got %q", dom.SubstrateClass)
+	}
+	if len(dom.Nodes) == 0 {
+		t.Fatal("expected synthetic nodes for plain text content")
+	}
+	if dom.Nodes[0].Kind != "code" {
+		t.Fatalf("expected code node, got %#v", dom.Nodes[0])
+	}
+}

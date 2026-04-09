@@ -160,3 +160,23 @@ func TestShouldFallbackToHTTP(t *testing.T) {
 		t.Fatal("did not expect timeout to trigger HTTP fallback")
 	}
 }
+
+func TestAcquireAllowsPlainText(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = fmt.Fprint(w, "fn main() {\n    println!(\"ok\");\n}\n")
+	}))
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:      server.URL + "/lib.rs",
+		Timeout:  2 * time.Second,
+		MaxBytes: 4096,
+	})
+	if err != nil {
+		t.Fatalf("expected plain text response to be allowed, got %v", err)
+	}
+	if !strings.Contains(page.HTML, "println!") {
+		t.Fatalf("expected plain text body to be captured, got %q", page.HTML)
+	}
+}

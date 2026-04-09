@@ -289,7 +289,13 @@ func userAgent(candidate, profile string) string {
 
 func isAllowedContentType(contentType string) bool {
 	contentType = strings.ToLower(contentType)
-	return strings.Contains(contentType, "text/html") || strings.Contains(contentType, "application/xhtml+xml")
+	return strings.Contains(contentType, "text/html") ||
+		strings.Contains(contentType, "application/xhtml+xml") ||
+		strings.Contains(contentType, "text/plain") ||
+		strings.Contains(contentType, "text/markdown") ||
+		strings.Contains(contentType, "application/json") ||
+		strings.Contains(contentType, "application/xml") ||
+		strings.Contains(contentType, "text/xml")
 }
 
 func readBounded(body io.Reader, maxBytes int64) (string, error) {

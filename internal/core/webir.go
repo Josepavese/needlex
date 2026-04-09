@@ -62,7 +62,7 @@ func (s WebIRSignals) Validate() error {
 	}
 	if s.SubstrateClass != "" {
 		switch s.SubstrateClass {
-		case "embedded_app_payload", "theme_heavy_wordpress", "generic_content":
+		case "embedded_app_payload", "theme_heavy_wordpress", "generic_content", "plain_text":
 		default:
 			errs = append(errs, fmt.Errorf("web_ir.signals.substrate_class %q is not supported", s.SubstrateClass))
 		}

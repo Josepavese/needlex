@@ -2,6 +2,8 @@ package pipeline
 
 import (
 	"fmt"
+	"net/url"
+	"path"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -46,6 +48,9 @@ func (Reducer) Reduce(page RawPage) (SimplifiedDOM, error) {
 }
 
 func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error) {
+	if !isHTMLLikeContentType(page.ContentType) {
+		return reduceTextLike(page), nil
+	}
 	root, err := html.Parse(strings.NewReader(page.HTML))
 	if err != nil {
 		return SimplifiedDOM{}, fmt.Errorf("parse html: %w", err)
@@ -70,6 +75,112 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 		SubstrateClass: inferSubstrateClass(page.HTML),
 		Nodes:          walker.nodes,
 	}, nil
+}
+
+func reduceTextLike(page RawPage) SimplifiedDOM {
+	text := strings.TrimSpace(page.HTML)
+	title := textPageTitle(page)
+	if text == "" {
+		return SimplifiedDOM{
+			URL:            page.FinalURL,
+			Title:          title,
+			SubstrateClass: "plain_text",
+		}
+	}
+	kind := "paragraph"
+	tag := "p"
+	blocks := splitTextBlocks(text, false)
+	if looksLikeCodeContent(page) {
+		kind = "code"
+		tag = "pre"
+		blocks = splitTextBlocks(text, true)
+	}
+	nodes := make([]SimplifiedNode, 0, len(blocks))
+	for i, block := range blocks {
+		block = strings.TrimSpace(block)
+		if block == "" {
+			continue
+		}
+		nodes = append(nodes, SimplifiedNode{
+			Path:  fmt.Sprintf("/%s[%d]", tag, i+1),
+			Tag:   tag,
+			Kind:  kind,
+			Text:  block,
+			Depth: 1,
+		})
+	}
+	return SimplifiedDOM{
+		URL:            page.FinalURL,
+		Title:          title,
+		SubstrateClass: "plain_text",
+		Nodes:          nodes,
+	}
+}
+
+func isHTMLLikeContentType(contentType string) bool {
+	contentType = strings.ToLower(strings.TrimSpace(contentType))
+	if contentType == "" {
+		return true
+	}
+	return strings.Contains(contentType, "text/html") || strings.Contains(contentType, "application/xhtml+xml")
+}
+
+func looksLikeCodeContent(page RawPage) bool {
+	parsed, err := url.Parse(strings.TrimSpace(page.FinalURL))
+	if err != nil {
+		return false
+	}
+	switch strings.ToLower(path.Ext(parsed.Path)) {
+	case ".rs", ".go", ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".h", ".hpp", ".rb", ".php", ".swift", ".kt", ".sh", ".bash", ".zsh", ".toml", ".yaml", ".yml", ".json", ".xml":
+		return true
+	}
+	return false
+}
+
+func textPageTitle(page RawPage) string {
+	parsed, err := url.Parse(strings.TrimSpace(page.FinalURL))
+	if err != nil {
+		return strings.TrimSpace(page.FinalURL)
+	}
+	base := strings.TrimSpace(path.Base(parsed.Path))
+	if base != "" && base != "." && base != "/" {
+		return base
+	}
+	if host := strings.TrimSpace(parsed.Hostname()); host != "" {
+		return host
+	}
+	return strings.TrimSpace(page.FinalURL)
+}
+
+func splitTextBlocks(text string, preserveLines bool) []string {
+	if preserveLines {
+		lines := strings.Split(text, "\n")
+		blocks := make([]string, 0, max(1, len(lines)/32))
+		chunk := make([]string, 0, 32)
+		for _, line := range lines {
+			chunk = append(chunk, strings.TrimRight(line, "\r"))
+			if len(chunk) >= 32 {
+				blocks = append(blocks, strings.Join(chunk, "\n"))
+				chunk = chunk[:0]
+			}
+		}
+		if len(chunk) > 0 {
+			blocks = append(blocks, strings.Join(chunk, "\n"))
+		}
+		return blocks
+	}
+	parts := strings.Split(text, "\n\n")
+	blocks := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = normalizeWhitespace(part)
+		if part != "" {
+			blocks = append(blocks, part)
+		}
+	}
+	if len(blocks) == 0 {
+		return []string{normalizeWhitespace(text)}
+	}
+	return blocks
 }
 
 type domWalker struct {
