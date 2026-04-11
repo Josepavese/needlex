@@ -102,8 +102,16 @@ func (c *mcpConn) WriteResponse(value any) error {
 }
 
 func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 1 {
+		switch strings.TrimSpace(args[0]) {
+		case "-h", "--help", "help":
+			writeMCPUsage(stdout)
+			return 0
+		}
+	}
 	if len(args) != 0 {
 		fmt.Fprintln(stderr, "mcp does not accept positional arguments")
+		writeMCPUsage(stderr)
 		return 2
 	}
 	if r.stdin == nil {
@@ -256,12 +264,35 @@ func isMCPWhitespace(b byte) bool {
 	}
 }
 
-func mcpToolResult(payload map[string]any) map[string]any {
+func mcpToolResult(payload map[string]any, display any) map[string]any {
+	if display == nil {
+		display = payload
+	}
 	return map[string]any{
-		"content":           []map[string]any{{"type": "text", "text": mustJSON(payload)}},
+		"content":           []map[string]any{{"type": "text", "text": mustJSON(display)}},
 		"structuredContent": payload,
 		"isError":           false,
 	}
+}
+
+func writeMCPUsage(w io.Writer) {
+	writeUsage(
+		w,
+		"needlex mcp",
+		"stdio MCP server for AI clients and MCP hosts",
+		"",
+		"Behavior:",
+		"  accepts both Content-Length framing and raw newline-delimited JSON-RPC",
+		"  replies using the same framing mode detected from the client",
+		"",
+		"Environment:",
+		"  NEEDLEX_HOME      override state root",
+		"  NEEDLEX_MCP_LOG   override MCP log path (default: $TMPDIR/needlex-mcp.log)",
+		"",
+		"Notes:",
+		"  run without extra positional arguments",
+		"  safe to probe with 'needlex mcp --help' before connecting a client",
+	)
 }
 
 func readMCPFrame(reader *bufio.Reader) ([]byte, error) {

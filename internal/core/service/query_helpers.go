@@ -26,7 +26,7 @@ func queryPlanCandidate(candidate DiscoverCandidate) queryplan.Candidate {
 }
 
 func resolveDiscoveryMode(mode string) (string, error) {
-	mode = strings.TrimSpace(strings.ToLower(mode))
+	mode = normalizeDiscoveryMode(mode)
 	if mode == "" {
 		return QueryDiscoverySameSite, nil
 	}
@@ -34,6 +34,24 @@ func resolveDiscoveryMode(mode string) (string, error) {
 	case QueryDiscoveryOff, QueryDiscoverySameSite, QueryDiscoveryWeb:
 		return mode, nil
 	default:
-		return "", fmt.Errorf("unsupported query discovery mode %q", mode)
+		return "", fmt.Errorf("unsupported discovery_mode %q; valid values: %s", mode, strings.Join(validDiscoveryModes(), ", "))
 	}
+}
+
+func normalizeDiscoveryMode(mode string) string {
+	mode = strings.TrimSpace(strings.ToLower(mode))
+	switch mode {
+	case "", QueryDiscoveryOff, QueryDiscoverySameSite, QueryDiscoveryWeb:
+		return mode
+	case "same-site", "same_site", "same site", "same-site-links", "same_site_link", "same site links":
+		return QueryDiscoverySameSite
+	case "web-search", "web search":
+		return QueryDiscoveryWeb
+	default:
+		return mode
+	}
+}
+
+func validDiscoveryModes() []string {
+	return []string{QueryDiscoverySameSite, QueryDiscoveryWeb, QueryDiscoveryOff}
 }

@@ -31,6 +31,24 @@ Current MCP tool set:
 6. `web_diff`
 7. `web_prune`
 
+Canonical query discovery literals:
+1. `same_site_links`
+2. `web_search`
+3. `off`
+
+Agent note:
+1. aliases like `same-site` are accepted for compatibility
+2. use the canonical literals above in generated tool calls
+
+Compact-first output rule:
+1. MCP `content.text` exposes the compact packet first
+2. MCP `structuredContent` keeps the richer diagnostic payload
+3. agents should default to the compact packet before opening diagnostics
+
+Tool scope rule:
+1. `web_extract` is intentionally not added yet
+2. Needle-X should first get better through clearer schema, examples, aliases, and compact-first packets
+
 ## Provider Catalogs
 
 Export tool definitions directly from the binary:

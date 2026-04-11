@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -122,6 +123,28 @@ func TestPrepareQueryRequestWithLocalStateLoadsFingerprintEvidence(t *testing.T)
 	}
 	if req.SeedNovelty <= 0 {
 		t.Fatalf("expected positive novelty, got %#v", req)
+	}
+}
+
+func TestPrepareQueryRequestWithLocalStateAppliesFetchGenomeHints(t *testing.T) {
+	root := t.TempDir()
+	_, _, err := store.NewGenomeStore(root).Observe(store.GenomeObservation{
+		URL:               "https://example.com/docs",
+		ObservedLane:      1,
+		PreferredProfile:  "standard",
+		FetchProfile:      "hardened",
+		FetchRetryProfile: "hardened",
+	})
+	if err != nil {
+		t.Fatalf("seed genome: %v", err)
+	}
+	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       "https://example.com/docs",
+		DiscoveryMode: QueryDiscoverySameSite,
+	}, config.Defaults(), intel.NoopSemanticAligner{})
+	if req.FetchProfile != "hardened" || req.FetchRetryProfile != "hardened" {
+		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
 	}
 }
 
@@ -277,5 +300,37 @@ func TestRunQueryDiscoveryPrefersMemoryCandidatesForSeedlessWeb(t *testing.T) {
 	}
 	if len(result.candidates) != 1 || result.candidates[0].URL != "https://playwright.dev/docs/intro" {
 		t.Fatalf("expected only memory-backed candidate, got %#v", result.candidates)
+	}
+}
+
+func TestResolveDiscoveryModeAcceptsCommonAliases(t *testing.T) {
+	cases := map[string]string{
+		"same-site":  QueryDiscoverySameSite,
+		"same_site":  QueryDiscoverySameSite,
+		"same site":  QueryDiscoverySameSite,
+		"web-search": QueryDiscoveryWeb,
+		"web search": QueryDiscoveryWeb,
+	}
+	for input, want := range cases {
+		got, err := resolveDiscoveryMode(input)
+		if err != nil {
+			t.Fatalf("resolveDiscoveryMode(%q): %v", input, err)
+		}
+		if got != want {
+			t.Fatalf("resolveDiscoveryMode(%q)=%q want %q", input, got, want)
+		}
+	}
+}
+
+func TestResolveDiscoveryModeErrorMentionsValidValues(t *testing.T) {
+	_, err := resolveDiscoveryMode("bogus-mode")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	msg := err.Error()
+	for _, token := range []string{"same_site_links", "web_search", "off"} {
+		if !strings.Contains(msg, token) {
+			t.Fatalf("expected %q in error %q", token, msg)
+		}
 	}
 }

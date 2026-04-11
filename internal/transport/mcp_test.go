@@ -184,7 +184,7 @@ func TestRunnerMCPReadReplayAndProof(t *testing.T) {
 	if !strings.Contains(string(responses[3]), `"proof"`) {
 		t.Fatalf("expected proof payload, got %s", responses[3])
 	}
-	assertMCPStructuredKeys(t, responses[1], "document", "web_ir", "chunks", "agent_context", "proof_refs", "cost_report")
+	assertMCPStructuredKeys(t, responses[1], "document", "web_ir", "chunks", "agent_context", "proof_refs", "cost_report", "compact", "summary", "uncertainty")
 	assertMCPStructuredKeys(t, responses[2], "replay_report")
 	assertMCPStructuredKeys(t, responses[3], "proof_records")
 }
@@ -286,7 +286,7 @@ func TestRunnerMCPQuery(t *testing.T) {
 	if !strings.Contains(string(responses[1]), `"result_pack"`) {
 		t.Fatalf("expected query payload, got %s", responses[1])
 	}
-	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "agent_context", "proof_refs", "trace_id")
+	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "agent_context", "proof_refs", "trace_id", "compact", "summary", "selected_url")
 }
 
 func TestRunnerMCPCrawl(t *testing.T) {
@@ -426,6 +426,38 @@ func assertMCPStructuredKeys(t *testing.T, frame []byte, keys ...string) {
 	for _, key := range keys {
 		if _, ok := structured[key]; !ok {
 			t.Fatalf("expected structuredContent key %q, got %#v", key, structured)
+		}
+	}
+}
+
+func TestRunnerMCPQueryToolSchemaIncludesDiscoveryModeEnum(t *testing.T) {
+	tools := mcpTools()
+	for _, tool := range tools {
+		if tool.Name != "web_query" {
+			continue
+		}
+		props, _ := tool.InputSchema["properties"].(map[string]any)
+		dm, _ := props["discovery_mode"].(map[string]any)
+		enumVals, _ := dm["enum"].([]string)
+		if len(enumVals) != 3 || enumVals[0] != "same_site_links" || enumVals[1] != "web_search" || enumVals[2] != "off" {
+			t.Fatalf("unexpected discovery_mode enum: %#v", dm["enum"])
+		}
+		if !strings.Contains(dm["description"].(string), "same_site_links") {
+			t.Fatalf("expected discovery_mode description to mention canonical values, got %#v", dm["description"])
+		}
+		return
+	}
+	t.Fatal("web_query tool not found")
+}
+
+func TestRunnerMCPToolsExposeExamples(t *testing.T) {
+	for _, tool := range mcpTools() {
+		if tool.Name == "" {
+			continue
+		}
+		examples, ok := tool.InputSchema["examples"].([]map[string]any)
+		if !ok || len(examples) == 0 {
+			t.Fatalf("tool %s missing schema examples", tool.Name)
 		}
 	}
 }

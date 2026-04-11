@@ -164,9 +164,12 @@ func writeRootUsage(w io.Writer) {
   needlex proof <trace-id|proof-id|chunk-id> [--json]
   needlex memory <stats|search|prune> [args]
   needlex prune (--all | --older-than-hours N) [--json]
-  needlex mcp
+  needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
   needlex version
+
+Hint:
+  needlex mcp --help    Show MCP transport notes and client integration details
 `)
 }
 

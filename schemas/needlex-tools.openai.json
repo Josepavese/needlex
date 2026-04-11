@@ -1,24 +1,44 @@
 {
   "provider": "openai",
-  "strict": false,
   "tools": [
     {
       "type": "function",
       "function": {
         "name": "web_crawl",
         "description": "Traverse linked pages starting from one seed URL.",
-        "strict": false,
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "max_depth": 1,
+              "max_pages": 5,
+              "same_domain": true,
+              "seed_url": "https://example.com/docs"
+            }
+          ],
           "properties": {
-            "seed_url": { "type": "string" },
-            "profile": { "type": "string" },
-            "user_agent": { "type": "string" },
-            "max_pages": { "type": "integer" },
-            "max_depth": { "type": "integer" },
-            "same_domain": { "type": "boolean" }
+            "max_depth": {
+              "type": "integer"
+            },
+            "max_pages": {
+              "type": "integer"
+            },
+            "profile": {
+              "type": "string"
+            },
+            "same_domain": {
+              "type": "boolean"
+            },
+            "seed_url": {
+              "type": "string"
+            },
+            "user_agent": {
+              "type": "string"
+            }
           },
-          "required": ["seed_url"]
+          "required": [
+            "seed_url"
+          ],
+          "type": "object"
         }
       }
     },
@@ -26,19 +46,51 @@
       "type": "function",
       "function": {
         "name": "web_query",
-        "description": "Plan and execute a goal-oriented query with optional seed URL and discovery (same-site or web-search).",
-        "strict": false,
+        "description": "Plan and execute a goal-oriented query with optional seed URL. Use discovery_mode=same_site_links to expand from the seed site, web_search for external bootstrap, or off for strict seeded mode.",
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "discovery_mode": "same_site_links",
+              "goal": "Find authentication flow details",
+              "seed_url": "https://agentclientprotocol.com/protocol/overview"
+            },
+            {
+              "discovery_mode": "web_search",
+              "goal": "OpenAI API pricing"
+            }
+          ],
           "properties": {
-            "goal": { "type": "string" },
-            "seed_url": { "type": "string" },
-            "profile": { "type": "string" },
-            "user_agent": { "type": "string" },
-            "discovery_mode": { "type": "string" },
-            "lane_max": { "type": "integer" }
+            "discovery_mode": {
+              "description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL.",
+              "enum": [
+                "same_site_links",
+                "web_search",
+                "off"
+              ],
+              "type": "string"
+            },
+            "goal": {
+              "description": "Retrieval objective or question to answer.",
+              "type": "string"
+            },
+            "lane_max": {
+              "type": "integer"
+            },
+            "profile": {
+              "type": "string"
+            },
+            "seed_url": {
+              "description": "Optional starting URL. If present, same_site_links expands from this site.",
+              "type": "string"
+            },
+            "user_agent": {
+              "type": "string"
+            }
           },
-          "required": ["goal"]
+          "required": [
+            "goal"
+          ],
+          "type": "object"
         }
       }
     },
@@ -46,18 +98,35 @@
       "type": "function",
       "function": {
         "name": "web_read",
-        "description": "Read a web page into compact proof-carrying context.",
-        "strict": false,
+        "description": "Read one URL and return compact proof-carrying context first, plus diagnostic fields for deeper inspection.",
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "objective": "Extract pricing and policy details",
+              "url": "https://example.com"
+            }
+          ],
           "properties": {
-            "url": { "type": "string" },
-            "profile": { "type": "string" },
-            "objective": { "type": "string" },
-            "user_agent": { "type": "string" },
-            "lane_max": { "type": "integer" }
+            "lane_max": {
+              "type": "integer"
+            },
+            "objective": {
+              "type": "string"
+            },
+            "profile": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "user_agent": {
+              "type": "string"
+            }
           },
-          "required": ["url"]
+          "required": [
+            "url"
+          ],
+          "type": "object"
         }
       }
     },
@@ -66,13 +135,21 @@
       "function": {
         "name": "web_replay",
         "description": "Replay a stored trace and report deterministic stage completion.",
-        "strict": false,
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "trace_id": "trace_123"
+            }
+          ],
           "properties": {
-            "trace_id": { "type": "string" }
+            "trace_id": {
+              "type": "string"
+            }
           },
-          "required": ["trace_id"]
+          "required": [
+            "trace_id"
+          ],
+          "type": "object"
         }
       }
     },
@@ -81,14 +158,26 @@
       "function": {
         "name": "web_diff",
         "description": "Compare two stored traces and report changed stages.",
-        "strict": false,
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "trace_a": "trace_a",
+              "trace_b": "trace_b"
+            }
+          ],
           "properties": {
-            "trace_a": { "type": "string" },
-            "trace_b": { "type": "string" }
+            "trace_a": {
+              "type": "string"
+            },
+            "trace_b": {
+              "type": "string"
+            }
           },
-          "required": ["trace_a", "trace_b"]
+          "required": [
+            "trace_a",
+            "trace_b"
+          ],
+          "type": "object"
         }
       }
     },
@@ -97,14 +186,27 @@
       "function": {
         "name": "web_proof",
         "description": "Load proof records by trace id, proof id, or chunk id.",
-        "strict": false,
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "chunk_id": "chk_123"
+            },
+            {
+              "trace_id": "trace_123"
+            }
+          ],
           "properties": {
-            "trace_id": { "type": "string" },
-            "proof_id": { "type": "string" },
-            "chunk_id": { "type": "string" }
-          }
+            "chunk_id": {
+              "type": "string"
+            },
+            "proof_id": {
+              "type": "string"
+            },
+            "trace_id": {
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       }
     },
@@ -113,13 +215,21 @@
       "function": {
         "name": "web_prune",
         "description": "Prune local traces, proofs, fingerprints, and genome files.",
-        "strict": false,
         "parameters": {
-          "type": "object",
+          "examples": [
+            {
+              "older_than_hours": 24
+            }
+          ],
           "properties": {
-            "all": { "type": "boolean" },
-            "older_than_hours": { "type": "integer" }
-          }
+            "all": {
+              "type": "boolean"
+            },
+            "older_than_hours": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
         }
       }
     }

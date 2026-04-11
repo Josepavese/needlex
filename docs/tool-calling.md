@@ -61,6 +61,19 @@ If you wire Needle-X into an AI tool-calling stack:
 4. keep `web_replay` and `web_diff` for audit/debug flows, not default agent loops
 5. keep `web_prune` as an operator tool, not a model-default tool
 
+
+
+### Query Discovery Mode
+
+For `web_query`, use the canonical `discovery_mode` literals:
+1. `same_site_links` to expand from the seed site
+2. `web_search` to bootstrap with search
+3. `off` for strict seeded mode
+
+Compatibility note:
+1. Needle-X now accepts aliases such as `same-site` and `web-search`
+2. but agents should prefer the canonical literals above to reduce drift
+
 ## Design Constraints
 
 The provider-facing contracts should stay:
@@ -104,6 +117,17 @@ Transport note:
 3. this is intentional for compatibility with Claude Desktop-style framed clients and simpler raw-JSON clients
 
 This remains the best standard integration surface for Needle-X itself.
+
+## Compact-first MCP Rule
+
+For MCP agent-facing calls:
+1. `content.text` should expose the compact packet first
+2. `structuredContent` should retain the richer diagnostic envelope
+3. agents should read the compact packet first and open diagnostics only when needed
+
+Tool expansion rule:
+1. do not add narrower tools like `web_extract` until repeated agent misuse shows that `web_read` and `web_query` cannot be made clear enough
+2. improve schema, examples, aliases, and compact output first
 
 ## Practical Recommendation
 
