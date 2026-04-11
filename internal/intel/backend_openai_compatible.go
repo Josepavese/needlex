@@ -182,6 +182,8 @@ func taskOutputContract(task string) string {
 		return `return JSON only with keys: selected_chunk_ids:string[], rejected_chunk_ids:string[], decision_reason:string, confidence:number. confidence must be between 0 and 1.`
 	case TaskQueryRewrite:
 		return `return JSON only with keys: search_queries:string[], canonical_entity:string, locality_hints:string[], category_hints:string[], confidence:number. search_queries must contain 1 to 5 concise search strings. If the goal contains a named entity, canonical_entity must preserve its exact surface form and every search query must include it verbatim. confidence must be between 0 and 1.`
+	case TaskEndpointExtract:
+		return `return JSON only with keys: selected_url:string, evidence_page_url:string, kind:string, confidence:number. selected_url must be one literal URL from the provided candidate_pages literal_urls list or one provided page_url. kind must be one of native_api_endpoint, compat_api_endpoint, docs_page, unrelated. confidence must be between 0 and 1.`
 	default:
 		return "return JSON only."
 	}
@@ -193,6 +195,8 @@ func contractForTask(task string) string {
 		return "For resolve_ambiguity, emit only the four required keys and use chunk ids exactly as provided."
 	case TaskQueryRewrite:
 		return "For query_rewrite, rewrite the user goal into up to five concise search queries. Preserve named entities exactly, keep them in every query, avoid speculation, and do not invent facts not implied by the input."
+	case TaskEndpointExtract:
+		return "For endpoint_extract, choose the most likely native provider endpoint or API base URL from the provided literal URLs. Prefer first-party native endpoints over proxies, compatibility layers, billing pages, policy pages, and generic docs. Never invent a URL and never output a URL that is not present in the input."
 	default:
 		return ""
 	}

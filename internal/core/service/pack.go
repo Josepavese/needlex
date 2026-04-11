@@ -87,7 +87,6 @@ func completePackStage(recorder *proof.Recorder, req ReadRequest, webIR core.Web
 
 func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest, dom pipeline.SimplifiedDOM, webIR core.WebIR, documentID string, segments []pipeline.Segment) (intel.Summary, []rankedSegment, []executedIntelTask, webIRSelectionPolicyReport, int, int, error) {
 	ranked := s.rankSegments(documentID, req.Objective, webIR, segments)
-	ranked = applyContaminationPenalty(ranked, req.Objective)
 	ranked = applyBoilerplatePenalty(ranked)
 	ranked = applySubordinateFragmentDemotion(ranked)
 	ranked = applyIndexLikeDemotion(ranked)
@@ -358,7 +357,6 @@ func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decision
 	out := make([]rankedSegment, 0, len(selected))
 	for _, item := range selected {
 		decision := decisions[item.chunk.Fingerprint]
-		decision.RiskFlags = append(decision.RiskFlags, contaminationRiskFlags(item.chunk.Text, req.Objective)...)
 		if decision.Lane >= 2 {
 			extracted := intel.Extract(s.cfg, s.semantic, decision, item.chunk, req.Objective, req.Profile)
 			applyIntelTextResult(&item.chunk, &decision, extracted.Text, extracted.Invocation, extracted.AdditionalRisk)

@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	req "github.com/imroc/req/v3"
@@ -22,6 +24,13 @@ type Acquirer struct {
 	Client *http.Client
 }
 
+type pacingState struct {
+	mu       sync.Mutex
+	lastSeen map[string]time.Time
+}
+
+var globalPacingState = &pacingState{lastSeen: map[string]time.Time{}}
+
 func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, error) {
 	if err := validateAcquireInput(input); err != nil {
 		return RawPage{}, err
@@ -32,8 +41,15 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 		return page, nil
 	}
 	if retryProfile := normalizeRetryProfile(input.RetryProfile); shouldRetryOnBlocked(err, retryProfile) {
+		retrySleep, waitErr := sleepWithJitter(ctx, input.BlockedRetryBackoff, input.BlockedRetryJitter)
+		if waitErr != nil {
+			return RawPage{}, waitErr
+		}
 		page, retryErr := a.acquireAttempt(ctx, input, input.Timeout, retryProfile)
 		if retryErr == nil {
+			page.RetryCount = 1
+			page.RetryReason = "blocked_status"
+			page.RetrySleepMS = retrySleep.Milliseconds()
 			return page, nil
 		}
 		err = retryErr
@@ -43,8 +59,15 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 	}
 
 	retryTimeout := expandedTimeout(input.Timeout)
+	retrySleep, waitErr := sleepWithJitter(ctx, input.TimeoutRetryBackoff, input.TimeoutRetryJitter)
+	if waitErr != nil {
+		return RawPage{}, waitErr
+	}
 	page, retryErr := a.acquireAttempt(ctx, input, retryTimeout, normalizeFetchProfile(input.Profile))
 	if retryErr == nil {
+		page.RetryCount = 1
+		page.RetryReason = "timeout"
+		page.RetrySleepMS = retrySleep.Milliseconds()
 		return page, nil
 	}
 	return RawPage{}, retryErr
@@ -54,21 +77,38 @@ func (a Acquirer) acquireAttempt(ctx context.Context, input AcquireInput, timeou
 	attemptInput := input
 	attemptInput.Timeout = timeout
 	attemptInput.Profile = profile
+	pacingDelay, err := applyPerHostPacing(ctx, attemptInput.URL, attemptInput.PerHostMinGap, attemptInput.PerHostJitter)
+	if err != nil {
+		return RawPage{}, err
+	}
 	if !supportsBrowserImpersonation(attemptInput.URL) {
-		return a.acquireWithHTTP(ctx, attemptInput, profile)
+		page, err := a.acquireWithHTTP(ctx, attemptInput, profile)
+		if err == nil {
+			page.HostPacingMS = pacingDelay.Milliseconds()
+		}
+		return page, err
 	}
 	switch profile {
 	case "browser_like", "hardened":
 		page, err := a.acquireWithReq(ctx, attemptInput, profile)
 		if err == nil {
+			page.HostPacingMS = pacingDelay.Milliseconds()
 			return page, nil
 		}
 		if shouldFallbackToHTTP(err) {
-			return a.acquireWithHTTP(ctx, attemptInput, profile)
+			page, httpErr := a.acquireWithHTTP(ctx, attemptInput, profile)
+			if httpErr == nil {
+				page.HostPacingMS = pacingDelay.Milliseconds()
+			}
+			return page, httpErr
 		}
 		return RawPage{}, err
 	default:
-		return a.acquireWithHTTP(ctx, attemptInput, profile)
+		page, err := a.acquireWithHTTP(ctx, attemptInput, profile)
+		if err == nil {
+			page.HostPacingMS = pacingDelay.Milliseconds()
+		}
+		return page, err
 	}
 }
 
@@ -190,6 +230,62 @@ func requestContext(ctx context.Context, timeout time.Duration) (context.Context
 		return ctx, func() {}
 	}
 	return context.WithTimeout(ctx, timeout)
+}
+
+func sleepWithJitter(ctx context.Context, base, jitter time.Duration) (time.Duration, error) {
+	delay := base
+	if jitter > 0 {
+		delay += time.Duration(rand.Int63n(int64(jitter) + 1))
+	}
+	if delay <= 0 {
+		return 0, nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case <-timer.C:
+		return delay, nil
+	}
+}
+
+func applyPerHostPacing(ctx context.Context, rawURL string, minGap, jitter time.Duration) (time.Duration, error) {
+	if minGap <= 0 {
+		return 0, nil
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || strings.TrimSpace(parsed.Hostname()) == "" {
+		return 0, nil
+	}
+	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	targetGap := minGap
+	if jitter > 0 {
+		targetGap += time.Duration(rand.Int63n(int64(jitter) + 1))
+	}
+	globalPacingState.mu.Lock()
+	lastSeen := globalPacingState.lastSeen[host]
+	now := time.Now()
+	delay := time.Duration(0)
+	if !lastSeen.IsZero() {
+		nextAllowed := lastSeen.Add(targetGap)
+		if nextAllowed.After(now) {
+			delay = nextAllowed.Sub(now)
+		}
+	}
+	globalPacingState.lastSeen[host] = now.Add(delay)
+	globalPacingState.mu.Unlock()
+	if delay <= 0 {
+		return 0, nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case <-timer.C:
+		return delay, nil
+	}
 }
 
 func shouldRetryOnBlocked(err error, retryProfile string) bool {

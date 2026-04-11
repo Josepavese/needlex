@@ -3,12 +3,18 @@ package pipeline
 import "time"
 
 type AcquireInput struct {
-	URL          string
-	Timeout      time.Duration
-	MaxBytes     int64
-	UserAgent    string
-	Profile      string
-	RetryProfile string
+	URL                 string
+	Timeout             time.Duration
+	MaxBytes            int64
+	UserAgent           string
+	Profile             string
+	RetryProfile        string
+	BlockedRetryBackoff time.Duration
+	BlockedRetryJitter  time.Duration
+	PerHostMinGap       time.Duration
+	PerHostJitter       time.Duration
+	TimeoutRetryBackoff time.Duration
+	TimeoutRetryJitter  time.Duration
 }
 
 type RawPage struct {
@@ -19,6 +25,10 @@ type RawPage struct {
 	HTML         string
 	FetchMode    string
 	FetchProfile string
+	RetryCount   int
+	RetryReason  string
+	RetrySleepMS int64
+	HostPacingMS int64
 	FetchedAt    time.Time
 }
 

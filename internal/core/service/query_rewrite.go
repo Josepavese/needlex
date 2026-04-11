@@ -55,23 +55,23 @@ func (s *Service) maybeRewriteSearchQueries(ctx context.Context, req QueryReques
 func normalizeRewriteQueries(queries []string, canonicalEntity, fallback string) []string {
 	seen := map[string]struct{}{}
 	out := make([]string, 0, min(len(queries)+1, 3))
-	entityNeedle := strings.ToLower(strings.TrimSpace(canonicalEntity))
 	for _, query := range append([]string{fallback}, queries...) {
 		query = strings.TrimSpace(query)
 		if query == "" {
 			continue
 		}
-		if !strings.Contains(strings.ToLower(query), entityNeedle) {
+		key := strings.ToLower(query)
+		if _, ok := seen[key]; ok {
 			continue
 		}
-		if _, ok := seen[strings.ToLower(query)]; ok {
-			continue
-		}
-		seen[strings.ToLower(query)] = struct{}{}
+		seen[key] = struct{}{}
 		out = append(out, query)
 		if len(out) == 3 {
 			break
 		}
+	}
+	if len(out) == 0 && strings.TrimSpace(canonicalEntity) != "" {
+		out = append(out, strings.TrimSpace(canonicalEntity))
 	}
 	return out
 }

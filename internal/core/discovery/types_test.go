@@ -48,6 +48,27 @@ func TestHostCompactnessBoostPrefersCanonicalHostOverSubdomain(t *testing.T) {
 	}
 }
 
+func TestProbableNonHTMLURLDetectsAssets(t *testing.T) {
+	if !ProbableNonHTMLURL("https://example.com/logo.png") {
+		t.Fatal("expected png asset url to be detected as non-html")
+	}
+	if ProbableNonHTMLURL("https://developers.openai.com/api") {
+		t.Fatal("expected docs page not to be detected as non-html")
+	}
+}
+
+func TestResourceClassClassification(t *testing.T) {
+	if got := ResourceClass("https://example.com/logo.png"); got != ResourceClassMediaAsset {
+		t.Fatalf("expected media asset, got %q", got)
+	}
+	if got := ResourceClass("https://developers.openai.com/api"); got != ResourceClassHTMLLike {
+		t.Fatalf("expected html-like, got %q", got)
+	}
+	if got := ResourceClass("https://api.example.com/openapi.json"); got != ResourceClassStructured {
+		t.Fatalf("expected structured data, got %q", got)
+	}
+}
+
 func contains(values []string, needle string) bool {
 	for _, value := range values {
 		if value == needle {

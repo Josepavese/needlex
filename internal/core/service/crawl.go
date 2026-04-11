@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"golang.org/x/net/html"
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
-	"github.com/josepavese/needlex/internal/pipeline"
 )
 
 type CrawlRequest struct {
 	SeedURL        string
 	Profile        string
+	FetchProfile   string
+	FetchRetryProfile string
 	UserAgent      string
 	MaxPages       int
 	MaxDepth       int
@@ -113,6 +113,8 @@ func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, 
 		URL:            targetURL,
 		Objective:      "crawl",
 		Profile:        profile,
+		FetchProfile:   req.FetchProfile,
+		FetchRetryProfile: req.FetchRetryProfile,
 		UserAgent:      req.UserAgent,
 		ForceLane:      req.ForceLane,
 		PruningProfile: req.PruningProfile,
@@ -122,14 +124,7 @@ func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, 
 }
 
 func (s *Service) expandCrawlNode(ctx context.Context, req CrawlRequest, node crawlNode, readResp ReadResponse, visited map[string]struct{}) []crawlNode {
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:          readResp.Document.FinalURL,
-		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:     s.cfg.Runtime.MaxBytes,
-		UserAgent:    req.UserAgent,
-		Profile:      s.cfg.Fetch.Profile,
-		RetryProfile: s.cfg.Fetch.RetryProfile,
-	})
+	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(readResp.Document.FinalURL, req.UserAgent))
 	if err != nil {
 		return nil
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -113,24 +114,29 @@ func TestAcquireUsesBrowserLikeProfileByDefault(t *testing.T) {
 func TestAcquireRetriesWithRetryProfileOnBlockedStatus(t *testing.T) {
 	var calls int32
 	var seenUserAgents []string
+	var firstAt time.Time
+	var secondAt time.Time
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seenUserAgents = append(seenUserAgents, r.Header.Get("User-Agent"))
 		call := atomic.AddInt32(&calls, 1)
 		if call == 1 {
+			firstAt = time.Now()
 			http.Error(w, "blocked", http.StatusServiceUnavailable)
 			return
 		}
+		secondAt = time.Now()
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = fmt.Fprint(w, "<html><body><p>ok</p></body></html>")
 	}))
 	defer server.Close()
 
 	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
-		URL:          server.URL,
-		Timeout:      2 * time.Second,
-		MaxBytes:     4096,
-		Profile:      "standard",
-		RetryProfile: "browser_like",
+		URL:                 server.URL,
+		Timeout:             2 * time.Second,
+		MaxBytes:            4096,
+		Profile:             "standard",
+		RetryProfile:        "browser_like",
+		BlockedRetryBackoff: 40 * time.Millisecond,
 	})
 	if err != nil {
 		t.Fatalf("expected blocked retry to recover, got %v", err)
@@ -150,6 +156,9 @@ func TestAcquireRetriesWithRetryProfileOnBlockedStatus(t *testing.T) {
 	if !strings.Contains(seenUserAgents[1], "Mozilla/5.0") {
 		t.Fatalf("expected browser-like user agent on retry, got %q", seenUserAgents[1])
 	}
+	if secondAt.Sub(firstAt) < 35*time.Millisecond {
+		t.Fatalf("expected blocked retry backoff to apply, delta=%s", secondAt.Sub(firstAt))
+	}
 }
 
 func TestShouldFallbackToHTTP(t *testing.T) {
@@ -158,6 +167,46 @@ func TestShouldFallbackToHTTP(t *testing.T) {
 	}
 	if shouldFallbackToHTTP(errors.New("fetch page: context deadline exceeded")) {
 		t.Fatal("did not expect timeout to trigger HTTP fallback")
+	}
+}
+
+func TestAcquireAppliesPerHostPacing(t *testing.T) {
+	globalPacingState.mu.Lock()
+	globalPacingState.lastSeen = map[string]time.Time{}
+	globalPacingState.mu.Unlock()
+
+	var firstAt time.Time
+	var secondAt time.Time
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if firstAt.IsZero() {
+			firstAt = time.Now()
+		} else {
+			secondAt = time.Now()
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = fmt.Fprint(w, "<html><body><p>ok</p></body></html>")
+	}))
+	defer server.Close()
+
+	parsed, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse server url: %v", err)
+	}
+
+	input := AcquireInput{
+		URL:           server.URL,
+		Timeout:       2 * time.Second,
+		MaxBytes:      4096,
+		PerHostMinGap: 45 * time.Millisecond,
+	}
+	if _, err := (Acquirer{}).Acquire(context.Background(), input); err != nil {
+		t.Fatalf("first acquire failed: %v", err)
+	}
+	if _, err := (Acquirer{}).Acquire(context.Background(), input); err != nil {
+		t.Fatalf("second acquire failed: %v", err)
+	}
+	if secondAt.Sub(firstAt) < 40*time.Millisecond {
+		t.Fatalf("expected host pacing to apply for %s, delta=%s", parsed.Hostname(), secondAt.Sub(firstAt))
 	}
 }
 

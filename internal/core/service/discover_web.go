@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -36,7 +37,7 @@ type DiscoverWebResponse struct {
 	Candidates   []DiscoverCandidate `json:"candidates"`
 }
 
-const webProbeLimit = 3
+const webProbeLimit = 5
 
 func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, error) {
 	if strings.TrimSpace(req.Goal) == "" {
@@ -113,6 +114,8 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Limited(req.MaxCandidates)
 	filtered = canonicalizeCandidateFamilies(filtered)
 	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
+	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
+	filtered = s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
 	if len(filtered) == 0 {
 		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
 	}
@@ -173,8 +176,8 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 	families := make(map[string][]DiscoverCandidate)
 	order := make([]string, 0)
 	for _, candidate := range candidates {
-		family, err := discoverycore.RegistrableDomain(candidate.URL)
-		if err != nil || strings.TrimSpace(family) == "" {
+		family, ok := candidateFamily(candidate.URL)
+		if !ok {
 			family = strings.TrimSpace(candidate.URL)
 		}
 		if _, ok := families[family]; !ok {
@@ -220,8 +223,8 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 	}
 	out := append([]DiscoverCandidate{}, candidates...)
 	for i := range out {
-		family, err := discoverycore.RegistrableDomain(out[i].URL)
-		if err != nil || strings.TrimSpace(family) == "" {
+		family, ok := candidateFamily(out[i].URL)
+		if !ok {
 			family = strings.TrimSpace(out[i].URL)
 		}
 		if similarity, ok := byFamily[family]; ok && similarity > 0 {
@@ -240,6 +243,16 @@ func sameCandidateFamily(leftURL, rightURL string) bool {
 		return false
 	}
 	return leftDomain == rightDomain
+}
+
+func candidateFamily(rawURL string) (string, bool) {
+	if family, err := discoverycore.RegistrableDomain(rawURL); err == nil && strings.TrimSpace(family) != "" {
+		return family, true
+	}
+	if host, ok := discoverycore.Hostname(rawURL); ok {
+		return host, true
+	}
+	return "", false
 }
 
 func sameDiscoverHost(leftURL, rightURL string) bool {
@@ -280,14 +293,7 @@ func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req 
 		return nil, "", err
 	}
 
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:          searchURL,
-		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:     s.cfg.Runtime.MaxBytes,
-		UserAgent:    effectiveUserAgent(req.UserAgent, true),
-		Profile:      s.cfg.Fetch.Profile,
-		RetryProfile: s.cfg.Fetch.RetryProfile,
-	})
+	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(searchURL, effectiveUserAgent(req.UserAgent, true)))
 	if err != nil {
 		if discoverycore.IsDuckDuckGoProvider(baseURL) && (strings.Contains(err.Error(), "unexpected status code 403") || strings.Contains(err.Error(), "unexpected status code 202")) {
 			return nil, "", fmt.Errorf("duckduckgo provider blocked by anti-bot challenge")
@@ -401,14 +407,7 @@ func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAg
 }
 
 func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidate DiscoverCandidate) ([]DiscoverCandidate, error) {
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:          candidate.URL,
-		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:     s.cfg.Runtime.MaxBytes,
-		UserAgent:    effectiveUserAgent(userAgent, true),
-		Profile:      s.cfg.Fetch.Profile,
-		RetryProfile: s.cfg.Fetch.RetryProfile,
-	})
+	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(candidate.URL, effectiveUserAgent(userAgent, true)))
 	if err != nil {
 		return nil, err
 	}
@@ -447,6 +446,7 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 		best.Reason = discoverycore.AppendUniqueReason(best.Reason, "page_expand")
 		out = append(out, best)
 	}
+	out = append(out, extractLiteralURLCandidates(goal, candidate, rawPage.FinalURL, rawPage.HTML, dom, domainHints)...)
 	return out, nil
 }
 
@@ -464,14 +464,7 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, goal, userAgent, ra
 		return hostRootIdentityProbe{}, nil
 	}
 
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:          rootURL,
-		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:     s.cfg.Runtime.MaxBytes,
-		UserAgent:    effectiveUserAgent(userAgent, true),
-		Profile:      s.cfg.Fetch.Profile,
-		RetryProfile: s.cfg.Fetch.RetryProfile,
-	})
+	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(rootURL, effectiveUserAgent(userAgent, true)))
 	if err != nil {
 		return hostRootIdentityProbe{}, err
 	}
@@ -514,6 +507,7 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, goal, userAgent, ra
 
 func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, pageTitle string, webIR core.WebIR, domainHints []string) DiscoverCandidate {
 	score, reasons := discoverycore.ScoreURL(goal, finalURL, discoverycore.JoinNonEmpty(pageTitle, candidate.Label), false, domainHints)
+	resourceClass := discoverycore.ResourceClass(finalURL)
 	if strings.TrimSpace(pageTitle) != "" {
 		score += 0.35
 		reasons = append(reasons, "page_title_probe")
@@ -543,6 +537,7 @@ func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, page
 	if host, ok := discoverycore.Hostname(finalURL); ok {
 		metadata["final_host"] = host
 	}
+	metadata["resource_class"] = resourceClass
 	return DiscoverCandidate{
 		URL:      finalURL,
 		Label:    discoverycore.FirstNonEmpty(pageTitle, candidate.Label),
@@ -550,6 +545,286 @@ func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, page
 		Reason:   discoverycore.AppendUniqueReason(append([]string{}, candidate.Reason...), reasons...),
 		Metadata: metadata,
 	}
+}
+
+var literalURLPattern = regexp.MustCompile(`https?://[^\s"'<>` + "`" + `)]+`)
+
+func extractLiteralURLCandidates(goal string, candidate DiscoverCandidate, finalURL, rawHTML string, dom pipeline.SimplifiedDOM, domainHints []string) []DiscoverCandidate {
+	finalFamily, ok := candidateFamily(finalURL)
+	if !ok {
+		return nil
+	}
+
+	texts := make([]string, 0, len(dom.Nodes)+2)
+	if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
+		texts = append(texts, trimmed)
+	}
+	if trimmed := strings.TrimSpace(dom.Title); trimmed != "" {
+		texts = append(texts, trimmed)
+	}
+	for _, node := range dom.Nodes {
+		if trimmed := strings.TrimSpace(node.Text); trimmed != "" {
+			texts = append(texts, trimmed)
+		}
+	}
+
+	literalLinks := make([]discoverycore.LinkCandidate, 0, 4)
+	seen := map[string]struct{}{}
+	for _, text := range texts {
+		for _, raw := range literalURLPattern.FindAllString(text, -1) {
+			literalURL := trimLiteralURL(raw)
+			if literalURL == "" {
+				continue
+			}
+			if _, ok := seen[literalURL]; ok {
+				continue
+			}
+			literalFamily, ok := candidateFamily(literalURL)
+			if !ok || literalFamily != finalFamily {
+				continue
+			}
+			seen[literalURL] = struct{}{}
+			literalLinks = append(literalLinks, discoverycore.LinkCandidate{
+				URL:   literalURL,
+				Label: discoverycore.JoinNonEmpty(dom.Title, candidate.Label),
+			})
+			if len(literalLinks) >= 4 {
+				break
+			}
+		}
+		if len(literalLinks) >= 4 {
+			break
+		}
+	}
+	if len(literalLinks) == 0 {
+		return nil
+	}
+
+	sourceClass := discoverycore.ResourceClass(finalURL)
+	scored := discoverycore.ScoreCandidates(goal, "", discoverycore.JoinNonEmpty(dom.Title, candidate.Label), literalLinks, domainHints)
+	out := make([]DiscoverCandidate, 0, min(len(scored), 2))
+	for _, item := range scored {
+		resourceClass := discoverycore.ResourceClass(item.URL)
+		if sourceClass == discoverycore.ResourceClassHTMLLike && resourceClass == discoverycore.ResourceClassMediaAsset {
+			continue
+		}
+		boost := 1.10
+		if discoverycore.URLPathDepth(item.URL) >= 3 {
+			boost += 0.12
+		}
+		out = append(out, DiscoverCandidate{
+			URL:   item.URL,
+			Label: discoverycore.FirstNonEmpty(item.Label, dom.Title, candidate.Label),
+			Score: item.Score + boost,
+			Reason: discoverycore.AppendUniqueReason(
+				append([]string{}, item.Reason...),
+				"literal_url_probe",
+				"literal_url_same_family",
+			),
+			Metadata: discoverycore.MergeMetadata(candidate.Metadata, map[string]string{
+				"literal_url_source": candidate.URL,
+				"page_title":         strings.TrimSpace(dom.Title),
+				"resource_class":     resourceClass,
+			}),
+		})
+		if len(out) >= 2 {
+			break
+		}
+	}
+	return out
+}
+
+func trimLiteralURL(raw string) string {
+	value := strings.TrimSpace(raw)
+	value = strings.TrimRight(value, ".,;:)]}\"'")
+	parsed, err := url.Parse(value)
+	if err != nil || strings.TrimSpace(parsed.Scheme) == "" || strings.TrimSpace(parsed.Host) == "" {
+		return ""
+	}
+	return parsed.String()
+}
+
+type endpointExtractorResult struct {
+	SelectedURL     string  `json:"selected_url"`
+	EvidencePageURL string  `json:"evidence_page_url"`
+	Kind            string  `json:"kind"`
+	Confidence      float64 `json:"confidence"`
+}
+
+func (s *Service) maybePromoteEndpointCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidates []DiscoverCandidate) []DiscoverCandidate {
+	backend := strings.TrimSpace(s.cfg.Models.Backend)
+	if len(candidates) == 0 || (backend != intel.BackendOpenAICompatible && backend != intel.BackendOllama) {
+		return candidates
+	}
+
+	type pageInput struct {
+		PageURL     string   `json:"page_url"`
+		PageTitle   string   `json:"page_title"`
+		LiteralURLs []string `json:"literal_urls"`
+	}
+	pageInputs := make([]pageInput, 0, min(len(candidates), 4))
+	allowed := map[string]pageInput{}
+
+	for _, candidate := range s.orderEndpointCandidates(ctx, goal, candidates, min(len(candidates), 4)) {
+		rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(candidate.URL, effectiveUserAgent(userAgent, true)))
+		if err != nil {
+			continue
+		}
+		dom, err := s.reducer.Reduce(rawPage)
+		if err != nil {
+			continue
+		}
+		literals := literalURLsForPage(rawPage.FinalURL, rawPage.HTML, dom)
+		if len(literals) == 0 {
+			continue
+		}
+		input := pageInput{
+			PageURL:     strings.TrimSpace(rawPage.FinalURL),
+			PageTitle:   strings.TrimSpace(dom.Title),
+			LiteralURLs: literals,
+		}
+		pageInputs = append(pageInputs, input)
+		for _, literal := range literals {
+			allowed[literal] = input
+		}
+	}
+	if len(pageInputs) == 0 {
+		return candidates
+	}
+
+	modelReq := intel.ModelRequest{
+		Task:            intel.TaskEndpointExtract,
+		ModelClass:      intel.ModelClassMicroSolver,
+		MaxInputTokens:  1200,
+		MaxOutputTokens: 180,
+		TimeoutMS:       max(600, s.cfg.Models.MicroTimeoutMS),
+		SchemaName:      "endpoint_extract.v1",
+		Input: map[string]any{
+			"goal":            strings.TrimSpace(goal),
+			"domain_hints":    domainHints,
+			"candidate_pages": pageInputs,
+		},
+	}
+	resp, err := s.runtime.Run(ctx, modelReq)
+	if err != nil {
+		return candidates
+	}
+	var out endpointExtractorResult
+	if err := json.Unmarshal([]byte(resp.OutputJSON), &out); err != nil {
+		return candidates
+	}
+	out.SelectedURL = strings.TrimSpace(out.SelectedURL)
+	selectedPage, ok := allowed[out.SelectedURL]
+	if !ok || out.Confidence < 0.55 {
+		return candidates
+	}
+
+	boosted := append([]DiscoverCandidate{}, candidates...)
+	boosted = append(boosted, DiscoverCandidate{
+		URL:   out.SelectedURL,
+		Label: discoverycore.FirstNonEmpty(strings.TrimSpace(selectedPage.PageTitle), out.SelectedURL),
+		Score: 4.50 + out.Confidence,
+		Reason: discoverycore.AppendUniqueReason(nil,
+			"endpoint_extract_llm",
+			"literal_url_probe",
+		),
+		Metadata: map[string]string{
+			"endpoint_extract_kind":          strings.TrimSpace(out.Kind),
+			"endpoint_extract_evidence_page": strings.TrimSpace(selectedPage.PageURL),
+		},
+	})
+	return discoverycore.NewSet(boosted).Sorted()
+}
+
+func (s *Service) orderEndpointCandidates(ctx context.Context, goal string, candidates []DiscoverCandidate, limit int) []DiscoverCandidate {
+	if len(candidates) == 0 || limit <= 0 {
+		return nil
+	}
+	window := min(len(candidates), max(limit*2, limit))
+	ordered := append([]DiscoverCandidate{}, candidates[:window]...)
+	semanticCandidates := make([]intel.SemanticCandidate, 0, len(ordered))
+	for _, candidate := range ordered {
+		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
+			ID: candidate.URL,
+			Text: discoverycore.JoinNonEmpty(
+				candidate.Label,
+				discoverycore.URLTokenText(candidate.URL),
+			),
+		})
+	}
+	byURL := map[string]float64{}
+	if len(semanticCandidates) > 0 {
+		if scored, err := s.semantic.Score(ctx, goal, semanticCandidates); err == nil {
+			for _, item := range scored {
+				byURL[item.ID] = item.Similarity
+			}
+		}
+	}
+	for i := range ordered {
+		resourceClass := discoverycore.ResourceClass(ordered[i].URL)
+		switch resourceClass {
+		case discoverycore.ResourceClassHTMLLike:
+			ordered[i].Score += 0.08
+			ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "endpoint_resource_class_html_like")
+		case discoverycore.ResourceClassStructured:
+			ordered[i].Score += 0.05
+			ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "endpoint_resource_class_structured")
+		case discoverycore.ResourceClassMediaAsset, discoverycore.ResourceClassArchiveFile:
+			ordered[i].Score -= 0.08
+			ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "endpoint_resource_class_penalty")
+		}
+		if similarity, ok := byURL[ordered[i].URL]; ok && similarity > 0 {
+			ordered[i].Score += similarity * 1.2
+			ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "endpoint_probe_semantic_alignment")
+		}
+		ordered[i].Metadata = discoverycore.MergeMetadata(ordered[i].Metadata, map[string]string{
+			"resource_class": resourceClass,
+		})
+	}
+	discoverycore.SortCandidates(ordered)
+	return ordered[:min(len(ordered), limit)]
+}
+
+func literalURLsForPage(finalURL, rawHTML string, dom pipeline.SimplifiedDOM) []string {
+	family, ok := candidateFamily(finalURL)
+	if !ok {
+		return nil
+	}
+	texts := make([]string, 0, len(dom.Nodes)+2)
+	if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
+		texts = append(texts, trimmed)
+	}
+	if trimmed := strings.TrimSpace(dom.Title); trimmed != "" {
+		texts = append(texts, trimmed)
+	}
+	for _, node := range dom.Nodes {
+		if trimmed := strings.TrimSpace(node.Text); trimmed != "" {
+			texts = append(texts, trimmed)
+		}
+	}
+	out := make([]string, 0, 8)
+	seen := map[string]struct{}{}
+	for _, text := range texts {
+		for _, raw := range literalURLPattern.FindAllString(text, -1) {
+			literalURL := trimLiteralURL(raw)
+			if literalURL == "" {
+				continue
+			}
+			if _, ok := seen[literalURL]; ok {
+				continue
+			}
+			literalFamily, ok := candidateFamily(literalURL)
+			if !ok || literalFamily != family {
+				continue
+			}
+			seen[literalURL] = struct{}{}
+			out = append(out, literalURL)
+			if len(out) >= 8 {
+				return out
+			}
+		}
+	}
+	return out
 }
 
 func hostRootURL(rawURL string) (string, bool) {

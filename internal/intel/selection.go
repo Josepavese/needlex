@@ -5,6 +5,7 @@ import "strings"
 const (
 	BackendNoop             = "noop"
 	BackendOpenAICompatible = "openai-compatible"
+	BackendOllama           = "ollama"
 )
 
 type BackendSelection struct {
@@ -20,7 +21,7 @@ func TaskAllowedForBackend(backend, task string) (bool, string) {
 	switch backend {
 	case "", BackendNoop:
 		return false, "backend_disabled"
-	case BackendOpenAICompatible:
+	case BackendOpenAICompatible, BackendOllama:
 		switch task {
 		case TaskResolveAmbiguity, TaskQueryRewrite:
 			return true, "benchmark_proven"
@@ -35,7 +36,7 @@ func TaskAllowedForBackend(backend, task string) (bool, string) {
 func SelectionForBackend(backend string) BackendSelection {
 	backend = strings.TrimSpace(backend)
 	switch backend {
-	case BackendOpenAICompatible:
+	case BackendOpenAICompatible, BackendOllama:
 		return BackendSelection{
 			Backend:      backend,
 			EnabledTasks: []string{TaskResolveAmbiguity, TaskQueryRewrite},

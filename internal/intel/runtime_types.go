@@ -2,6 +2,7 @@ package intel
 
 const (
 	TaskResolveAmbiguity  = "resolve_ambiguity"
+	TaskEndpointExtract   = "endpoint_extract"
 	TaskQueryRewrite      = "query_rewrite"
 	ModelClassMicroSolver = "micro_solver"
 	ModelFinishReasonStop = "stop"
@@ -41,7 +42,7 @@ type ModelResponse struct {
 
 func validTask(task string) bool {
 	switch task {
-	case TaskResolveAmbiguity, TaskQueryRewrite:
+	case TaskResolveAmbiguity, TaskQueryRewrite, TaskEndpointExtract:
 		return true
 	default:
 		return false

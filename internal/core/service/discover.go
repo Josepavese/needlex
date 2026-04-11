@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/intel"
@@ -63,14 +62,7 @@ func validateDiscoverRequest(req DiscoverRequest) error {
 }
 
 func (s *Service) acquireDiscoverPage(ctx context.Context, rawURL, userAgent string) (pipeline.RawPage, pipeline.SimplifiedDOM, error) {
-	rawPage, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:          rawURL,
-		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:     s.cfg.Runtime.MaxBytes,
-		UserAgent:    userAgent,
-		Profile:      s.cfg.Fetch.Profile,
-		RetryProfile: s.cfg.Fetch.RetryProfile,
-	})
+	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(rawURL, userAgent))
 	if err != nil {
 		return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, err
 	}

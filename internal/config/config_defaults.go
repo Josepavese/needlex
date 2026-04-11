@@ -34,8 +34,14 @@ func defaultRuntimeConfig() RuntimeConfig {
 
 func defaultFetchConfig() FetchConfig {
 	return FetchConfig{
-		Profile:      "browser_like",
-		RetryProfile: "hardened",
+		Profile:               "browser_like",
+		RetryProfile:          "hardened",
+		BlockedRetryBackoffMS: 400,
+		BlockedRetryJitterMS:  200,
+		TimeoutRetryBackoffMS: 150,
+		TimeoutRetryJitterMS:  75,
+		PerHostMinGapMS:       250,
+		PerHostJitterMS:       100,
 	}
 }
 

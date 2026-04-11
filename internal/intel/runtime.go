@@ -58,6 +58,14 @@ func NewRuntime(cfg config.Config, client *http.Client) ModelRuntime {
 				MicroSolver: cfg.Models.Router,
 			},
 		}
+	case "ollama":
+		return OllamaRuntime{
+			BaseURL: cfg.Models.BaseURL,
+			Client:  client,
+			Models: RuntimeModels{
+				MicroSolver: cfg.Models.Router,
+			},
+		}
 	default:
 		return DefaultRuntime()
 	}

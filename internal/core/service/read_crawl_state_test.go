@@ -16,6 +16,8 @@ func TestPrepareReadRequestWithLocalStateAppliesGenome(t *testing.T) {
 		URL:              "https://example.com/docs",
 		ObservedLane:     2,
 		PreferredProfile: "tiny",
+		FetchProfile:     "hardened",
+		FetchRetryProfile: "hardened",
 		PruningProfile:   "aggressive",
 		RenderNeeded:     true,
 	})
@@ -29,6 +31,9 @@ func TestPrepareReadRequestWithLocalStateAppliesGenome(t *testing.T) {
 	}
 	if req.Profile != "tiny" {
 		t.Fatalf("expected profile tiny, got %q", req.Profile)
+	}
+	if req.FetchProfile != "hardened" || req.FetchRetryProfile != "hardened" {
+		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
 	}
 	if req.PruningProfile != "aggressive" {
 		t.Fatalf("expected pruning aggressive, got %q", req.PruningProfile)
@@ -80,6 +85,16 @@ func TestObserveReadResponseWithLocalStatePersistsArtifacts(t *testing.T) {
 					CompletedAt: time.Unix(1700000001, 0).UTC(),
 					OutputHash:  "hash",
 				},
+				{
+					Stage: "acquire",
+					Metadata: map[string]string{
+						"fetch_profile": "browser_like",
+						"retry_profile": "hardened",
+					},
+					StartedAt:   time.Unix(1700000000, 0).UTC(),
+					CompletedAt: time.Unix(1700000001, 0).UTC(),
+					OutputHash:  "hash2",
+				},
 			},
 		},
 	}
@@ -100,6 +115,9 @@ func TestObserveReadResponseWithLocalStatePersistsArtifacts(t *testing.T) {
 	if genome.ForceLane != 1 {
 		t.Fatalf("expected force lane 1, got %d", genome.ForceLane)
 	}
+	if genome.FetchProfile != "browser_like" || genome.FetchRetryProfile != "hardened" {
+		t.Fatalf("expected fetch profiles persisted, got %+v", genome)
+	}
 }
 
 func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
@@ -108,6 +126,8 @@ func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 		URL:              "https://example.com/root",
 		ObservedLane:     1,
 		PreferredProfile: "tiny",
+		FetchProfile:     "browser_like",
+		FetchRetryProfile: "hardened",
 		PruningProfile:   "forum",
 		RenderNeeded:     true,
 	})
@@ -121,6 +141,9 @@ func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 	}
 	if req.Profile != "tiny" {
 		t.Fatalf("expected profile tiny, got %q", req.Profile)
+	}
+	if req.FetchProfile != "browser_like" || req.FetchRetryProfile != "hardened" {
+		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
 	}
 	if req.PruningProfile != "forum" {
 		t.Fatalf("expected pruning forum, got %q", req.PruningProfile)

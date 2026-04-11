@@ -15,6 +15,8 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 		URL:              "https://example.com/docs",
 		ObservedLane:     1,
 		PreferredProfile: "tiny",
+		FetchProfile:     "browser_like",
+		FetchRetryProfile: "hardened",
 		FetchMode:        "http",
 		NoiseLevel:       "medium",
 		PageType:         "docs",
@@ -38,6 +40,9 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 	}
 	if loaded.LastPageType != "docs" {
 		t.Fatalf("expected docs page type, got %q", loaded.LastPageType)
+	}
+	if loaded.FetchProfile != "browser_like" || loaded.FetchRetryProfile != "hardened" {
+		t.Fatalf("expected fetch profiles persisted, got %+v", loaded)
 	}
 }
 

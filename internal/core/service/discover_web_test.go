@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/pipeline"
 )
 
 func TestRefineWebCandidatePrefersFirstPartyHostCoherence(t *testing.T) {
@@ -93,6 +95,151 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 	}
 }
 
+func TestDiscoverWebPromotesSameFamilyLiteralEndpoint(t *testing.T) {
+	var docsServer *httptest.Server
+	docsServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprint(w, `<html><head><title>Z AI Docs</title></head><body><h1>Z AI</h1></body></html>`)
+		case "/coding-plan":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Z AI Coding Plan</title></head><body><h1>Coding Plan</h1><pre>%s/api/coding/paas/v4</pre></body></html>`, docsServer.URL)
+		case "/api/coding/paas/v4":
+			_, _ = fmt.Fprint(w, `{"ok":true}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer docsServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(
+			w,
+			`<html><body><a class="result__a" href="%s/coding-plan">Z AI coding plan</a></body></html>`,
+			docsServer.URL,
+		)
+	}))
+	defer searchServer.Close()
+
+	cfg := config.Defaults()
+	svc, err := New(cfg, searchServer.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "z ai coding plan base url",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != docsServer.URL+"/api/coding/paas/v4" {
+		t.Fatalf("expected literal endpoint candidate to win, got %q", resp.SelectedURL)
+	}
+}
+
+func TestExtractLiteralURLCandidatesSkipsMediaAssetsFromHTMLPage(t *testing.T) {
+	base := DiscoverCandidate{URL: "https://mdn.org.cn/en-US/docs/Web/JavaScript/Guide", Label: "JavaScript Guide"}
+	dom := pipeline.SimplifiedDOM{Title: "JavaScript 指南 - JavaScript | MDN - MDN 文档"}
+	rawHTML := `<html><head><title>JavaScript Guide</title></head><body><img src="https://mdn.org.cn/favicon.ico"><a href="https://mdn.org.cn/en-US/docs/Web/JavaScript/Guide">guide</a></body></html>`
+	got := extractLiteralURLCandidates("MDN JavaScript guide", base, base.URL, rawHTML, dom, nil)
+	for _, candidate := range got {
+		if candidate.URL == "https://mdn.org.cn/favicon.ico" {
+			t.Fatalf("expected media asset literal URL to be skipped, got %#v", got)
+		}
+	}
+}
+
+func TestDiscoverWebEndpointExtractorPromotesLiteralURLFromShortlist(t *testing.T) {
+	var docsServer *httptest.Server
+	docsServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprint(w, `<html><head><title>Z AI Docs</title></head><body><h1>Z AI</h1></body></html>`)
+		case "/coding-plan":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Z AI Coding Plan</title></head><body><h1>Coding Plan</h1><pre>%s/api/coding/paas/v4</pre></body></html>`, docsServer.URL)
+		case "/api/coding/paas/v4":
+			_, _ = fmt.Fprint(w, `{"ok":true}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer docsServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(
+			w,
+			`<html><body><a class="result__a" href="%s/coding-plan">Z AI coding plan</a><a class="result__a" href="%s/">Z AI</a></body></html>`,
+			docsServer.URL,
+			docsServer.URL,
+		)
+	}))
+	defer searchServer.Close()
+
+	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Messages []struct {
+				Content string `json:"content"`
+			} `json:"messages"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode model request: %v", err)
+		}
+		content := fmt.Sprintf(`{"selected_url":"%s/api/coding/paas/v4","evidence_page_url":"%s/coding-plan","kind":"native_api_endpoint","confidence":0.93}`, docsServer.URL, docsServer.URL)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{"finish_reason": "stop", "message": map[string]any{"content": content}}},
+			"usage":   map[string]any{"prompt_tokens": 64, "completion_tokens": 18},
+		})
+	}))
+	defer modelServer.Close()
+
+	cfg := config.Defaults()
+	cfg.Models.Backend = "openai-compatible"
+	cfg.Models.BaseURL = modelServer.URL
+	cfg.Models.Router = "qwen-endpoint"
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "z ai coding plan api endpoint",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != docsServer.URL+"/api/coding/paas/v4" {
+		t.Fatalf("expected llm endpoint extractor to win, got %q", resp.SelectedURL)
+	}
+}
+
+func TestOrderEndpointCandidatesPrefersContextualHTMLCandidate(t *testing.T) {
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, semantic.URL)
+	svc := newTestService(t, cfg, nil)
+
+	ordered := svc.orderEndpointCandidates(context.Background(), "OpenAI API pricing", []DiscoverCandidate{
+		{URL: "https://example.com/logo.png", Label: "OpenAI API pricing", Score: 1.0},
+		{URL: "https://developers.openai.com/api/pricing", Label: "OpenAI API pricing", Score: 1.0},
+	}, 1)
+	if len(ordered) != 1 {
+		t.Fatalf("expected one ordered candidate, got %d", len(ordered))
+	}
+	if ordered[0].URL != "https://developers.openai.com/api/pricing" {
+		t.Fatalf("expected html-like candidate to win probe ordering, got %q", ordered[0].URL)
+	}
+	if ordered[0].Metadata["resource_class"] != "html_like" {
+		t.Fatalf("expected resource class metadata, got %#v", ordered[0].Metadata)
+	}
+}
+
 func TestCanonicalizeCandidateFamiliesPrefersSameHostRootWhenScoresClose(t *testing.T) {
 	candidates := []DiscoverCandidate{
 		{URL: "https://playwright.dev/community/welcome", Score: 1.20},
@@ -136,5 +283,108 @@ func TestSemanticDisambiguateCandidateFamiliesBoostsBrandAlignedFamily(t *testin
 	got := svc.semanticDisambiguateCandidateFamilies(context.Background(), "python packaging", candidates)
 	if got[0].URL != "https://packaging.python.org/en/latest/" {
 		t.Fatalf("expected semantic family scorer to prefer python packaging family, got %q", got[0].URL)
+	}
+}
+
+func TestApplyCandidateIntelligencePrefersFirstPartyDocsClass(t *testing.T) {
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, semantic.URL)
+	svc := newTestService(t, cfg, nil)
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://www.javascript.com/resources",
+			Score: 1.92,
+			Label: "JavaScript.com Resources",
+			Metadata: map[string]string{
+				"host_root_title": "JavaScript resources",
+				"page_title":      "JavaScript.com | Resources",
+				"resource_class":  "html_like",
+			},
+		},
+		{
+			URL:   "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+			Score: 1.64,
+			Label: "JavaScript Guide - JavaScript | MDN",
+			Metadata: map[string]string{
+				"host_root_title": "MDN Web Docs",
+				"page_title":      "JavaScript Guide - JavaScript | MDN",
+				"resource_class":  "html_like",
+			},
+		},
+	}
+
+	got := svc.applyCandidateIntelligence(context.Background(), "MDN JavaScript guide", candidates)
+	if got[0].URL != "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide" {
+		t.Fatalf("expected candidate intelligence to prefer first-party docs, got %q", got[0].URL)
+	}
+	if got[0].Metadata["candidate_class"] == "" || got[0].Metadata["cluster_id"] == "" {
+		t.Fatalf("expected candidate intelligence metadata, got %#v", got[0].Metadata)
+	}
+	if !containsReason(got[0].Reason, "candidate_intelligence") {
+		t.Fatalf("expected candidate intelligence reason, got %#v", got[0].Reason)
+	}
+	if got[1].Metadata["candidate_class"] == "" {
+		t.Fatalf("expected runner-up class metadata, got %#v", got[1].Metadata)
+	}
+	if got[1].Metadata["candidate_class"] == got[0].Metadata["candidate_class"] {
+		t.Fatalf("expected distinct classes to be learned, got %#v", got)
+	}
+}
+
+func TestCandidateIntelligenceWindowSkipsClearLeader(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{URL: "https://example.com/a", Score: 2.4},
+		{URL: "https://example.com/b", Score: 1.9},
+		{URL: "https://example.com/c", Score: 1.7},
+	}
+	if got := candidateIntelligenceWindow(candidates); got != 0 {
+		t.Fatalf("expected clear leader to skip candidate intelligence, got window=%d", got)
+	}
+}
+
+func TestApplyCandidateIntelligenceChoosesClusterRepresentative(t *testing.T) {
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, semantic.URL)
+	svc := newTestService(t, cfg, nil)
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://developers.openai.com/api",
+			Score: 1.30,
+			Label: "OpenAI API",
+			Metadata: map[string]string{
+				"host_root_title": "OpenAI Platform",
+				"page_title":      "API Reference",
+				"resource_class":  "html_like",
+			},
+		},
+		{
+			URL:   "https://developers.openai.com/api/reference/responses",
+			Score: 1.31,
+			Label: "Responses API",
+			Metadata: map[string]string{
+				"host_root_title": "OpenAI Platform",
+				"page_title":      "Responses API Reference",
+				"resource_class":  "html_like",
+			},
+		},
+	}
+
+	got := svc.applyCandidateIntelligence(context.Background(), "OpenAI API reference", candidates)
+	if got[0].URL != "https://developers.openai.com/api" {
+		t.Fatalf("expected shallower central family representative to win, got %q", got[0].URL)
+	}
+	if !containsReason(got[0].Reason, "candidate_cluster_representative") {
+		t.Fatalf("expected representative reason, got %#v", got[0].Reason)
+	}
+	if !containsReason(got[1].Reason, "candidate_cluster_redundant") {
+		t.Fatalf("expected redundant cluster reason, got %#v", got[1].Reason)
 	}
 }

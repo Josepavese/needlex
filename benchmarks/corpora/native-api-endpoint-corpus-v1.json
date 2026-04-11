@@ -1,0 +1,20 @@
+{
+  "version": "native-api-endpoint-corpus-v1",
+  "cases": [
+    {
+      "id": "z-ai-coding-plan-endpoint",
+      "goal": "z ai coding plan base url",
+      "expected_url": "https://api.z.ai/api/coding/paas/v4"
+    },
+    {
+      "id": "anthropic-messages-endpoint",
+      "goal": "Anthropic Messages API endpoint",
+      "expected_url": "https://api.anthropic.com/v1/messages"
+    },
+    {
+      "id": "openai-responses-endpoint",
+      "goal": "OpenAI Responses API endpoint",
+      "expected_url": "https://api.openai.com/v1/responses"
+    }
+  ]
+}

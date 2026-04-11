@@ -58,7 +58,7 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 	if evidence, ok := loadQueryFingerprintEvidence(storeRoot, req.SeedURL); ok {
 		req.SeedTraceID, req.SeedStable, req.SeedNovelty, req.SeedChanged = evidence.TraceID, evidence.Stable, evidence.Novelty, evidence.Changed
 	}
-	loadGenomeHints(storeRoot, req.SeedURL, &req.ForceLane, &req.Profile, &req.PruningProfile, &req.RenderHint)
+	loadGenomeHints(storeRoot, req.SeedURL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.PruningProfile, &req.RenderHint)
 	return req
 }
 
@@ -174,6 +174,16 @@ func maxLane(path []int) int {
 func packMetadata(trace proof.RunTrace, key string) string {
 	for _, stage := range trace.Stages {
 		if stage.Stage != "pack" {
+			continue
+		}
+		return stage.Metadata[key]
+	}
+	return ""
+}
+
+func traceMetadata(trace proof.RunTrace, stageName, key string) string {
+	for _, stage := range trace.Stages {
+		if stage.Stage != stageName {
 			continue
 		}
 		return stage.Metadata[key]

@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-01T08:18:25Z",
+  "generated_at_utc": "2026-04-11T21:52:29Z",
   "corpus_version": "discovery-corpus-v1",
   "summary": {
     "case_count": 8,
@@ -14,7 +14,7 @@
     {
       "name": "same_site_goal_match",
       "mode": "same_site",
-      "selected_url": "http://127.0.0.1:34963/docs/replay",
+      "selected_url": "http://127.0.0.1:35383/docs/replay",
       "provider": "local_same_site",
       "candidate_count": 3,
       "bootstrap_hits": 0,
@@ -29,7 +29,7 @@
     {
       "name": "seedless_local_autoseed",
       "mode": "seedless_local",
-      "selected_url": "http://127.0.0.1:39553/docs/replay",
+      "selected_url": "http://127.0.0.1:45953/docs/replay",
       "provider": "local_same_site",
       "candidate_count": 2,
       "bootstrap_hits": 0,
@@ -44,9 +44,9 @@
     {
       "name": "seedless_web_rewrite_entity_query",
       "mode": "seedless_web_rewrite",
-      "selected_url": "http://127.0.0.1:46293/asd-charly-brown",
+      "selected_url": "http://127.0.0.1:35297/asd-charly-brown",
       "provider": "127.0.0.1",
-      "candidate_count": 3,
+      "candidate_count": 4,
       "bootstrap_hits": 4,
       "pass": true,
       "local_provider": false,
@@ -59,9 +59,9 @@
     {
       "name": "seedless_web_rewrite_multilingual_corporate",
       "mode": "seedless_web_rewrite",
-      "selected_url": "http://127.0.0.1:37307/half-pocket",
+      "selected_url": "http://127.0.0.1:42869/half-pocket",
       "provider": "127.0.0.1",
-      "candidate_count": 3,
+      "candidate_count": 4,
       "bootstrap_hits": 4,
       "pass": true,
       "local_provider": false,
@@ -74,9 +74,9 @@
     {
       "name": "seedless_web_rewrite_tool_brand",
       "mode": "seedless_web_rewrite",
-      "selected_url": "http://127.0.0.1:35597/playwright",
+      "selected_url": "http://127.0.0.1:43213/playwright",
       "provider": "127.0.0.1",
-      "candidate_count": 3,
+      "candidate_count": 4,
       "bootstrap_hits": 4,
       "pass": true,
       "local_provider": false,
@@ -89,9 +89,9 @@
     {
       "name": "seedless_web_bootstrap_clear_no_rewrite",
       "mode": "seedless_web_rewrite",
-      "selected_url": "http://127.0.0.1:45329/sqlite",
+      "selected_url": "http://127.0.0.1:33757/sqlite",
       "provider": "127.0.0.1",
-      "candidate_count": 2,
+      "candidate_count": 3,
       "bootstrap_hits": 1,
       "pass": true,
       "local_provider": false,
@@ -104,9 +104,9 @@
     {
       "name": "seedless_web_invalid_rewrite_rejected",
       "mode": "seedless_web_rewrite",
-      "selected_url": "http://127.0.0.1:45277/asd-charly-brown",
+      "selected_url": "http://127.0.0.1:33345/asd-charly-brown",
       "provider": "127.0.0.1",
-      "candidate_count": 2,
+      "candidate_count": 3,
       "bootstrap_hits": 1,
       "pass": true,
       "local_provider": false,
@@ -119,9 +119,9 @@
     {
       "name": "seedless_web_rewrite_fallback_to_bootstrap",
       "mode": "seedless_web_rewrite",
-      "selected_url": "http://127.0.0.1:45729/asd-charly-brown",
+      "selected_url": "http://127.0.0.1:34839/asd-charly-brown",
       "provider": "127.0.0.1",
-      "candidate_count": 2,
+      "candidate_count": 3,
       "bootstrap_hits": 1,
       "pass": true,
       "local_provider": false,

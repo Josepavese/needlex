@@ -480,6 +480,29 @@ func TestRunnerHelpListsDayOneCommands(t *testing.T) {
 			t.Fatalf("expected help to include %q, got %q", command, stdout.String())
 		}
 	}
+	if !strings.Contains(stdout.String(), "needlex mcp --help") {
+		t.Fatalf("expected root help to advertise mcp helper, got %q", stdout.String())
+	}
+}
+
+func TestRunnerMCPHelp(t *testing.T) {
+	runner := NewRunner()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := runner.Run([]string{"mcp", "--help"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "stdio MCP server") {
+		t.Fatalf("expected MCP help text, got %q", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "Content-Length framing") {
+		t.Fatalf("expected MCP framing note, got %q", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr, got %q", stderr.String())
+	}
 }
 
 func TestRunnerVersion(t *testing.T) {

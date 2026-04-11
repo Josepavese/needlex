@@ -24,6 +24,9 @@ func TestDefaultsUseBrowserLikeFetchProfile(t *testing.T) {
 	if cfg.Fetch.Profile != "browser_like" || cfg.Fetch.RetryProfile != "hardened" {
 		t.Fatalf("unexpected fetch defaults: %+v", cfg.Fetch)
 	}
+	if cfg.Fetch.BlockedRetryBackoffMS != 400 || cfg.Fetch.BlockedRetryJitterMS != 200 || cfg.Fetch.TimeoutRetryBackoffMS != 150 || cfg.Fetch.TimeoutRetryJitterMS != 75 || cfg.Fetch.PerHostMinGapMS != 250 || cfg.Fetch.PerHostJitterMS != 100 {
+		t.Fatalf("unexpected fetch pacing defaults: %+v", cfg.Fetch)
+	}
 }
 
 func TestLoadMergesJSONWithDefaults(t *testing.T) {
@@ -53,14 +56,20 @@ func TestLoadMergesJSONWithDefaults(t *testing.T) {
 func TestApplyEnvOverridesValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
-		"NEEDLEX_FETCH_PROFILE":             "standard",
-		"NEEDLEX_FETCH_RETRY_PROFILE":       "browser_like",
-		"NEEDLEX_MODELS_BACKEND":            "openai-compatible",
-		"NEEDLEX_MODELS_BASE_URL":           "http://localhost:11434/v1",
-		"NEEDLEX_RUNTIME_MAX_DEPTH":         "7",
-		"NEEDLEX_POLICY_THRESHOLD_CONFLICT": "0.65",
-		"NEEDLEX_MODELS_FORMATTER":          "formatter-x",
-		"NEEDLEX_MODELS_MICRO_TIMEOUT_MS":   "1500",
+		"NEEDLEX_FETCH_PROFILE":                  "standard",
+		"NEEDLEX_FETCH_RETRY_PROFILE":            "browser_like",
+		"NEEDLEX_FETCH_BLOCKED_RETRY_BACKOFF_MS": "700",
+		"NEEDLEX_FETCH_BLOCKED_RETRY_JITTER_MS":  "90",
+		"NEEDLEX_FETCH_PER_HOST_MIN_GAP_MS":      "333",
+		"NEEDLEX_FETCH_PER_HOST_JITTER_MS":       "55",
+		"NEEDLEX_FETCH_TIMEOUT_RETRY_BACKOFF_MS": "120",
+		"NEEDLEX_FETCH_TIMEOUT_RETRY_JITTER_MS":  "30",
+		"NEEDLEX_MODELS_BACKEND":                 "openai-compatible",
+		"NEEDLEX_MODELS_BASE_URL":                "http://localhost:11434/v1",
+		"NEEDLEX_RUNTIME_MAX_DEPTH":              "7",
+		"NEEDLEX_POLICY_THRESHOLD_CONFLICT":      "0.65",
+		"NEEDLEX_MODELS_FORMATTER":               "formatter-x",
+		"NEEDLEX_MODELS_MICRO_TIMEOUT_MS":        "1500",
 	}
 
 	if err := cfg.ApplyEnv(env); err != nil {
@@ -71,6 +80,9 @@ func TestApplyEnvOverridesValues(t *testing.T) {
 	}
 	if cfg.Fetch.Profile != "standard" || cfg.Fetch.RetryProfile != "browser_like" {
 		t.Fatalf("unexpected fetch override: %+v", cfg.Fetch)
+	}
+	if cfg.Fetch.BlockedRetryBackoffMS != 700 || cfg.Fetch.BlockedRetryJitterMS != 90 || cfg.Fetch.PerHostMinGapMS != 333 || cfg.Fetch.PerHostJitterMS != 55 || cfg.Fetch.TimeoutRetryBackoffMS != 120 || cfg.Fetch.TimeoutRetryJitterMS != 30 {
+		t.Fatalf("unexpected fetch pacing override: %+v", cfg.Fetch)
 	}
 	if cfg.Policy.ThresholdConflict != 0.65 {
 		t.Fatalf("expected threshold conflict override, got %f", cfg.Policy.ThresholdConflict)

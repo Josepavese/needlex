@@ -1,7 +1,7 @@
 package service
 
 func PrepareReadRequestWithLocalState(storeRoot string, req ReadRequest) ReadRequest {
-	loadGenomeHints(storeRoot, req.URL, &req.ForceLane, &req.Profile, &req.PruningProfile, &req.RenderHint)
+	loadGenomeHints(storeRoot, req.URL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.PruningProfile, &req.RenderHint)
 	req.StableFingerprints = append(req.StableFingerprints, stableFingerprintsForURL(storeRoot, req.URL)...)
 	return req
 }
@@ -12,7 +12,7 @@ func ObserveReadResponseWithLocalState(storeRoot string, req ReadRequest, resp R
 }
 
 func PrepareCrawlRequestWithLocalState(storeRoot string, req CrawlRequest) CrawlRequest {
-	loadGenomeHints(storeRoot, req.SeedURL, &req.ForceLane, &req.Profile, &req.PruningProfile, &req.RenderHint)
+	loadGenomeHints(storeRoot, req.SeedURL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.PruningProfile, &req.RenderHint)
 	return req
 }
 

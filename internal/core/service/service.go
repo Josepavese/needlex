@@ -16,9 +16,10 @@ import (
 
 type ReadRequest struct {
 	URL, Objective, Profile, UserAgent, PruningProfile string
-	ForceLane                                          int
-	RenderHint                                         bool
-	StableFingerprints                                 []string
+	FetchProfile, FetchRetryProfile                     string
+	ForceLane                                           int
+	RenderHint                                          bool
+	StableFingerprints                                  []string
 }
 
 type ReadResponse struct {
@@ -157,24 +158,29 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 		return pipeline.RawPage{}, err
 	}
 
-	page, err := s.acquirer.Acquire(ctx, pipeline.AcquireInput{
-		URL:          req.URL,
-		Timeout:      time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
-		MaxBytes:     s.cfg.Runtime.MaxBytes,
-		UserAgent:    effectiveUserAgent(req.UserAgent, req.RenderHint),
-		Profile:      s.cfg.Fetch.Profile,
-		RetryProfile: s.cfg.Fetch.RetryProfile,
-	})
+	page, err := s.acquirer.Acquire(ctx, s.fetchAcquireInputWithProfiles(req.URL, effectiveUserAgent(req.UserAgent, req.RenderHint), req.FetchProfile, req.FetchRetryProfile))
 	if err != nil {
 		recorder.Error(stage, "NX_FETCH_FAILED", err.Error(), nil, s.now().UTC())
 		return pipeline.RawPage{}, err
 	}
 
-	if err := recorder.StageCompleted(stage, page, 1, map[string]string{
-		"fetch_mode":    page.FetchMode,
-		"fetch_profile": page.FetchProfile,
-		"final_url":     page.FinalURL,
-	}, s.now().UTC()); err != nil {
+	effectiveRetryProfile := req.FetchRetryProfile
+	if effectiveRetryProfile == "" {
+		effectiveRetryProfile = s.cfg.Fetch.RetryProfile
+	}
+	metadata := map[string]string{
+		"fetch_mode":     page.FetchMode,
+		"fetch_profile":  page.FetchProfile,
+		"retry_profile":  effectiveRetryProfile,
+		"final_url":      page.FinalURL,
+		"retry_count":    fmt.Sprintf("%d", page.RetryCount),
+		"retry_sleep_ms": fmt.Sprintf("%d", page.RetrySleepMS),
+		"host_pacing_ms": fmt.Sprintf("%d", page.HostPacingMS),
+	}
+	if page.RetryReason != "" {
+		metadata["retry_reason"] = page.RetryReason
+	}
+	if err := recorder.StageCompleted(stage, page, 1, metadata, s.now().UTC()); err != nil {
 		return pipeline.RawPage{}, err
 	}
 	return page, nil

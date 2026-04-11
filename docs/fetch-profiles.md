@@ -77,9 +77,26 @@ Read this correctly:
 1. browser-like default improves acquisition on some blocked targets
 2. it is not a claim that every anti-bot system is solved
 
+## Roadmap
+
+Tracked here:
+1. [Fetch Resilience Roadmap](roadmap/fetch-resilience-roadmap.md)
+
+This roadmap is intentionally about:
+1. compatibility
+2. pacing
+3. observability
+4. benchmark discipline
+
+It is not a roadmap for stealth or anti-bot evasion.
+
 ## Traceability
 
 The `acquire` stage trace now records:
 1. `fetch_mode`
 2. `fetch_profile`
 3. `final_url`
+4. `retry_count`
+5. `retry_reason`
+6. `retry_sleep_ms`
+7. `host_pacing_ms`

@@ -26,6 +26,15 @@ type Candidate struct {
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
+const (
+	ResourceClassHTMLLike     = "html_like"
+	ResourceClassDocumentFile = "document_file"
+	ResourceClassStructured   = "structured_data"
+	ResourceClassMediaAsset   = "media_asset"
+	ResourceClassArchiveFile  = "archive_file"
+	ResourceClassUnknown      = "unknown"
+)
+
 func ScoreCandidates(goal, seedURL, seedLabel string, links []LinkCandidate, domainHints []string) []Candidate {
 	domainHints = NormalizeDomainHints(domainHints)
 	out := make([]Candidate, 0, len(links)+1)
@@ -48,11 +57,13 @@ func ScoreCandidates(goal, seedURL, seedLabel string, links []LinkCandidate, dom
 		}
 		seen[link.URL] = struct{}{}
 		score, reason := score(goal, seedURL, link.Label, link.URL, false, domainHints)
+		metadata := map[string]string{"resource_class": ResourceClass(link.URL)}
 		out = append(out, Candidate{
-			URL:    link.URL,
-			Label:  strings.TrimSpace(link.Label),
-			Score:  score,
-			Reason: reason,
+			URL:      link.URL,
+			Label:    strings.TrimSpace(link.Label),
+			Score:    score,
+			Reason:   reason,
+			Metadata: metadata,
 		})
 	}
 
@@ -167,6 +178,10 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 		score += hostBoost
 		reasons = append(reasons, "host_goal_coherence")
 	}
+	if urlBoost := urlGoalCoherenceBoost(goal, rawURL); urlBoost > 0 {
+		score += urlBoost
+		reasons = append(reasons, "url_goal_coherence")
+	}
 	if compactness := HostCompactnessBoost(rawURL); compactness != 0 {
 		score += compactness
 		if compactness > 0 {
@@ -179,6 +194,42 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 	}
 
 	return score, reasons
+}
+
+func ResourceClass(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ResourceClassUnknown
+	}
+	ext := strings.ToLower(strings.TrimSpace(path.Ext(parsed.Path)))
+	switch ext {
+	case "", ".html", ".htm", ".xhtml":
+		return ResourceClassHTMLLike
+	case ".pdf", ".txt", ".md":
+		return ResourceClassDocumentFile
+	case ".json", ".xml", ".rss", ".atom":
+		return ResourceClassStructured
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".mp4", ".mp3":
+		return ResourceClassMediaAsset
+	case ".zip", ".gz", ".tgz":
+		return ResourceClassArchiveFile
+	default:
+		return ResourceClassUnknown
+	}
+}
+
+func ProbableNonHTMLURL(rawURL string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return false
+	}
+	ext := strings.ToLower(strings.TrimSpace(path.Ext(parsed.Path)))
+	switch ext {
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".pdf", ".xml", ".rss", ".atom", ".zip", ".gz", ".tgz", ".mp4", ".mp3":
+		return true
+	default:
+		return false
+	}
 }
 
 func goalLabelAlignmentBoost(goal, label string) float64 {
@@ -295,6 +346,10 @@ func HostTokenText(rawURL string) string {
 
 func hostGoalCoherenceBoost(goal, rawURL string) float64 {
 	return tokenOverlapBoost(goal, HostTokenText(rawURL))
+}
+
+func urlGoalCoherenceBoost(goal, rawURL string) float64 {
+	return tokenOverlapBoost(goal, URLTokenText(rawURL)) * 0.55
 }
 
 func HostTitleCoherenceBoost(title, rawURL string) float64 {

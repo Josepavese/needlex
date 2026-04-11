@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestNormalizeRewriteQueriesPreservesCanonicalEntity(t *testing.T) {
+func TestNormalizeRewriteQueriesKeepsFallbackAndDeduplicates(t *testing.T) {
 	got := normalizeRewriteQueries(
 		[]string{
 			"dance school Alessandria",
@@ -17,20 +17,17 @@ func TestNormalizeRewriteQueriesPreservesCanonicalEntity(t *testing.T) {
 	)
 	want := []string{
 		"ASD Charly Brown dance school Alessandria",
+		"dance school Alessandria",
 		"ASD Charly Brown scuola di danza",
-		`"ASD Charly Brown" Cassine`,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unexpected normalized queries\nwant: %#v\ngot:  %#v", want, got)
 	}
 }
 
-func TestNormalizeRewriteQueriesDropsGenericQueries(t *testing.T) {
+func TestNormalizeRewriteQueriesFallsBackWhenQueriesEmpty(t *testing.T) {
 	got := normalizeRewriteQueries(
-		[]string{
-			"dance school Alessandria",
-			"dance classes Alessandria",
-		},
+		nil,
 		"ASD Charly Brown",
 		"ASD Charly Brown dance school Alessandria",
 	)

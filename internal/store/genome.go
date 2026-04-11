@@ -19,6 +19,8 @@ type DomainGenome struct {
 	Domain           string    `json:"domain"`
 	ForceLane        int       `json:"force_lane"`
 	PreferredProfile string    `json:"preferred_profile,omitempty"`
+	FetchProfile     string    `json:"fetch_profile,omitempty"`
+	FetchRetryProfile string   `json:"fetch_retry_profile,omitempty"`
 	PruningProfile   string    `json:"pruning_profile,omitempty"`
 	RenderNeeded     bool      `json:"render_needed,omitempty"`
 	NoiseLevel       string    `json:"noise_level,omitempty"`
@@ -32,6 +34,8 @@ type GenomeObservation struct {
 	URL              string
 	ObservedLane     int
 	PreferredProfile string
+	FetchProfile     string
+	FetchRetryProfile string
 	PruningProfile   string
 	RenderNeeded     bool
 	FetchMode        string
@@ -107,6 +111,12 @@ func (s GenomeStore) Observe(observation GenomeObservation) (DomainGenome, strin
 	if strings.TrimSpace(observation.PreferredProfile) != "" {
 		genome.PreferredProfile = observation.PreferredProfile
 	}
+	if strings.TrimSpace(observation.FetchProfile) != "" {
+		genome.FetchProfile = observation.FetchProfile
+	}
+	if strings.TrimSpace(observation.FetchRetryProfile) != "" {
+		genome.FetchRetryProfile = observation.FetchRetryProfile
+	}
 	if pruningProfile := resolvePruningProfile(observation); pruningProfile != "" {
 		genome.PruningProfile = pruningProfile
 	}
@@ -153,6 +163,16 @@ func (g DomainGenome) Validate() error {
 	case "", "standard", "aggressive", "forum":
 	default:
 		return fmt.Errorf("pruning_profile must be one of %q, %q, or %q", "standard", "aggressive", "forum")
+	}
+	switch strings.TrimSpace(g.FetchProfile) {
+	case "", "standard", "browser_like", "hardened":
+	default:
+		return fmt.Errorf("fetch_profile must be one of %q, %q, or %q", "standard", "browser_like", "hardened")
+	}
+	switch strings.TrimSpace(g.FetchRetryProfile) {
+	case "", "standard", "browser_like", "hardened":
+	default:
+		return fmt.Errorf("fetch_retry_profile must be one of %q, %q, or %q", "standard", "browser_like", "hardened")
 	}
 	if g.SeenCount > 0 && g.LastSeenAt.IsZero() {
 		return fmt.Errorf("last_seen_at is required when seen_count > 0")

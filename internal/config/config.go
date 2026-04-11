@@ -20,8 +20,14 @@ type RuntimeConfig struct {
 }
 
 type FetchConfig struct {
-	Profile      string `json:"profile,omitempty"`
-	RetryProfile string `json:"retry_profile,omitempty"`
+	Profile               string `json:"profile,omitempty"`
+	RetryProfile          string `json:"retry_profile,omitempty"`
+	BlockedRetryBackoffMS int64  `json:"blocked_retry_backoff_ms,omitempty"`
+	BlockedRetryJitterMS  int64  `json:"blocked_retry_jitter_ms,omitempty"`
+	TimeoutRetryBackoffMS int64  `json:"timeout_retry_backoff_ms,omitempty"`
+	TimeoutRetryJitterMS  int64  `json:"timeout_retry_jitter_ms,omitempty"`
+	PerHostMinGapMS       int64  `json:"per_host_min_gap_ms,omitempty"`
+	PerHostJitterMS       int64  `json:"per_host_jitter_ms,omitempty"`
 }
 
 type PolicyConfig struct {

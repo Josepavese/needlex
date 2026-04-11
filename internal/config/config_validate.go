@@ -35,6 +35,18 @@ func validateFetch(fetch FetchConfig) []error {
 			errs = append(errs, fmt.Errorf("%s must be one of standard, browser_like, hardened", field))
 		}
 	}
+	for field, value := range map[string]int64{
+		"fetch.blocked_retry_backoff_ms": fetch.BlockedRetryBackoffMS,
+		"fetch.blocked_retry_jitter_ms":  fetch.BlockedRetryJitterMS,
+		"fetch.per_host_min_gap_ms":      fetch.PerHostMinGapMS,
+		"fetch.per_host_jitter_ms":       fetch.PerHostJitterMS,
+		"fetch.timeout_retry_backoff_ms": fetch.TimeoutRetryBackoffMS,
+		"fetch.timeout_retry_jitter_ms":  fetch.TimeoutRetryJitterMS,
+	} {
+		if value < 0 {
+			errs = append(errs, fmt.Errorf("%s must be >= 0", field))
+		}
+	}
 	return errs
 }
 
@@ -116,12 +128,15 @@ func validateModels(models ModelsConfig) []error {
 		}
 	}
 	switch strings.TrimSpace(models.Backend) {
-	case "", "noop", "openai-compatible":
+	case "", "noop", "openai-compatible", "ollama":
 	default:
-		errs = append(errs, fmt.Errorf("models.backend must be one of noop, openai-compatible"))
+		errs = append(errs, fmt.Errorf("models.backend must be one of noop, openai-compatible, ollama"))
 	}
-	if strings.TrimSpace(models.Backend) == "openai-compatible" && strings.TrimSpace(models.BaseURL) == "" {
-		errs = append(errs, fmt.Errorf("models.base_url must not be empty when models.backend is openai-compatible"))
+	switch strings.TrimSpace(models.Backend) {
+	case "openai-compatible", "ollama":
+		if strings.TrimSpace(models.BaseURL) == "" {
+			errs = append(errs, fmt.Errorf("models.base_url must not be empty when models.backend is %s", strings.TrimSpace(models.Backend)))
+		}
 	}
 	for field, value := range map[string]int64{
 		"models.micro_timeout_ms":      models.MicroTimeoutMS,

@@ -76,6 +76,8 @@ func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL str
 		URL:            selectedURL,
 		Objective:      req.Goal,
 		Profile:        profile,
+		FetchProfile:   req.FetchProfile,
+		FetchRetryProfile: req.FetchRetryProfile,
 		UserAgent:      req.UserAgent,
 		ForceLane:      req.ForceLane,
 		PruningProfile: req.PruningProfile,
