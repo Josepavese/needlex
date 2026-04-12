@@ -29,10 +29,11 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 			memoryStore := memory.NewSQLiteStore(storeRoot, cfg.Memory.Path)
 			memoryService := memory.NewService(cfg.Memory, memoryStore, intel.NewTextEmbedder(cfg, nil))
 			if matches, err := memoryService.Search(ctx, req.Goal, memory.SearchOptions{
-				Limit:       3,
-				ExpandLimit: 2,
-				MinScore:    0.15,
-				DomainHints: req.DomainHints,
+				Limit:         3,
+				ExpandLimit:   2,
+				MinScore:      0.15,
+				DomainHints:   req.DomainHints,
+				QueryVariants: append([]string{}, req.SearchQueries...),
 			}); err == nil && len(matches) > 0 {
 				req.MemoryCandidates = memoryCandidatesToDiscover(matches)
 				req.DomainHints = mergeDomainHints(req.DomainHints, domainHintsFromDiscoverCandidates(req.MemoryCandidates)...)

@@ -49,15 +49,19 @@ type Embedding struct {
 }
 
 type Candidate struct {
-	URL      string
-	Title    string
-	Score    float64
-	Reasons  []string
-	TraceRef string
-	ProofRef string
-	Host     string
-	Distance float64
-	Source   string
+	URL             string
+	Title           string
+	Score           float64
+	Reasons         []string
+	TraceRef        string
+	ProofRef        string
+	Host            string
+	Distance        float64
+	Source          string
+	ObservedAt      time.Time
+	StableRatio     float64
+	NoveltyRatio    float64
+	ChangedRecently bool
 }
 
 type Stats struct {
@@ -65,6 +69,7 @@ type Stats struct {
 	EdgeCount      int
 	EmbeddingCount int
 	LastObservedAt time.Time
+	LastRebuildAt  time.Time
 	DBPath         string
 }
 
@@ -83,10 +88,32 @@ type SearchOptions struct {
 }
 
 type Observation struct {
-	Document     core.Document
-	ResultPack   core.ResultPack
-	ProofRecords []proof.ProofRecord
-	TraceID      string
-	SourceKind   string
-	ObservedAt   time.Time
+	Document        core.Document
+	ResultPack      core.ResultPack
+	ProofRecords    []proof.ProofRecord
+	TraceID         string
+	SourceKind      string
+	ObservedAt      time.Time
+	Language        string
+	LocalityHints   []string
+	EntityHints     []string
+	CategoryHints   []string
+	StableRatio     float64
+	NoveltyRatio    float64
+	ChangedRecently bool
+}
+
+type ExportStats struct {
+	DocumentsPath  string `json:"documents_path"`
+	EdgesPath      string `json:"edges_path"`
+	EmbeddingsPath string `json:"embeddings_path"`
+	DocumentCount  int    `json:"document_count"`
+	EdgeCount      int    `json:"edge_count"`
+	EmbeddingCount int    `json:"embedding_count"`
+}
+
+type ImportStats struct {
+	DocumentCount  int `json:"document_count"`
+	EdgeCount      int `json:"edge_count"`
+	EmbeddingCount int `json:"embedding_count"`
 }

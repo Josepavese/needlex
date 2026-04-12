@@ -19,9 +19,12 @@ type Store interface {
 	UpsertEmbedding(ctx context.Context, emb Embedding, vector []float32) error
 	SearchByVector(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error)
 	ExpandNeighbors(ctx context.Context, urls []string, limit int) ([]Candidate, error)
+	ExpandHosts(ctx context.Context, hosts []string, limit int) ([]Candidate, error)
 	GetStats(ctx context.Context) (Stats, error)
 	Prune(ctx context.Context, policy PrunePolicy) error
 	RebuildIndex(ctx context.Context) error
+	ExportJSONL(ctx context.Context, dir string) (ExportStats, error)
+	ImportJSONL(ctx context.Context, dir string) (ImportStats, error)
 }
 
 type Service struct {
@@ -53,9 +56,16 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 		Path:            path,
 		Title:           strings.TrimSpace(obs.Document.Title),
 		SemanticSummary: summary,
+		Language:        strings.TrimSpace(obs.Language),
+		LocalityHints:   compactStrings(obs.LocalityHints),
+		EntityHints:     compactStrings(obs.EntityHints),
+		CategoryHints:   compactStrings(obs.CategoryHints),
 		ProofRefs:       proofRefs,
 		LastTraceID:     strings.TrimSpace(obs.TraceID),
 		SourceKind:      firstNonEmpty(obs.SourceKind, "read"),
+		StableRatio:     clampUnitInterval(obs.StableRatio),
+		NoveltyRatio:    clampUnitInterval(obs.NoveltyRatio),
+		ChangedRecently: obs.ChangedRecently,
 		ObservedAt:      observedAt,
 		UpdatedAt:       observedAt,
 	}
@@ -122,6 +132,13 @@ func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([
 	}
 	for _, neighbor := range neighbors {
 		mergeCandidate(merged, neighbor)
+	}
+	hostCandidates, err := s.store.ExpandHosts(ctx, candidateHosts(merged), neighborLimit)
+	if err != nil {
+		return nil, err
+	}
+	for _, candidate := range hostCandidates {
+		mergeCandidate(merged, candidate)
 	}
 	out := make([]Candidate, 0, len(merged))
 	for _, candidate := range merged {
@@ -206,6 +223,24 @@ func candidateURLs(items map[string]Candidate) []string {
 	return out
 }
 
+func candidateHosts(items map[string]Candidate) []string {
+	out := make([]string, 0, len(items))
+	seen := map[string]struct{}{}
+	for _, item := range items {
+		host := strings.TrimSpace(item.Host)
+		if host == "" {
+			continue
+		}
+		if _, ok := seen[host]; ok {
+			continue
+		}
+		seen[host] = struct{}{}
+		out = append(out, host)
+	}
+	sort.Strings(out)
+	return out
+}
+
 func mergeCandidate(target map[string]Candidate, candidate Candidate) {
 	existing, ok := target[candidate.URL]
 	if !ok || candidate.Score > existing.Score {
@@ -238,4 +273,14 @@ func minInt(left, right int) int {
 		return left
 	}
 	return right
+}
+
+func clampUnitInterval(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 1 {
+		return 1
+	}
+	return value
 }

@@ -2,6 +2,8 @@ package memory
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -65,12 +67,91 @@ func TestServiceObserveAndSearch(t *testing.T) {
 	if matches[0].URL != "https://playwright.dev/" && matches[0].URL != "https://playwright.dev/docs/intro" {
 		t.Fatalf("unexpected top memory match: %+v", matches[0])
 	}
+	foundHostRecall := false
+	for _, match := range matches {
+		if match.URL == "https://playwright.dev/docs/intro" && containsReason(match.Reasons, "host_memory_recall") {
+			foundHostRecall = true
+			break
+		}
+	}
+	if !foundHostRecall {
+		t.Fatalf("expected same-host memory recall in matches, got %+v", matches)
+	}
 	stats, err := store.GetStats(context.Background())
 	if err != nil {
 		t.Fatalf("memory stats: %v", err)
 	}
 	if stats.DocumentCount != 2 || stats.EmbeddingCount != 2 || stats.EdgeCount != 1 {
 		t.Fatalf("unexpected memory stats: %+v", stats)
+	}
+}
+
+func TestSQLiteStoreExportImportAndRebuild(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	now := time.Now().UTC()
+	ctx := context.Background()
+	doc := Document{
+		URL:             "https://example.com/about",
+		FinalURL:        "https://example.com/about",
+		Host:            "example.com",
+		Path:            "/about",
+		Title:           "About Example",
+		SemanticSummary: "Example is a studio.",
+		Language:        "en",
+		LocalityHints:   []string{"Turin"},
+		EntityHints:     []string{"Example Studio"},
+		CategoryHints:   []string{"design"},
+		ProofRefs:       []string{"proof_1"},
+		LastTraceID:     "trace_1",
+		SourceKind:      "read",
+		StableRatio:     0.8,
+		NoveltyRatio:    0.1,
+		ObservedAt:      now,
+		UpdatedAt:       now,
+	}
+	if err := store.UpsertDocument(ctx, doc); err != nil {
+		t.Fatalf("upsert doc: %v", err)
+	}
+	if err := store.UpsertEdges(ctx, []Edge{{SourceURL: doc.URL, TargetURL: "https://example.com/services", AnchorText: "Services", SameHost: true, TraceRef: "trace_1", ObservedAt: now}}); err != nil {
+		t.Fatalf("upsert edge: %v", err)
+	}
+	if err := store.UpsertEmbedding(ctx, Embedding{EmbeddingRef: "emb_1", DocumentURL: doc.URL, Model: "m", Backend: "b", InputText: "About Example\nExample is a studio.", Dimension: 3, CreatedAt: now, UpdatedAt: now}, []float32{1, 0, 0}); err != nil {
+		t.Fatalf("upsert embedding: %v", err)
+	}
+
+	exportDir := filepath.Join(root, "export")
+	exportStats, err := store.ExportJSONL(ctx, exportDir)
+	if err != nil {
+		t.Fatalf("export jsonl: %v", err)
+	}
+	if exportStats.DocumentCount != 1 || exportStats.EdgeCount != 1 || exportStats.EmbeddingCount != 1 {
+		t.Fatalf("unexpected export stats: %+v", exportStats)
+	}
+	for _, path := range []string{exportStats.DocumentsPath, exportStats.EdgesPath, exportStats.EmbeddingsPath} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected exported file %s: %v", path, err)
+		}
+	}
+
+	importRoot := t.TempDir()
+	importStore := NewSQLiteStore(importRoot, "discovery/discovery.db")
+	importStats, err := importStore.ImportJSONL(ctx, exportDir)
+	if err != nil {
+		t.Fatalf("import jsonl: %v", err)
+	}
+	if importStats.DocumentCount != 1 || importStats.EdgeCount != 1 || importStats.EmbeddingCount != 1 {
+		t.Fatalf("unexpected import stats: %+v", importStats)
+	}
+	if err := importStore.RebuildIndex(ctx); err != nil {
+		t.Fatalf("rebuild index: %v", err)
+	}
+	stats, err := importStore.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("get stats after import: %v", err)
+	}
+	if stats.DocumentCount != 1 || stats.EdgeCount != 1 || stats.EmbeddingCount != 1 || stats.LastRebuildAt.IsZero() {
+		t.Fatalf("unexpected imported stats: %+v", stats)
 	}
 }
 
@@ -100,4 +181,13 @@ func TestSQLiteStorePrune(t *testing.T) {
 	if stats.DocumentCount != 2 || stats.EmbeddingCount != 2 {
 		t.Fatalf("unexpected stats after prune: %+v", stats)
 	}
+}
+
+func containsReason(reasons []string, needle string) bool {
+	for _, reason := range reasons {
+		if reason == needle {
+			return true
+		}
+	}
+	return false
 }

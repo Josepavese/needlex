@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"strings"
 
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
@@ -27,11 +28,14 @@ func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (c
 		_, _ = store.NewProofStore(r.storeRoot).SaveProofRecords(page.Trace.TraceID, page.ProofRecords)
 		_, _ = store.NewFingerprintStore(r.storeRoot).SaveChunks(page.Trace.TraceID, page.ResultPack.Chunks)
 		r.observeDiscoveryMemory(cfg, memory.Observation{
-			Document:     page.Document,
-			ResultPack:   page.ResultPack,
-			ProofRecords: page.ProofRecords,
-			TraceID:      page.Trace.TraceID,
-			SourceKind:   "crawl",
+			Document:        page.Document,
+			ResultPack:      page.ResultPack,
+			ProofRecords:    page.ProofRecords,
+			TraceID:         page.Trace.TraceID,
+			SourceKind:      "crawl",
+			StableRatio:     pageFingerprintStable(r.storeRoot, page.Document.FinalURL),
+			NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, page.Document.FinalURL),
+			ChangedRecently: pageFingerprintChanged(r.storeRoot, page.Document.FinalURL),
 		})
 	}
 	coreservice.ObserveCrawlResponseWithLocalState(r.storeRoot, req, resp)
@@ -61,11 +65,14 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 	}
 	coreservice.ObserveReadResponseWithLocalState(r.storeRoot, req, resp)
 	r.observeDiscoveryMemory(cfg, memory.Observation{
-		Document:     resp.Document,
-		ResultPack:   resp.ResultPack,
-		ProofRecords: resp.ProofRecords,
-		TraceID:      resp.Trace.TraceID,
-		SourceKind:   "read",
+		Document:        resp.Document,
+		ResultPack:      resp.ResultPack,
+		ProofRecords:    resp.ProofRecords,
+		TraceID:         resp.Trace.TraceID,
+		SourceKind:      "read",
+		StableRatio:     pageFingerprintStable(r.storeRoot, resp.Document.FinalURL),
+		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
+		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
 
 	return resp, artifactPaths{
@@ -97,11 +104,17 @@ func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (c
 	}
 	coreservice.ObserveQueryResponseWithLocalState(r.storeRoot, req, resp)
 	r.observeDiscoveryMemory(cfg, memory.Observation{
-		Document:     resp.Document,
-		ResultPack:   resp.ResultPack,
-		ProofRecords: resp.ProofRecords,
-		TraceID:      resp.TraceID,
-		SourceKind:   "query",
+		Document:        resp.Document,
+		ResultPack:      resp.ResultPack,
+		ProofRecords:    resp.ProofRecords,
+		TraceID:         resp.TraceID,
+		SourceKind:      "query",
+		EntityHints:     queryCompilerEntityHints(resp.Plan.Compiler),
+		LocalityHints:   queryCompilerListMetadata(resp.Plan.Compiler, "locality_hints"),
+		CategoryHints:   queryCompilerListMetadata(resp.Plan.Compiler, "category_hints"),
+		StableRatio:     pageFingerprintStable(r.storeRoot, resp.Document.FinalURL),
+		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
+		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
 
 	return resp, artifactPaths{
@@ -118,6 +131,77 @@ func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Obs
 	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
 	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
 	_ = service.Observe(context.Background(), observation)
+}
+
+func pageFingerprintStable(storeRoot, rawURL string) float64 {
+	evidence, ok := coreservice.NewFingerprintEvidenceLoader(storeRoot)(rawURL)
+	if !ok {
+		return 0
+	}
+	return evidence.Stable
+}
+
+func pageFingerprintNovelty(storeRoot, rawURL string) float64 {
+	evidence, ok := coreservice.NewFingerprintEvidenceLoader(storeRoot)(rawURL)
+	if !ok {
+		return 0
+	}
+	return evidence.Novelty
+}
+
+func pageFingerprintChanged(storeRoot, rawURL string) bool {
+	evidence, ok := coreservice.NewFingerprintEvidenceLoader(storeRoot)(rawURL)
+	if !ok {
+		return false
+	}
+	return evidence.Changed
+}
+
+func queryCompilerEntityHints(plan coreservice.QueryCompiler) []string {
+	entity := ""
+	for _, decision := range plan.Decisions {
+		if decision.Stage != "plan.query_rewrite" {
+			continue
+		}
+		if value := decision.Metadata["canonical_entity"]; value != "" {
+			entity = value
+			break
+		}
+	}
+	if entity == "" {
+		return nil
+	}
+	return []string{entity}
+}
+
+func queryCompilerListMetadata(plan coreservice.QueryCompiler, key string) []string {
+	for _, decision := range plan.Decisions {
+		if decision.Stage != "plan.query_rewrite" {
+			continue
+		}
+		if raw := decision.Metadata[key]; raw != "" {
+			return splitCommaMetadata(raw)
+		}
+	}
+	return nil
+}
+
+func splitCommaMetadata(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if _, ok := seen[part]; ok {
+			continue
+		}
+		seen[part] = struct{}{}
+		out = append(out, part)
+	}
+	return out
 }
 
 func (r Runner) loadReplay(traceID string) (proof.ReplayReport, error) {

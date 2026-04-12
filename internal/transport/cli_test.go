@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -717,6 +718,66 @@ func TestRunnerMemoryPrune(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), `"documents": 1`) || !strings.Contains(stdout.String(), `"embeddings": 1`) {
 		t.Fatalf("expected removed counts in prune output, got %q", stdout.String())
+	}
+}
+
+func TestRunnerMemoryExportImportAndRebuildIndex(t *testing.T) {
+	root := t.TempDir()
+	semantic := newMemoryEmbeddingServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	cfg.Memory.Enabled = true
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "memory-test-embed"
+	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
+	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+
+	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return cfg, nil
+		},
+		storeRoot: root,
+	}
+
+	exportDir := filepath.Join(root, "memory-export")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := runner.Run([]string{"memory", "export", "--out", exportDir, "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("memory export failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"document_count": 1`) {
+		t.Fatalf("expected memory export json, got %q", stdout.String())
+	}
+
+	importRoot := t.TempDir()
+	importRunner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return cfg, nil
+		},
+		storeRoot: importRoot,
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := importRunner.Run([]string{"memory", "import", "--in", exportDir, "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("memory import failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"document_count": 1`) {
+		t.Fatalf("expected memory import json, got %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := importRunner.Run([]string{"memory", "rebuild-index", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("memory rebuild-index failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"last_rebuild_at"`) {
+		t.Fatalf("expected last_rebuild_at in rebuild output, got %q", stdout.String())
 	}
 }
 
