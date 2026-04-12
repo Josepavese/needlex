@@ -110,6 +110,7 @@ type summary struct {
 	RetryReasons                map[string]int     `json:"retry_reasons,omitempty"`
 	ErrorKinds                  map[string]int     `json:"error_kinds,omitempty"`
 	RunnerRuns                  int                `json:"runner_runs,omitempty"`
+	RunnerTimeoutMS             int64              `json:"runner_timeout_ms,omitempty"`
 }
 
 type report struct {
@@ -123,12 +124,17 @@ type report struct {
 func main() {
 	var outPath, casesPath string
 	var runs int
+	var timeoutMS int64
 	flag.StringVar(&outPath, "out", "improvements/seedless-ddg-benchmark-latest.json", "output report path")
 	flag.StringVar(&casesPath, "cases", "benchmarks/corpora/seedless-ddg-corpus-v1.json", "seedless ddg corpus path")
 	flag.IntVar(&runs, "runs", 3, "number of attempts per case/profile")
+	flag.Int64Var(&timeoutMS, "timeout-ms", 25000, "per-run timeout in milliseconds")
 	flag.Parse()
 	if runs <= 0 {
 		runs = 1
+	}
+	if timeoutMS <= 0 {
+		timeoutMS = 25000
 	}
 
 	c, err := loadCorpus(casesPath)
@@ -205,10 +211,10 @@ func main() {
 	results := make([]caseResult, 0, len(c.Cases))
 	for i, item := range c.Cases {
 		fmt.Printf("[seedless-ddg] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID)
-		standard := runCase(binaryPath, standardCfg, "standard", item.Goal, item.ExpectedDomain, runs)
-		standardSemantic := runCase(binaryPath, standardSemanticCfg, "standard_semantic", item.Goal, item.ExpectedDomain, runs)
-		browser := runCase(binaryPath, browserCfg, "browser_like", item.Goal, item.ExpectedDomain, runs)
-		browserSemantic := runCase(binaryPath, browserSemanticCfg, "browser_like_semantic", item.Goal, item.ExpectedDomain, runs)
+		standard := runCase(binaryPath, standardCfg, "standard", item.Goal, item.ExpectedDomain, runs, timeoutMS)
+		standardSemantic := runCase(binaryPath, standardSemanticCfg, "standard_semantic", item.Goal, item.ExpectedDomain, runs, timeoutMS)
+		browser := runCase(binaryPath, browserCfg, "browser_like", item.Goal, item.ExpectedDomain, runs, timeoutMS)
+		browserSemantic := runCase(binaryPath, browserSemanticCfg, "browser_like_semantic", item.Goal, item.ExpectedDomain, runs, timeoutMS)
 		row := caseResult{
 			ID:    item.ID,
 			Goal:  item.Goal,
@@ -223,7 +229,7 @@ func main() {
 		GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339),
 		CorpusVersion:  c.Version,
 		BinaryPath:     binaryPath,
-		Summary:        summarize(results, runs),
+		Summary:        summarize(results, runs, timeoutMS),
 		Results:        results,
 	}
 	if err := evalutil.WriteJSON(outPath, rep); err != nil {
@@ -268,9 +274,9 @@ func writeConfig(dir, name string, payload map[string]any) (string, error) {
 	return path, os.WriteFile(path, raw, 0o644)
 }
 
-func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs int) runResult {
+func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs int, timeoutMS int64) runResult {
 	if runs <= 1 {
-		result := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain)
+		result := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain, timeoutMS)
 		result.AttemptCount = 1
 		result.PassCount = boolToInt(result.SelectedPass)
 		result.RuntimePassCount = boolToInt(result.RuntimeOK)
@@ -284,7 +290,7 @@ func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs 
 	errorKinds := map[string]int{}
 	selectedURLCounts := map[string]int{}
 	for i := 0; i < runs; i++ {
-		attempt := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain)
+		attempt := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain, timeoutMS)
 		attempts = append(attempts, runAttempt{
 			Attempt:         i + 1,
 			RuntimeOK:       attempt.RuntimeOK,
@@ -335,9 +341,9 @@ func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs 
 	return best
 }
 
-func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string) runResult {
+func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string, timeoutMS int64) runResult {
 	result := runResult{Profile: profile, ExpectedDomain: expectedDomain}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMS)*time.Millisecond)
 	defer cancel()
 	started := time.Now()
 	cmd := exec.CommandContext(ctx, binaryPath, "query", "--goal", goal, "--json", "--json-mode", "full", "--config", configPath)
@@ -492,7 +498,7 @@ func boolScore(r runResult) int {
 	return score
 }
 
-func summarize(results []caseResult, runs int) summary {
+func summarize(results []caseResult, runs int, timeoutMS int64) summary {
 	var stdPass, stdSemPass, browserPass, browserSemPass int
 	profileWins := map[string]int{}
 	retryRuns := map[string]int{}
@@ -600,6 +606,7 @@ func summarize(results []caseResult, runs int) summary {
 		RetryReasons:                retryReasons,
 		ErrorKinds:                  errorKinds,
 		RunnerRuns:                  runs,
+		RunnerTimeoutMS:             timeoutMS,
 	}
 }
 

@@ -87,11 +87,12 @@ func defaultDiscoveryConfig(baseline modelbaseline.Manifest) DiscoveryConfig {
 
 func defaultSemanticConfig(baseline modelbaseline.Manifest) SemanticConfig {
 	return SemanticConfig{
-		Enabled:             false,
+		Enabled:             true,
 		Backend:             baseline.Semantic.RecommendedBackend,
 		BaseURL:             baseline.Semantic.RecommendedBaseURL,
 		Model:               baseline.Semantic.Model,
 		TimeoutMS:           baseline.Semantic.TimeoutMS,
+		FailureCooldownMS:   5000,
 		SimilarityThreshold: 0.55,
 		DominanceDelta:      0.08,
 		MaxCandidates:       4,

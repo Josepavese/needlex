@@ -70,6 +70,7 @@ type SemanticConfig struct {
 	BaseURL             string  `json:"base_url,omitempty"`
 	Model               string  `json:"model,omitempty"`
 	TimeoutMS           int64   `json:"timeout_ms,omitempty"`
+	FailureCooldownMS   int64   `json:"failure_cooldown_ms,omitempty"`
 	SimilarityThreshold float64 `json:"similarity_threshold,omitempty"`
 	DominanceDelta      float64 `json:"dominance_delta,omitempty"`
 	MaxCandidates       int     `json:"max_candidates,omitempty"`

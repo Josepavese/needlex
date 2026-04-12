@@ -8,6 +8,8 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 )
@@ -65,13 +67,79 @@ func NewSemanticAligner(cfg config.Config, client *http.Client) SemanticAligner 
 	if !cfg.Semantic.Enabled || strings.TrimSpace(cfg.Semantic.Model) == "" {
 		return NoopSemanticAligner{}
 	}
+	var aligner SemanticAligner
 	switch strings.TrimSpace(cfg.Semantic.Backend) {
 	case "ollama-embed":
-		return OllamaSemanticAligner{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: cfg.Semantic.Model, Client: client, Config: cfg.Semantic}
+		aligner = OllamaSemanticAligner{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: cfg.Semantic.Model, Client: client, Config: cfg.Semantic}
 	case "openai-embeddings":
-		return OpenAISemanticAligner{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: cfg.Semantic.Model, Client: client, Config: cfg.Semantic}
+		aligner = OpenAISemanticAligner{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: cfg.Semantic.Model, Client: client, Config: cfg.Semantic}
+	default:
+		return NoopSemanticAligner{}
 	}
-	return NoopSemanticAligner{}
+	return &resilientSemanticAligner{
+		inner:    aligner,
+		now:      time.Now,
+		cooldown: time.Duration(cfg.Semantic.FailureCooldownMS) * time.Millisecond,
+	}
+}
+
+type resilientSemanticAligner struct {
+	inner         SemanticAligner
+	now           func() time.Time
+	cooldown      time.Duration
+	mu            sync.Mutex
+	cooldownUntil time.Time
+}
+
+func (a *resilientSemanticAligner) Align(ctx context.Context, objective string, candidates []SemanticCandidate) (SemanticAlignment, error) {
+	if a.coolingDown() {
+		return SemanticAlignment{}, nil
+	}
+	alignment, err := a.inner.Align(ctx, objective, candidates)
+	if err != nil {
+		a.trip()
+		return SemanticAlignment{}, nil
+	}
+	a.clear()
+	return alignment, nil
+}
+
+func (a *resilientSemanticAligner) Score(ctx context.Context, objective string, candidates []SemanticCandidate) ([]SemanticScore, error) {
+	if a.coolingDown() {
+		return nil, nil
+	}
+	scores, err := a.inner.Score(ctx, objective, candidates)
+	if err != nil {
+		a.trip()
+		return nil, nil
+	}
+	a.clear()
+	return scores, nil
+}
+
+func (a *resilientSemanticAligner) coolingDown() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.cooldownUntil.IsZero() {
+		return false
+	}
+	now := a.now()
+	return a.cooldownUntil.After(now)
+}
+
+func (a *resilientSemanticAligner) trip() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.cooldown <= 0 {
+		return
+	}
+	a.cooldownUntil = a.now().Add(a.cooldown)
+}
+
+func (a *resilientSemanticAligner) clear() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.cooldownUntil = time.Time{}
 }
 
 func (a OllamaSemanticAligner) Align(ctx context.Context, objective string, candidates []SemanticCandidate) (SemanticAlignment, error) {

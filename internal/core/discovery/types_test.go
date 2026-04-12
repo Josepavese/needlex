@@ -69,6 +69,30 @@ func TestResourceClassClassification(t *testing.T) {
 	}
 }
 
+func TestScoreCandidatesPrefersHTMLDocsOverStructuredFeedWhenGoalMatches(t *testing.T) {
+	candidates := ScoreCandidates(
+		"MDN JavaScript guide",
+		"",
+		"",
+		[]LinkCandidate{
+			{URL: "https://www.scribd.com/opensearch.xml", Label: "MDN JavaScript guide"},
+			{URL: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide", Label: "MDN JavaScript guide"},
+		},
+		nil,
+	)
+	if candidates[0].URL != "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide" {
+		t.Fatalf("expected html docs candidate to beat structured feed, got %q", candidates[0].URL)
+	}
+}
+
+func TestURLStructureBoostPenalizesOpaqueFragmentSchemaPath(t *testing.T) {
+	opaque := urlStructureBoost("https://portaleimpresa24.it/#/schema/person/58759422aedb08e769f435f4bb1631cc")
+	root := urlStructureBoost("https://www.coni.it/")
+	if opaque >= root {
+		t.Fatalf("expected opaque fragment schema path to score below root, opaque=%f root=%f", opaque, root)
+	}
+}
+
 func contains(values []string, needle string) bool {
 	for _, value := range values {
 		if value == needle {

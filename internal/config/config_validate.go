@@ -101,6 +101,9 @@ func validateSemantic(semantic SemanticConfig) []error {
 	if semantic.TimeoutMS <= 0 {
 		errs = append(errs, fmt.Errorf("semantic.timeout_ms must be > 0"))
 	}
+	if semantic.FailureCooldownMS <= 0 {
+		errs = append(errs, fmt.Errorf("semantic.failure_cooldown_ms must be > 0"))
+	}
 	if semantic.MaxCandidates <= 0 {
 		errs = append(errs, fmt.Errorf("semantic.max_candidates must be > 0"))
 	}

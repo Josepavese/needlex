@@ -170,6 +170,14 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 			reasons = append(reasons, "structure_penalty")
 		}
 	}
+	if classBoost := resourceClassBoost(rawURL); classBoost != 0 {
+		score += classBoost
+		if classBoost > 0 {
+			reasons = append(reasons, "resource_class_hint")
+		} else {
+			reasons = append(reasons, "resource_class_penalty")
+		}
+	}
 	if host, ok := Hostname(rawURL); ok && slices.Contains(domainHints, host) {
 		score += 1.10
 		reasons = append(reasons, "domain_hint_match")
@@ -443,9 +451,13 @@ func urlStructureBoost(rawURL string) float64 {
 	if err != nil {
 		return 0
 	}
+	fragmentPenalty := 0.0
+	if strings.TrimSpace(parsed.Fragment) != "" {
+		fragmentPenalty = -0.10
+	}
 	trimmedPath := strings.Trim(parsed.EscapedPath(), "/")
 	if trimmedPath == "" {
-		return 0.22
+		return 0.22 + fragmentPenalty
 	}
 	segments := strings.FieldsFunc(trimmedPath, func(r rune) bool { return r == '/' })
 	depth := len(segments)
@@ -463,6 +475,7 @@ func urlStructureBoost(rawURL string) float64 {
 	if parsed.RawQuery == "" {
 		score += 0.03
 	}
+	score += fragmentPenalty
 	last := strings.ToLower(strings.TrimSpace(segments[len(segments)-1]))
 	switch {
 	case strings.HasPrefix(last, "class-"):
@@ -481,9 +494,47 @@ func urlStructureBoost(rawURL string) float64 {
 		if len(segment) >= 18 && strings.Count(segment, "-") >= 2 {
 			score -= 0.08
 		}
+		if len(segment) >= 24 && opaqueAlnumSegment(segment) {
+			score -= 0.12
+		}
 		if strings.Contains(segment, ".html") || strings.Contains(segment, ".htm") {
 			score -= 0.04
 		}
 	}
 	return score
+}
+
+func resourceClassBoost(rawURL string) float64 {
+	switch ResourceClass(rawURL) {
+	case ResourceClassHTMLLike:
+		return 0.12
+	case ResourceClassDocumentFile:
+		return 0.02
+	case ResourceClassStructured:
+		return -0.28
+	case ResourceClassMediaAsset:
+		return -0.18
+	case ResourceClassArchiveFile:
+		return -0.14
+	default:
+		return 0
+	}
+}
+
+func opaqueAlnumSegment(segment string) bool {
+	hasLetter := false
+	hasDigit := false
+	for _, r := range segment {
+		switch {
+		case unicode.IsLetter(r):
+			hasLetter = true
+		case unicode.IsDigit(r):
+			hasDigit = true
+		case r == '-' || r == '_' || r == '.':
+			continue
+		default:
+			return false
+		}
+	}
+	return hasLetter && hasDigit
 }

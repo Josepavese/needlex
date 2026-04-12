@@ -126,8 +126,11 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Semantic.Backend != "openai-embeddings" || cfg.Semantic.BaseURL != "http://127.0.0.1:18180" || cfg.Semantic.Model != "intfloat/multilingual-e5-small" || cfg.Semantic.TimeoutMS != 1200 {
 		t.Fatalf("unexpected semantic SSOT defaults: %+v", cfg.Semantic)
 	}
-	if cfg.Semantic.Enabled {
-		t.Fatal("expected semantic gate disabled by default")
+	if !cfg.Semantic.Enabled {
+		t.Fatal("expected semantic gate enabled by default")
+	}
+	if cfg.Semantic.FailureCooldownMS != 5000 {
+		t.Fatalf("unexpected semantic cooldown default: %+v", cfg.Semantic)
 	}
 	if cfg.Discovery.ProviderChain != "brave://search,https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/" {
 		t.Fatalf("unexpected discovery SSOT defaults: %+v", cfg.Discovery)
@@ -148,6 +151,7 @@ func TestApplyEnvOverridesSemanticValues(t *testing.T) {
 		"NEEDLEX_SEMANTIC_BASE_URL":             "http://localhost:11434",
 		"NEEDLEX_SEMANTIC_MODEL":                "embed-x",
 		"NEEDLEX_SEMANTIC_TIMEOUT_MS":           "1500",
+		"NEEDLEX_SEMANTIC_FAILURE_COOLDOWN_MS":  "2500",
 		"NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD": "0.66",
 		"NEEDLEX_SEMANTIC_DOMINANCE_DELTA":      "0.11",
 		"NEEDLEX_SEMANTIC_MAX_CANDIDATES":       "5",
@@ -155,7 +159,7 @@ func TestApplyEnvOverridesSemanticValues(t *testing.T) {
 	if err := cfg.ApplyEnv(env); err != nil {
 		t.Fatalf("apply env: %v", err)
 	}
-	if !cfg.Semantic.Enabled || cfg.Semantic.Model != "embed-x" || cfg.Semantic.MaxCandidates != 5 {
+	if !cfg.Semantic.Enabled || cfg.Semantic.Model != "embed-x" || cfg.Semantic.MaxCandidates != 5 || cfg.Semantic.FailureCooldownMS != 2500 {
 		t.Fatalf("unexpected semantic config override: %+v", cfg.Semantic)
 	}
 }
