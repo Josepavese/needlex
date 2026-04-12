@@ -41,7 +41,7 @@
     },
     {
       "name": "web_query",
-      "description": "Plan and execute a goal-oriented query with optional seed URL. Use discovery_mode=same_site_links to expand from the seed site, web_search for external bootstrap, or off for strict seeded mode.",
+      "description": "Plan and execute a goal-oriented query with optional seed URL. Use discovery_mode=same_site_links to expand from the seed site, web_search for external bootstrap, or off only when seed_url is already the exact canonical page you want to read.",
       "input_schema": {
         "examples": [
           {
@@ -52,11 +52,16 @@
           {
             "discovery_mode": "web_search",
             "goal": "OpenAI API pricing"
+          },
+          {
+            "discovery_mode": "off",
+            "goal": "Read the verified initialize method page",
+            "seed_url": "https://agentclientprotocol.com/protocol/initialization"
           }
         ],
         "properties": {
           "discovery_mode": {
-            "description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL.",
+            "description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL and should be used only after the exact page has already been verified.",
             "enum": [
               "same_site_links",
               "web_search",
@@ -75,7 +80,7 @@
             "type": "string"
           },
           "seed_url": {
-            "description": "Optional starting URL. If present, same_site_links expands from this site.",
+            "description": "Optional starting URL. If present, same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist.",
             "type": "string"
           },
           "user_agent": {

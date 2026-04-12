@@ -16,25 +16,20 @@ import (
 	"github.com/josepavese/needlex/internal/store"
 )
 
-func TestRefineWebCandidatePrefersFirstPartyHostCoherence(t *testing.T) {
-	official := refineWebCandidate(
+func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
+	candidate := refineWebCandidate(
 		"OpenAI API pricing",
-		DiscoverCandidate{URL: "https://developers.openai.com/api/pricing", Label: "OpenAI API pricing"},
+		DiscoverCandidate{URL: "https://developers.openai.com/api/pricing", Label: "OpenAI API pricing", Score: 0.5},
 		"https://developers.openai.com/api/pricing",
 		"OpenAI API pricing",
-		core.WebIR{},
+		core.WebIR{NodeCount: 3},
 		nil,
 	)
-	thirdParty := refineWebCandidate(
-		"OpenAI API pricing",
-		DiscoverCandidate{URL: "https://curlscape.com/blog/openai-api-pricing-guide", Label: "OpenAI API pricing"},
-		"https://curlscape.com/blog/openai-api-pricing-guide",
-		"OpenAI API pricing",
-		core.WebIR{},
-		nil,
-	)
-	if official.Score <= thirdParty.Score {
-		t.Fatalf("expected first-party host coherence to win, official=%f third_party=%f", official.Score, thirdParty.Score)
+	if !containsReason(candidate.Reason, "page_title_probe") || !containsReason(candidate.Reason, "web_ir_probe") {
+		t.Fatalf("expected probe-driven reasons, got %#v", candidate.Reason)
+	}
+	if containsReason(candidate.Reason, "host_page_coherence") {
+		t.Fatalf("expected legacy lexical host-page coherence to be absent, got %#v", candidate.Reason)
 	}
 }
 

@@ -211,21 +211,22 @@ func mcpCrawlTool() mcpTool {
 func mcpQueryTool() mcpTool {
 	return mcpTool{
 		Name:        "web_query",
-		Description: "Plan and execute a goal-oriented query with optional seed URL. Use discovery_mode=same_site_links to expand from the seed site, web_search for external bootstrap, or off for strict seeded mode.",
+		Description: "Plan and execute a goal-oriented query with optional seed URL. Use discovery_mode=same_site_links to expand from the seed site, web_search for external bootstrap, or off only when seed_url is already the exact canonical page you want to read.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"goal":       map[string]any{"type": "string", "description": "Retrieval objective or question to answer."},
-			"seed_url":   map[string]any{"type": "string", "description": "Optional starting URL. If present, same_site_links expands from this site."},
+			"seed_url":   map[string]any{"type": "string", "description": "Optional starting URL. If present, same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist."},
 			"profile":    map[string]any{"type": "string"},
 			"user_agent": map[string]any{"type": "string"},
 			"discovery_mode": map[string]any{
 				"type":        "string",
 				"enum":        []string{"same_site_links", "web_search", "off"},
-				"description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL.",
+				"description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL and should be used only after the exact page has already been verified.",
 			},
 			"lane_max": map[string]any{"type": "integer"},
 		}, "goal"),
 			map[string]any{"goal": "Find authentication flow details", "seed_url": "https://agentclientprotocol.com/protocol/overview", "discovery_mode": "same_site_links"},
 			map[string]any{"goal": "OpenAI API pricing", "discovery_mode": "web_search"},
+			map[string]any{"goal": "Read the verified initialize method page", "seed_url": "https://agentclientprotocol.com/protocol/initialization", "discovery_mode": "off"},
 		),
 	}
 }

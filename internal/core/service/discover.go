@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
@@ -102,6 +103,9 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 		if similarity, ok := byURL[out[i].URL]; ok {
 			out[i].Score += similarity * 3
 			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_goal_alignment")
+			out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
+				"semantic_goal_similarity": strconv.FormatFloat(similarity, 'f', 3, 64),
+			})
 		}
 	}
 	discoverycore.SortCandidates(out)

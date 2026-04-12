@@ -183,7 +183,7 @@ func runDiscoveryCase(item discoveryCase) (discoveryRow, error) {
 				}
 				_, _ = fmt.Fprintf(w, `<html><head><title>%s</title></head><body><article><h1>%s</h1><p>Target entity page.</p></article></body></html>`, title, title)
 			default:
-				_, _ = fmt.Fprint(w, `<html><head><title>Other Dance School</title></head><body><article><h1>Other Dance School</h1></article></body></html>`)
+				_, _ = fmt.Fprint(w, `<html><head><title>Other Dance School</title></head><body><article><h1>Other Dance School</h1><p>Generic directory entry.</p></article></body></html>`)
 			}
 		}))
 		defer pageServer.Close()

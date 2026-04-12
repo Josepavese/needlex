@@ -41,9 +41,6 @@ func (s *Service) maybeRewriteSearchQueries(ctx context.Context, req QueryReques
 		return nil, queryRewriteResult{}, false
 	}
 	out.CanonicalEntity = strings.TrimSpace(out.CanonicalEntity)
-	if out.CanonicalEntity == "" {
-		return nil, queryRewriteResult{}, false
-	}
 	queries := normalizeRewriteQueries(out.SearchQueries, strings.TrimSpace(out.CanonicalEntity), strings.TrimSpace(req.Goal))
 	if len(queries) < 2 {
 		return nil, queryRewriteResult{}, false

@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"path"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -182,23 +181,11 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 		score += 1.10
 		reasons = append(reasons, "domain_hint_match")
 	}
-	if hostBoost := hostGoalCoherenceBoost(goal, rawURL); hostBoost > 0 {
-		score += hostBoost
-		reasons = append(reasons, "host_goal_coherence")
-	}
-	if urlBoost := urlGoalCoherenceBoost(goal, rawURL); urlBoost > 0 {
-		score += urlBoost
-		reasons = append(reasons, "url_goal_coherence")
-	}
 	if compactness := HostCompactnessBoost(rawURL); compactness != 0 {
 		score += compactness
 		if compactness > 0 {
 			reasons = append(reasons, "host_compactness")
 		}
-	}
-	if labelBoost := goalLabelAlignmentBoost(goal, label); labelBoost > 0 {
-		score += labelBoost
-		reasons = append(reasons, "goal_label_alignment")
 	}
 
 	return score, reasons
@@ -240,86 +227,6 @@ func ProbableNonHTMLURL(rawURL string) bool {
 	}
 }
 
-func goalLabelAlignmentBoost(goal, label string) float64 {
-	goal = normalizeText(goal)
-	label = normalizeText(label)
-	if goal == "" || label == "" {
-		return 0
-	}
-	if goal == label {
-		return 0.70
-	}
-	if strings.Contains(label, goal) || strings.Contains(goal, label) {
-		return 0.45
-	}
-
-	goalTokens := textTokens(goal)
-	labelTokens := textTokens(label)
-	if len(goalTokens) == 0 || len(labelTokens) == 0 {
-		return 0
-	}
-	goalSet := make(map[string]struct{}, len(goalTokens))
-	for _, token := range goalTokens {
-		goalSet[token] = struct{}{}
-	}
-	matched := 0
-	for _, token := range labelTokens {
-		if _, ok := goalSet[token]; ok {
-			matched++
-		}
-	}
-	if matched == 0 {
-		return 0
-	}
-	coverage := float64(matched) / float64(max(len(goalTokens), len(labelTokens)))
-	switch {
-	case matched >= 2 && coverage >= 0.5:
-		return 0.35
-	case matched >= 1:
-		return 0.18
-	default:
-		return 0
-	}
-}
-
-func normalizeText(value string) string {
-	value = strings.TrimSpace(strings.ToLower(value))
-	if value == "" {
-		return ""
-	}
-	var b strings.Builder
-	lastSpace := false
-	for _, r := range value {
-		switch {
-		case unicode.IsLetter(r) || unicode.IsNumber(r):
-			b.WriteRune(r)
-			lastSpace = false
-		case !lastSpace:
-			b.WriteByte(' ')
-			lastSpace = true
-		}
-	}
-	return strings.TrimSpace(b.String())
-}
-
-func textTokens(value string) []string {
-	parts := strings.Fields(value)
-	if len(parts) == 0 {
-		return nil
-	}
-	seen := map[string]struct{}{}
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if _, ok := seen[part]; ok {
-			continue
-		}
-		seen[part] = struct{}{}
-		out = append(out, part)
-	}
-	sort.Strings(out)
-	return out
-}
-
 func JoinNonEmpty(values ...string) string {
 	parts := make([]string, 0, len(values))
 	for _, value := range values {
@@ -350,18 +257,6 @@ func HostTokenText(rawURL string) string {
 		return host
 	}
 	return strings.Join(tokens, " ")
-}
-
-func hostGoalCoherenceBoost(goal, rawURL string) float64 {
-	return tokenOverlapBoost(goal, HostTokenText(rawURL))
-}
-
-func urlGoalCoherenceBoost(goal, rawURL string) float64 {
-	return tokenOverlapBoost(goal, URLTokenText(rawURL)) * 0.55
-}
-
-func HostTitleCoherenceBoost(title, rawURL string) float64 {
-	return tokenOverlapBoost(title, HostTokenText(rawURL))
 }
 
 func HostCompactnessBoost(rawURL string) float64 {
@@ -404,46 +299,6 @@ func URLPathDepth(rawURL string) int {
 		return 0
 	}
 	return len(strings.FieldsFunc(trimmedPath, func(r rune) bool { return r == '/' }))
-}
-
-func tokenOverlapBoost(left, right string) float64 {
-	overlap := tokenOverlapRatio(left, right)
-	switch {
-	case overlap >= 0.50:
-		return 0.65
-	case overlap >= 0.34:
-		return 0.40
-	case overlap > 0:
-		return 0.18
-	default:
-		return 0
-	}
-}
-
-func tokenOverlapRatio(left, right string) float64 {
-	leftTokens := textTokens(normalizeText(left))
-	rightTokens := textTokens(normalizeText(right))
-	if len(leftTokens) == 0 || len(rightTokens) == 0 {
-		return 0
-	}
-	leftSet := make(map[string]struct{}, len(leftTokens))
-	for _, token := range leftTokens {
-		leftSet[token] = struct{}{}
-	}
-	rightSet := make(map[string]struct{}, len(rightTokens))
-	for _, token := range rightTokens {
-		rightSet[token] = struct{}{}
-	}
-	shared := 0
-	for token := range leftSet {
-		if _, ok := rightSet[token]; ok {
-			shared++
-		}
-	}
-	if shared == 0 {
-		return 0
-	}
-	return float64(shared) / float64(max(len(leftSet), len(rightSet)))
 }
 
 func urlStructureBoost(rawURL string) float64 {

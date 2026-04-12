@@ -38,3 +38,22 @@ func TestNormalizeRewriteQueriesFallsBackWhenQueriesEmpty(t *testing.T) {
 		t.Fatalf("unexpected normalized queries\nwant: %#v\ngot:  %#v", want, got)
 	}
 }
+
+func TestNormalizeRewriteQueriesAllowsSemanticVariantsWithoutCanonicalEntity(t *testing.T) {
+	got := normalizeRewriteQueries(
+		[]string{
+			"official site comitato olimpico nazionale italiano",
+			"sito ufficiale coni",
+		},
+		"",
+		"official site for Comitato Olimpico Nazionale Italiano",
+	)
+	want := []string{
+		"official site for Comitato Olimpico Nazionale Italiano",
+		"official site comitato olimpico nazionale italiano",
+		"sito ufficiale coni",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected normalized queries\nwant: %#v\ngot:  %#v", want, got)
+	}
+}

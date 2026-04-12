@@ -648,6 +648,27 @@ func TestQuerySeedlessWebSearchUsesRewriteQueries(t *testing.T) {
 	}
 }
 
+func TestQueryDiscoveryOffGuidesOnSeed404(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	svc := newTestService(t, config.Defaults(), server.Client())
+	_, err := svc.Query(context.Background(), QueryRequest{
+		Goal:          "Read the initialize method",
+		SeedURL:       server.URL + "/missing-page",
+		DiscoveryMode: QueryDiscoveryOff,
+	})
+	if err == nil {
+		t.Fatal("expected query to fail")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "seed_url returned 404") || !strings.Contains(msg, "same_site_links") || !strings.Contains(msg, "web_search") {
+		t.Fatalf("unexpected guided error: %q", msg)
+	}
+}
+
 func hasCompilerDecision(decisions []QueryPlanDecision, reason string) bool {
 	for _, decision := range decisions {
 		if decision.ReasonCode == reason {

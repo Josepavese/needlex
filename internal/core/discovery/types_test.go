@@ -2,7 +2,7 @@ package discovery
 
 import "testing"
 
-func TestScoreCandidatesPrefersHostGoalCoherenceOverGenericThirdPartyLabel(t *testing.T) {
+func TestScoreCandidatesRemainStructureFirstWithoutLexicalPromotion(t *testing.T) {
 	candidates := ScoreCandidates(
 		"OpenAI API pricing",
 		"",
@@ -16,19 +16,8 @@ func TestScoreCandidatesPrefersHostGoalCoherenceOverGenericThirdPartyLabel(t *te
 	if len(candidates) != 2 {
 		t.Fatalf("expected 2 candidates, got %d", len(candidates))
 	}
-	if candidates[0].URL != "https://developers.openai.com/api/pricing" {
-		t.Fatalf("expected first-party host to win, got %q", candidates[0].URL)
-	}
-	if !contains(candidates[0].Reason, "host_goal_coherence") {
-		t.Fatalf("expected host_goal_coherence reason, got %#v", candidates[0].Reason)
-	}
-}
-
-func TestHostTitleCoherenceBoostPrefersBrandAlignedHost(t *testing.T) {
-	official := HostTitleCoherenceBoost("Playwright", "https://playwright.dev/docs/intro")
-	thirdParty := HostTitleCoherenceBoost("Playwright", "https://browserstack.com/guide/playwright-tutorial")
-	if official <= thirdParty {
-		t.Fatalf("expected official host-title coherence to win, official=%f third_party=%f", official, thirdParty)
+	if contains(candidates[0].Reason, "goal_label_alignment") {
+		t.Fatalf("expected lexical goal-label reason to be absent, got %#v", candidates[0].Reason)
 	}
 }
 

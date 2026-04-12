@@ -445,6 +445,13 @@ func TestRunnerMCPQueryToolSchemaIncludesDiscoveryModeEnum(t *testing.T) {
 		if !strings.Contains(dm["description"].(string), "same_site_links") {
 			t.Fatalf("expected discovery_mode description to mention canonical values, got %#v", dm["description"])
 		}
+		if !strings.Contains(tool.Description, "exact canonical page") {
+			t.Fatalf("expected web_query description to guide strict off mode, got %#v", tool.Description)
+		}
+		seedURL, _ := props["seed_url"].(map[string]any)
+		if !strings.Contains(seedURL["description"].(string), "exact canonical page") {
+			t.Fatalf("expected seed_url description to guide strict off mode, got %#v", seedURL["description"])
+		}
 		return
 	}
 	t.Fatal("web_query tool not found")

@@ -120,7 +120,8 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		}
 		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
 	}
-	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, candidates.Sorted(), req.MaxCandidates)
+	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates.Sorted())
+	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, bootstrapped, req.MaxCandidates)
 	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Limited(req.MaxCandidates)
 	filtered = canonicalizeCandidateFamilies(filtered)
 	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
@@ -386,8 +387,7 @@ func localSubstrateResolved(candidate DiscoverCandidate) bool {
 		return true
 	}
 	return slices.Contains(candidate.Reason, "semantic_goal_alignment") ||
-		slices.Contains(candidate.Reason, "structure_hint") ||
-		slices.Contains(candidate.Reason, "host_goal_coherence")
+		slices.Contains(candidate.Reason, "structure_hint")
 }
 
 func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {
@@ -618,10 +618,6 @@ func refineWebCandidate(goal string, candidate DiscoverCandidate, finalURL, page
 	if strings.TrimSpace(pageTitle) != "" {
 		score += 0.35
 		reasons = append(reasons, "page_title_probe")
-	}
-	if hostBoost := discoverycore.HostTitleCoherenceBoost(pageTitle, finalURL); hostBoost > 0 {
-		score += hostBoost
-		reasons = append(reasons, "host_page_coherence")
 	}
 	if webIR.NodeCount > 0 {
 		score += 0.10

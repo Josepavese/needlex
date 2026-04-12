@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
@@ -18,7 +20,7 @@ const (
 
 type QueryRequest struct {
 	Goal, SeedURL, SeedTraceID, Profile, UserAgent, DiscoveryMode, PruningProfile string
-	FetchProfile, FetchRetryProfile                                                string
+	FetchProfile, FetchRetryProfile                                               string
 	DomainHints                                                                   []string
 	SearchQueries                                                                 []string            `json:"-"`
 	MemoryCandidates                                                              []DiscoverCandidate `json:"-"`
@@ -88,6 +90,9 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 	}
 	readResp, err := s.Read(ctx, s.readRequestForQuery(req, profile, plan.SelectedURL))
 	if err != nil {
+		if discoveryMode == QueryDiscoveryOff && strings.TrimSpace(req.SeedURL) != "" && strings.Contains(strings.ToLower(err.Error()), "unexpected status code 404") {
+			return QueryResponse{}, fmt.Errorf("seed_url returned 404; discovery_mode=off requires an exact canonical page. Use same_site_links or web_search first")
+		}
 		return QueryResponse{}, err
 	}
 	return finalizeQueryResponse(plan, baseCompiler, discoveryResult.candidates, readResp)

@@ -2,6 +2,7 @@ package queryflow
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
@@ -37,10 +38,14 @@ func ShouldEscalateRewrite(selectedURL string, candidates []discoverycore.Candid
 	if strings.TrimSpace(selectedURL) == "" || len(candidates) == 0 {
 		return true
 	}
+	top := candidates[0]
 	if len(candidates) < 2 {
-		return false
+		return !candidateSemanticallyGrounded(top)
 	}
-	return SelectionDelta(candidates) <= 0.25
+	if SelectionDelta(candidates) <= 0.25 {
+		return true
+	}
+	return !candidateSemanticallyGrounded(top)
 }
 
 func SelectionDelta(candidates []discoverycore.Candidate) float64 {
@@ -109,4 +114,19 @@ func mergeMetadata(existing, incoming map[string]string) map[string]string {
 		out[key] = value
 	}
 	return out
+}
+
+func candidateSemanticallyGrounded(candidate discoverycore.Candidate) bool {
+	if similarity, ok := candidate.Metadata["semantic_goal_similarity"]; ok {
+		if value, err := strconv.ParseFloat(strings.TrimSpace(similarity), 64); err == nil && value >= 0.30 {
+			return true
+		}
+	}
+	for _, reason := range candidate.Reason {
+		switch strings.TrimSpace(reason) {
+		case "candidate_intelligence", "candidate_identity_alignment", "candidate_cluster_representative", "local_memory_hit":
+			return true
+		}
+	}
+	return false
 }
