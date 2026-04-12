@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"net/url"
 	"strings"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
@@ -17,8 +18,16 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 		result.provider = "discovery_memory"
 		result.candidates = append([]DiscoverCandidate{}, req.MemoryCandidates...)
 		result.selected = req.MemoryCandidates[0].URL
-		if discoveryMode == QueryDiscoveryWeb && !queryflow.ShouldEscalateRewrite(result.selected, result.candidates) {
-			return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
+		if discoveryMode == QueryDiscoveryWeb {
+			if recovered, ok := s.tryMemoryFamilyRecovery(ctx, req); ok && preferRecoveredMemoryFamily(result.selected, recovered.SelectedURL) {
+				result.provider = "discovery_memory_same_site"
+				result.selected = recovered.SelectedURL
+				result.candidates = recovered.Candidates
+				return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
+			}
+			if !queryflow.ShouldEscalateRewrite(result.selected, result.candidates) {
+				return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
+			}
 		}
 	}
 	if discoveryMode == QueryDiscoveryOff {
@@ -50,6 +59,131 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 		}
 	}
 	return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
+}
+
+func preferRecoveredMemoryFamily(currentURL, recoveredURL string) bool {
+	currentHost := hostFromURLString(currentURL)
+	recoveredHost := hostFromURLString(recoveredURL)
+	if currentHost == "" || recoveredHost == "" || currentHost != recoveredHost {
+		return false
+	}
+	return urlPathDepth(recoveredURL) > urlPathDepth(currentURL)
+}
+
+func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest) (DiscoverResponse, bool) {
+	if strings.TrimSpace(req.SeedURL) != "" || len(req.MemoryCandidates) == 0 {
+		return DiscoverResponse{}, false
+	}
+	seed := selectMemoryFamilySeed(req.MemoryCandidates)
+	if strings.TrimSpace(seed.URL) == "" {
+		return DiscoverResponse{}, false
+	}
+	discovery, err := s.Discover(ctx, DiscoverRequest{
+		Goal:          req.Goal,
+		SeedURL:       seed.URL,
+		UserAgent:     req.UserAgent,
+		SameDomain:    true,
+		MaxCandidates: min(5, s.cfg.Runtime.MaxPages),
+		DomainHints:   mergeDomainHints(req.DomainHints, hostFromURLString(seed.URL)),
+	})
+	if err != nil || strings.TrimSpace(discovery.SelectedURL) == "" || len(discovery.Candidates) == 0 {
+		return DiscoverResponse{}, false
+	}
+	discovery.SelectedURL = preferredRecoveredMemoryURL(seed.URL, discovery)
+	if discovery.SelectedURL != "" {
+		discovery.Candidates = promoteRecoveredCandidate(discovery.Candidates, discovery.SelectedURL)
+	}
+	return discovery, true
+}
+
+func selectMemoryFamilySeed(candidates []DiscoverCandidate) DiscoverCandidate {
+	if len(candidates) == 0 {
+		return DiscoverCandidate{}
+	}
+	type familyScore struct {
+		URL       string
+		Host      string
+		Score     float64
+		BestScore float64
+	}
+	byHost := map[string]familyScore{}
+	for _, candidate := range candidates {
+		host := hostFromURLString(candidate.URL)
+		if host == "" {
+			continue
+		}
+		current := byHost[host]
+		current.Host = host
+		current.Score += candidate.Score
+		if current.URL == "" || candidate.Score > current.BestScore {
+			current.URL = candidate.URL
+			current.BestScore = candidate.Score
+		}
+		byHost[host] = current
+	}
+	best := DiscoverCandidate{}
+	bestScore := -1.0
+	for _, candidate := range candidates {
+		host := hostFromURLString(candidate.URL)
+		score := candidate.Score
+		if family, ok := byHost[host]; ok {
+			score += family.Score * 0.35
+		}
+		if score > bestScore {
+			bestScore = score
+			best = candidate
+		}
+	}
+	return best
+}
+
+func urlPathDepth(raw string) int {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return 0
+	}
+	path := strings.Trim(parsed.EscapedPath(), "/")
+	if path == "" {
+		return 0
+	}
+	return len(strings.Split(path, "/"))
+}
+
+func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse) string {
+	best := strings.TrimSpace(discovery.SelectedURL)
+	bestDepth := urlPathDepth(best)
+	seedHost := hostFromURLString(seedURL)
+	for _, candidate := range discovery.Candidates {
+		host := hostFromURLString(candidate.URL)
+		if host == "" || host != seedHost {
+			continue
+		}
+		depth := urlPathDepth(candidate.URL)
+		if depth > bestDepth {
+			best = candidate.URL
+			bestDepth = depth
+		}
+	}
+	return best
+}
+
+func promoteRecoveredCandidate(candidates []DiscoverCandidate, selectedURL string) []DiscoverCandidate {
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := range out {
+		if strings.TrimSpace(out[i].URL) != strings.TrimSpace(selectedURL) {
+			continue
+		}
+		out[i].Score += 0.6
+		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "memory_family_specific_page")
+		if i == 0 {
+			return out
+		}
+		selected := out[i]
+		copy(out[1:i+1], out[0:i])
+		out[0] = selected
+		return out
+	}
+	return out
 }
 
 type queryWebDiscoveryResult struct {

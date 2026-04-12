@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -300,6 +303,40 @@ func TestRunQueryDiscoveryPrefersMemoryCandidatesForSeedlessWeb(t *testing.T) {
 	}
 	if len(result.candidates) != 1 || result.candidates[0].URL != "https://playwright.dev/docs/intro" {
 		t.Fatalf("expected only memory-backed candidate, got %#v", result.candidates)
+	}
+}
+
+func TestRunQueryDiscoveryUsesMemoryFamilyRecoveryBeforeWebBootstrap(t *testing.T) {
+	seedURL := ""
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Playwright</title></head><body><a href="%s/docs/intro">Installation</a></body></html>`, seedURL)
+		case "/docs/intro":
+			_, _ = fmt.Fprint(w, `<html><head><title>Installation | Playwright</title></head><body><article><h1>Installation</h1><p>Install Playwright and browser binaries.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	seedURL = server.URL
+
+	svc := newTestService(t, config.Defaults(), server.Client())
+	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
+		Goal: "playwright installation",
+		MemoryCandidates: []DiscoverCandidate{
+			{URL: seedURL, Label: "Playwright", Score: 2.1, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+		},
+	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
+	if err != nil {
+		t.Fatalf("run query discovery: %v", err)
+	}
+	if result.provider != "discovery_memory_same_site" {
+		t.Fatalf("expected discovery_memory_same_site provider, got %#v", result)
+	}
+	if result.selected != server.URL+"/docs/intro" {
+		t.Fatalf("expected same-site recovered child page, got %#v", result)
 	}
 }
 

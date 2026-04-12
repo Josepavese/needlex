@@ -237,6 +237,150 @@
           "type": "object"
         }
       }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "memory_stats",
+        "description": "Inspect Discovery Memory counts, freshness, and database path.",
+        "parameters": {
+          "examples": [
+            {}
+          ],
+          "properties": {
+            "config_path": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "memory_search",
+        "description": "Search Discovery Memory semantically before public bootstrap. Use this to inspect what local memory already knows.",
+        "parameters": {
+          "examples": [
+            {
+              "limit": 5,
+              "query": "playwright installation"
+            }
+          ],
+          "properties": {
+            "config_path": {
+              "type": "string"
+            },
+            "domain_hints": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "goal": {
+              "description": "Alias for query.",
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "query": {
+              "description": "Semantic retrieval query.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "memory_prune",
+        "description": "Prune Discovery Memory to configured bounds.",
+        "parameters": {
+          "examples": [
+            {}
+          ],
+          "properties": {
+            "config_path": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "memory_export",
+        "description": "Export Discovery Memory canonical rows to JSONL files for inspection, backup, or migration.",
+        "parameters": {
+          "examples": [
+            {
+              "out_dir": ".needlex/discovery/export"
+            }
+          ],
+          "properties": {
+            "config_path": {
+              "type": "string"
+            },
+            "out_dir": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "out_dir"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "memory_import",
+        "description": "Import Discovery Memory canonical rows from JSONL files.",
+        "parameters": {
+          "examples": [
+            {
+              "in_dir": ".needlex/discovery/export"
+            }
+          ],
+          "properties": {
+            "config_path": {
+              "type": "string"
+            },
+            "in_dir": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "in_dir"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "memory_rebuild_index",
+        "description": "Rebuild or refresh Discovery Memory acceleration state from canonical local rows.",
+        "parameters": {
+          "examples": [
+            {}
+          ],
+          "properties": {
+            "config_path": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      }
     }
   ]
 }

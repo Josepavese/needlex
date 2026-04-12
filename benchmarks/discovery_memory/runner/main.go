@@ -63,6 +63,8 @@ type stageResult struct {
 	RuntimeOK      bool     `json:"runtime_ok"`
 	SelectedURL    string   `json:"selected_url,omitempty"`
 	Provider       string   `json:"provider,omitempty"`
+	PublicProvider bool     `json:"public_provider"`
+	LocalProvider  bool     `json:"local_provider"`
 	SelectedPass   bool     `json:"selected_pass"`
 	SummaryPresent bool     `json:"summary_present"`
 	ProofUsable    bool     `json:"proof_usable"`
@@ -90,6 +92,10 @@ type summary struct {
 	WarmRuntimeSuccessRate float64 `json:"warm_runtime_success_rate"`
 	ColdSelectedPassRate   float64 `json:"cold_selected_pass_rate"`
 	WarmSelectedPassRate   float64 `json:"warm_selected_pass_rate"`
+	ColdPublicProviderRate float64 `json:"cold_public_provider_rate"`
+	WarmPublicProviderRate float64 `json:"warm_public_provider_rate"`
+	ColdLocalProviderRate  float64 `json:"cold_local_provider_rate"`
+	WarmLocalProviderRate  float64 `json:"warm_local_provider_rate"`
 	WarmMemoryProviderRate float64 `json:"warm_memory_provider_rate"`
 	ImprovementRate        float64 `json:"improvement_rate"`
 	AvgColdLatencyMS       int64   `json:"avg_cold_latency_ms"`
@@ -234,6 +240,8 @@ func runQueryStage(binaryPath, workDir, configPath string, item seededCase) stag
 		RuntimeOK:      true,
 		SelectedURL:    strings.TrimSpace(payload.SelectedURL),
 		Provider:       strings.TrimSpace(payload.Provider),
+		PublicProvider: isPublicDiscoveryProvider(strings.TrimSpace(payload.Provider)),
+		LocalProvider:  isLocalDiscoveryProvider(strings.TrimSpace(payload.Provider)),
 		SelectedPass:   selectedPass,
 		SummaryPresent: strings.TrimSpace(payload.Summary) != "",
 		ProofUsable:    proofUsable,
@@ -355,7 +363,7 @@ func summarize(results []caseResult) summary {
 	if len(results) == 0 {
 		return summary{}
 	}
-	var coldRuntime, warmRuntime, coldPass, warmPass, warmMemoryProvider, improved int
+	var coldRuntime, warmRuntime, coldPass, warmPass, coldPublic, warmPublic, coldLocal, warmLocal, warmMemoryProvider, improved int
 	var coldLatency, warmLatency, coldBytes, warmBytes, warmDocs int64
 	for _, r := range results {
 		if r.Cold.RuntimeOK {
@@ -369,6 +377,18 @@ func summarize(results []caseResult) summary {
 		}
 		if r.Warm.SelectedPass {
 			warmPass++
+		}
+		if r.Cold.PublicProvider {
+			coldPublic++
+		}
+		if r.Warm.PublicProvider {
+			warmPublic++
+		}
+		if r.Cold.LocalProvider {
+			coldLocal++
+		}
+		if r.Warm.LocalProvider {
+			warmLocal++
 		}
 		if r.Warm.Provider == "discovery_memory" {
 			warmMemoryProvider++
@@ -389,6 +409,10 @@ func summarize(results []caseResult) summary {
 		WarmRuntimeSuccessRate: float64(warmRuntime) / n,
 		ColdSelectedPassRate:   float64(coldPass) / n,
 		WarmSelectedPassRate:   float64(warmPass) / n,
+		ColdPublicProviderRate: float64(coldPublic) / n,
+		WarmPublicProviderRate: float64(warmPublic) / n,
+		ColdLocalProviderRate:  float64(coldLocal) / n,
+		WarmLocalProviderRate:  float64(warmLocal) / n,
 		WarmMemoryProviderRate: float64(warmMemoryProvider) / n,
 		ImprovementRate:        float64(improved) / n,
 		AvgColdLatencyMS:       coldLatency / int64(len(results)),
@@ -397,6 +421,37 @@ func summarize(results []caseResult) summary {
 		AvgWarmPacketBytes:     warmBytes / int64(len(results)),
 		AvgWarmMemoryDocuments: float64(warmDocs) / n,
 	}
+}
+
+func isLocalDiscoveryProvider(provider string) bool {
+	value := strings.TrimSpace(provider)
+	if value == "" {
+		return false
+	}
+	for _, part := range strings.Split(value, ",") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "local_") || strings.HasPrefix(part, "discovery_memory") {
+			return true
+		}
+	}
+	return false
+}
+
+func isPublicDiscoveryProvider(provider string) bool {
+	value := strings.TrimSpace(provider)
+	if value == "" {
+		return false
+	}
+	for _, part := range strings.Split(value, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if !strings.HasPrefix(part, "local_") && !strings.HasPrefix(part, "discovery_memory") {
+			return true
+		}
+	}
+	return false
 }
 
 func newEmbeddingServer() *httptest.Server {

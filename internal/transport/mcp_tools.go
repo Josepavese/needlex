@@ -2,6 +2,7 @@ package transport
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
@@ -56,6 +57,18 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 			return nil, err
 		}
 		return mcpToolResult(map[string]any{"prune_report": report}, map[string]any{"prune_report": report}), nil
+	case "memory_stats":
+		return r.callMCPMemoryStatsTool(call.Arguments)
+	case "memory_search":
+		return r.callMCPMemorySearchTool(call.Arguments)
+	case "memory_prune":
+		return r.callMCPMemoryPruneTool(call.Arguments)
+	case "memory_export":
+		return r.callMCPMemoryExportTool(call.Arguments)
+	case "memory_import":
+		return r.callMCPMemoryImportTool(call.Arguments)
+	case "memory_rebuild_index":
+		return r.callMCPMemoryRebuildIndexTool(call.Arguments)
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", call.Name)
 	}
@@ -188,6 +201,12 @@ func mcpTools() []mcpTool {
 		mcpDiffTool(),
 		mcpProofTool(),
 		mcpPruneTool(),
+		mcpMemoryStatsTool(),
+		mcpMemorySearchTool(),
+		mcpMemoryPruneTool(),
+		mcpMemoryExportTool(),
+		mcpMemoryImportTool(),
+		mcpMemoryRebuildIndexTool(),
 	}
 }
 
@@ -288,6 +307,243 @@ func mcpPruneTool() mcpTool {
 			"all":              map[string]any{"type": "boolean"},
 			"older_than_hours": map[string]any{"type": "integer"},
 		}), map[string]any{"older_than_hours": 24}),
+	}
+}
+
+func (r Runner) callMCPMemoryStatsTool(args map[string]any) (map[string]any, error) {
+	cfg, err := config.Load(stringArg(args, "config_path"))
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	stats, err := r.loadMemoryStats(cfg)
+	if err != nil {
+		return nil, err
+	}
+	compact := compactStats(stats)
+	payload := map[string]any{
+		"kind":    "memory_stats",
+		"stats":   compact,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPMemorySearchTool(args map[string]any) (map[string]any, error) {
+	cfg, err := config.Load(stringArg(args, "config_path"))
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	limit := intDefault(args, "limit", 5)
+	query := stringArg(args, "query")
+	if query == "" {
+		query = stringArg(args, "goal")
+	}
+	candidates, err := r.searchMemory(cfg, query, limit, csvOrListArg(args, "domain_hints"))
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":       "memory_search",
+		"query":      query,
+		"candidates": compactMemoryCandidates(candidates),
+	}
+	payload := map[string]any{
+		"kind":       "memory_search",
+		"query":      query,
+		"candidates": compactMemoryCandidates(candidates),
+		"compact":    compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPMemoryPruneTool(args map[string]any) (map[string]any, error) {
+	cfg, err := config.Load(stringArg(args, "config_path"))
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	before, after, policy, err := r.pruneMemory(cfg)
+	if err != nil {
+		return nil, err
+	}
+	removed := map[string]int{
+		"documents":  before.DocumentCount - after.DocumentCount,
+		"edges":      before.EdgeCount - after.EdgeCount,
+		"embeddings": before.EmbeddingCount - after.EmbeddingCount,
+	}
+	compact := map[string]any{
+		"kind":    "memory_prune",
+		"before":  compactStats(before),
+		"after":   compactStats(after),
+		"removed": removed,
+	}
+	payload := map[string]any{
+		"kind":    "memory_prune",
+		"before":  compactStats(before),
+		"after":   compactStats(after),
+		"policy":  policy,
+		"removed": removed,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPMemoryExportTool(args map[string]any) (map[string]any, error) {
+	cfg, err := config.Load(stringArg(args, "config_path"))
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	outDir := stringArg(args, "out_dir")
+	if outDir == "" {
+		return nil, fmt.Errorf("memory_export requires out_dir")
+	}
+	exported, err := r.exportMemory(cfg, outDir)
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":   "memory_export",
+		"export": exported,
+	}
+	payload := map[string]any{
+		"kind":    "memory_export",
+		"export":  exported,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPMemoryImportTool(args map[string]any) (map[string]any, error) {
+	cfg, err := config.Load(stringArg(args, "config_path"))
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	inDir := stringArg(args, "in_dir")
+	if inDir == "" {
+		return nil, fmt.Errorf("memory_import requires in_dir")
+	}
+	imported, err := r.importMemory(cfg, inDir)
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":   "memory_import",
+		"import": imported,
+	}
+	payload := map[string]any{
+		"kind":    "memory_import",
+		"import":  imported,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPMemoryRebuildIndexTool(args map[string]any) (map[string]any, error) {
+	cfg, err := config.Load(stringArg(args, "config_path"))
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	stats, err := r.rebuildMemoryIndex(cfg)
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":  "memory_rebuild_index",
+		"stats": compactStats(stats),
+	}
+	payload := map[string]any{
+		"kind":    "memory_rebuild_index",
+		"stats":   compactStats(stats),
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func mcpMemoryStatsTool() mcpTool {
+	return mcpTool{
+		Name:        "memory_stats",
+		Description: "Inspect Discovery Memory counts, freshness, and database path.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"config_path": map[string]any{"type": "string"},
+		}), map[string]any{}),
+	}
+}
+
+func mcpMemorySearchTool() mcpTool {
+	return mcpTool{
+		Name:        "memory_search",
+		Description: "Search Discovery Memory semantically before public bootstrap. Use this to inspect what local memory already knows.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"query":        map[string]any{"type": "string", "description": "Semantic retrieval query."},
+			"goal":         map[string]any{"type": "string", "description": "Alias for query."},
+			"limit":        map[string]any{"type": "integer"},
+			"domain_hints": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"config_path":  map[string]any{"type": "string"},
+		}), map[string]any{"query": "playwright installation", "limit": 5}),
+	}
+}
+
+func mcpMemoryPruneTool() mcpTool {
+	return mcpTool{
+		Name:        "memory_prune",
+		Description: "Prune Discovery Memory to configured bounds.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"config_path": map[string]any{"type": "string"},
+		}), map[string]any{}),
+	}
+}
+
+func mcpMemoryExportTool() mcpTool {
+	return mcpTool{
+		Name:        "memory_export",
+		Description: "Export Discovery Memory canonical rows to JSONL files for inspection, backup, or migration.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"out_dir":     map[string]any{"type": "string"},
+			"config_path": map[string]any{"type": "string"},
+		}, "out_dir"), map[string]any{"out_dir": ".needlex/discovery/export"}),
+	}
+}
+
+func mcpMemoryImportTool() mcpTool {
+	return mcpTool{
+		Name:        "memory_import",
+		Description: "Import Discovery Memory canonical rows from JSONL files.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"in_dir":      map[string]any{"type": "string"},
+			"config_path": map[string]any{"type": "string"},
+		}, "in_dir"), map[string]any{"in_dir": ".needlex/discovery/export"}),
+	}
+}
+
+func mcpMemoryRebuildIndexTool() mcpTool {
+	return mcpTool{
+		Name:        "memory_rebuild_index",
+		Description: "Rebuild or refresh Discovery Memory acceleration state from canonical local rows.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"config_path": map[string]any{"type": "string"},
+		}), map[string]any{}),
+	}
+}
+
+func csvOrListArg(args map[string]any, key string) []string {
+	raw, ok := args[key]
+	if !ok || raw == nil {
+		return nil
+	}
+	switch typed := raw.(type) {
+	case string:
+		return splitCSV(typed)
+	case []any:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if value, ok := item.(string); ok && strings.TrimSpace(value) != "" {
+				out = append(out, strings.TrimSpace(value))
+			}
+		}
+		return out
+	case []string:
+		return typed
+	default:
+		return nil
 	}
 }
 

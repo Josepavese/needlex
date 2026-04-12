@@ -51,6 +51,11 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
 	}
+	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index"} {
+		if !strings.Contains(string(responses[1]), tool) {
+			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
+		}
+	}
 }
 
 func TestRunnerMCPInitializeAndToolsListRawJSON(t *testing.T) {
@@ -334,6 +339,80 @@ func TestRunnerMCPCrawl(t *testing.T) {
 		t.Fatalf("expected crawl summary, got %s", responses[1])
 	}
 	assertMCPStructuredKeys(t, responses[1], "documents", "summary", "stored_runs")
+}
+
+func TestRunnerMCPMemoryTools(t *testing.T) {
+	root := t.TempDir()
+	semantic := newMemoryEmbeddingServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	cfg.Memory.Enabled = true
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Backend = "openai-embeddings"
+	cfg.Semantic.BaseURL = semantic.URL
+	cfg.Semantic.Model = "memory-test-embed"
+	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
+	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+	configPath := filepath.Join(root, "needlex-memory.json")
+	rawCfg, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(configPath, rawCfg, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+	exportDir := filepath.Join(root, "memory-export")
+	importRoot := t.TempDir()
+
+	input := framedMessages(
+		t,
+		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "memory_stats", "arguments": map[string]any{"config_path": configPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "memory_search", "arguments": map[string]any{"query": "playwright installation", "config_path": configPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "memory_export", "arguments": map[string]any{"out_dir": exportDir, "config_path": configPath}}},
+	)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	runner := Runner{loadConfig: config.Load, stdin: strings.NewReader(input), storeRoot: root}
+	code := runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	responses := decodeMCPResponses(t, stdout.Bytes())
+	if len(responses) != 4 {
+		t.Fatalf("expected 4 responses, got %d", len(responses))
+	}
+	assertMCPStructuredKeys(t, responses[1], "stats", "compact")
+	assertMCPStructuredKeys(t, responses[2], "candidates", "compact")
+	assertMCPStructuredKeys(t, responses[3], "export", "compact")
+
+	importCfgPath := filepath.Join(importRoot, "needlex-memory.json")
+	if err := os.WriteFile(importCfgPath, rawCfg, 0o644); err != nil {
+		t.Fatalf("write import config: %v", err)
+	}
+	input = framedMessages(
+		t,
+		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "memory_import", "arguments": map[string]any{"in_dir": exportDir, "config_path": importCfgPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "memory_rebuild_index", "arguments": map[string]any{"config_path": importCfgPath}}},
+	)
+	stdout.Reset()
+	stderr.Reset()
+	runner = Runner{loadConfig: config.Load, stdin: strings.NewReader(input), storeRoot: importRoot}
+	code = runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	responses = decodeMCPResponses(t, stdout.Bytes())
+	if len(responses) != 3 {
+		t.Fatalf("expected 3 responses, got %d", len(responses))
+	}
+	assertMCPStructuredKeys(t, responses[1], "import", "compact")
+	assertMCPStructuredKeys(t, responses[2], "stats", "compact")
 }
 
 func framedMessages(t *testing.T, messages ...map[string]any) string {
