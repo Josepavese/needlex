@@ -9,49 +9,22 @@ import (
 	"github.com/josepavese/needlex/internal/intel"
 )
 
-const (
-	candidateClassFirstPartyDocs  = "first_party_docs"
-	candidateClassFirstPartyHome  = "first_party_home"
-	candidateClassThirdPartyGuide = "third_party_tutorial"
-	candidateClassThirdPartyWrap  = "third_party_wrapper"
-	candidateClassReferenceIndex  = "reference_index"
-	candidateClassStructuredAPI   = "structured_endpoint"
-	candidateClassAssetFile       = "asset_file"
-	candidateClassUnknown         = "unknown"
-)
-
-type candidateClassSpec struct {
-	Name      string
-	Prototype string
-	Boost     float64
-}
-
 type candidateIntelligence struct {
-	Class            string
-	ClassConfidence  float64
-	ClusterID        string
-	ClusterSize      int
-	ClusterDominant  string
-	ClusterCoherence float64
+	GoalSimilarity float64
+	HostSimilarity float64
+	PageSimilarity float64
+	ClusterID      string
+	ClusterSize    int
+	ClusterFamily  string
+	Coherence      float64
 }
 
 type candidateCluster struct {
-	ID           string
-	MemberIdx    []int
-	Dominant     string
-	Coherence    float64
-	AvgClassConf float64
-	Centrality   map[int]float64
-}
-
-var candidateClassSpecs = []candidateClassSpec{
-	{Name: candidateClassFirstPartyDocs, Prototype: "official documentation reference developer guide api docs", Boost: 0.34},
-	{Name: candidateClassFirstPartyHome, Prototype: "official homepage main site organization home", Boost: 0.20},
-	{Name: candidateClassReferenceIndex, Prototype: "reference resources index portal directory catalog", Boost: -0.05},
-	{Name: candidateClassStructuredAPI, Prototype: "structured api endpoint schema json xml feed", Boost: 0.10},
-	{Name: candidateClassThirdPartyGuide, Prototype: "tutorial walkthrough learning article blog guide", Boost: -0.06},
-	{Name: candidateClassThirdPartyWrap, Prototype: "wrapper sdk integration compatibility adapter proxy provider", Boost: -0.12},
-	{Name: candidateClassAssetFile, Prototype: "asset icon image stylesheet static file media download", Boost: -0.16},
+	ID         string
+	MemberIdx  []int
+	Family     string
+	Coherence  float64
+	Centrality map[int]float64
 }
 
 func (s *Service) applyCandidateIntelligence(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
@@ -61,6 +34,9 @@ func (s *Service) applyCandidateIntelligence(ctx context.Context, goal string, c
 	}
 	annotated := append([]DiscoverCandidate{}, candidates...)
 	texts := make([]intel.SemanticCandidate, 0, window)
+	identityTexts := make([]intel.SemanticCandidate, 0, window)
+	hostTexts := make([]intel.SemanticCandidate, 0, window)
+	pageTexts := make([]intel.SemanticCandidate, 0, window)
 	for i := 0; i < window; i++ {
 		annotated[i].Metadata = discoverycore.MergeMetadata(annotated[i].Metadata, map[string]string{
 			"resource_class": discoverycore.FirstNonEmpty(annotated[i].Metadata["resource_class"], discoverycore.ResourceClass(annotated[i].URL)),
@@ -69,59 +45,105 @@ func (s *Service) applyCandidateIntelligence(ctx context.Context, goal string, c
 			ID:   annotated[i].URL,
 			Text: candidateSemanticText(annotated[i]),
 		})
+		identityTexts = append(identityTexts, intel.SemanticCandidate{
+			ID: annotated[i].URL,
+			Text: discoverycore.JoinNonEmpty(
+				annotated[i].Metadata["host_root_title"],
+				annotated[i].Metadata["page_title"],
+				annotated[i].Label,
+			),
+		})
+		hostTexts = append(hostTexts, intel.SemanticCandidate{
+			ID:   annotated[i].URL,
+			Text: discoverycore.JoinNonEmpty(annotated[i].Metadata["host_root_title"]),
+		})
+		pageTexts = append(pageTexts, intel.SemanticCandidate{
+			ID: annotated[i].URL,
+			Text: discoverycore.JoinNonEmpty(
+				annotated[i].Metadata["page_title"],
+				annotated[i].Label,
+			),
+		})
 	}
-	classMap := s.classifyCandidateSet(ctx, texts)
-	if len(classMap) == 0 {
+
+	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, texts)
+	for url, value := range s.scoreCandidateSetToGoal(ctx, goal, identityTexts) {
+		if value > goalSimilarity[url] {
+			goalSimilarity[url] = value
+		}
+	}
+	hostSimilarity := s.scoreCandidateSetToGoal(ctx, goal, hostTexts)
+	pageSimilarity := s.scoreCandidateSetToGoal(ctx, goal, pageTexts)
+	if len(goalSimilarity) == 0 {
 		return candidates
 	}
 	graph := s.buildCandidateSemanticGraph(ctx, texts, annotated[:window])
-	clusters := buildCandidateClusters(annotated[:window], classMap, graph)
+	clusters := buildCandidateClusters(annotated[:window], goalSimilarity, graph)
 	clusterByIdx := map[int]candidateCluster{}
 	for _, cluster := range clusters {
 		for _, idx := range cluster.MemberIdx {
 			clusterByIdx[idx] = cluster
 		}
 	}
+
 	for i := 0; i < window; i++ {
-		intelMeta, ok := classMap[annotated[i].URL]
-		if !ok {
-			continue
-		}
 		cluster := clusterByIdx[i]
-		boost := classBoost(intelMeta.Class)
+		similarity := goalSimilarity[annotated[i].URL]
+		hostSim := hostSimilarity[annotated[i].URL]
+		pageSim := pageSimilarity[annotated[i].URL]
+		boost := minFloat(similarity*0.28, 0.20)
 		if cluster.ClusterSize() > 1 {
-			boost += 0.05 * float64(min(cluster.ClusterSize()-1, 2))
+			boost += 0.04 * float64(min(cluster.ClusterSize()-1, 2))
 		}
-		if cluster.Dominant == intelMeta.Class && cluster.Coherence > 0 {
-			boost += minFloat(cluster.Coherence*0.10, 0.12)
+		if cluster.Coherence > 0 {
+			boost += minFloat(cluster.Coherence*0.07, 0.08)
 		}
 		if centrality, ok := cluster.Centrality[i]; ok && centrality > 0 {
-			boost += minFloat(centrality*0.18, 0.22)
+			boost += minFloat(centrality*0.14, 0.16)
+		}
+		switch annotated[i].Metadata["resource_class"] {
+		case discoverycore.ResourceClassHTMLLike:
+			boost += 0.03
+		case discoverycore.ResourceClassMediaAsset:
+			boost -= 0.12
+		case discoverycore.ResourceClassArchiveFile:
+			boost -= 0.08
+		case discoverycore.ResourceClassStructured:
+			boost -= 0.02
+		}
+		if pageSim >= 0.24 && hostSim >= 0.16 {
+			boost += 0.12
+			annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_identity_alignment")
+		}
+		if pageSim >= 0.24 && hostSim > 0 && hostSim < 0.10 {
+			boost -= 0.18
+			annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_identity_mismatch")
 		}
 		if boost != 0 {
 			annotated[i].Score += boost
 			annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_intelligence")
-			if classBoost(intelMeta.Class) != 0 {
-				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_class_"+intelMeta.Class)
-			}
 			if cluster.ClusterSize() > 1 {
 				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_cluster_support")
+			}
+			if similarity > 0 {
+				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_goal_grounding")
 			}
 			if centrality, ok := cluster.Centrality[i]; ok && centrality > 0 {
 				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_graph_centrality")
 			}
 		}
 		annotated[i].Metadata = discoverycore.MergeMetadata(annotated[i].Metadata, map[string]string{
-			"candidate_class":            intelMeta.Class,
-			"candidate_class_confidence": fmt.Sprintf("%.3f", intelMeta.ClassConfidence),
-			"cluster_id":                 cluster.ID,
-			"cluster_size":               fmt.Sprintf("%d", cluster.ClusterSize()),
-			"cluster_dominant_class":     cluster.Dominant,
-			"cluster_coherence":          fmt.Sprintf("%.3f", cluster.Coherence),
-			"cluster_centrality":         fmt.Sprintf("%.3f", cluster.Centrality[i]),
+			"candidate_goal_similarity": fmt.Sprintf("%.3f", similarity),
+			"candidate_host_similarity": fmt.Sprintf("%.3f", hostSim),
+			"candidate_page_similarity": fmt.Sprintf("%.3f", pageSim),
+			"cluster_id":                cluster.ID,
+			"cluster_size":              fmt.Sprintf("%d", cluster.ClusterSize()),
+			"cluster_family":            cluster.Family,
+			"cluster_coherence":         fmt.Sprintf("%.3f", cluster.Coherence),
+			"cluster_centrality":        fmt.Sprintf("%.3f", cluster.Centrality[i]),
 		})
 	}
-	applyClusterRepresentativeSelection(annotated[:window], clusterByIdx, classMap)
+	applyClusterRepresentativeSelection(annotated[:window], clusterByIdx, goalSimilarity)
 	discoverycore.SortCandidates(annotated)
 	return annotated
 }
@@ -157,51 +179,17 @@ func candidateSemanticText(candidate DiscoverCandidate) string {
 	)
 }
 
-func (s *Service) classifyCandidateSet(ctx context.Context, candidates []intel.SemanticCandidate) map[string]candidateIntelligence {
-	if len(candidates) == 0 {
+func (s *Service) scoreCandidateSetToGoal(ctx context.Context, goal string, candidates []intel.SemanticCandidate) map[string]float64 {
+	if len(candidates) == 0 || strings.TrimSpace(goal) == "" {
 		return nil
 	}
-	scoreByCandidate := map[string]map[string]float64{}
-	for _, spec := range candidateClassSpecs {
-		scored, err := s.semantic.Score(ctx, spec.Prototype, candidates)
-		if err != nil || len(scored) == 0 {
-			continue
-		}
-		for _, item := range scored {
-			row := scoreByCandidate[item.ID]
-			if row == nil {
-				row = map[string]float64{}
-				scoreByCandidate[item.ID] = row
-			}
-			row[spec.Name] = item.Similarity
-		}
-	}
-	if len(scoreByCandidate) == 0 {
+	scored, err := s.semantic.Score(ctx, goal, candidates)
+	if err != nil || len(scored) == 0 {
 		return nil
 	}
-	out := map[string]candidateIntelligence{}
-	for _, candidate := range candidates {
-		row := scoreByCandidate[candidate.ID]
-		if len(row) == 0 {
-			continue
-		}
-		bestClass, bestScore, second := candidateClassUnknown, -1.0, -1.0
-		for _, spec := range candidateClassSpecs {
-			score := row[spec.Name]
-			if score > bestScore {
-				second = bestScore
-				bestScore = score
-				bestClass = spec.Name
-			} else if score > second {
-				second = score
-			}
-		}
-		conf := bestScore - maxFloat(second, 0)
-		if bestScore <= 0 {
-			bestClass = candidateClassUnknown
-			conf = 0
-		}
-		out[candidate.ID] = candidateIntelligence{Class: bestClass, ClassConfidence: conf}
+	out := make(map[string]float64, len(scored))
+	for _, item := range scored {
+		out[item.ID] = maxFloat(item.Similarity, 0)
 	}
 	return out
 }
@@ -237,7 +225,7 @@ func (s *Service) buildCandidateSemanticGraph(ctx context.Context, texts []intel
 		for j := i + 1; j < len(texts); j++ {
 			similarity := mutualSemanticSimilarity(raw, i, j)
 			structural := candidateStructuralAffinity(candidates[i], candidates[j])
-			weight := similarity*0.62 + structural*0.38
+			weight := similarity*0.66 + structural*0.34
 			if weight <= 0 {
 				continue
 			}
@@ -258,10 +246,7 @@ func mutualSemanticSimilarity(raw [][]float64, left, right int) float64 {
 	if left >= len(raw) || right >= len(raw) {
 		return 0
 	}
-	var (
-		lr float64
-		rl float64
-	)
+	var lr, rl float64
 	if row := raw[left]; right < len(row) {
 		lr = row[right]
 	}
@@ -291,7 +276,7 @@ func candidateStructuralAffinity(left, right DiscoverCandidate) float64 {
 	return affinity
 }
 
-func buildCandidateClusters(candidates []DiscoverCandidate, classes map[string]candidateIntelligence, graph candidateSemanticGraph) []candidateCluster {
+func buildCandidateClusters(candidates []DiscoverCandidate, goalSimilarity map[string]float64, graph candidateSemanticGraph) []candidateCluster {
 	if len(candidates) == 0 {
 		return nil
 	}
@@ -320,9 +305,7 @@ func buildCandidateClusters(candidates []DiscoverCandidate, classes map[string]c
 				union(i, j)
 				continue
 			}
-			li, lok := classes[left.URL]
-			ri, rok := classes[right.URL]
-			if lok && rok && li.Class != candidateClassUnknown && li.Class == ri.Class && li.ClassConfidence >= 0.08 && ri.ClassConfidence >= 0.08 && edgeWeight >= 0.50 {
+			if goalSimilarity[left.URL] >= 0.28 && goalSimilarity[right.URL] >= 0.28 && edgeWeight >= 0.48 {
 				union(i, j)
 			}
 		}
@@ -334,32 +317,20 @@ func buildCandidateClusters(candidates []DiscoverCandidate, classes map[string]c
 	out := make([]candidateCluster, 0, len(groups))
 	seq := 1
 	for _, idxs := range groups {
-		countByClass := map[string]int{}
-		avgConf := 0.0
 		centrality := map[int]float64{}
+		sumCoherence := 0.0
+		familyCounts := map[string]int{}
 		for _, idx := range idxs {
-			if intelMeta, ok := classes[candidates[idx].URL]; ok {
-				countByClass[intelMeta.Class]++
-				avgConf += intelMeta.ClassConfidence
+			if family, ok := candidateFamily(candidates[idx].URL); ok {
+				familyCounts[family]++
 			}
+			sumCoherence += goalSimilarity[candidates[idx].URL]
 			for _, other := range idxs {
 				if idx == other {
 					continue
 				}
 				centrality[idx] += graph.weights[idx][other]
 			}
-		}
-		dominant := candidateClassUnknown
-		dominantCount := -1
-		for _, spec := range candidateClassSpecs {
-			if countByClass[spec.Name] > dominantCount {
-				dominantCount = countByClass[spec.Name]
-				dominant = spec.Name
-			}
-		}
-		coherence := 0.0
-		if len(idxs) > 0 {
-			coherence = avgConf / float64(len(idxs))
 		}
 		maxCentrality := 0.0
 		for _, value := range centrality {
@@ -370,20 +341,27 @@ func buildCandidateClusters(candidates []DiscoverCandidate, classes map[string]c
 				centrality[idx] = value / maxCentrality
 			}
 		}
+		family := ""
+		familyCount := -1
+		for candidateFamily, count := range familyCounts {
+			if count > familyCount {
+				family = candidateFamily
+				familyCount = count
+			}
+		}
 		out = append(out, candidateCluster{
-			ID:           fmt.Sprintf("cluster_%02d", seq),
-			MemberIdx:    idxs,
-			Dominant:     dominant,
-			Coherence:    coherence,
-			AvgClassConf: coherence,
-			Centrality:   centrality,
+			ID:         fmt.Sprintf("cluster_%02d", seq),
+			MemberIdx:  idxs,
+			Family:     family,
+			Coherence:  sumCoherence / float64(len(idxs)),
+			Centrality: centrality,
 		})
 		seq++
 	}
 	return out
 }
 
-func applyClusterRepresentativeSelection(candidates []DiscoverCandidate, clusterByIdx map[int]candidateCluster, classes map[string]candidateIntelligence) {
+func applyClusterRepresentativeSelection(candidates []DiscoverCandidate, clusterByIdx map[int]candidateCluster, goalSimilarity map[string]float64) {
 	seen := map[string]struct{}{}
 	for idx, cluster := range clusterByIdx {
 		if _, ok := seen[cluster.ID]; ok {
@@ -394,9 +372,9 @@ func applyClusterRepresentativeSelection(candidates []DiscoverCandidate, cluster
 			continue
 		}
 		repIdx := idx
-		repScore := clusterRepresentativeScore(candidates[idx], cluster, idx, classes)
+		repScore := clusterRepresentativeScore(candidates[idx], cluster, idx, goalSimilarity)
 		for _, memberIdx := range cluster.MemberIdx {
-			score := clusterRepresentativeScore(candidates[memberIdx], cluster, memberIdx, classes)
+			score := clusterRepresentativeScore(candidates[memberIdx], cluster, memberIdx, goalSimilarity)
 			if score > repScore {
 				repIdx = memberIdx
 				repScore = score
@@ -414,26 +392,13 @@ func applyClusterRepresentativeSelection(candidates []DiscoverCandidate, cluster
 	}
 }
 
-func clusterRepresentativeScore(candidate DiscoverCandidate, cluster candidateCluster, idx int, classes map[string]candidateIntelligence) float64 {
+func clusterRepresentativeScore(candidate DiscoverCandidate, cluster candidateCluster, idx int, goalSimilarity map[string]float64) float64 {
 	score := candidate.Score
 	if centrality, ok := cluster.Centrality[idx]; ok {
 		score += centrality * 0.30
 	}
-	if intelMeta, ok := classes[candidate.URL]; ok {
-		switch intelMeta.Class {
-		case candidateClassFirstPartyDocs:
-			score += 0.16
-		case candidateClassFirstPartyHome:
-			score += 0.10
-		case candidateClassStructuredAPI:
-			score += 0.06
-		case candidateClassThirdPartyWrap:
-			score -= 0.10
-		case candidateClassThirdPartyGuide:
-			score -= 0.05
-		case candidateClassAssetFile:
-			score -= 0.18
-		}
+	if similarity := goalSimilarity[candidate.URL]; similarity > 0 {
+		score += minFloat(similarity*0.24, 0.18)
 	}
 	depth := discoverycore.URLPathDepth(candidate.URL)
 	switch {
@@ -444,22 +409,18 @@ func clusterRepresentativeScore(candidate DiscoverCandidate, cluster candidateCl
 	case depth >= 4:
 		score -= 0.04
 	}
-	if candidate.Metadata["resource_class"] == discoverycore.ResourceClassHTMLLike {
+	switch candidate.Metadata["resource_class"] {
+	case discoverycore.ResourceClassHTMLLike:
 		score += 0.05
+	case discoverycore.ResourceClassMediaAsset:
+		score -= 0.18
+	case discoverycore.ResourceClassArchiveFile:
+		score -= 0.10
 	}
 	return score
 }
 
 func (c candidateCluster) ClusterSize() int { return len(c.MemberIdx) }
-
-func classBoost(class string) float64 {
-	for _, spec := range candidateClassSpecs {
-		if spec.Name == class {
-			return spec.Boost
-		}
-	}
-	return 0
-}
 
 func maxFloat(left, right float64) float64 {
 	if left > right {

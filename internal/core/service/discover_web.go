@@ -20,6 +20,7 @@ import (
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/store"
+	"golang.org/x/net/html"
 )
 
 type DiscoverWebRequest struct {
@@ -545,13 +546,14 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 		}
 	}
 
-	expanded := extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, true)
+	identityRefs := extractIdentityReferenceCandidates(rawPage.HTML, rawPage.FinalURL, discoverycore.FirstNonEmpty(dom.Title, candidate.Label))
+	if len(identityRefs) > 0 {
+		out = append(out, s.selectIdentityReferenceCandidates(ctx, goal, candidate, identityRefs)...)
+	}
+	expanded := extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, false)
 	expandedScored := discoverycore.ScoreCandidates(goal, "", "", expanded, domainHints)
 	if len(expandedScored) > 0 {
-		best := expandedScored[0]
-		best.Score += 0.40
-		best.Reason = discoverycore.AppendUniqueReason(best.Reason, "page_expand")
-		out = append(out, best)
+		out = append(out, s.selectExpandedRecoveryCandidates(ctx, goal, candidate, expandedScored)...)
 	}
 	out = append(out, extractLiteralURLCandidates(goal, candidate, rawPage.FinalURL, rawPage.HTML, dom, domainHints)...)
 	return out, nil
@@ -657,10 +659,13 @@ func extractLiteralURLCandidates(goal string, candidate DiscoverCandidate, final
 	if !ok {
 		return nil
 	}
+	sourceClass := discoverycore.ResourceClass(finalURL)
 
 	texts := make([]string, 0, len(dom.Nodes)+2)
-	if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
-		texts = append(texts, trimmed)
+	if sourceClass != discoverycore.ResourceClassHTMLLike {
+		if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
+			texts = append(texts, trimmed)
+		}
 	}
 	if trimmed := strings.TrimSpace(dom.Title); trimmed != "" {
 		texts = append(texts, trimmed)
@@ -703,7 +708,6 @@ func extractLiteralURLCandidates(goal string, candidate DiscoverCandidate, final
 		return nil
 	}
 
-	sourceClass := discoverycore.ResourceClass(finalURL)
 	scored := discoverycore.ScoreCandidates(goal, "", discoverycore.JoinNonEmpty(dom.Title, candidate.Label), literalLinks, domainHints)
 	out := make([]DiscoverCandidate, 0, min(len(scored), 2))
 	for _, item := range scored {
@@ -745,6 +749,234 @@ func trimLiteralURL(raw string) string {
 		return ""
 	}
 	return parsed.String()
+}
+
+type identityReferenceCandidate struct {
+	URL      string
+	Label    string
+	Relation string
+}
+
+func extractIdentityReferenceCandidates(rawHTML, baseURL, label string) []identityReferenceCandidate {
+	root, err := html.Parse(strings.NewReader(rawHTML))
+	if err != nil {
+		return nil
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return nil
+	}
+	out := make([]identityReferenceCandidate, 0, 6)
+	seen := map[string]struct{}{}
+	var walk func(*html.Node)
+	walk = func(node *html.Node) {
+		if node.Type == html.ElementNode {
+			switch strings.ToLower(strings.TrimSpace(node.Data)) {
+			case "link":
+				rel := strings.ToLower(strings.TrimSpace(htmlAttr(node, "rel")))
+				if rel == "canonical" || strings.Contains(rel, "alternate") {
+					if href := resolveReferenceURL(base, htmlAttr(node, "href")); href != "" {
+						if _, ok := seen[href]; !ok {
+							seen[href] = struct{}{}
+							relation := "alternate"
+							if rel == "canonical" {
+								relation = "canonical"
+							}
+							out = append(out, identityReferenceCandidate{URL: href, Label: strings.TrimSpace(label), Relation: relation})
+						}
+					}
+				}
+			case "meta":
+				property := strings.ToLower(strings.TrimSpace(htmlAttr(node, "property")))
+				if property == "og:url" {
+					if href := resolveReferenceURL(base, htmlAttr(node, "content")); href != "" {
+						if _, ok := seen[href]; !ok {
+							seen[href] = struct{}{}
+							out = append(out, identityReferenceCandidate{URL: href, Label: strings.TrimSpace(label), Relation: "og_url"})
+						}
+					}
+				}
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(root)
+	return out
+}
+
+func (s *Service) selectIdentityReferenceCandidates(ctx context.Context, goal string, source DiscoverCandidate, refs []identityReferenceCandidate) []DiscoverCandidate {
+	if len(refs) == 0 {
+		return nil
+	}
+	baseLinks := make([]discoverycore.LinkCandidate, 0, len(refs))
+	relationByURL := make(map[string]string, len(refs))
+	sourceURL := strings.TrimSpace(source.URL)
+	for _, ref := range refs {
+		if strings.TrimSpace(ref.URL) == sourceURL {
+			continue
+		}
+		baseLinks = append(baseLinks, discoverycore.LinkCandidate{URL: ref.URL, Label: ref.Label})
+		relationByURL[ref.URL] = ref.Relation
+	}
+	scored := discoverycore.ScoreCandidates(goal, "", source.Label, baseLinks, nil)
+	if len(scored) == 0 {
+		return nil
+	}
+	semanticCandidates := make([]intel.SemanticCandidate, 0, len(scored))
+	for _, candidate := range scored {
+		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
+			ID: candidate.URL,
+			Text: discoverycore.JoinNonEmpty(
+				source.Metadata["host_root_title"],
+				source.Metadata["page_title"],
+				source.Label,
+				candidate.Label,
+				discoverycore.URLTokenText(candidate.URL),
+			),
+		})
+	}
+	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, semanticCandidates)
+	sourceFamily, _ := candidateFamily(source.URL)
+	out := make([]DiscoverCandidate, 0, 2)
+	for _, candidate := range scored {
+		similarity := goalSimilarity[candidate.URL]
+		switch relationByURL[candidate.URL] {
+		case "alternate":
+			if similarity < 0.22 {
+				continue
+			}
+		case "og_url":
+			if similarity < 0.18 {
+				continue
+			}
+		}
+		boost := 1.10
+		if similarity > 0 {
+			boost += similarity * 1.4
+		}
+		if family, ok := candidateFamily(candidate.URL); ok && family != "" && family != sourceFamily {
+			boost += 0.45
+		}
+		switch relationByURL[candidate.URL] {
+		case "canonical":
+			boost += 0.75
+		case "og_url":
+			boost += 0.60
+		case "alternate":
+			boost += 0.35
+		}
+		out = append(out, DiscoverCandidate{
+			URL:   candidate.URL,
+			Label: discoverycore.FirstNonEmpty(candidate.Label, source.Label, candidate.URL),
+			Score: candidate.Score + boost,
+			Reason: discoverycore.AppendUniqueReason(candidate.Reason,
+				"identity_reference",
+				"external_family_recovery",
+				"identity_reference_"+discoverycore.FirstNonEmpty(relationByURL[candidate.URL], "unknown"),
+			),
+			Metadata: discoverycore.MergeMetadata(source.Metadata, map[string]string{
+				"identity_reference_source": source.URL,
+				"identity_reference_kind":   relationByURL[candidate.URL],
+				"resource_class":            discoverycore.ResourceClass(candidate.URL),
+			}),
+		})
+		if len(out) >= 2 {
+			break
+		}
+	}
+	return out
+}
+
+func resolveReferenceURL(base *url.URL, raw string) string {
+	ref, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return ""
+	}
+	resolved := base.ResolveReference(ref)
+	if resolved.Scheme != "http" && resolved.Scheme != "https" {
+		return ""
+	}
+	return resolved.String()
+}
+
+func htmlAttr(node *html.Node, key string) string {
+	for _, attr := range node.Attr {
+		if strings.EqualFold(strings.TrimSpace(attr.Key), key) {
+			return strings.TrimSpace(attr.Val)
+		}
+	}
+	return ""
+}
+
+func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal string, source DiscoverCandidate, expanded []DiscoverCandidate) []DiscoverCandidate {
+	if len(expanded) == 0 {
+		return nil
+	}
+	ordered := append([]DiscoverCandidate{}, expanded...)
+	semanticCandidates := make([]intel.SemanticCandidate, 0, len(ordered))
+	for _, candidate := range ordered {
+		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
+			ID: candidate.URL,
+			Text: discoverycore.JoinNonEmpty(
+				source.Metadata["host_root_title"],
+				source.Metadata["page_title"],
+				source.Label,
+				candidate.Label,
+				discoverycore.URLTokenText(candidate.URL),
+			),
+		})
+	}
+	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, semanticCandidates)
+	sourceFamily, _ := candidateFamily(source.URL)
+	for i := range ordered {
+		similarity := goalSimilarity[ordered[i].URL]
+		family, familyOK := candidateFamily(ordered[i].URL)
+		sameFamily := familyOK && family != "" && family == sourceFamily
+		if similarity > 0 {
+			ordered[i].Score += similarity * 1.35
+			ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "page_expand_semantic_grounding")
+		}
+		if sameFamily {
+			if discoverycore.URLPathDepth(ordered[i].URL) > discoverycore.URLPathDepth(source.URL) {
+				ordered[i].Score += 0.42
+				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "same_family_child_recovery")
+			} else {
+				ordered[i].Score += 0.14
+				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "same_family_page_expand")
+			}
+		}
+		if familyOK && family != "" && family != sourceFamily {
+			if similarity < 0.18 {
+				ordered[i].Score -= 0.18
+				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "external_family_ungrounded")
+			} else {
+				ordered[i].Score += 0.60
+				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "external_family_recovery")
+			}
+		}
+	}
+	discoverycore.SortCandidates(ordered)
+
+	out := make([]DiscoverCandidate, 0, 3)
+	seenFamilies := map[string]struct{}{}
+	for _, candidate := range ordered {
+		family, _ := candidateFamily(candidate.URL)
+		if family != "" {
+			if _, ok := seenFamilies[family]; ok {
+				continue
+			}
+			seenFamilies[family] = struct{}{}
+		}
+		candidate.Score += 0.40
+		candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, "page_expand")
+		out = append(out, candidate)
+		if len(out) >= 3 {
+			break
+		}
+	}
+	return out
 }
 
 type endpointExtractorResult struct {
@@ -893,9 +1125,12 @@ func literalURLsForPage(finalURL, rawHTML string, dom pipeline.SimplifiedDOM) []
 	if !ok {
 		return nil
 	}
+	sourceClass := discoverycore.ResourceClass(finalURL)
 	texts := make([]string, 0, len(dom.Nodes)+2)
-	if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
-		texts = append(texts, trimmed)
+	if sourceClass != discoverycore.ResourceClassHTMLLike {
+		if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
+			texts = append(texts, trimmed)
+		}
 	}
 	if trimmed := strings.TrimSpace(dom.Title); trimmed != "" {
 		texts = append(texts, trimmed)

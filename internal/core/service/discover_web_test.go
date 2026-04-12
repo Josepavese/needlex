@@ -151,6 +151,23 @@ func TestExtractLiteralURLCandidatesSkipsMediaAssetsFromHTMLPage(t *testing.T) {
 	}
 }
 
+func TestExtractLiteralURLCandidatesIgnoreRawHTMLNoiseForHTMLPages(t *testing.T) {
+	base := DiscoverCandidate{URL: "https://www.w3schools.com/Js/", Label: "JavaScript Tutorial"}
+	dom := pipeline.SimplifiedDOM{
+		Title: "JavaScript Tutorial",
+		Nodes: []pipeline.SimplifiedNode{
+			{Text: "Learn JavaScript fundamentals."},
+		},
+	}
+	rawHTML := `<html><head><title>JavaScript Tutorial</title><script>var x="https://www.w3schools.com/about/about_privacy.asp"</script></head><body><p>Learn JavaScript fundamentals.</p></body></html>`
+	got := extractLiteralURLCandidates("MDN JavaScript guide", base, base.URL, rawHTML, dom, nil)
+	for _, item := range got {
+		if item.URL == "https://www.w3schools.com/about/about_privacy.asp" {
+			t.Fatalf("expected raw html noise url to be ignored for html pages, got %#v", got)
+		}
+	}
+}
+
 func TestDiscoverWebEndpointExtractorPromotesLiteralURLFromShortlist(t *testing.T) {
 	var docsServer *httptest.Server
 	docsServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -284,7 +301,7 @@ func TestSemanticDisambiguateCandidateFamiliesBoostsBrandAlignedFamily(t *testin
 	}
 }
 
-func TestApplyCandidateIntelligencePrefersFirstPartyDocsClass(t *testing.T) {
+func TestApplyCandidateIntelligenceAddsSemanticGroundingMetadata(t *testing.T) {
 	semantic := newDiscoverSemanticServer()
 	defer semantic.Close()
 
@@ -316,20 +333,162 @@ func TestApplyCandidateIntelligencePrefersFirstPartyDocsClass(t *testing.T) {
 	}
 
 	got := svc.applyCandidateIntelligence(context.Background(), "MDN JavaScript guide", candidates)
-	if got[0].URL != "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide" {
-		t.Fatalf("expected candidate intelligence to prefer first-party docs, got %q", got[0].URL)
-	}
-	if got[0].Metadata["candidate_class"] == "" || got[0].Metadata["cluster_id"] == "" {
+	if got[0].Metadata["candidate_goal_similarity"] == "" || got[0].Metadata["cluster_id"] == "" {
 		t.Fatalf("expected candidate intelligence metadata, got %#v", got[0].Metadata)
 	}
 	if !containsReason(got[0].Reason, "candidate_intelligence") {
 		t.Fatalf("expected candidate intelligence reason, got %#v", got[0].Reason)
 	}
-	if got[1].Metadata["candidate_class"] == "" {
-		t.Fatalf("expected runner-up class metadata, got %#v", got[1].Metadata)
+	if got[1].Metadata["candidate_goal_similarity"] == "" || got[1].Metadata["cluster_id"] == "" {
+		t.Fatalf("expected runner-up semantic metadata, got %#v", got[1].Metadata)
 	}
-	if got[1].Metadata["candidate_class"] == got[0].Metadata["candidate_class"] {
-		t.Fatalf("expected distinct classes to be learned, got %#v", got)
+}
+
+func TestDiscoverWebRecoversCanonicalFamilyFromIdentityReferences(t *testing.T) {
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+
+	var officialServer *httptest.Server
+	officialServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprint(w, `<html><head><title>MDN Web Docs</title></head><body><h1>MDN Web Docs</h1></body></html>`)
+		case "/en-US/docs/Web/JavaScript/Guide":
+			_, _ = fmt.Fprint(w, `<html><head><title>JavaScript Guide - JavaScript | MDN</title></head><body><h1>Guide</h1><p>Guide body.</p></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer officialServer.Close()
+
+	mirrorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/guide":
+			_, _ = fmt.Fprintf(w, `<html><head><title>JavaScript Guide</title><link rel="canonical" href="%s/en-US/docs/Web/JavaScript/Guide"><link rel="alternate" href="%s/en-US/docs/Web/JavaScript/Guide"></head><body><h1>Guide</h1></body></html>`, officialServer.URL, officialServer.URL)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer mirrorServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/guide">JavaScript Guide</a></body></html>`, mirrorServer.URL)
+	}))
+	defer searchServer.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, semantic.URL)
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "MDN JavaScript guide",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != officialServer.URL+"/en-US/docs/Web/JavaScript/Guide" {
+		t.Fatalf("expected canonical family recovery to win, got %q", resp.SelectedURL)
+	}
+}
+
+func TestDiscoverWebSurfacesOfficialFamilyFromExternalEntityLinks(t *testing.T) {
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+
+	officialServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprint(w, `<html><head><title>Home - Comitato Olimpico Nazionale</title></head><body><h1>CONI</h1></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer officialServer.Close()
+
+	entityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/entity":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Comitato Olimpico Nazionale Italiano</title></head><body><h1>CONI</h1><a href="%s">sito istituzionale</a></body></html>`, officialServer.URL)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer entityServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/entity">Comitato Olimpico Nazionale Italiano</a></body></html>`, entityServer.URL)
+	}))
+	defer searchServer.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, semantic.URL)
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "official site for Comitato Olimpico Nazionale Italiano",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	found := false
+	for _, candidate := range resp.Candidates {
+		if candidate.URL == officialServer.URL {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected official host to surface in candidates, got %#v", resp.Candidates)
+	}
+}
+
+func TestApplyCandidateIntelligencePenalizesIdentityMismatchMirror(t *testing.T) {
+	semantic := newDiscoverSemanticServer()
+	defer semantic.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, semantic.URL)
+	svc := newTestService(t, cfg, nil)
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://devdoc.net/web/developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/JavaScript_Overview.html",
+			Score: 1.10,
+			Label: "Introduction - JavaScript | MDN",
+			Metadata: map[string]string{
+				"host_root_title": "Developer's Documentation Collections",
+				"page_title":      "Introduction - JavaScript | MDN",
+				"resource_class":  "html_like",
+			},
+		},
+		{
+			URL:   "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+			Score: 1.02,
+			Label: "JavaScript | MDN",
+			Metadata: map[string]string{
+				"host_root_title": "MDN Web Docs",
+				"page_title":      "JavaScript | MDN",
+				"resource_class":  "html_like",
+			},
+		},
+	}
+
+	got := svc.applyCandidateIntelligence(context.Background(), "MDN JavaScript guide", candidates)
+	if got[0].URL != "https://developer.mozilla.org/en-US/docs/Web/JavaScript" {
+		t.Fatalf("expected official family to beat mirror after identity mismatch penalty, got %q", got[0].URL)
+	}
+	if got[1].Metadata["candidate_host_similarity"] == "" || got[1].Metadata["candidate_page_similarity"] == "" {
+		t.Fatalf("expected mirror identity metadata, got %#v", got[1].Metadata)
 	}
 }
 
