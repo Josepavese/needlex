@@ -73,14 +73,14 @@ func (s *Service) applyDiscoveryToPlan(plan *QueryPlan, req QueryRequest, discov
 
 func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL string) ReadRequest {
 	return ReadRequest{
-		URL:            selectedURL,
-		Objective:      req.Goal,
-		Profile:        profile,
-		FetchProfile:   req.FetchProfile,
+		URL:               selectedURL,
+		Objective:         req.Goal,
+		Profile:           profile,
+		FetchProfile:      req.FetchProfile,
 		FetchRetryProfile: req.FetchRetryProfile,
-		UserAgent:      req.UserAgent,
-		ForceLane:      req.ForceLane,
-		PruningProfile: req.PruningProfile,
-		RenderHint:     req.RenderHint,
+		UserAgent:         req.UserAgent,
+		ForceLane:         req.ForceLane,
+		PruningProfile:    req.PruningProfile,
+		RenderHint:        req.RenderHint,
 	}
 }

@@ -99,10 +99,7 @@ func marshalOllamaRequest(model string, req ModelRequest) ([]byte, error) {
 	messages := promptForRequest(req)
 	ollamaMessages := make([]ollamaChatMessage, 0, len(messages))
 	for _, item := range messages {
-		ollamaMessages = append(ollamaMessages, ollamaChatMessage{
-			Role:    item.Role,
-			Content: item.Content,
-		})
+		ollamaMessages = append(ollamaMessages, ollamaChatMessage(item))
 	}
 	options := map[string]any{
 		"temperature": 0,

@@ -13,13 +13,13 @@ import (
 func TestPrepareReadRequestWithLocalStateAppliesGenome(t *testing.T) {
 	root := t.TempDir()
 	_, _, err := store.NewGenomeStore(root).Observe(store.GenomeObservation{
-		URL:              "https://example.com/docs",
-		ObservedLane:     2,
-		PreferredProfile: "tiny",
-		FetchProfile:     "hardened",
+		URL:               "https://example.com/docs",
+		ObservedLane:      2,
+		PreferredProfile:  "tiny",
+		FetchProfile:      "hardened",
 		FetchRetryProfile: "hardened",
-		PruningProfile:   "aggressive",
-		RenderNeeded:     true,
+		PruningProfile:    "aggressive",
+		RenderNeeded:      true,
 	})
 	if err != nil {
 		t.Fatalf("seed genome: %v", err)
@@ -123,13 +123,13 @@ func TestObserveReadResponseWithLocalStatePersistsArtifacts(t *testing.T) {
 func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 	root := t.TempDir()
 	_, _, err := store.NewGenomeStore(root).Observe(store.GenomeObservation{
-		URL:              "https://example.com/root",
-		ObservedLane:     1,
-		PreferredProfile: "tiny",
-		FetchProfile:     "browser_like",
+		URL:               "https://example.com/root",
+		ObservedLane:      1,
+		PreferredProfile:  "tiny",
+		FetchProfile:      "browser_like",
 		FetchRetryProfile: "hardened",
-		PruningProfile:   "forum",
-		RenderNeeded:     true,
+		PruningProfile:    "forum",
+		RenderNeeded:      true,
 	})
 	if err != nil {
 		t.Fatalf("seed genome: %v", err)

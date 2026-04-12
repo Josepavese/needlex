@@ -27,14 +27,6 @@ type corpus struct {
 	} `json:"cases"`
 }
 
-type discoverWebResponse struct {
-	Provider    string `json:"provider"`
-	SelectedURL string `json:"selected_url"`
-	Candidates  []struct {
-		URL string `json:"url"`
-	} `json:"candidates"`
-}
-
 type runResult struct {
 	Profile         string   `json:"profile"`
 	Skipped         bool     `json:"skipped,omitempty"`

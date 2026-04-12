@@ -12,14 +12,14 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 	store.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
 
 	genome, _, err := store.Observe(GenomeObservation{
-		URL:              "https://example.com/docs",
-		ObservedLane:     1,
-		PreferredProfile: "tiny",
-		FetchProfile:     "browser_like",
+		URL:               "https://example.com/docs",
+		ObservedLane:      1,
+		PreferredProfile:  "tiny",
+		FetchProfile:      "browser_like",
 		FetchRetryProfile: "hardened",
-		FetchMode:        "http",
-		NoiseLevel:       "medium",
-		PageType:         "docs",
+		FetchMode:         "http",
+		NoiseLevel:        "medium",
+		PageType:          "docs",
 	})
 	if err != nil {
 		t.Fatalf("observe genome: %v", err)

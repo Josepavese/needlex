@@ -16,31 +16,31 @@ import (
 var ErrGenomeNotFound = errors.New("genome not found")
 
 type DomainGenome struct {
-	Domain           string    `json:"domain"`
-	ForceLane        int       `json:"force_lane"`
-	PreferredProfile string    `json:"preferred_profile,omitempty"`
-	FetchProfile     string    `json:"fetch_profile,omitempty"`
-	FetchRetryProfile string   `json:"fetch_retry_profile,omitempty"`
-	PruningProfile   string    `json:"pruning_profile,omitempty"`
-	RenderNeeded     bool      `json:"render_needed,omitempty"`
-	NoiseLevel       string    `json:"noise_level,omitempty"`
-	LastPageType     string    `json:"last_page_type,omitempty"`
-	SeenCount        int       `json:"seen_count"`
-	LastSeenAt       time.Time `json:"last_seen_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	Domain            string    `json:"domain"`
+	ForceLane         int       `json:"force_lane"`
+	PreferredProfile  string    `json:"preferred_profile,omitempty"`
+	FetchProfile      string    `json:"fetch_profile,omitempty"`
+	FetchRetryProfile string    `json:"fetch_retry_profile,omitempty"`
+	PruningProfile    string    `json:"pruning_profile,omitempty"`
+	RenderNeeded      bool      `json:"render_needed,omitempty"`
+	NoiseLevel        string    `json:"noise_level,omitempty"`
+	LastPageType      string    `json:"last_page_type,omitempty"`
+	SeenCount         int       `json:"seen_count"`
+	LastSeenAt        time.Time `json:"last_seen_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type GenomeObservation struct {
-	URL              string
-	ObservedLane     int
-	PreferredProfile string
-	FetchProfile     string
+	URL               string
+	ObservedLane      int
+	PreferredProfile  string
+	FetchProfile      string
 	FetchRetryProfile string
-	PruningProfile   string
-	RenderNeeded     bool
-	FetchMode        string
-	NoiseLevel       string
-	PageType         string
+	PruningProfile    string
+	RenderNeeded      bool
+	FetchMode         string
+	NoiseLevel        string
+	PageType          string
 }
 
 type GenomeStore struct {

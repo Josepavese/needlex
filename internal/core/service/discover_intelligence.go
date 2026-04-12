@@ -9,16 +9,6 @@ import (
 	"github.com/josepavese/needlex/internal/intel"
 )
 
-type candidateIntelligence struct {
-	GoalSimilarity float64
-	HostSimilarity float64
-	PageSimilarity float64
-	ClusterID      string
-	ClusterSize    int
-	ClusterFamily  string
-	Coherence      float64
-}
-
 type candidateCluster struct {
 	ID         string
 	MemberIdx  []int
