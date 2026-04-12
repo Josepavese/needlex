@@ -16,3 +16,4 @@ Deep reference:
 3. [Operator Guide](../operator-guide.md)
 4. [Tool Calling](../tool-calling.md)
 5. [Benchmark Report](../benchmark-report.md)
+6. [Experimental Specs](../experimental/README.md)

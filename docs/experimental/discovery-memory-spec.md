@@ -1,7 +1,7 @@
 # Discovery Memory Spec
 
-Status: future capability specification  
-Version: `0.3`  
+Status: partially implemented strategic specification  
+Version: `0.4`  
 Scope: local-first seedless discovery support without mandatory infrastructure
 
 Primary references:
@@ -15,6 +15,27 @@ Primary references:
 - DuckDB `vss`: <https://duckdb.org/docs/stable/core_extensions/vss.html>
 - LanceDB docs: <https://docs.lancedb.com/>
 - Qdrant docs: <https://qdrant.tech/documentation/>
+
+## 0. Current State
+
+This document is no longer a pure future-spec.
+
+Parts of the underlying direction already exist in the runtime:
+1. local discovery state
+2. `discovery.db`
+3. provider health memory
+4. local reuse in warm-state discovery paths
+5. semantic reranking and family recovery in seedless discovery
+
+What remains candidate rather than complete:
+1. richer document/edge memory substrate
+2. broader local-first seedless recall before public bootstrap
+3. stronger semantic retrieval over accumulated local evidence
+4. a cleaner SSOT around discovery-memory-specific stores and exports
+
+Read this document as:
+1. a strategic direction that is partially absorbed
+2. not as a promise that every section below is implemented today
 
 ## 1. Purpose
 
@@ -72,7 +93,7 @@ Its role is:
 
 ## 5. Position in Runtime
 
-Future seedless query flow:
+Target seedless query flow:
 
 `Goal -> QueryRewrite -> DiscoveryMemory -> PublicBootstrap(best effort) -> SemanticRerank -> Read -> Proof`
 
@@ -85,8 +106,8 @@ More precisely:
 6. all candidates then go through semantic/structural reranking
 
 Important:
-`Discovery Memory` is the first seedless discovery substrate.
-Public search becomes fallback, not primary identity.
+`Discovery Memory` is the intended first seedless discovery substrate.
+In the current runtime, public bootstrap still exists as an important path, but local state is already part of the product and should keep expanding.
 
 ## 6. Product Shape
 

@@ -313,13 +313,13 @@ A workflow burst is successful only if it ends with one of:
 Search is now governed by this rule:
 
 1. `seed-first` is core
-2. `seedless` is best-effort
+2. `seedless` is a first-class product surface, but still less stable than seeded and warm-state flows
 3. no infra is required
 4. no public search provider is treated as strategic foundation
-5. `Discovery Memory` remains a future strategic front, not a release blocker
+5. `Discovery Memory` is partly absorbed already, but not yet the dominant seedless substrate
 
 References:
-1. [seedless-discovery-strategy.md](experimental/seedless-discovery-strategy.md)
+1. [seedless-discovery-strategy.md](archive/seedless-discovery-strategy.md)
 2. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
 
 ## Output Policy

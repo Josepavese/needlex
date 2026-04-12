@@ -24,6 +24,7 @@ Start here if you want:
 1. a compact web context compiler
 2. a proof-carrying retrieval layer
 3. a local-first runtime with CLI and MCP surfaces
+4. a product with both warm-state local retrieval and seedless open-web discovery modes
 
 ## What Needle-X Is Not
 
@@ -38,3 +39,4 @@ Start here if you want:
 3. [Operator Guide](../operator-guide.md)
 4. [Tool Calling](../tool-calling.md)
 5. [Benchmark Report](../benchmark-report.md)
+6. [Experimental Specs](../experimental/README.md)

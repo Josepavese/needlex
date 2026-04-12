@@ -1,5 +1,16 @@
 # Seedless Discovery Strategy
 
+Archive status:
+1. historical strategy document
+2. partially absorbed in runtime and roadmap
+3. no longer the active framing for seedless product doctrine
+
+Why archived:
+1. it frames seedless too narrowly as `best-effort`
+2. seedless is now treated as a first-class product surface
+3. provider taxonomy and reliability ideas have already moved into the active runtime and roadmap
+4. the remaining useful content is historical context, not active doctrine
+
 Status: future capability strategy  
 Version: `0.1`  
 Scope: Needle-X-compatible bootstrap discovery without mandatory infrastructure

@@ -9,10 +9,11 @@ Baseline SSOT:
 
 Strategic but non-active specs:
 1. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
-2. [seedless-discovery-strategy.md](experimental/seedless-discovery-strategy.md)
+2. [agentic-decision-plane-spec.md](experimental/agentic-decision-plane-spec.md)
 
 Historical material:
 1. [archive/README.md](archive/README.md)
+2. [seedless-discovery-strategy.md](archive/seedless-discovery-strategy.md)
 
 ## Product Shape
 
