@@ -86,6 +86,52 @@ func TestServiceObserveAndSearch(t *testing.T) {
 	}
 }
 
+func TestServiceSearchInfersFamilyRootFromObservedDescendants(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	svc := NewService(config.MemoryConfig{EmbeddingBackend: "openai-embeddings", EmbeddingModel: "embed-x"}, store, stubEmbedder{vectors: map[string][]float32{
+		"JavaScript | MDN\nJavaScript overview language guide on MDN.":                               {1, 0, 0},
+		"AsyncGenerator | MDN\nAsyncGenerator reference details on MDN JavaScript reference page.":   {1, 0, 0},
+		"Enumerability | MDN\nEnumerability and ownership details for JavaScript properties on MDN.": {1, 0, 0},
+		"MDN JavaScript overview": {1, 0, 0},
+	}})
+	now := time.Now().UTC()
+	for _, item := range []struct {
+		url   string
+		title string
+		text  string
+		trace string
+	}{
+		{"https://developer.mozilla.org/en-US/docs/Web/JavaScript", "JavaScript | MDN", "JavaScript overview language guide on MDN.", "trace_root"},
+		{"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator", "AsyncGenerator | MDN", "AsyncGenerator reference details on MDN JavaScript reference page.", "trace_ref"},
+		{"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Enumerability_and_ownership_of_properties", "Enumerability | MDN", "Enumerability and ownership details for JavaScript properties on MDN.", "trace_guide"},
+	} {
+		if err := svc.Observe(context.Background(), Observation{
+			Document:    core.Document{URL: item.url, FinalURL: item.url, Title: item.title, FetchedAt: now, FetchMode: core.FetchModeHTTP},
+			ResultPack:  core.ResultPack{Profile: core.ProfileStandard, Chunks: []core.Chunk{{ID: item.trace, DocID: item.trace, Text: item.text, Confidence: 0.95}}},
+			TraceID:     item.trace,
+			ObservedAt:  now,
+			SourceKind:  "read",
+			StableRatio: 0.8,
+		}); err != nil {
+			t.Fatalf("observe %s: %v", item.url, err)
+		}
+	}
+	matches, err := svc.Search(context.Background(), "MDN JavaScript overview", SearchOptions{Limit: 5, ExpandLimit: 3})
+	if err != nil {
+		t.Fatalf("search memory: %v", err)
+	}
+	if len(matches) == 0 {
+		t.Fatal("expected matches")
+	}
+	if matches[0].URL != "https://developer.mozilla.org/en-US/docs/Web/JavaScript" {
+		t.Fatalf("expected root overview first, got %+v", matches[0])
+	}
+	if !containsReason(matches[0].Reasons, "family_root_inference") && !containsReason(matches[0].Reasons, "local_memory_hit") {
+		t.Fatalf("expected root inference signal, got %+v", matches[0])
+	}
+}
+
 func TestSQLiteStoreExportImportAndRebuild(t *testing.T) {
 	root := t.TempDir()
 	store := NewSQLiteStore(root, "discovery/discovery.db")

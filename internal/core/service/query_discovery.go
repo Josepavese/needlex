@@ -19,7 +19,7 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 		result.candidates = append([]DiscoverCandidate{}, req.MemoryCandidates...)
 		result.selected = req.MemoryCandidates[0].URL
 		if discoveryMode == QueryDiscoveryWeb {
-			if recovered, ok := s.tryMemoryFamilyRecovery(ctx, req); ok && preferRecoveredMemoryFamily(result.selected, recovered.SelectedURL) {
+			if recovered, ok := s.tryMemoryFamilyRecovery(ctx, req); ok && shouldPromoteRecoveredMemoryFamily(result.selected, recovered) {
 				result.provider = "discovery_memory_same_site"
 				result.selected = recovered.SelectedURL
 				result.candidates = recovered.Candidates
@@ -70,6 +70,16 @@ func preferRecoveredMemoryFamily(currentURL, recoveredURL string) bool {
 	return urlPathDepth(recoveredURL) > urlPathDepth(currentURL)
 }
 
+func shouldPromoteRecoveredMemoryFamily(currentURL string, recovered DiscoverResponse) bool {
+	if preferRecoveredMemoryFamily(currentURL, recovered.SelectedURL) {
+		return true
+	}
+	if !sameNormalizedURL(currentURL, recovered.SelectedURL) {
+		return false
+	}
+	return len(recovered.Candidates) > 1
+}
+
 func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest) (DiscoverResponse, bool) {
 	if strings.TrimSpace(req.SeedURL) != "" || len(req.MemoryCandidates) == 0 {
 		return DiscoverResponse{}, false
@@ -91,6 +101,7 @@ func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest)
 	}
 	discovery.SelectedURL = preferredRecoveredMemoryURL(seed.URL, discovery)
 	if discovery.SelectedURL != "" {
+		discovery.Candidates = ensureRecoveredCandidatePresent(discovery.Candidates, discovery.SelectedURL, seed)
 		discovery.Candidates = promoteRecoveredCandidate(discovery.Candidates, discovery.SelectedURL)
 	}
 	return discovery, true
@@ -150,30 +161,61 @@ func urlPathDepth(raw string) int {
 }
 
 func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse) string {
-	best := strings.TrimSpace(discovery.SelectedURL)
-	bestDepth := urlPathDepth(best)
+	best := strings.TrimSpace(seedURL)
 	seedHost := hostFromURLString(seedURL)
-	for _, candidate := range discovery.Candidates {
-		host := hostFromURLString(candidate.URL)
-		if host == "" || host != seedHost {
-			continue
+	if seedHost == "" {
+		return strings.TrimSpace(discovery.SelectedURL)
+	}
+	if urlPathDepth(seedURL) == 0 {
+		best = strings.TrimSpace(discovery.SelectedURL)
+		bestDepth := urlPathDepth(best)
+		for _, candidate := range discovery.Candidates {
+			host := hostFromURLString(candidate.URL)
+			if host == "" || host != seedHost {
+				continue
+			}
+			depth := urlPathDepth(candidate.URL)
+			if depth > bestDepth {
+				best = candidate.URL
+				bestDepth = depth
+			}
 		}
-		depth := urlPathDepth(candidate.URL)
-		if depth > bestDepth {
-			best = candidate.URL
-			bestDepth = depth
+		return best
+	}
+	for _, candidate := range discovery.Candidates {
+		if sameNormalizedURL(seedURL, candidate.URL) {
+			return candidate.URL
 		}
 	}
 	return best
 }
 
+func sameNormalizedURL(a, b string) bool {
+	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
+		return false
+	}
+	pa, errA := url.Parse(strings.TrimSpace(a))
+	pb, errB := url.Parse(strings.TrimSpace(b))
+	if errA != nil || errB != nil {
+		return false
+	}
+	return strings.EqualFold(pa.Hostname(), pb.Hostname()) &&
+		strings.Trim(pa.EscapedPath(), "/") == strings.Trim(pb.EscapedPath(), "/")
+}
+
 func promoteRecoveredCandidate(candidates []DiscoverCandidate, selectedURL string) []DiscoverCandidate {
 	out := append([]DiscoverCandidate{}, candidates...)
+	topScore := 0.0
+	for _, candidate := range out {
+		if candidate.Score > topScore {
+			topScore = candidate.Score
+		}
+	}
 	for i := range out {
 		if strings.TrimSpace(out[i].URL) != strings.TrimSpace(selectedURL) {
 			continue
 		}
-		out[i].Score += 0.6
+		out[i].Score = maxRecoveredFloat(out[i].Score+0.6, topScore+0.12)
 		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "memory_family_specific_page")
 		if i == 0 {
 			return out
@@ -184,6 +226,52 @@ func promoteRecoveredCandidate(candidates []DiscoverCandidate, selectedURL strin
 		return out
 	}
 	return out
+}
+
+func ensureRecoveredCandidatePresent(candidates []DiscoverCandidate, selectedURL string, seed DiscoverCandidate) []DiscoverCandidate {
+	for _, candidate := range candidates {
+		if sameNormalizedURL(candidate.URL, selectedURL) {
+			return candidates
+		}
+	}
+	inserted := DiscoverCandidate{
+		URL:      selectedURL,
+		Label:    discoverycore.FirstNonEmpty(seed.Label, seed.URL),
+		Score:    firstNonZero(seed.Score, 1.05),
+		Reason:   discoverycore.AppendUniqueReason(append([]string{}, seed.Reason...), "memory_family_seed_preserved"),
+		Metadata: cloneStringMap(seed.Metadata),
+	}
+	return append([]DiscoverCandidate{inserted}, candidates...)
+}
+
+func firstNonZero(values ...float64) float64 {
+	for _, value := range values {
+		if value > 0 {
+			return value
+		}
+	}
+	return 0
+}
+
+func cloneStringMap(input map[string]string) map[string]string {
+	if len(input) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(input))
+	for key, value := range input {
+		out[key] = value
+	}
+	return out
+}
+
+func maxRecoveredFloat(values ...float64) float64 {
+	best := 0.0
+	for _, value := range values {
+		if value > best {
+			best = value
+		}
+	}
+	return best
 }
 
 type queryWebDiscoveryResult struct {

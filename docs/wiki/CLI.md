@@ -14,7 +14,7 @@ needlex
 4. `needlex proof <trace-id|proof-id|chunk-id> --json`
 5. `needlex replay <trace-id> --json`
 6. `needlex diff <trace-a> <trace-b> --json`
-7. `needlex memory stats|search|prune`
+7. `needlex memory stats|search|prune|export|import|rebuild-index`
 
 ## Minimal Examples
 

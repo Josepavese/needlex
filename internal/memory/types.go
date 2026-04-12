@@ -64,10 +64,26 @@ type Candidate struct {
 	ChangedRecently bool
 }
 
+type TopicNode struct {
+	TopicKey            string
+	Host                string
+	RootPath            string
+	RepresentativeURL   string
+	RepresentativeTitle string
+	SemanticSummary     string
+	Language            string
+	SupportCount        int
+	ChildCount          int
+	TopicDepth          int
+	ObservedAt          time.Time
+	UpdatedAt           time.Time
+}
+
 type Stats struct {
 	DocumentCount  int
 	EdgeCount      int
 	EmbeddingCount int
+	TopicNodeCount int
 	LastObservedAt time.Time
 	LastRebuildAt  time.Time
 	DBPath         string
@@ -107,13 +123,16 @@ type ExportStats struct {
 	DocumentsPath  string `json:"documents_path"`
 	EdgesPath      string `json:"edges_path"`
 	EmbeddingsPath string `json:"embeddings_path"`
+	TopicNodesPath string `json:"topic_nodes_path"`
 	DocumentCount  int    `json:"document_count"`
 	EdgeCount      int    `json:"edge_count"`
 	EmbeddingCount int    `json:"embedding_count"`
+	TopicNodeCount int    `json:"topic_node_count"`
 }
 
 type ImportStats struct {
 	DocumentCount  int `json:"document_count"`
 	EdgeCount      int `json:"edge_count"`
 	EmbeddingCount int `json:"embedding_count"`
+	TopicNodeCount int `json:"topic_node_count"`
 }

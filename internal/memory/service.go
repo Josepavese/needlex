@@ -17,7 +17,10 @@ type Store interface {
 	UpsertDocument(ctx context.Context, doc Document) error
 	UpsertEdges(ctx context.Context, edges []Edge) error
 	UpsertEmbedding(ctx context.Context, emb Embedding, vector []float32) error
+	RefreshTopicNodes(ctx context.Context, doc Document) error
+	SearchTopicNodes(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error)
 	SearchByVector(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error)
+	ExpandAncestorRoots(ctx context.Context, urls []string, limit int) ([]Candidate, error)
 	ExpandNeighbors(ctx context.Context, urls []string, limit int) ([]Candidate, error)
 	ExpandHosts(ctx context.Context, hosts []string, limit int) ([]Candidate, error)
 	GetStats(ctx context.Context) (Stats, error)
@@ -94,7 +97,10 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 		CreatedAt:    observedAt,
 		UpdatedAt:    observedAt,
 	}
-	return s.store.UpsertEmbedding(ctx, emb, vectors[0])
+	if err := s.store.UpsertEmbedding(ctx, emb, vectors[0]); err != nil {
+		return err
+	}
+	return s.store.RefreshTopicNodes(ctx, doc)
 }
 
 func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([]Candidate, error) {
@@ -114,6 +120,13 @@ func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([
 	}
 	merged := map[string]Candidate{}
 	for _, vector := range vectors {
+		topicMatches, err := s.store.SearchTopicNodes(ctx, vector, opts.Limit, opts.DomainHints)
+		if err != nil {
+			return nil, err
+		}
+		for _, match := range topicMatches {
+			mergeCandidate(merged, match)
+		}
 		matches, err := s.store.SearchByVector(ctx, vector, opts.Limit, opts.DomainHints)
 		if err != nil {
 			return nil, err
@@ -125,6 +138,13 @@ func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([
 	neighborLimit := opts.ExpandLimit
 	if neighborLimit <= 0 {
 		neighborLimit = minInt(3, opts.Limit)
+	}
+	ancestorRoots, err := s.store.ExpandAncestorRoots(ctx, candidateURLs(merged), neighborLimit)
+	if err != nil {
+		return nil, err
+	}
+	for _, candidate := range ancestorRoots {
+		mergeCandidate(merged, candidate)
 	}
 	neighbors, err := s.store.ExpandNeighbors(ctx, candidateURLs(merged), neighborLimit)
 	if err != nil {

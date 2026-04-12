@@ -272,6 +272,24 @@ Search local memory directly:
 needlex memory search "playwright installation" --json
 ```
 
+Export the store to JSONL:
+
+```bash
+needlex memory export --out /tmp/needlex-memory
+```
+
+Import a previously exported store:
+
+```bash
+needlex memory import --in /tmp/needlex-memory
+```
+
+Rebuild vector/search indexes after import or maintenance:
+
+```bash
+needlex memory rebuild-index --json
+```
+
 Prune the local discovery store using configured limits:
 
 ```bash
@@ -281,7 +299,9 @@ needlex memory prune --json
 Operator rule:
 1. `memory search` is local recall, not public web search
 2. `memory prune` keeps the store bounded using configured document, edge, and embedding limits
-3. the canonical store is SQLite under `.needlex/discovery/`
+3. `memory export` and `memory import` are operator tools for portability, backup, and warm-state seeding
+4. `memory rebuild-index` is the maintenance path after bulk import or index drift
+5. the canonical store is SQLite under `.needlex/discovery/`
 
 Evaluation artifacts live under `improvements/`.
 

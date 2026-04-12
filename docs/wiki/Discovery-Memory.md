@@ -47,6 +47,9 @@ Guardrail:
 needlex memory stats --json
 needlex memory search "pricing" --json
 needlex memory prune --json
+needlex memory export --out /tmp/needlex-memory
+needlex memory import --in /tmp/needlex-memory
+needlex memory rebuild-index --json
 ```
 
 ## Next

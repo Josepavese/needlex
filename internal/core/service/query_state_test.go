@@ -295,14 +295,14 @@ func TestRunQueryDiscoveryPrefersMemoryCandidatesForSeedlessWeb(t *testing.T) {
 	if err != nil {
 		t.Fatalf("run query discovery: %v", err)
 	}
-	if result.provider != "discovery_memory" {
-		t.Fatalf("expected discovery_memory provider, got %#v", result)
+	if result.provider != "discovery_memory_same_site" {
+		t.Fatalf("expected discovery_memory_same_site provider, got %#v", result)
 	}
 	if result.selected != "https://playwright.dev/docs/intro" {
 		t.Fatalf("expected selected memory candidate, got %#v", result)
 	}
-	if len(result.candidates) != 1 || result.candidates[0].URL != "https://playwright.dev/docs/intro" {
-		t.Fatalf("expected only memory-backed candidate, got %#v", result.candidates)
+	if len(result.candidates) == 0 || result.candidates[0].URL != "https://playwright.dev/docs/intro" {
+		t.Fatalf("expected same-site recovery to keep intro page first, got %#v", result.candidates)
 	}
 }
 
@@ -337,6 +337,43 @@ func TestRunQueryDiscoveryUsesMemoryFamilyRecoveryBeforeWebBootstrap(t *testing.
 	}
 	if result.selected != server.URL+"/docs/intro" {
 		t.Fatalf("expected same-site recovered child page, got %#v", result)
+	}
+}
+
+func TestRunQueryDiscoveryKeepsOverviewSeedWhenRecoveredFamilyContainsOnlyDescendants(t *testing.T) {
+	seedURL := ""
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/docs/Web/JavaScript":
+			_, _ = fmt.Fprintf(w, `<html><head><title>JavaScript | MDN</title></head><body><a href="%s/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator">AsyncGenerator</a></body></html>`, seedURL)
+		case "/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator":
+			_, _ = fmt.Fprint(w, `<html><head><title>AsyncGenerator | MDN</title></head><body><article><h1>AsyncGenerator</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	seedURL = server.URL + "/docs/Web/JavaScript"
+
+	svc := newTestService(t, config.Defaults(), server.Client())
+	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
+		Goal: "MDN JavaScript overview",
+		MemoryCandidates: []DiscoverCandidate{
+			{URL: seedURL, Label: "JavaScript | MDN", Score: 2.1, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+		},
+	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
+	if err != nil {
+		t.Fatalf("run query discovery: %v", err)
+	}
+	if result.provider != "discovery_memory_same_site" {
+		t.Fatalf("expected discovery_memory_same_site provider, got %#v", result)
+	}
+	if result.selected != seedURL {
+		t.Fatalf("expected overview seed to remain selected, got %#v", result)
+	}
+	if len(result.candidates) == 0 || result.candidates[0].URL != seedURL {
+		t.Fatalf("expected overview seed candidate to be preserved first, got %#v", result.candidates)
 	}
 }
 
