@@ -7,10 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"github.com/josepavese/needlex/internal/store"
 )
 
 func TestRefineWebCandidatePrefersFirstPartyHostCoherence(t *testing.T) {
@@ -332,6 +335,80 @@ func TestApplyCandidateIntelligencePrefersFirstPartyDocsClass(t *testing.T) {
 	}
 	if got[1].Metadata["candidate_class"] == got[0].Metadata["candidate_class"] {
 		t.Fatalf("expected distinct classes to be learned, got %#v", got)
+	}
+}
+
+func TestOrderedDiscoveryProvidersPrefersHealthyProvider(t *testing.T) {
+	cfg := config.Defaults()
+	svc := newTestService(t, cfg, nil)
+	svc.discoveryProviders = store.NewDiscoveryProviderStateStore(t.TempDir())
+	svc.discoveryProviders.Observe(store.DiscoveryProviderObservation{
+		Name:            "lite.duckduckgo.com",
+		Outcome:         store.DiscoveryProviderOutcomeBlocked,
+		BlockedCooldown: 10 * time.Minute,
+	})
+	svc.discoveryProviders.Observe(store.DiscoveryProviderObservation{
+		Name:    "html.duckduckgo.com",
+		Outcome: store.DiscoveryProviderOutcomeSuccess,
+	})
+
+	got := svc.orderedDiscoveryProviders([]string{
+		"https://lite.duckduckgo.com/lite/",
+		"https://html.duckduckgo.com/html/",
+	})
+	if got[0] != "https://html.duckduckgo.com/html/" {
+		t.Fatalf("expected healthy provider first, got %#v", got)
+	}
+}
+
+func TestDiscoverWebSkipsRemainingQueriesAfterProviderLevelFailure(t *testing.T) {
+	searchHits := 0
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits++
+		http.Error(w, "blocked", http.StatusForbidden)
+	}))
+	defer searchServer.Close()
+
+	cfg := config.Defaults()
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	svc.discoveryProviders = store.NewDiscoveryProviderStateStore(t.TempDir())
+
+	_, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "OpenAI API pricing",
+		Queries:       []string{"openai api pricing", "openai pricing docs"},
+		MaxCandidates: 5,
+	})
+	if err == nil {
+		t.Fatal("expected discover web to fail")
+	}
+	if searchHits >= 6 {
+		t.Fatalf("expected provider-level failure to reduce provider hits, got %d", searchHits)
+	}
+}
+
+func TestDiscoverWebPersistsProviderOutcome(t *testing.T) {
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "blocked", http.StatusForbidden)
+	}))
+	defer searchServer.Close()
+
+	cfg := config.Defaults()
+	svc := newTestService(t, cfg, searchServer.Client())
+	root := t.TempDir()
+	svc.discoveryProviders = store.NewDiscoveryProviderStateStore(root)
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	_, _ = svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "OpenAI API pricing",
+		MaxCandidates: 5,
+	})
+	state, err := svc.discoveryProviders.Load(discoverycore.ProviderName(searchServer.URL))
+	if err != nil {
+		t.Fatalf("expected provider state to be written: %v", err)
+	}
+	if state.BlockedCount == 0 && state.FailureCount == 0 && state.UnavailableCount == 0 {
+		t.Fatalf("expected provider state to record a failure outcome, got %+v", state)
 	}
 }
 

@@ -77,7 +77,11 @@ func defaultModelsConfig(baseline modelbaseline.Manifest) ModelsConfig {
 
 func defaultDiscoveryConfig(baseline modelbaseline.Manifest) DiscoveryConfig {
 	return DiscoveryConfig{
-		ProviderChain: baseline.Discovery.RecommendedProviderChain,
+		ProviderChain:                 baseline.Discovery.RecommendedProviderChain,
+		ProviderFailureCooldownMS:     120_000,
+		ProviderBlockedCooldownMS:     900_000,
+		ProviderTimeoutCooldownMS:     300_000,
+		ProviderUnavailableCooldownMS: 60_000,
 	}
 }
 

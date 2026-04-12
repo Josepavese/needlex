@@ -51,6 +51,9 @@ Work:
 3. jitter for retries
 4. trace metadata for retry profile and retry count
 5. per-host pacing hooks
+6. provider health persistence and cooldowns for seedless bootstrap
+7. provider ordering based on recent success and cooldown state
+8. provider-level circuit breaking inside a single seedless request
 
 ### Stage 2: Better Compatibility
 
@@ -98,5 +101,9 @@ Started in this iteration:
 3. jitter support for retries
 4. per-host minimum pacing gap
 5. retry and pacing metadata in fetch trace
+6. persistent discovery-provider health store
+7. provider cooldowns for blocked, timeout, unavailable, and generic failure outcomes
+8. dynamic provider ordering from persisted health state
+9. provider-level short-circuiting to avoid burning repeated queries on a degraded bootstrap source
 
 This is a resilience improvement, not a stealth feature.

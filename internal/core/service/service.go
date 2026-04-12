@@ -11,15 +11,17 @@ import (
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
+	"github.com/josepavese/needlex/internal/store"
 )
 
 type ReadRequest struct {
 	URL, Objective, Profile, UserAgent, PruningProfile string
-	FetchProfile, FetchRetryProfile                     string
-	ForceLane                                           int
-	RenderHint                                          bool
-	StableFingerprints                                  []string
+	FetchProfile, FetchRetryProfile                    string
+	ForceLane                                          int
+	RenderHint                                         bool
+	StableFingerprints                                 []string
 }
 
 type ReadResponse struct {
@@ -42,6 +44,7 @@ type Service struct {
 	semantic           intel.SemanticAligner
 	now                func() time.Time
 	webDiscoverBaseURL string
+	discoveryProviders store.DiscoveryProviderStateStore
 }
 
 func New(cfg config.Config, client *http.Client) (*Service, error) {
@@ -60,6 +63,7 @@ func New(cfg config.Config, client *http.Client) (*Service, error) {
 		semantic:           intel.NewSemanticAligner(cfg, client),
 		now:                time.Now,
 		webDiscoverBaseURL: strings.TrimSpace(cfg.Discovery.ProviderChain),
+		discoveryProviders: store.NewDiscoveryProviderStateStore(platform.DefaultStateRoot()),
 	}, nil
 }
 

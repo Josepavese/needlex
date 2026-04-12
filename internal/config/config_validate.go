@@ -151,10 +151,21 @@ func validateModels(models ModelsConfig) []error {
 }
 
 func validateDiscovery(discovery DiscoveryConfig) []error {
+	errs := []error{}
 	if strings.TrimSpace(discovery.ProviderChain) == "" {
-		return []error{fmt.Errorf("discovery.provider_chain must not be empty")}
+		errs = append(errs, fmt.Errorf("discovery.provider_chain must not be empty"))
 	}
-	return nil
+	for field, value := range map[string]int64{
+		"discovery.provider_failure_cooldown_ms":     discovery.ProviderFailureCooldownMS,
+		"discovery.provider_blocked_cooldown_ms":     discovery.ProviderBlockedCooldownMS,
+		"discovery.provider_timeout_cooldown_ms":     discovery.ProviderTimeoutCooldownMS,
+		"discovery.provider_unavailable_cooldown_ms": discovery.ProviderUnavailableCooldownMS,
+	} {
+		if value < 0 {
+			errs = append(errs, fmt.Errorf("%s must be >= 0", field))
+		}
+	}
+	return errs
 }
 
 func validateMemory(memory MemoryConfig) []error {

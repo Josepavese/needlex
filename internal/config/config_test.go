@@ -163,8 +163,12 @@ func TestApplyEnvOverridesSemanticValues(t *testing.T) {
 func TestApplyEnvOverridesDiscoveryValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
-		"NEEDLEX_DISCOVERY_PROVIDER_CHAIN": "https://example.com/search,https://backup.example/search",
-		"BRAVE_SEARCH_API_KEY":             "brave-test",
+		"NEEDLEX_DISCOVERY_PROVIDER_CHAIN":                   "https://example.com/search,https://backup.example/search",
+		"BRAVE_SEARCH_API_KEY":                               "brave-test",
+		"NEEDLEX_DISCOVERY_PROVIDER_FAILURE_COOLDOWN_MS":     "1000",
+		"NEEDLEX_DISCOVERY_PROVIDER_BLOCKED_COOLDOWN_MS":     "2000",
+		"NEEDLEX_DISCOVERY_PROVIDER_TIMEOUT_COOLDOWN_MS":     "3000",
+		"NEEDLEX_DISCOVERY_PROVIDER_UNAVAILABLE_COOLDOWN_MS": "4000",
 	}
 	if err := cfg.ApplyEnv(env); err != nil {
 		t.Fatalf("apply env: %v", err)
@@ -174,6 +178,9 @@ func TestApplyEnvOverridesDiscoveryValues(t *testing.T) {
 	}
 	if cfg.Discovery.BraveAPIKey != "brave-test" {
 		t.Fatalf("unexpected discovery api key override: %+v", cfg.Discovery)
+	}
+	if cfg.Discovery.ProviderFailureCooldownMS != 1000 || cfg.Discovery.ProviderBlockedCooldownMS != 2000 || cfg.Discovery.ProviderTimeoutCooldownMS != 3000 || cfg.Discovery.ProviderUnavailableCooldownMS != 4000 {
+		t.Fatalf("unexpected discovery cooldown override: %+v", cfg.Discovery)
 	}
 }
 

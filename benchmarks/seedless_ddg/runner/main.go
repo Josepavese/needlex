@@ -46,23 +46,45 @@ type queryResponse struct {
 }
 
 type runResult struct {
-	Profile         string   `json:"profile"`
-	RuntimeOK       bool     `json:"runtime_ok"`
-	SelectedURL     string   `json:"selected_url,omitempty"`
-	SelectedDomain  string   `json:"selected_domain,omitempty"`
-	ExpectedDomain  string   `json:"expected_domain"`
-	SelectedPass    bool     `json:"selected_pass"`
-	DiscoverySource string   `json:"discovery_provider,omitempty"`
-	CandidateCount  int      `json:"candidate_count"`
-	DocumentFetch   string   `json:"document_fetch_mode,omitempty"`
-	AcquireMetadata []string `json:"acquire_metadata,omitempty"`
-	RetryCount      int      `json:"retry_count,omitempty"`
-	RetrySleepMS    int64    `json:"retry_sleep_ms,omitempty"`
-	HostPacingMS    int64    `json:"host_pacing_ms,omitempty"`
-	RetryReason     string   `json:"retry_reason,omitempty"`
-	ErrorKind       string   `json:"error_kind,omitempty"`
-	LatencyMS       int64    `json:"latency_ms,omitempty"`
-	Error           string   `json:"error,omitempty"`
+	Profile          string       `json:"profile"`
+	AttemptCount     int          `json:"attempt_count,omitempty"`
+	PassCount        int          `json:"pass_count,omitempty"`
+	RuntimePassCount int          `json:"runtime_pass_count,omitempty"`
+	RuntimeOK        bool         `json:"runtime_ok"`
+	SelectedURL      string       `json:"selected_url,omitempty"`
+	SelectedDomain   string       `json:"selected_domain,omitempty"`
+	ExpectedDomain   string       `json:"expected_domain"`
+	SelectedPass     bool         `json:"selected_pass"`
+	DiscoverySource  string       `json:"discovery_provider,omitempty"`
+	CandidateCount   int          `json:"candidate_count"`
+	DocumentFetch    string       `json:"document_fetch_mode,omitempty"`
+	AcquireMetadata  []string     `json:"acquire_metadata,omitempty"`
+	RetryCount       int          `json:"retry_count,omitempty"`
+	RetrySleepMS     int64        `json:"retry_sleep_ms,omitempty"`
+	HostPacingMS     int64        `json:"host_pacing_ms,omitempty"`
+	RetryReason      string       `json:"retry_reason,omitempty"`
+	ErrorKind        string       `json:"error_kind,omitempty"`
+	LatencyMS        int64        `json:"latency_ms,omitempty"`
+	Error            string       `json:"error,omitempty"`
+	Attempts         []runAttempt `json:"attempts,omitempty"`
+}
+
+type runAttempt struct {
+	Attempt         int    `json:"attempt"`
+	RuntimeOK       bool   `json:"runtime_ok"`
+	SelectedURL     string `json:"selected_url,omitempty"`
+	SelectedDomain  string `json:"selected_domain,omitempty"`
+	SelectedPass    bool   `json:"selected_pass"`
+	DiscoverySource string `json:"discovery_provider,omitempty"`
+	CandidateCount  int    `json:"candidate_count"`
+	DocumentFetch   string `json:"document_fetch_mode,omitempty"`
+	RetryCount      int    `json:"retry_count,omitempty"`
+	RetrySleepMS    int64  `json:"retry_sleep_ms,omitempty"`
+	HostPacingMS    int64  `json:"host_pacing_ms,omitempty"`
+	RetryReason     string `json:"retry_reason,omitempty"`
+	ErrorKind       string `json:"error_kind,omitempty"`
+	LatencyMS       int64  `json:"latency_ms,omitempty"`
+	Error           string `json:"error,omitempty"`
 }
 
 type caseResult struct {
@@ -87,6 +109,7 @@ type summary struct {
 	AvgHostPacingMSByProfile    map[string]float64 `json:"avg_host_pacing_ms_by_profile,omitempty"`
 	RetryReasons                map[string]int     `json:"retry_reasons,omitempty"`
 	ErrorKinds                  map[string]int     `json:"error_kinds,omitempty"`
+	RunnerRuns                  int                `json:"runner_runs,omitempty"`
 }
 
 type report struct {
@@ -99,9 +122,14 @@ type report struct {
 
 func main() {
 	var outPath, casesPath string
+	var runs int
 	flag.StringVar(&outPath, "out", "improvements/seedless-ddg-benchmark-latest.json", "output report path")
 	flag.StringVar(&casesPath, "cases", "benchmarks/corpora/seedless-ddg-corpus-v1.json", "seedless ddg corpus path")
+	flag.IntVar(&runs, "runs", 3, "number of attempts per case/profile")
 	flag.Parse()
+	if runs <= 0 {
+		runs = 1
+	}
 
 	c, err := loadCorpus(casesPath)
 	if err != nil {
@@ -177,10 +205,10 @@ func main() {
 	results := make([]caseResult, 0, len(c.Cases))
 	for i, item := range c.Cases {
 		fmt.Printf("[seedless-ddg] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID)
-		standard := runCase(binaryPath, standardCfg, "standard", item.Goal, item.ExpectedDomain)
-		standardSemantic := runCase(binaryPath, standardSemanticCfg, "standard_semantic", item.Goal, item.ExpectedDomain)
-		browser := runCase(binaryPath, browserCfg, "browser_like", item.Goal, item.ExpectedDomain)
-		browserSemantic := runCase(binaryPath, browserSemanticCfg, "browser_like_semantic", item.Goal, item.ExpectedDomain)
+		standard := runCase(binaryPath, standardCfg, "standard", item.Goal, item.ExpectedDomain, runs)
+		standardSemantic := runCase(binaryPath, standardSemanticCfg, "standard_semantic", item.Goal, item.ExpectedDomain, runs)
+		browser := runCase(binaryPath, browserCfg, "browser_like", item.Goal, item.ExpectedDomain, runs)
+		browserSemantic := runCase(binaryPath, browserSemanticCfg, "browser_like_semantic", item.Goal, item.ExpectedDomain, runs)
 		row := caseResult{
 			ID:    item.ID,
 			Goal:  item.Goal,
@@ -195,7 +223,7 @@ func main() {
 		GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339),
 		CorpusVersion:  c.Version,
 		BinaryPath:     binaryPath,
-		Summary:        summarize(results),
+		Summary:        summarize(results, runs),
 		Results:        results,
 	}
 	if err := evalutil.WriteJSON(outPath, rep); err != nil {
@@ -240,7 +268,74 @@ func writeConfig(dir, name string, payload map[string]any) (string, error) {
 	return path, os.WriteFile(path, raw, 0o644)
 }
 
-func runCase(binaryPath, configPath, profile, goal, expectedDomain string) runResult {
+func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs int) runResult {
+	if runs <= 1 {
+		result := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain)
+		result.AttemptCount = 1
+		result.PassCount = boolToInt(result.SelectedPass)
+		result.RuntimePassCount = boolToInt(result.RuntimeOK)
+		return result
+	}
+	attempts := make([]runAttempt, 0, runs)
+	passCount := 0
+	runtimePassCount := 0
+	best := runResult{Profile: profile, ExpectedDomain: expectedDomain}
+	bestScore := -1
+	errorKinds := map[string]int{}
+	selectedURLCounts := map[string]int{}
+	for i := 0; i < runs; i++ {
+		attempt := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain)
+		attempts = append(attempts, runAttempt{
+			Attempt:         i + 1,
+			RuntimeOK:       attempt.RuntimeOK,
+			SelectedURL:     attempt.SelectedURL,
+			SelectedDomain:  attempt.SelectedDomain,
+			SelectedPass:    attempt.SelectedPass,
+			DiscoverySource: attempt.DiscoverySource,
+			CandidateCount:  attempt.CandidateCount,
+			DocumentFetch:   attempt.DocumentFetch,
+			RetryCount:      attempt.RetryCount,
+			RetrySleepMS:    attempt.RetrySleepMS,
+			HostPacingMS:    attempt.HostPacingMS,
+			RetryReason:     attempt.RetryReason,
+			ErrorKind:       attempt.ErrorKind,
+			LatencyMS:       attempt.LatencyMS,
+			Error:           attempt.Error,
+		})
+		if attempt.SelectedPass {
+			passCount++
+		}
+		if attempt.RuntimeOK {
+			runtimePassCount++
+		}
+		if attempt.ErrorKind != "" {
+			errorKinds[attempt.ErrorKind]++
+		}
+		if attempt.SelectedURL != "" {
+			selectedURLCounts[attempt.SelectedURL]++
+		}
+		if score := boolScore(attempt); score > bestScore {
+			bestScore = score
+			best = attempt
+		}
+	}
+	best.AttemptCount = runs
+	best.PassCount = passCount
+	best.RuntimePassCount = runtimePassCount
+	best.RuntimeOK = runtimePassCount*2 >= runs
+	best.SelectedPass = passCount*2 >= runs
+	best.Attempts = attempts
+	if best.SelectedURL == "" {
+		best.SelectedURL = mostCommonKey(selectedURLCounts)
+		best.SelectedDomain = canonicalHost(best.SelectedURL)
+	}
+	if !best.SelectedPass {
+		best.ErrorKind = mostCommonKey(errorKinds)
+	}
+	return best
+}
+
+func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string) runResult {
 	result := runResult{Profile: profile, ExpectedDomain: expectedDomain}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -311,6 +406,26 @@ func runCase(binaryPath, configPath, profile, goal, expectedDomain string) runRe
 	return result
 }
 
+func boolToInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func mostCommonKey[T comparable](items map[T]int) T {
+	var zero T
+	bestCount := -1
+	best := zero
+	for key, count := range items {
+		if count > bestCount {
+			bestCount = count
+			best = key
+		}
+	}
+	return best
+}
+
 func classifyRunError(raw string) string {
 	text := strings.ToLower(strings.TrimSpace(raw))
 	switch {
@@ -377,7 +492,7 @@ func boolScore(r runResult) int {
 	return score
 }
 
-func summarize(results []caseResult) summary {
+func summarize(results []caseResult, runs int) summary {
 	var stdPass, stdSemPass, browserPass, browserSemPass int
 	profileWins := map[string]int{}
 	retryRuns := map[string]int{}
@@ -389,18 +504,39 @@ func summarize(results []caseResult) summary {
 	errorKinds := map[string]int{}
 	for _, row := range results {
 		for _, run := range row.Runs {
-			totalRuns[run.Profile]++
-			if run.RetryCount > 0 {
-				retryRuns[run.Profile]++
-				retryCountSum[run.Profile] += run.RetryCount
+			attempts := run.Attempts
+			if len(attempts) == 0 {
+				attempts = []runAttempt{{
+					RuntimeOK:       run.RuntimeOK,
+					SelectedURL:     run.SelectedURL,
+					SelectedDomain:  run.SelectedDomain,
+					SelectedPass:    run.SelectedPass,
+					DiscoverySource: run.DiscoverySource,
+					CandidateCount:  run.CandidateCount,
+					DocumentFetch:   run.DocumentFetch,
+					RetryCount:      run.RetryCount,
+					RetrySleepMS:    run.RetrySleepMS,
+					HostPacingMS:    run.HostPacingMS,
+					RetryReason:     run.RetryReason,
+					ErrorKind:       run.ErrorKind,
+					LatencyMS:       run.LatencyMS,
+					Error:           run.Error,
+				}}
 			}
-			retrySleepSum[run.Profile] += run.RetrySleepMS
-			hostPacingSum[run.Profile] += run.HostPacingMS
-			if run.RetryReason != "" {
-				retryReasons[run.RetryReason]++
-			}
-			if run.ErrorKind != "" {
-				errorKinds[run.ErrorKind]++
+			for _, attempt := range attempts {
+				totalRuns[run.Profile]++
+				if attempt.RetryCount > 0 {
+					retryRuns[run.Profile]++
+					retryCountSum[run.Profile] += attempt.RetryCount
+				}
+				retrySleepSum[run.Profile] += attempt.RetrySleepMS
+				hostPacingSum[run.Profile] += attempt.HostPacingMS
+				if attempt.RetryReason != "" {
+					retryReasons[attempt.RetryReason]++
+				}
+				if attempt.ErrorKind != "" {
+					errorKinds[attempt.ErrorKind]++
+				}
 			}
 			switch run.Profile {
 			case "standard":
@@ -463,6 +599,7 @@ func summarize(results []caseResult) summary {
 		AvgHostPacingMSByProfile:    avgHostPacingMSByProfile,
 		RetryReasons:                retryReasons,
 		ErrorKinds:                  errorKinds,
+		RunnerRuns:                  runs,
 	}
 }
 

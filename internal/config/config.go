@@ -56,8 +56,12 @@ type ModelsConfig struct {
 }
 
 type DiscoveryConfig struct {
-	ProviderChain string `json:"provider_chain,omitempty"`
-	BraveAPIKey   string `json:"brave_api_key,omitempty"`
+	ProviderChain                 string `json:"provider_chain,omitempty"`
+	BraveAPIKey                   string `json:"brave_api_key,omitempty"`
+	ProviderFailureCooldownMS     int64  `json:"provider_failure_cooldown_ms,omitempty"`
+	ProviderBlockedCooldownMS     int64  `json:"provider_blocked_cooldown_ms,omitempty"`
+	ProviderTimeoutCooldownMS     int64  `json:"provider_timeout_cooldown_ms,omitempty"`
+	ProviderUnavailableCooldownMS int64  `json:"provider_unavailable_cooldown_ms,omitempty"`
 }
 
 type SemanticConfig struct {

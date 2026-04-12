@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"github.com/josepavese/needlex/internal/store"
 )
 
 type DiscoverWebRequest struct {
@@ -52,7 +54,7 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		}
 	}
 
-	providers := discoverycore.WebSearchProviders(s.webDiscoverBaseURL)
+	providers := s.orderedDiscoveryProviders(discoverycore.WebSearchProviders(s.webDiscoverBaseURL))
 	var (
 		discoveryURL  string
 		providerNames []string
@@ -64,16 +66,22 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		queries = []string{req.Goal}
 	}
 	for _, providerBaseURL := range providers {
+		providerName := discoverycore.ProviderName(providerBaseURL)
 		providerUsed := false
 		for _, query := range queries {
 			bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req, query)
 			if err != nil {
+				s.observeDiscoveryProvider(providerName, classifyDiscoveryProviderOutcome(err))
 				if isProviderUnavailable(err) {
-					continue
+					break
 				}
 				lastErr = err
+				if discoveryProviderLevelFailure(err) {
+					break
+				}
 				continue
 			}
+			s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
 			if discoveryURL == "" {
 				discoveryURL = bootURL
 			}
@@ -81,24 +89,26 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 			providerUsed = true
 		}
 		if providerUsed {
-			providerNames = append(providerNames, discoverycore.ProviderName(providerBaseURL))
+			providerNames = append(providerNames, providerName)
 		}
 	}
 	if len(candidates.Sorted()) == 0 && len(queries) > 1 {
 		for _, providerBaseURL := range providers {
+			providerName := discoverycore.ProviderName(providerBaseURL)
 			bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req, req.Goal)
 			if err != nil {
+				s.observeDiscoveryProvider(providerName, classifyDiscoveryProviderOutcome(err))
 				if isProviderUnavailable(err) {
 					continue
 				}
 				lastErr = err
 				continue
 			}
+			s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
 			if discoveryURL == "" {
 				discoveryURL = bootURL
 			}
 			candidates.Merge(bootstrapped)
-			providerName := discoverycore.ProviderName(providerBaseURL)
 			if !slices.Contains(providerNames, providerName) {
 				providerNames = append(providerNames, providerName)
 			}
@@ -127,6 +137,103 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		DiscoveryURL: discoveryURL,
 		Candidates:   filtered,
 	}, nil
+}
+
+func (s *Service) orderedDiscoveryProviders(providers []string) []string {
+	if len(providers) < 2 {
+		return providers
+	}
+	type providerSlot struct {
+		baseURL string
+		index   int
+		state   store.DiscoveryProviderState
+		ok      bool
+	}
+	at := s.now().UTC()
+	slots := make([]providerSlot, 0, len(providers))
+	for index, provider := range providers {
+		state, err := s.discoveryProviders.Load(discoverycore.ProviderName(provider))
+		slots = append(slots, providerSlot{
+			baseURL: provider,
+			index:   index,
+			state:   state,
+			ok:      err == nil,
+		})
+	}
+	sort.SliceStable(slots, func(i, j int) bool {
+		left, right := slots[i], slots[j]
+		leftCooling := left.ok && left.state.CoolingDown(at)
+		rightCooling := right.ok && right.state.CoolingDown(at)
+		if leftCooling != rightCooling {
+			return !leftCooling
+		}
+		leftScore := 0.0
+		rightScore := 0.0
+		if left.ok {
+			leftScore = left.state.HealthScore(at)
+		}
+		if right.ok {
+			rightScore = right.state.HealthScore(at)
+		}
+		if leftScore != rightScore {
+			return leftScore > rightScore
+		}
+		return left.index < right.index
+	})
+	out := make([]string, 0, len(slots))
+	for _, slot := range slots {
+		out = append(out, slot.baseURL)
+	}
+	return out
+}
+
+func (s *Service) observeDiscoveryProvider(name, outcome string) {
+	if strings.TrimSpace(name) == "" || strings.TrimSpace(outcome) == "" {
+		return
+	}
+	_, _, _ = s.discoveryProviders.Observe(store.DiscoveryProviderObservation{
+		Name:                name,
+		Outcome:             outcome,
+		FailureCooldown:     time.Duration(s.cfg.Discovery.ProviderFailureCooldownMS) * time.Millisecond,
+		BlockedCooldown:     time.Duration(s.cfg.Discovery.ProviderBlockedCooldownMS) * time.Millisecond,
+		TimeoutCooldown:     time.Duration(s.cfg.Discovery.ProviderTimeoutCooldownMS) * time.Millisecond,
+		UnavailableCooldown: time.Duration(s.cfg.Discovery.ProviderUnavailableCooldownMS) * time.Millisecond,
+	})
+}
+
+func classifyDiscoveryProviderOutcome(err error) string {
+	if err == nil {
+		return store.DiscoveryProviderOutcomeSuccess
+	}
+	if isProviderUnavailable(err) {
+		return store.DiscoveryProviderOutcomeUnavailable
+	}
+	text := strings.ToLower(strings.TrimSpace(err.Error()))
+	switch {
+	case strings.Contains(text, "anti-bot challenge"),
+		strings.Contains(text, "rate limit"),
+		strings.Contains(text, "unexpected status code 403"),
+		strings.Contains(text, "unexpected status code 429"),
+		strings.Contains(text, "bootstrap provider returned 403"),
+		strings.Contains(text, "bootstrap provider returned 429"):
+		return store.DiscoveryProviderOutcomeBlocked
+	case strings.Contains(text, "deadline exceeded"),
+		strings.Contains(text, "timeout"),
+		strings.Contains(text, "context deadline exceeded"),
+		strings.Contains(text, "client.timeout exceeded"):
+		return store.DiscoveryProviderOutcomeTimeout
+	default:
+		return store.DiscoveryProviderOutcomeFailure
+	}
+}
+
+func discoveryProviderLevelFailure(err error) bool {
+	switch classifyDiscoveryProviderOutcome(err) {
+	case store.DiscoveryProviderOutcomeBlocked, store.DiscoveryProviderOutcomeTimeout, store.DiscoveryProviderOutcomeUnavailable:
+		return true
+	default:
+		return false
+	}
 }
 
 func canonicalizeCandidateFamilies(candidates []DiscoverCandidate) []DiscoverCandidate {

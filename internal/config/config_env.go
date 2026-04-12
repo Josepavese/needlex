@@ -61,6 +61,10 @@ func (c *Config) applyInt64Env(env map[string]string) error {
 		{"NEEDLEX_MODELS_STRUCTURED_TIMEOUT_MS", &c.Models.StructuredTimeoutMS},
 		{"NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS", &c.Models.SpecialistTimeoutMS},
 		{"NEEDLEX_SEMANTIC_TIMEOUT_MS", &c.Semantic.TimeoutMS},
+		{"NEEDLEX_DISCOVERY_PROVIDER_FAILURE_COOLDOWN_MS", &c.Discovery.ProviderFailureCooldownMS},
+		{"NEEDLEX_DISCOVERY_PROVIDER_BLOCKED_COOLDOWN_MS", &c.Discovery.ProviderBlockedCooldownMS},
+		{"NEEDLEX_DISCOVERY_PROVIDER_TIMEOUT_COOLDOWN_MS", &c.Discovery.ProviderTimeoutCooldownMS},
+		{"NEEDLEX_DISCOVERY_PROVIDER_UNAVAILABLE_COOLDOWN_MS", &c.Discovery.ProviderUnavailableCooldownMS},
 	})
 }
 
