@@ -10,10 +10,7 @@ import (
 const EnvHome = "NEEDLEX_HOME"
 
 func DefaultStateRoot() string {
-	if root := strings.TrimSpace(os.Getenv(EnvHome)); root != "" {
-		return root
-	}
-	return ".needlex"
+	return StableStateRoot()
 }
 
 func InstalledStateRoot() string {

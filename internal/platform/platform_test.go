@@ -46,3 +46,14 @@ func TestStableStateRootUsesInstalledAbsolutePath(t *testing.T) {
 		t.Fatalf("got %q want %q", got, want)
 	}
 }
+
+func TestDefaultStateRootUsesStableStateRoot(t *testing.T) {
+	t.Setenv(EnvHome, "")
+	t.Setenv("HOME", "/home/jose")
+	t.Setenv("XDG_DATA_HOME", "")
+	got := DefaultStateRoot()
+	want := filepath.Join("/home/jose", ".local", "share", "needlex")
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
