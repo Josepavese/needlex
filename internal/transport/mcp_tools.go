@@ -12,82 +12,94 @@ import (
 )
 
 func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
-	switch call.Name {
-	case "web_crawl":
-		return r.callMCPCrawlTool(call.Arguments)
-	case "web_query":
-		return r.callMCPQueryTool(call.Arguments)
-	case "web_read":
-		return r.callMCPReadTool(call.Arguments)
-	case "web_replay":
-		report, err := r.loadReplay(stringArg(call.Arguments, "trace_id"))
-		if err != nil {
-			return nil, err
-		}
-		return mcpToolResult(map[string]any{"replay_report": report}, map[string]any{"replay_report": report}), nil
-	case "web_diff":
-		report, err := r.loadDiff(stringArg(call.Arguments, "trace_a"), stringArg(call.Arguments, "trace_b"))
-		if err != nil {
-			return nil, err
-		}
-		return mcpToolResult(map[string]any{"diff_report": report}, map[string]any{"diff_report": report}), nil
-	case "web_proof":
-		lookup := stringArg(call.Arguments, "chunk_id")
-		if lookup == "" {
-			lookup = stringArg(call.Arguments, "proof_id")
-		}
-		if lookup == "" {
-			lookup = stringArg(call.Arguments, "trace_id")
-		}
-		result, err := r.loadProof(lookup)
-		if err != nil {
-			return nil, err
-		}
-		payload := map[string]any{
-			"trace_id":      result.TraceID,
-			"proof_records": result.Records,
-		}
-		if len(result.Records) == 1 {
-			payload["proof"] = result.Records[0]
-		}
-		return mcpToolResult(payload, payload), nil
-	case "web_prune":
-		pruneAll := boolArg(call.Arguments, "all")
-		olderThanHours, _ := intArg(call.Arguments, "older_than_hours")
-		report, err := store.Prune(r.storeRoot, durationHours(olderThanHours), pruneAll, timeNowUTC())
-		if err != nil {
-			return nil, err
-		}
-		return mcpToolResult(map[string]any{"prune_report": report}, map[string]any{"prune_report": report}), nil
-	case "memory_stats":
-		return r.callMCPMemoryStatsTool(call.Arguments)
-	case "memory_search":
-		return r.callMCPMemorySearchTool(call.Arguments)
-	case "memory_prune":
-		return r.callMCPMemoryPruneTool(call.Arguments)
-	case "memory_export":
-		return r.callMCPMemoryExportTool(call.Arguments)
-	case "memory_import":
-		return r.callMCPMemoryImportTool(call.Arguments)
-	case "memory_rebuild_index":
-		return r.callMCPMemoryRebuildIndexTool(call.Arguments)
-	case "analytics_stats":
-		return r.callMCPAnalyticsStatsTool(call.Arguments)
-	case "analytics_recent_runs":
-		return r.callMCPAnalyticsRecentRunsTool(call.Arguments)
-	case "analytics_value_report":
-		return r.callMCPAnalyticsValueReportTool(call.Arguments)
-	case "analytics_hosts":
-		return r.callMCPAnalyticsHostsTool(call.Arguments)
-	case "analytics_providers":
-		return r.callMCPAnalyticsProvidersTool(call.Arguments)
-	case "analytics_daily":
-		return r.callMCPAnalyticsDailyTool(call.Arguments)
-	case "analytics_export":
-		return r.callMCPAnalyticsExportTool(call.Arguments)
-	default:
+	handler, ok := r.mcpToolHandlers()[call.Name]
+	if !ok {
 		return nil, fmt.Errorf("unsupported tool %q", call.Name)
 	}
+	return handler(call.Arguments)
+}
+
+func (r Runner) mcpToolHandlers() map[string]func(map[string]any) (map[string]any, error) {
+	return map[string]func(map[string]any) (map[string]any, error){
+		"web_crawl":              r.callMCPCrawlTool,
+		"web_query":              r.callMCPQueryTool,
+		"web_read":               r.callMCPReadTool,
+		"web_replay":             r.callMCPReplayTool,
+		"web_diff":               r.callMCPDiffTool,
+		"web_proof":              r.callMCPProofTool,
+		"web_prune":              r.callMCPPruneTool,
+		"memory_stats":           r.callMCPMemoryStatsTool,
+		"memory_search":          r.callMCPMemorySearchTool,
+		"memory_prune":           r.callMCPMemoryPruneTool,
+		"memory_export":          r.callMCPMemoryExportTool,
+		"memory_import":          r.callMCPMemoryImportTool,
+		"memory_rebuild_index":   r.callMCPMemoryRebuildIndexTool,
+		"analytics_stats":        r.callMCPAnalyticsStatsTool,
+		"analytics_recent_runs":  r.callMCPAnalyticsRecentRunsTool,
+		"analytics_value_report": r.callMCPAnalyticsValueReportTool,
+		"analytics_hosts":        r.callMCPAnalyticsHostsTool,
+		"analytics_providers":    r.callMCPAnalyticsProvidersTool,
+		"analytics_daily":        r.callMCPAnalyticsDailyTool,
+		"analytics_export":       r.callMCPAnalyticsExportTool,
+	}
+}
+
+func (r Runner) callMCPReplayTool(args map[string]any) (map[string]any, error) {
+	report, err := r.loadReplay(stringArg(args, "trace_id"))
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{"replay_report": report}
+	return mcpToolResult(payload, payload), nil
+}
+
+func (r Runner) callMCPDiffTool(args map[string]any) (map[string]any, error) {
+	report, err := r.loadDiff(stringArg(args, "trace_a"), stringArg(args, "trace_b"))
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{"diff_report": report}
+	return mcpToolResult(payload, payload), nil
+}
+
+func (r Runner) callMCPProofTool(args map[string]any) (map[string]any, error) {
+	lookup := firstNonEmptyString(
+		stringArg(args, "chunk_id"),
+		stringArg(args, "proof_id"),
+		stringArg(args, "trace_id"),
+	)
+	result, err := r.loadProof(lookup)
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{
+		"trace_id":      result.TraceID,
+		"proof_records": result.Records,
+	}
+	if len(result.Records) == 1 {
+		payload["proof"] = result.Records[0]
+	}
+	return mcpToolResult(payload, payload), nil
+}
+
+func (r Runner) callMCPPruneTool(args map[string]any) (map[string]any, error) {
+	pruneAll := boolArg(args, "all")
+	olderThanHours, _ := intArg(args, "older_than_hours")
+	report, err := store.Prune(r.storeRoot, durationHours(olderThanHours), pruneAll, timeNowUTC())
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{"prune_report": report}
+	return mcpToolResult(payload, payload), nil
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {

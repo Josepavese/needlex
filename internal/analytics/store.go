@@ -160,6 +160,62 @@ type SQLiteStore struct {
 	dbPath string
 }
 
+var analyticsSchemaStatements = []string{
+	`CREATE TABLE IF NOT EXISTS analytics_runs (
+	  run_id TEXT PRIMARY KEY,
+	  started_at TEXT NOT NULL,
+	  completed_at TEXT NOT NULL,
+	  operation TEXT NOT NULL,
+	  surface TEXT NOT NULL,
+	  profile TEXT NOT NULL,
+	  goal_hash TEXT NOT NULL,
+	  goal_length_chars INTEGER NOT NULL,
+	  discovery_mode TEXT NOT NULL,
+	  seed_present INTEGER NOT NULL,
+	  host TEXT NOT NULL DEFAULT '',
+	  selected_url TEXT NOT NULL,
+	  provider TEXT NOT NULL,
+	  success INTEGER NOT NULL,
+	  trace_id TEXT NOT NULL,
+	  latency_ms INTEGER NOT NULL,
+	  packet_bytes INTEGER NOT NULL,
+	  final_context_chars INTEGER NOT NULL,
+	  chunk_count INTEGER NOT NULL,
+	  source_count INTEGER NOT NULL,
+	  link_count INTEGER NOT NULL,
+	  proof_ref_count INTEGER NOT NULL,
+	  proof_usable INTEGER NOT NULL,
+	  public_bootstrap_used INTEGER NOT NULL,
+	  local_memory_used INTEGER NOT NULL,
+	  topic_node_used INTEGER NOT NULL,
+	  same_site_recovery_used INTEGER NOT NULL,
+	  candidate_count INTEGER NOT NULL,
+	  raw_fetch_chars INTEGER NOT NULL,
+	  raw_fetch_bytes INTEGER NOT NULL,
+	  reduced_chars INTEGER NOT NULL,
+	  reduced_node_count INTEGER NOT NULL,
+	  memory_document_count INTEGER NOT NULL,
+	  memory_embedding_count INTEGER NOT NULL,
+	  memory_topic_node_count INTEGER NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_analytics_runs_completed_at ON analytics_runs(completed_at)`,
+	`CREATE INDEX IF NOT EXISTS idx_analytics_runs_operation ON analytics_runs(operation)`,
+	`CREATE INDEX IF NOT EXISTS idx_analytics_runs_host ON analytics_runs(host)`,
+	`CREATE INDEX IF NOT EXISTS idx_analytics_runs_provider ON analytics_runs(provider)`,
+	`CREATE TABLE IF NOT EXISTS analytics_stage_events (
+	  id INTEGER PRIMARY KEY AUTOINCREMENT,
+	  run_id TEXT NOT NULL,
+	  stage TEXT NOT NULL,
+	  started_at TEXT NOT NULL,
+	  completed_at TEXT NOT NULL,
+	  latency_ms INTEGER NOT NULL,
+	  item_count INTEGER NOT NULL,
+	  status TEXT NOT NULL,
+	  metadata_json TEXT NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_analytics_stage_events_run_id ON analytics_stage_events(run_id)`,
+}
+
 func NewSQLiteStore(root string) SQLiteStore {
 	cleanRoot := strings.TrimSpace(root)
 	if cleanRoot == "" {
@@ -171,9 +227,7 @@ func NewSQLiteStore(root string) SQLiteStore {
 func (s SQLiteStore) DBPath() string { return s.dbPath }
 
 func (s SQLiteStore) AppendRun(ctx context.Context, run RunRecord, stages []StageEvent) error {
-	if strings.TrimSpace(run.Host) == "" {
-		run.Host = hostFromURL(run.SelectedURL)
-	}
+	run = normalizeRunRecord(run)
 	conn, err := s.open(ctx)
 	if err != nil {
 		return err
@@ -184,7 +238,27 @@ func (s SQLiteStore) AppendRun(ctx context.Context, run RunRecord, stages []Stag
 		return fmt.Errorf("begin analytics tx: %w", err)
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, `
+	if err := s.upsertRun(ctx, tx, run); err != nil {
+		return err
+	}
+	if err := s.insertStageEvents(ctx, tx, stages); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit analytics tx: %w", err)
+	}
+	return nil
+}
+
+func normalizeRunRecord(run RunRecord) RunRecord {
+	if strings.TrimSpace(run.Host) == "" {
+		run.Host = hostFromURL(run.SelectedURL)
+	}
+	return run
+}
+
+func (s SQLiteStore) upsertRun(ctx context.Context, tx *sql.Tx, run RunRecord) error {
+	_, err := tx.ExecContext(ctx, `
 INSERT INTO analytics_runs (
   run_id, started_at, completed_at, operation, surface, profile, goal_hash, goal_length_chars,
   discovery_mode, seed_present, host, selected_url, provider, success, trace_id, latency_ms,
@@ -267,6 +341,10 @@ ON CONFLICT(run_id) DO UPDATE SET
 	if err != nil {
 		return fmt.Errorf("upsert analytics run: %w", err)
 	}
+	return nil
+}
+
+func (s SQLiteStore) insertStageEvents(ctx context.Context, tx *sql.Tx, stages []StageEvent) error {
 	for _, stage := range stages {
 		rawMeta, _ := json.Marshal(stage.Metadata)
 		if _, err := tx.ExecContext(ctx, `
@@ -276,9 +354,6 @@ INSERT INTO analytics_stage_events (
 `, stage.RunID, stage.Stage, stage.StartedAt.UTC().Format(time.RFC3339Nano), stage.CompletedAt.UTC().Format(time.RFC3339Nano), stage.LatencyMS, stage.ItemCount, stage.Status, string(rawMeta)); err != nil {
 			return fmt.Errorf("insert analytics stage event: %w", err)
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit analytics tx: %w", err)
 	}
 	return nil
 }
@@ -550,29 +625,57 @@ func (s SQLiteStore) ExportJSON(ctx context.Context, outDir string) (ExportStats
 		return ExportStats{}, err
 	}
 	defer conn.Close()
-
-	stats, err := s.Stats(ctx)
+	bundle, err := s.loadExportBundle(ctx)
 	if err != nil {
 		return ExportStats{}, err
+	}
+	result := buildExportStats(outDir, bundle)
+	if err := s.writeExportArtifacts(ctx, conn, result, bundle); err != nil {
+		return ExportStats{}, err
+	}
+	return result, nil
+}
+
+type exportBundle struct {
+	stats     Stats
+	hosts     []HostRollup
+	providers []ProviderRollup
+	daily     []DailyRollup
+	report    ValueReport
+}
+
+func (s SQLiteStore) loadExportBundle(ctx context.Context) (exportBundle, error) {
+	stats, err := s.Stats(ctx)
+	if err != nil {
+		return exportBundle{}, err
 	}
 	hosts, err := s.Hosts(ctx, 1000)
 	if err != nil {
-		return ExportStats{}, err
+		return exportBundle{}, err
 	}
 	providers, err := s.Providers(ctx, 1000)
 	if err != nil {
-		return ExportStats{}, err
+		return exportBundle{}, err
 	}
 	daily, err := s.Daily(ctx, 1000)
 	if err != nil {
-		return ExportStats{}, err
+		return exportBundle{}, err
 	}
 	report, err := s.ValueReport(ctx)
 	if err != nil {
-		return ExportStats{}, err
+		return exportBundle{}, err
 	}
+	return exportBundle{
+		stats:     stats,
+		hosts:     hosts,
+		providers: providers,
+		daily:     daily,
+		report:    report,
+	}, nil
+}
 
-	result := ExportStats{
+func buildExportStats(outDir string, bundle exportBundle) ExportStats {
+	return ExportStats{
 		Directory:       outDir,
 		RunsPath:        filepath.Join(outDir, "analytics_runs.jsonl"),
 		StagesPath:      filepath.Join(outDir, "analytics_stage_events.jsonl"),
@@ -580,14 +683,16 @@ func (s SQLiteStore) ExportJSON(ctx context.Context, outDir string) (ExportStats
 		ProvidersPath:   filepath.Join(outDir, "analytics_providers.json"),
 		DailyPath:       filepath.Join(outDir, "analytics_daily.json"),
 		ValueReportPath: filepath.Join(outDir, "analytics_value_report.json"),
-		RunCount:        stats.RunCount,
-		StageCount:      stats.StageEventCount,
-		HostCount:       len(hosts),
-		ProviderCount:   len(providers),
-		DailyCount:      len(daily),
+		RunCount:        bundle.stats.RunCount,
+		StageCount:      bundle.stats.StageEventCount,
+		HostCount:       len(bundle.hosts),
+		ProviderCount:   len(bundle.providers),
+		DailyCount:      len(bundle.daily),
 	}
+}
 
-	if err := exportJSONLQuery(ctx, conn, result.RunsPath, `
+func (s SQLiteStore) writeExportArtifacts(ctx context.Context, conn *sql.DB, stats ExportStats, bundle exportBundle) error {
+	if err := exportJSONLQuery(ctx, conn, stats.RunsPath, `
 SELECT
   run_id, started_at, completed_at, operation, surface, profile, goal_hash, goal_length_chars,
   discovery_mode, seed_present, host, selected_url, provider, success, trace_id, latency_ms,
@@ -598,28 +703,28 @@ SELECT
 FROM analytics_runs
 ORDER BY completed_at DESC
 `); err != nil {
-		return ExportStats{}, err
+		return err
 	}
-	if err := exportJSONLQuery(ctx, conn, result.StagesPath, `
+	if err := exportJSONLQuery(ctx, conn, stats.StagesPath, `
 SELECT run_id, stage, started_at, completed_at, latency_ms, item_count, status, metadata_json
 FROM analytics_stage_events
 ORDER BY id ASC
 `); err != nil {
-		return ExportStats{}, err
+		return err
 	}
-	if err := writeJSONFile(result.HostsPath, hosts); err != nil {
-		return ExportStats{}, err
+	if err := writeJSONFile(stats.HostsPath, bundle.hosts); err != nil {
+		return err
 	}
-	if err := writeJSONFile(result.ProvidersPath, providers); err != nil {
-		return ExportStats{}, err
+	if err := writeJSONFile(stats.ProvidersPath, bundle.providers); err != nil {
+		return err
 	}
-	if err := writeJSONFile(result.DailyPath, daily); err != nil {
-		return ExportStats{}, err
+	if err := writeJSONFile(stats.DailyPath, bundle.daily); err != nil {
+		return err
 	}
-	if err := writeJSONFile(result.ValueReportPath, report); err != nil {
-		return ExportStats{}, err
+	if err := writeJSONFile(stats.ValueReportPath, bundle.report); err != nil {
+		return err
 	}
-	return result, nil
+	return nil
 }
 
 func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
@@ -642,61 +747,7 @@ func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
 }
 
 func (s SQLiteStore) ensureSchema(ctx context.Context, db *sql.DB) error {
-	for _, stmt := range []string{
-		`CREATE TABLE IF NOT EXISTS analytics_runs (
-		  run_id TEXT PRIMARY KEY,
-		  started_at TEXT NOT NULL,
-		  completed_at TEXT NOT NULL,
-		  operation TEXT NOT NULL,
-		  surface TEXT NOT NULL,
-		  profile TEXT NOT NULL,
-		  goal_hash TEXT NOT NULL,
-		  goal_length_chars INTEGER NOT NULL,
-		  discovery_mode TEXT NOT NULL,
-		  seed_present INTEGER NOT NULL,
-		  host TEXT NOT NULL DEFAULT '',
-		  selected_url TEXT NOT NULL,
-		  provider TEXT NOT NULL,
-		  success INTEGER NOT NULL,
-		  trace_id TEXT NOT NULL,
-		  latency_ms INTEGER NOT NULL,
-		  packet_bytes INTEGER NOT NULL,
-		  final_context_chars INTEGER NOT NULL,
-		  chunk_count INTEGER NOT NULL,
-		  source_count INTEGER NOT NULL,
-		  link_count INTEGER NOT NULL,
-		  proof_ref_count INTEGER NOT NULL,
-		  proof_usable INTEGER NOT NULL,
-		  public_bootstrap_used INTEGER NOT NULL,
-		  local_memory_used INTEGER NOT NULL,
-		  topic_node_used INTEGER NOT NULL,
-		  same_site_recovery_used INTEGER NOT NULL,
-		  candidate_count INTEGER NOT NULL,
-		  raw_fetch_chars INTEGER NOT NULL,
-		  raw_fetch_bytes INTEGER NOT NULL,
-		  reduced_chars INTEGER NOT NULL,
-		  reduced_node_count INTEGER NOT NULL,
-		  memory_document_count INTEGER NOT NULL,
-		  memory_embedding_count INTEGER NOT NULL,
-		  memory_topic_node_count INTEGER NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_analytics_runs_completed_at ON analytics_runs(completed_at)`,
-		`CREATE INDEX IF NOT EXISTS idx_analytics_runs_operation ON analytics_runs(operation)`,
-		`CREATE INDEX IF NOT EXISTS idx_analytics_runs_host ON analytics_runs(host)`,
-		`CREATE INDEX IF NOT EXISTS idx_analytics_runs_provider ON analytics_runs(provider)`,
-		`CREATE TABLE IF NOT EXISTS analytics_stage_events (
-		  id INTEGER PRIMARY KEY AUTOINCREMENT,
-		  run_id TEXT NOT NULL,
-		  stage TEXT NOT NULL,
-		  started_at TEXT NOT NULL,
-		  completed_at TEXT NOT NULL,
-		  latency_ms INTEGER NOT NULL,
-		  item_count INTEGER NOT NULL,
-		  status TEXT NOT NULL,
-		  metadata_json TEXT NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_analytics_stage_events_run_id ON analytics_stage_events(run_id)`,
-	} {
+	for _, stmt := range analyticsSchemaStatements {
 		if _, err := db.ExecContext(ctx, stmt); err != nil {
 			return fmt.Errorf("ensure analytics schema: %w", err)
 		}
