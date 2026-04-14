@@ -89,6 +89,27 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if !strings.Contains(stdout.String(), "discovery_memory_same_site") {
 		t.Fatalf("unexpected analytics providers output: %q", stdout.String())
 	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = runner.Run([]string{"analytics", "daily"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("analytics daily exit=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Runs: 1") {
+		t.Fatalf("unexpected analytics daily output: %q", stdout.String())
+	}
+
+	exportDir := t.TempDir()
+	stdout.Reset()
+	stderr.Reset()
+	code = runner.Run([]string{"analytics", "export", "--out", exportDir}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("analytics export exit=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "analytics_runs.jsonl") || !strings.Contains(stdout.String(), "analytics_value_report.json") {
+		t.Fatalf("unexpected analytics export output: %q", stdout.String())
+	}
 }
 
 func TestRunnerHelpListsAnalyticsCommand(t *testing.T) {

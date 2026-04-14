@@ -53,7 +53,7 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
 	}
-	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers"} {
+	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers", "analytics_daily", "analytics_export"} {
 		if !strings.Contains(string(responses[1]), tool) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
@@ -460,6 +460,8 @@ func TestRunnerMCPAnalyticsTools(t *testing.T) {
 		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "analytics_value_report", "arguments": map[string]any{}}},
 		map[string]any{"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": map[string]any{"name": "analytics_hosts", "arguments": map[string]any{"limit": 5}}},
 		map[string]any{"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": map[string]any{"name": "analytics_providers", "arguments": map[string]any{"limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": map[string]any{"name": "analytics_daily", "arguments": map[string]any{"limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": map[string]any{"name": "analytics_export", "arguments": map[string]any{"out_dir": filepath.Join(root, "analytics-export")}}},
 	)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -469,14 +471,16 @@ func TestRunnerMCPAnalyticsTools(t *testing.T) {
 		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
 	}
 	responses := decodeMCPResponses(t, stdout.Bytes())
-	if len(responses) != 6 {
-		t.Fatalf("expected 6 responses, got %d", len(responses))
+	if len(responses) != 8 {
+		t.Fatalf("expected 8 responses, got %d", len(responses))
 	}
 	assertMCPStructuredKeys(t, responses[1], "stats", "compact")
 	assertMCPStructuredKeys(t, responses[2], "runs", "compact")
 	assertMCPStructuredKeys(t, responses[3], "report", "compact")
 	assertMCPStructuredKeys(t, responses[4], "hosts", "compact")
 	assertMCPStructuredKeys(t, responses[5], "providers", "compact")
+	assertMCPStructuredKeys(t, responses[6], "days", "compact")
+	assertMCPStructuredKeys(t, responses[7], "export", "compact")
 }
 
 func framedMessages(t *testing.T, messages ...map[string]any) string {

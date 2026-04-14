@@ -415,6 +415,43 @@
         },
         "type": "object"
       }
+    },
+    {
+      "name": "analytics_daily",
+      "description": "Return day-level Analytics PAL rollups for trend tracking, regression detection, and release-to-release comparison.",
+      "input_schema": {
+        "examples": [
+          {
+            "limit": 30
+          }
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "analytics_export",
+      "description": "Export Analytics PAL canonical rows and rollups to JSON and JSONL files for offline analysis, dashboards, or audit.",
+      "input_schema": {
+        "examples": [
+          {
+            "out_dir": ".needlex/analytics/export"
+          }
+        ],
+        "properties": {
+          "out_dir": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "out_dir"
+        ],
+        "type": "object"
+      }
     }
   ]
 }

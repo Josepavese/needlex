@@ -81,6 +81,10 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 		return r.callMCPAnalyticsHostsTool(call.Arguments)
 	case "analytics_providers":
 		return r.callMCPAnalyticsProvidersTool(call.Arguments)
+	case "analytics_daily":
+		return r.callMCPAnalyticsDailyTool(call.Arguments)
+	case "analytics_export":
+		return r.callMCPAnalyticsExportTool(call.Arguments)
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", call.Name)
 	}
@@ -224,6 +228,8 @@ func mcpTools() []mcpTool {
 		mcpAnalyticsValueReportTool(),
 		mcpAnalyticsHostsTool(),
 		mcpAnalyticsProvidersTool(),
+		mcpAnalyticsDailyTool(),
+		mcpAnalyticsExportTool(),
 	}
 }
 
@@ -626,6 +632,44 @@ func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]a
 	return mcpToolResult(payload, compact), nil
 }
 
+func (r Runner) callMCPAnalyticsDailyTool(args map[string]any) (map[string]any, error) {
+	days, err := analytics.NewSQLiteStore(r.storeRoot).Daily(context.Background(), intDefault(args, "limit", 30))
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind": "analytics_daily",
+		"days": days,
+	}
+	payload := map[string]any{
+		"kind":    "analytics_daily",
+		"days":    days,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPAnalyticsExportTool(args map[string]any) (map[string]any, error) {
+	outDir := stringArg(args, "out_dir")
+	if outDir == "" {
+		return nil, fmt.Errorf("analytics_export requires out_dir")
+	}
+	exported, err := analytics.NewSQLiteStore(r.storeRoot).ExportJSON(context.Background(), outDir)
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":   "analytics_export",
+		"export": exported,
+	}
+	payload := map[string]any{
+		"kind":    "analytics_export",
+		"export":  exported,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
 func mcpAnalyticsStatsTool() mcpTool {
 	return mcpTool{
 		Name:        "analytics_stats",
@@ -669,6 +713,26 @@ func mcpAnalyticsProvidersTool() mcpTool {
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"limit": map[string]any{"type": "integer"},
 		}), map[string]any{"limit": 20}),
+	}
+}
+
+func mcpAnalyticsDailyTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_daily",
+		Description: "Return day-level Analytics PAL rollups for trend tracking, regression detection, and release-to-release comparison.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"limit": map[string]any{"type": "integer"},
+		}), map[string]any{"limit": 30}),
+	}
+}
+
+func mcpAnalyticsExportTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_export",
+		Description: "Export Analytics PAL canonical rows and rollups to JSON and JSONL files for offline analysis, dashboards, or audit.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"out_dir": map[string]any{"type": "string"},
+		}, "out_dir"), map[string]any{"out_dir": ".needlex/analytics/export"}),
 	}
 }
 

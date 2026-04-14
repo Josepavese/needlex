@@ -2,6 +2,8 @@ package analytics
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -86,5 +88,40 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	}
 	if recent[0].CharsSaved <= 0 || !recent[0].LocalMemoryUsed || recent[0].PublicBootstrapUsed {
 		t.Fatalf("unexpected recent run: %+v", recent[0])
+	}
+
+	hosts, err := store.Hosts(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("hosts: %v", err)
+	}
+	if len(hosts) != 1 || hosts[0].Host != "example.com" {
+		t.Fatalf("unexpected hosts: %+v", hosts)
+	}
+
+	providers, err := store.Providers(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("providers: %v", err)
+	}
+	if len(providers) != 1 || providers[0].Provider != "discovery_memory_same_site" {
+		t.Fatalf("unexpected providers: %+v", providers)
+	}
+
+	daily, err := store.Daily(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("daily: %v", err)
+	}
+	if len(daily) != 1 || daily[0].RunCount != 1 {
+		t.Fatalf("unexpected daily: %+v", daily)
+	}
+
+	exportDir := t.TempDir()
+	exported, err := store.ExportJSON(context.Background(), exportDir)
+	if err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	for _, path := range []string{exported.RunsPath, exported.StagesPath, exported.HostsPath, exported.ProvidersPath, exported.DailyPath, exported.ValueReportPath} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected export file %s: %v", filepath.Base(path), err)
+		}
 	}
 }

@@ -15,7 +15,7 @@ needlex
 5. `needlex replay <trace-id> --json`
 6. `needlex diff <trace-a> <trace-b> --json`
 7. `needlex memory stats|search|prune|export|import|rebuild-index`
-8. `needlex analytics stats|recent|value-report|hosts|providers`
+8. `needlex analytics stats|recent|value-report|hosts|providers|daily|export`
 
 ## Minimal Examples
 
@@ -24,6 +24,7 @@ needlex read https://example.com --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
 needlex analytics value-report
+needlex analytics daily --limit 30
 ```
 
 ## Output Rule

@@ -130,6 +130,32 @@ type ProviderRollup struct {
 	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
 }
 
+type DailyRollup struct {
+	Day                     string  `json:"day"`
+	RunCount                int     `json:"run_count"`
+	SuccessfulRuns          int     `json:"successful_runs"`
+	AvgLatencyMS            int64   `json:"avg_latency_ms"`
+	TotalAgentCharsSaved    int64   `json:"total_agent_chars_saved"`
+	ProofBackedRate         float64 `json:"proof_backed_rate"`
+	PublicBootstrapUsedRate float64 `json:"public_bootstrap_used_rate"`
+	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
+}
+
+type ExportStats struct {
+	Directory       string `json:"directory"`
+	RunsPath        string `json:"runs_path"`
+	StagesPath      string `json:"stages_path"`
+	HostsPath       string `json:"hosts_path"`
+	ProvidersPath   string `json:"providers_path"`
+	DailyPath       string `json:"daily_path"`
+	ValueReportPath string `json:"value_report_path"`
+	RunCount        int    `json:"run_count"`
+	StageCount      int    `json:"stage_count"`
+	HostCount       int    `json:"host_count"`
+	ProviderCount   int    `json:"provider_count"`
+	DailyCount      int    `json:"daily_count"`
+}
+
 type SQLiteStore struct {
 	dbPath string
 }
@@ -469,6 +495,133 @@ LIMIT ?
 	return out, nil
 }
 
+func (s SQLiteStore) Daily(ctx context.Context, limit int) ([]DailyRollup, error) {
+	if limit <= 0 {
+		limit = 30
+	}
+	conn, err := s.open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	rows, err := conn.QueryContext(ctx, `
+SELECT
+  substr(completed_at, 1, 10) AS day,
+  COUNT(*),
+  COALESCE(SUM(success), 0),
+  COALESCE(CAST(AVG(latency_ms) AS INTEGER), 0),
+  COALESCE(SUM(MAX(raw_fetch_chars - final_context_chars, 0)), 0),
+  COALESCE(AVG(CAST(proof_usable AS REAL)), 0),
+  COALESCE(AVG(CAST(public_bootstrap_used AS REAL)), 0),
+  COALESCE(AVG(CAST(local_memory_used AS REAL)), 0)
+FROM analytics_runs
+GROUP BY substr(completed_at, 1, 10)
+ORDER BY day DESC
+LIMIT ?
+`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query analytics daily rollups: %w", err)
+	}
+	defer rows.Close()
+	out := []DailyRollup{}
+	for rows.Next() {
+		var item DailyRollup
+		if err := rows.Scan(&item.Day, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
+			return nil, fmt.Errorf("scan analytics daily rollup: %w", err)
+		}
+		out = append(out, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate analytics daily rollups: %w", err)
+	}
+	return out, nil
+}
+
+func (s SQLiteStore) ExportJSON(ctx context.Context, outDir string) (ExportStats, error) {
+	outDir = strings.TrimSpace(outDir)
+	if outDir == "" {
+		return ExportStats{}, fmt.Errorf("analytics export requires out_dir")
+	}
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return ExportStats{}, fmt.Errorf("create analytics export dir: %w", err)
+	}
+	conn, err := s.open(ctx)
+	if err != nil {
+		return ExportStats{}, err
+	}
+	defer conn.Close()
+
+	stats, err := s.Stats(ctx)
+	if err != nil {
+		return ExportStats{}, err
+	}
+	hosts, err := s.Hosts(ctx, 1000)
+	if err != nil {
+		return ExportStats{}, err
+	}
+	providers, err := s.Providers(ctx, 1000)
+	if err != nil {
+		return ExportStats{}, err
+	}
+	daily, err := s.Daily(ctx, 1000)
+	if err != nil {
+		return ExportStats{}, err
+	}
+	report, err := s.ValueReport(ctx)
+	if err != nil {
+		return ExportStats{}, err
+	}
+
+	result := ExportStats{
+		Directory:       outDir,
+		RunsPath:        filepath.Join(outDir, "analytics_runs.jsonl"),
+		StagesPath:      filepath.Join(outDir, "analytics_stage_events.jsonl"),
+		HostsPath:       filepath.Join(outDir, "analytics_hosts.json"),
+		ProvidersPath:   filepath.Join(outDir, "analytics_providers.json"),
+		DailyPath:       filepath.Join(outDir, "analytics_daily.json"),
+		ValueReportPath: filepath.Join(outDir, "analytics_value_report.json"),
+		RunCount:        stats.RunCount,
+		StageCount:      stats.StageEventCount,
+		HostCount:       len(hosts),
+		ProviderCount:   len(providers),
+		DailyCount:      len(daily),
+	}
+
+	if err := exportJSONLQuery(ctx, conn, result.RunsPath, `
+SELECT
+  run_id, started_at, completed_at, operation, surface, profile, goal_hash, goal_length_chars,
+  discovery_mode, seed_present, host, selected_url, provider, success, trace_id, latency_ms,
+  packet_bytes, final_context_chars, chunk_count, source_count, link_count, proof_ref_count,
+  proof_usable, public_bootstrap_used, local_memory_used, topic_node_used, same_site_recovery_used,
+  candidate_count, raw_fetch_chars, raw_fetch_bytes, reduced_chars, reduced_node_count,
+  memory_document_count, memory_embedding_count, memory_topic_node_count
+FROM analytics_runs
+ORDER BY completed_at DESC
+`); err != nil {
+		return ExportStats{}, err
+	}
+	if err := exportJSONLQuery(ctx, conn, result.StagesPath, `
+SELECT run_id, stage, started_at, completed_at, latency_ms, item_count, status, metadata_json
+FROM analytics_stage_events
+ORDER BY id ASC
+`); err != nil {
+		return ExportStats{}, err
+	}
+	if err := writeJSONFile(result.HostsPath, hosts); err != nil {
+		return ExportStats{}, err
+	}
+	if err := writeJSONFile(result.ProvidersPath, providers); err != nil {
+		return ExportStats{}, err
+	}
+	if err := writeJSONFile(result.DailyPath, daily); err != nil {
+		return ExportStats{}, err
+	}
+	if err := writeJSONFile(result.ValueReportPath, report); err != nil {
+		return ExportStats{}, err
+	}
+	return result, nil
+}
+
 func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(s.dbPath), 0o755); err != nil {
 		return nil, fmt.Errorf("create analytics db dir: %w", err)
@@ -567,4 +720,63 @@ func hostFromURL(raw string) string {
 		return ""
 	}
 	return strings.TrimSpace(parsed.Hostname())
+}
+
+func exportJSONLQuery(ctx context.Context, conn *sql.DB, path, query string) error {
+	rows, err := conn.QueryContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("query analytics export rows: %w", err)
+	}
+	defer rows.Close()
+	columns, err := rows.Columns()
+	if err != nil {
+		return fmt.Errorf("analytics export columns: %w", err)
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create analytics export file: %w", err)
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	for rows.Next() {
+		values := make([]any, len(columns))
+		scanTargets := make([]any, len(columns))
+		for i := range values {
+			scanTargets[i] = &values[i]
+		}
+		if err := rows.Scan(scanTargets...); err != nil {
+			return fmt.Errorf("scan analytics export row: %w", err)
+		}
+		record := map[string]any{}
+		for i, column := range columns {
+			record[column] = normalizeSQLValue(values[i])
+		}
+		if err := encoder.Encode(record); err != nil {
+			return fmt.Errorf("encode analytics export row: %w", err)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate analytics export rows: %w", err)
+	}
+	return nil
+}
+
+func writeJSONFile(path string, value any) error {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal analytics export json: %w", err)
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write analytics export json: %w", err)
+	}
+	return nil
+}
+
+func normalizeSQLValue(value any) any {
+	switch typed := value.(type) {
+	case []byte:
+		return string(typed)
+	default:
+		return typed
+	}
 }

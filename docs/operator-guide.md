@@ -159,12 +159,16 @@ needlex analytics recent --limit 20
 needlex analytics value-report
 needlex analytics hosts --limit 20
 needlex analytics providers --limit 20
+needlex analytics daily --limit 30
+needlex analytics export --out .needlex/analytics/export
 ```
 
 Interpretation rule:
 1. `value-report` is front-of-house and demo-friendly
 2. `hosts` tells you where Needle-X wins or struggles on real target families
 3. `providers` tells you whether the value came from local-first recovery, same-site expansion, or public bootstrap
+4. `daily` tells you whether those numbers are improving or regressing over time
+5. `export` makes the substrate portable for dashboards, audit, and offline analysis
 
 ### 1b. Agent Context
 

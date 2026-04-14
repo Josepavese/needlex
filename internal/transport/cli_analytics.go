@@ -31,8 +31,16 @@ type analyticsProvidersResult struct {
 	Providers []analytics.ProviderRollup `json:"providers"`
 }
 
+type analyticsDailyResult struct {
+	Days []analytics.DailyRollup `json:"days"`
+}
+
+type analyticsExportResult struct {
+	Export analytics.ExportStats `json:"export"`
+}
+
 func writeAnalyticsUsage(w io.Writer) {
-	writeUsage(w, "needlex analytics <stats|recent|value-report|hosts|providers> [args]")
+	writeUsage(w, "needlex analytics <stats|recent|value-report|hosts|providers|daily|export> [args]")
 }
 
 func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
@@ -51,6 +59,10 @@ func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
 		return r.runAnalyticsHosts(args[1:], stdout, stderr)
 	case "providers":
 		return r.runAnalyticsProviders(args[1:], stdout, stderr)
+	case "daily":
+		return r.runAnalyticsDaily(args[1:], stdout, stderr)
+	case "export":
+		return r.runAnalyticsExport(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeAnalyticsUsage(stdout)
 		return 0
@@ -155,18 +167,21 @@ func (r Runner) runAnalyticsValueReport(args []string, stdout, stderr io.Writer)
 	if jsonOut {
 		return writeJSON(stdout, stderr, analyticsValueReportResult{Report: report})
 	}
-	fmt.Fprintf(stdout, "Chars Saved for the Agent: %d\n", report.TotalAgentCharsSaved)
-	fmt.Fprintf(stdout, "Context Compression Ratio: %.2fx\n", report.ContextCompressionRatio)
-	fmt.Fprintf(stdout, "Bootstrap Avoided: %d\n", report.TotalPublicBootstrapsAvoided)
-	fmt.Fprintf(stdout, "Proof-Backed Answers Delivered: %d\n", report.TotalProofBackedPackets)
-	fmt.Fprintf(stdout, "Web Work Avoided: %d memory reuse events\n", report.TotalMemoryReuseEvents)
-	fmt.Fprintf(stdout, "Topic Roots Recovered: %d\n", report.TotalTopicRootCorrections)
-	fmt.Fprintf(stdout, "Warm-State Lift: %.2f%%\n", report.WarmLikeReuseRate*100)
-	fmt.Fprintf(stdout, "\nRuns: %d successful / %d total\n", report.SuccessfulRuns, report.TotalRuns)
-	fmt.Fprintf(stdout, "Avg Latency: %dms\n", report.AvgLatencyMS)
-	fmt.Fprintf(stdout, "Sources Visited: %d\n", report.TotalSourcesVisited)
-	fmt.Fprintf(stdout, "Links Explored: %d\n", report.TotalLinksExplored)
-	fmt.Fprintf(stdout, "Proof-Backed Rate: %.2f%%\n", report.ProofBackedRate*100)
+	fmt.Fprintln(stdout, "Value")
+	fmt.Fprintf(stdout, "  Chars Saved for the Agent: %d\n", report.TotalAgentCharsSaved)
+	fmt.Fprintf(stdout, "  Context Compression Ratio: %.2fx\n", report.ContextCompressionRatio)
+	fmt.Fprintf(stdout, "  Bootstrap Avoided: %d\n", report.TotalPublicBootstrapsAvoided)
+	fmt.Fprintf(stdout, "  Proof-Backed Answers Delivered: %d\n", report.TotalProofBackedPackets)
+	fmt.Fprintf(stdout, "  Topic Roots Recovered: %d\n", report.TotalTopicRootCorrections)
+	fmt.Fprintf(stdout, "  Warm-State Lift: %.2f%%\n", report.WarmLikeReuseRate*100)
+	fmt.Fprintln(stdout, "\nTrust")
+	fmt.Fprintf(stdout, "  Proof-Backed Rate: %.2f%%\n", report.ProofBackedRate*100)
+	fmt.Fprintf(stdout, "  Successful Runs: %d / %d\n", report.SuccessfulRuns, report.TotalRuns)
+	fmt.Fprintln(stdout, "\nEfficiency")
+	fmt.Fprintf(stdout, "  Avg Latency: %dms\n", report.AvgLatencyMS)
+	fmt.Fprintf(stdout, "  Sources Visited: %d\n", report.TotalSourcesVisited)
+	fmt.Fprintf(stdout, "  Links Explored: %d\n", report.TotalLinksExplored)
+	fmt.Fprintf(stdout, "  Web Work Avoided: %d memory reuse events\n", report.TotalMemoryReuseEvents)
 	return 0
 }
 
@@ -237,5 +252,72 @@ func (r Runner) runAnalyticsProviders(args []string, stdout, stderr io.Writer) i
 		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", provider.PublicBootstrapUsedRate*100)
 		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", provider.LocalMemoryUsedRate*100)
 	}
+	return 0
+}
+
+func (r Runner) runAnalyticsDaily(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("analytics daily", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	var jsonOut bool
+	var limit int
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.IntVar(&limit, "limit", 30, "number of days")
+	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		writeUsage(stderr, "needlex analytics daily [--limit N] [--json]")
+		return 2
+	}
+	days, err := analytics.NewSQLiteStore(r.storeRoot).Daily(context.Background(), limit)
+	if err != nil {
+		fmt.Fprintf(stderr, "analytics daily failed: %v\n", err)
+		return 1
+	}
+	if jsonOut {
+		return writeJSON(stdout, stderr, analyticsDailyResult{Days: days})
+	}
+	fmt.Fprintf(stdout, "Days: %d\n", len(days))
+	for i, day := range days {
+		fmt.Fprintf(stdout, "%d. %s\n", i+1, day.Day)
+		fmt.Fprintf(stdout, "   Runs: %d (%d successful)\n", day.RunCount, day.SuccessfulRuns)
+		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", day.AvgLatencyMS)
+		fmt.Fprintf(stdout, "   Chars Saved: %d\n", day.TotalAgentCharsSaved)
+		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", day.ProofBackedRate*100)
+		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", day.PublicBootstrapUsedRate*100)
+		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", day.LocalMemoryUsedRate*100)
+	}
+	return 0
+}
+
+func (r Runner) runAnalyticsExport(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("analytics export", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	var jsonOut bool
+	var outDir string
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.StringVar(&outDir, "out", "", "export directory")
+	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--out": {}, "-out": {}})); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || strings.TrimSpace(outDir) == "" {
+		writeUsage(stderr, "needlex analytics export --out DIR [--json]")
+		return 2
+	}
+	exported, err := analytics.NewSQLiteStore(r.storeRoot).ExportJSON(context.Background(), outDir)
+	if err != nil {
+		fmt.Fprintf(stderr, "analytics export failed: %v\n", err)
+		return 1
+	}
+	if jsonOut {
+		return writeJSON(stdout, stderr, analyticsExportResult{Export: exported})
+	}
+	fmt.Fprintf(stdout, "Directory: %s\n", exported.Directory)
+	fmt.Fprintf(stdout, "Runs: %s (%d)\n", exported.RunsPath, exported.RunCount)
+	fmt.Fprintf(stdout, "Stages: %s (%d)\n", exported.StagesPath, exported.StageCount)
+	fmt.Fprintf(stdout, "Hosts: %s (%d)\n", exported.HostsPath, exported.HostCount)
+	fmt.Fprintf(stdout, "Providers: %s (%d)\n", exported.ProvidersPath, exported.ProviderCount)
+	fmt.Fprintf(stdout, "Daily: %s (%d)\n", exported.DailyPath, exported.DailyCount)
+	fmt.Fprintf(stdout, "Value Report: %s\n", exported.ValueReportPath)
 	return 0
 }
