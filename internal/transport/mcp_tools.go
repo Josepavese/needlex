@@ -77,6 +77,10 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 		return r.callMCPAnalyticsRecentRunsTool(call.Arguments)
 	case "analytics_value_report":
 		return r.callMCPAnalyticsValueReportTool(call.Arguments)
+	case "analytics_hosts":
+		return r.callMCPAnalyticsHostsTool(call.Arguments)
+	case "analytics_providers":
+		return r.callMCPAnalyticsProvidersTool(call.Arguments)
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", call.Name)
 	}
@@ -218,6 +222,8 @@ func mcpTools() []mcpTool {
 		mcpAnalyticsStatsTool(),
 		mcpAnalyticsRecentRunsTool(),
 		mcpAnalyticsValueReportTool(),
+		mcpAnalyticsHostsTool(),
+		mcpAnalyticsProvidersTool(),
 	}
 }
 
@@ -586,6 +592,40 @@ func (r Runner) callMCPAnalyticsValueReportTool(_ map[string]any) (map[string]an
 	return mcpToolResult(payload, compact), nil
 }
 
+func (r Runner) callMCPAnalyticsHostsTool(args map[string]any) (map[string]any, error) {
+	hosts, err := analytics.NewSQLiteStore(r.storeRoot).Hosts(context.Background(), intDefault(args, "limit", 20))
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":  "analytics_hosts",
+		"hosts": hosts,
+	}
+	payload := map[string]any{
+		"kind":    "analytics_hosts",
+		"hosts":   hosts,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]any, error) {
+	providers, err := analytics.NewSQLiteStore(r.storeRoot).Providers(context.Background(), intDefault(args, "limit", 20))
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":      "analytics_providers",
+		"providers": providers,
+	}
+	payload := map[string]any{
+		"kind":      "analytics_providers",
+		"providers": providers,
+		"compact":   compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
 func mcpAnalyticsStatsTool() mcpTool {
 	return mcpTool{
 		Name:        "analytics_stats",
@@ -609,6 +649,26 @@ func mcpAnalyticsValueReportTool() mcpTool {
 		Name:        "analytics_value_report",
 		Description: "Return the front-of-house Analytics PAL value report: chars saved, compression, bootstrap avoided, proof-backed delivery, and warm-state lift.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{}), map[string]any{}),
+	}
+}
+
+func mcpAnalyticsHostsTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_hosts",
+		Description: "Return host-level Analytics PAL rollups showing where Needle-X creates value and where retrieval quality or latency concentrate.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"limit": map[string]any{"type": "integer"},
+		}), map[string]any{"limit": 20}),
+	}
+}
+
+func mcpAnalyticsProvidersTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_providers",
+		Description: "Return provider-level Analytics PAL rollups to separate local-first wins, public bootstrap dependence, and provider-specific cost patterns.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"limit": map[string]any{"type": "integer"},
+		}), map[string]any{"limit": 20}),
 	}
 }
 

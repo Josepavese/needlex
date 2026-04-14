@@ -15,6 +15,7 @@ needlex
 5. `needlex replay <trace-id> --json`
 6. `needlex diff <trace-a> <trace-b> --json`
 7. `needlex memory stats|search|prune|export|import|rebuild-index`
+8. `needlex analytics stats|recent|value-report|hosts|providers`
 
 ## Minimal Examples
 
@@ -22,6 +23,7 @@ needlex
 needlex read https://example.com --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
+needlex analytics value-report
 ```
 
 ## Output Rule
@@ -30,6 +32,7 @@ Default JSON is compact and AI-first:
 1. less noise
 2. proof-aware
 3. diagnostics only when needed
+4. `read` and `query` include a compact `analytics` footer so the value delivered by Needle-X is visible inline
 
 ## Next
 

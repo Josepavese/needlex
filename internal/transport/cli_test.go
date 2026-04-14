@@ -59,7 +59,7 @@ func TestRunnerReadJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), `"summary"`) || !strings.Contains(stdout.String(), `"uncertainty"`) || !strings.Contains(stdout.String(), `"chunks"`) || strings.Contains(stdout.String(), `"proof_records"`) {
+	if !strings.Contains(stdout.String(), `"summary"`) || !strings.Contains(stdout.String(), `"uncertainty"`) || !strings.Contains(stdout.String(), `"chunks"`) || !strings.Contains(stdout.String(), `"analytics"`) || strings.Contains(stdout.String(), `"proof_records"`) {
 		t.Fatalf("expected compact json payload, got %q", stdout.String())
 	}
 	if !strings.Contains(stdout.String(), `"kind": "page_read"`) {

@@ -30,6 +30,17 @@ Current MCP tool set:
 5. `web_replay`
 6. `web_diff`
 7. `web_prune`
+8. `memory_stats`
+9. `memory_search`
+10. `memory_prune`
+11. `memory_export`
+12. `memory_import`
+13. `memory_rebuild_index`
+14. `analytics_stats`
+15. `analytics_recent_runs`
+16. `analytics_value_report`
+17. `analytics_hosts`
+18. `analytics_providers`
 
 Canonical query discovery literals:
 1. `same_site_links`
@@ -44,6 +55,7 @@ Compact-first output rule:
 1. MCP `content.text` exposes the compact packet first
 2. MCP `structuredContent` keeps the richer diagnostic payload
 3. agents should default to the compact packet before opening diagnostics
+4. analytics tools follow the same rule: headline numbers first, richer rollups in structured payloads
 
 Tool scope rule:
 1. `web_extract` is intentionally not added yet
@@ -68,6 +80,11 @@ needlex tool-catalog --provider anthropic
 5. `web_replay` -> `needlex replay`
 6. `web_diff` -> `needlex diff`
 7. `web_prune` -> `needlex prune`
+8. `analytics_stats` -> `needlex analytics stats`
+9. `analytics_recent_runs` -> `needlex analytics recent`
+10. `analytics_value_report` -> `needlex analytics value-report`
+11. `analytics_hosts` -> `needlex analytics hosts`
+12. `analytics_providers` -> `needlex analytics providers`
 
 ## Next
 

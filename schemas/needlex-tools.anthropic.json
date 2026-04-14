@@ -381,6 +381,40 @@
         "properties": {},
         "type": "object"
       }
+    },
+    {
+      "name": "analytics_hosts",
+      "description": "Return host-level Analytics PAL rollups showing where Needle-X creates value and where retrieval quality or latency concentrate.",
+      "input_schema": {
+        "examples": [
+          {
+            "limit": 20
+          }
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "analytics_providers",
+      "description": "Return provider-level Analytics PAL rollups to separate local-first wins, public bootstrap dependence, and provider-specific cost patterns.",
+      "input_schema": {
+        "examples": [
+          {
+            "limit": 20
+          }
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
     }
   ]
 }

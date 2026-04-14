@@ -10,6 +10,13 @@ Every successful `read` and `query` run gives you four things:
 3. proof access for chunk provenance
 4. a stored trace for replay and diff
 
+Every successful `read` and `query` run now also carries a compact analytics footer:
+1. chars saved
+2. compression ratio
+3. proof-backed yes/no
+4. local-memory vs public-bootstrap use
+5. topic-node usage when applicable
+
 For agent-facing consumption, prefer the compact agent-facing fields first:
 1. inline chunk text
 2. inline `source_url`
@@ -135,8 +142,29 @@ Look at compact JSON first:
 5. `links`
 6. `web_ir_summary`
 7. `cost_report`
+8. `analytics`
 
 This tells you what Needle-X decided to keep and how expensive the run was.
+The `analytics` footer tells you how much work Needle-X avoided for the agent and whether the result came from public bootstrap or local-first recovery.
+
+## Analytics
+
+Use Analytics PAL when you want product-visible value numbers first and maintainer diagnostics second.
+
+Core commands:
+
+```bash
+needlex analytics stats
+needlex analytics recent --limit 20
+needlex analytics value-report
+needlex analytics hosts --limit 20
+needlex analytics providers --limit 20
+```
+
+Interpretation rule:
+1. `value-report` is front-of-house and demo-friendly
+2. `hosts` tells you where Needle-X wins or struggles on real target families
+3. `providers` tells you whether the value came from local-first recovery, same-site expansion, or public bootstrap
 
 ### 1b. Agent Context
 

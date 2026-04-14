@@ -123,6 +123,7 @@ func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode st
 		GoalLengthChars:      len(strings.TrimSpace(goal)),
 		DiscoveryMode:        firstNonEmpty(discoveryMode, "off"),
 		SeedPresent:          seedPresent,
+		Host:                 hostFromURL(firstNonEmpty(selected, documentURL)),
 		SelectedURL:          firstNonEmpty(selected, documentURL),
 		Provider:             strings.TrimSpace(provider),
 		Success:              true,

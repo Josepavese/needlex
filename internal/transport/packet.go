@@ -1,10 +1,12 @@
 package transport
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/proof"
 )
 
 type compactChunk struct {
@@ -39,39 +41,50 @@ type compactUncertainty struct {
 	Reasons []string `json:"reasons,omitempty"`
 }
 
+type compactAnalyticsFooter struct {
+	CharsSaved          int     `json:"chars_saved"`
+	CompressionRatio    float64 `json:"compression_ratio"`
+	ProofBacked         bool    `json:"proof_backed"`
+	PublicBootstrapUsed bool    `json:"public_bootstrap_used"`
+	LocalMemoryUsed     bool    `json:"local_memory_used"`
+	TopicNodeUsed       bool    `json:"topic_node_used"`
+}
+
 type compactReadOutput struct {
-	Kind         string              `json:"kind"`
-	URL          string              `json:"url"`
-	Title        string              `json:"title,omitempty"`
-	Summary      string              `json:"summary,omitempty"`
-	Uncertainty  compactUncertainty  `json:"uncertainty"`
-	Profile      string              `json:"profile,omitempty"`
-	TraceID      string              `json:"trace_id,omitempty"`
-	Outline      []string            `json:"outline,omitempty"`
-	Chunks       []compactChunk      `json:"chunks"`
-	Links        []string            `json:"links,omitempty"`
-	Signals      compactSignals      `json:"signals,omitempty"`
-	WebIRSummary compactWebIRSummary `json:"web_ir_summary"`
-	CostReport   core.CostReport     `json:"cost_report"`
+	Kind         string                 `json:"kind"`
+	URL          string                 `json:"url"`
+	Title        string                 `json:"title,omitempty"`
+	Summary      string                 `json:"summary,omitempty"`
+	Uncertainty  compactUncertainty     `json:"uncertainty"`
+	Profile      string                 `json:"profile,omitempty"`
+	TraceID      string                 `json:"trace_id,omitempty"`
+	Outline      []string               `json:"outline,omitempty"`
+	Chunks       []compactChunk         `json:"chunks"`
+	Links        []string               `json:"links,omitempty"`
+	Signals      compactSignals         `json:"signals,omitempty"`
+	WebIRSummary compactWebIRSummary    `json:"web_ir_summary"`
+	Analytics    compactAnalyticsFooter `json:"analytics"`
+	CostReport   core.CostReport        `json:"cost_report"`
 }
 
 type compactQueryOutput struct {
-	Kind         string              `json:"kind"`
-	Goal         string              `json:"goal"`
-	SeedURL      string              `json:"seed_url,omitempty"`
-	SelectedURL  string              `json:"selected_url"`
-	Summary      string              `json:"summary,omitempty"`
-	Uncertainty  compactUncertainty  `json:"uncertainty"`
-	SelectionWhy []string            `json:"selection_why,omitempty"`
-	Provider     string              `json:"provider,omitempty"`
-	Profile      string              `json:"profile,omitempty"`
-	TraceID      string              `json:"trace_id,omitempty"`
-	Outline      []string            `json:"outline,omitempty"`
-	Chunks       []compactChunk      `json:"chunks"`
-	Candidates   []compactCandidate  `json:"candidates,omitempty"`
-	Signals      compactSignals      `json:"signals,omitempty"`
-	WebIRSummary compactWebIRSummary `json:"web_ir_summary"`
-	CostReport   core.CostReport     `json:"cost_report"`
+	Kind         string                 `json:"kind"`
+	Goal         string                 `json:"goal"`
+	SeedURL      string                 `json:"seed_url,omitempty"`
+	SelectedURL  string                 `json:"selected_url"`
+	Summary      string                 `json:"summary,omitempty"`
+	Uncertainty  compactUncertainty     `json:"uncertainty"`
+	SelectionWhy []string               `json:"selection_why,omitempty"`
+	Provider     string                 `json:"provider,omitempty"`
+	Profile      string                 `json:"profile,omitempty"`
+	TraceID      string                 `json:"trace_id,omitempty"`
+	Outline      []string               `json:"outline,omitempty"`
+	Chunks       []compactChunk         `json:"chunks"`
+	Candidates   []compactCandidate     `json:"candidates,omitempty"`
+	Signals      compactSignals         `json:"signals,omitempty"`
+	WebIRSummary compactWebIRSummary    `json:"web_ir_summary"`
+	Analytics    compactAnalyticsFooter `json:"analytics"`
+	CostReport   core.CostReport        `json:"cost_report"`
 }
 
 type compactCrawlDocument struct {
@@ -101,6 +114,7 @@ func compactReadResponse(resp coreservice.ReadResponse) compactReadOutput {
 		Links:        append([]string{}, resp.ResultPack.Links...),
 		Signals:      compactSignals{Confidence: topChunkConfidence(selectedChunks), SubstrateClass: resp.WebIR.Signals.SubstrateClass},
 		WebIRSummary: compactWebIR(resp.WebIR),
+		Analytics:    compactAnalyticsForRead(resp),
 		CostReport:   resp.ResultPack.CostReport,
 	}
 }
@@ -123,6 +137,7 @@ func compactQueryResponse(resp coreservice.QueryResponse) compactQueryOutput {
 		Candidates:   compactCandidates(resp.AgentContext.Candidates),
 		Signals:      compactSignals{Confidence: topChunkConfidence(selectedChunks), SubstrateClass: resp.WebIR.Signals.SubstrateClass},
 		WebIRSummary: compactWebIR(resp.WebIR),
+		Analytics:    compactAnalyticsForQuery(resp),
 		CostReport:   resp.CostReport,
 	}
 }
@@ -177,4 +192,74 @@ func compactWebIR(webIR core.WebIR) compactWebIRSummary {
 		EmbeddedNodeCount: webIR.Signals.EmbeddedNodeCount,
 		SubstrateClass:    webIR.Signals.SubstrateClass,
 	}
+}
+
+func compactAnalyticsForRead(resp coreservice.ReadResponse) compactAnalyticsFooter {
+	return compactAnalyticsFromTrace(resp.Trace, len(resp.ResultPack.ProofRefs), "")
+}
+
+func compactAnalyticsForQuery(resp coreservice.QueryResponse) compactAnalyticsFooter {
+	return compactAnalyticsFromTrace(resp.Trace, len(resp.ResultPack.ProofRefs), resp.Plan.DiscoveryProvider)
+}
+
+func compactAnalyticsFromTrace(trace proof.RunTrace, proofRefCount int, provider string) compactAnalyticsFooter {
+	rawChars := 0
+	packetChars := 0
+	topicNodeUsed := false
+	for _, stage := range trace.Stages {
+		switch stage.Stage {
+		case "acquire":
+			rawChars = atoiSafe(stage.Metadata["raw_chars"])
+		case "pack":
+			packetChars = atoiSafe(stage.Metadata["packet_chars"])
+		}
+		for key, value := range stage.Metadata {
+			if strings.Contains(key, "reason") && strings.Contains(value, "topic_node_retrieval") {
+				topicNodeUsed = true
+			}
+		}
+	}
+	charsSaved := rawChars - packetChars
+	if charsSaved < 0 {
+		charsSaved = 0
+	}
+	compressionRatio := 0.0
+	if rawChars > 0 {
+		compressionRatio = float64(charsSaved) / float64(rawChars)
+	}
+	return compactAnalyticsFooter{
+		CharsSaved:          charsSaved,
+		CompressionRatio:    compressionRatio,
+		ProofBacked:         proofRefCount > 0,
+		PublicBootstrapUsed: compactUsesPublicBootstrap(provider),
+		LocalMemoryUsed:     compactUsesLocalMemory(provider),
+		TopicNodeUsed:       topicNodeUsed,
+	}
+}
+
+func atoiSafe(raw string) int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	value := 0
+	_, _ = fmt.Sscanf(raw, "%d", &value)
+	return value
+}
+
+func compactUsesPublicBootstrap(provider string) bool {
+	for _, part := range strings.Split(strings.TrimSpace(provider), ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if !strings.HasPrefix(part, "local_") && !strings.HasPrefix(part, "discovery_memory") {
+			return true
+		}
+	}
+	return false
+}
+
+func compactUsesLocalMemory(provider string) bool {
+	return strings.Contains(strings.TrimSpace(provider), "discovery_memory")
 }

@@ -69,6 +69,26 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Chars Saved for the Agent:") || !strings.Contains(stdout.String(), "Topic Roots Recovered: 1") {
 		t.Fatalf("unexpected analytics value-report output: %q", stdout.String())
 	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = runner.Run([]string{"analytics", "hosts"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("analytics hosts exit=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "example.com") {
+		t.Fatalf("unexpected analytics hosts output: %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = runner.Run([]string{"analytics", "providers"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("analytics providers exit=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "discovery_memory_same_site") {
+		t.Fatalf("unexpected analytics providers output: %q", stdout.String())
+	}
 }
 
 func TestRunnerHelpListsAnalyticsCommand(t *testing.T) {

@@ -23,8 +23,16 @@ type analyticsValueReportResult struct {
 	Report analytics.ValueReport `json:"report"`
 }
 
+type analyticsHostsResult struct {
+	Hosts []analytics.HostRollup `json:"hosts"`
+}
+
+type analyticsProvidersResult struct {
+	Providers []analytics.ProviderRollup `json:"providers"`
+}
+
 func writeAnalyticsUsage(w io.Writer) {
-	writeUsage(w, "needlex analytics <stats|recent|value-report> [args]")
+	writeUsage(w, "needlex analytics <stats|recent|value-report|hosts|providers> [args]")
 }
 
 func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
@@ -39,6 +47,10 @@ func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
 		return r.runAnalyticsRecent(args[1:], stdout, stderr)
 	case "value-report":
 		return r.runAnalyticsValueReport(args[1:], stdout, stderr)
+	case "hosts":
+		return r.runAnalyticsHosts(args[1:], stdout, stderr)
+	case "providers":
+		return r.runAnalyticsProviders(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		writeAnalyticsUsage(stdout)
 		return 0
@@ -155,5 +167,75 @@ func (r Runner) runAnalyticsValueReport(args []string, stdout, stderr io.Writer)
 	fmt.Fprintf(stdout, "Sources Visited: %d\n", report.TotalSourcesVisited)
 	fmt.Fprintf(stdout, "Links Explored: %d\n", report.TotalLinksExplored)
 	fmt.Fprintf(stdout, "Proof-Backed Rate: %.2f%%\n", report.ProofBackedRate*100)
+	return 0
+}
+
+func (r Runner) runAnalyticsHosts(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("analytics hosts", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	var jsonOut bool
+	var limit int
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.IntVar(&limit, "limit", 20, "number of hosts")
+	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		writeUsage(stderr, "needlex analytics hosts [--limit N] [--json]")
+		return 2
+	}
+	hosts, err := analytics.NewSQLiteStore(r.storeRoot).Hosts(context.Background(), limit)
+	if err != nil {
+		fmt.Fprintf(stderr, "analytics hosts failed: %v\n", err)
+		return 1
+	}
+	if jsonOut {
+		return writeJSON(stdout, stderr, analyticsHostsResult{Hosts: hosts})
+	}
+	fmt.Fprintf(stdout, "Hosts: %d\n", len(hosts))
+	for i, host := range hosts {
+		fmt.Fprintf(stdout, "%d. %s\n", i+1, host.Host)
+		fmt.Fprintf(stdout, "   Runs: %d (%d successful)\n", host.RunCount, host.SuccessfulRuns)
+		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", host.AvgLatencyMS)
+		fmt.Fprintf(stdout, "   Chars Saved: %d\n", host.TotalAgentCharsSaved)
+		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", host.ProofBackedRate*100)
+		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", host.PublicBootstrapUsedRate*100)
+		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", host.LocalMemoryUsedRate*100)
+	}
+	return 0
+}
+
+func (r Runner) runAnalyticsProviders(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("analytics providers", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	var jsonOut bool
+	var limit int
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.IntVar(&limit, "limit", 20, "number of providers")
+	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		writeUsage(stderr, "needlex analytics providers [--limit N] [--json]")
+		return 2
+	}
+	providers, err := analytics.NewSQLiteStore(r.storeRoot).Providers(context.Background(), limit)
+	if err != nil {
+		fmt.Fprintf(stderr, "analytics providers failed: %v\n", err)
+		return 1
+	}
+	if jsonOut {
+		return writeJSON(stdout, stderr, analyticsProvidersResult{Providers: providers})
+	}
+	fmt.Fprintf(stdout, "Providers: %d\n", len(providers))
+	for i, provider := range providers {
+		fmt.Fprintf(stdout, "%d. %s\n", i+1, provider.Provider)
+		fmt.Fprintf(stdout, "   Runs: %d (%d successful)\n", provider.RunCount, provider.SuccessfulRuns)
+		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", provider.AvgLatencyMS)
+		fmt.Fprintf(stdout, "   Chars Saved: %d\n", provider.TotalAgentCharsSaved)
+		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", provider.ProofBackedRate*100)
+		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", provider.PublicBootstrapUsedRate*100)
+		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", provider.LocalMemoryUsedRate*100)
+	}
 	return 0
 }
