@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -426,8 +427,8 @@ func (e providerUnavailableError) Error() string {
 }
 
 func isProviderUnavailable(err error) bool {
-	_, ok := err.(providerUnavailableError)
-	return ok
+	var unavailable providerUnavailableError
+	return errors.As(err, &unavailable)
 }
 
 func (s *Service) discoverWebBootstrapBrave(ctx context.Context, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {

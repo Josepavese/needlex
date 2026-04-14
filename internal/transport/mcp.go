@@ -3,6 +3,7 @@ package transport
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -134,7 +135,7 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 	for {
 		payload, err := conn.ReadPayload()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return 0
 			}
 			mcpLogf(logf, "read failed: %v", err)
@@ -245,7 +246,7 @@ func detectMCPFraming(reader *bufio.Reader) (mcpFramingMode, error) {
 		}
 	}
 	peek, err := reader.Peek(32)
-	if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
+	if err != nil && !errors.Is(err, bufio.ErrBufferFull) && !errors.Is(err, io.EOF) {
 		return mcpFramingUnknown, err
 	}
 	lower := strings.ToLower(string(peek))

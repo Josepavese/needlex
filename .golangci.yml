@@ -1,18 +1,18 @@
+version: "2"
+
 run:
   tests: false
 
 linters:
+  default: none
   enable:
-    - gocyclo
-    - funlen
-    - ineffassign
+    - bodyclose
+    - errorlint
     - govet
+    - ineffassign
     - misspell
-  disable-all: true
+    - unconvert
 
-linters-settings:
-  funlen:
-    lines: 60
-    statements: 40
-  gocyclo:
-    min-complexity: 30
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
