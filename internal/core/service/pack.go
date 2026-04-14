@@ -117,9 +117,23 @@ func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest
 }
 
 func packStageMetadata(req ReadRequest, webIR core.WebIR, chunks []core.Chunk, selected []rankedSegment, summary intel.Summary, stableHits, novelHits, reuseEligible, reuseApplied int) map[string]string {
+	packetChars := 0
+	sourceCount := 0
+	linkCount := 1
+	proofRefCount := len(selected)
+	for _, chunk := range chunks {
+		packetChars += len(chunk.Text)
+	}
+	if len(chunks) > 0 {
+		sourceCount = 1
+	}
 	return map[string]string{
 		"profile":                   req.Profile,
 		"chunks":                    fmt.Sprintf("%d", len(chunks)),
+		"packet_chars":              fmt.Sprintf("%d", packetChars),
+		"source_count":              fmt.Sprintf("%d", sourceCount),
+		"link_count":                fmt.Sprintf("%d", linkCount),
+		"proof_ref_count":           fmt.Sprintf("%d", proofRefCount),
 		"page_type":                 summary.PageType,
 		"substrate_class":           webIR.Signals.SubstrateClass,
 		"difficulty":                summary.Difficulty,

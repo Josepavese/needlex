@@ -2,8 +2,10 @@ package transport
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
@@ -38,6 +40,7 @@ func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (c
 			ChangedRecently: pageFingerprintChanged(r.storeRoot, page.Document.FinalURL),
 		})
 	}
+	r.observeAnalyticsCrawl(cfg, req, resp, storedRuns)
 	coreservice.ObserveCrawlResponseWithLocalState(r.storeRoot, req, resp)
 
 	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
@@ -74,6 +77,7 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
 		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
+	r.observeAnalyticsRead(cfg, req, resp)
 
 	return resp, artifactPaths{
 		TracePath:       tracePath,
@@ -116,6 +120,7 @@ func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (c
 		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
 		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
+	r.observeAnalyticsQuery(cfg, req, resp)
 
 	return resp, artifactPaths{
 		TracePath:       tracePath,
@@ -131,6 +136,43 @@ func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Obs
 	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
 	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
 	_ = service.Observe(context.Background(), observation)
+}
+
+func (r Runner) observeAnalyticsRead(cfg config.Config, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
+	stats := r.analyticsMemoryStats(cfg)
+	packetBytes := compactJSONSize(compactReadResponse(resp))
+	_ = analytics.ObserveRead(context.Background(), analytics.NewSQLiteStore(r.storeRoot), "cli", req, resp, packetBytes, stats)
+}
+
+func (r Runner) observeAnalyticsQuery(cfg config.Config, req coreservice.QueryRequest, resp coreservice.QueryResponse) {
+	stats := r.analyticsMemoryStats(cfg)
+	packetBytes := compactJSONSize(compactQueryResponse(resp))
+	_ = analytics.ObserveQuery(context.Background(), analytics.NewSQLiteStore(r.storeRoot), "cli", req, resp, packetBytes, stats)
+}
+
+func (r Runner) observeAnalyticsCrawl(cfg config.Config, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
+	stats := r.analyticsMemoryStats(cfg)
+	packetBytes := compactJSONSize(compactCrawlResponse(resp, crawlArtifacts{StoredRuns: storedRuns}))
+	_ = analytics.ObserveCrawl(context.Background(), analytics.NewSQLiteStore(r.storeRoot), "cli", req, resp, packetBytes, stats)
+}
+
+func (r Runner) analyticsMemoryStats(cfg config.Config) memory.Stats {
+	if !cfg.Memory.Enabled {
+		return memory.Stats{}
+	}
+	stats, err := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path).GetStats(context.Background())
+	if err != nil {
+		return memory.Stats{}
+	}
+	return stats
+}
+
+func compactJSONSize(value any) int {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return 0
+	}
+	return len(data)
 }
 
 func pageFingerprintStable(storeRoot, rawURL string) float64 {

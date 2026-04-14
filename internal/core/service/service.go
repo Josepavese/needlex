@@ -177,9 +177,12 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 		"fetch_profile":  page.FetchProfile,
 		"retry_profile":  effectiveRetryProfile,
 		"final_url":      page.FinalURL,
+		"content_type":   page.ContentType,
 		"retry_count":    fmt.Sprintf("%d", page.RetryCount),
 		"retry_sleep_ms": fmt.Sprintf("%d", page.RetrySleepMS),
 		"host_pacing_ms": fmt.Sprintf("%d", page.HostPacingMS),
+		"raw_chars":      fmt.Sprintf("%d", len(page.HTML)),
+		"raw_bytes":      fmt.Sprintf("%d", len([]byte(page.HTML))),
 	}
 	if page.RetryReason != "" {
 		metadata["retry_reason"] = page.RetryReason
@@ -202,9 +205,16 @@ func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage, req
 		return pipeline.SimplifiedDOM{}, err
 	}
 
+	reducedChars := 0
+	for _, node := range dom.Nodes {
+		reducedChars += len(node.Text)
+	}
 	if err := recorder.StageCompleted(stage, dom, len(dom.Nodes), map[string]string{
-		"title":          dom.Title,
-		"web_ir_version": core.WebIRVersion,
+		"title":           dom.Title,
+		"web_ir_version":  core.WebIRVersion,
+		"substrate_class": dom.SubstrateClass,
+		"reduced_nodes":   fmt.Sprintf("%d", len(dom.Nodes)),
+		"reduced_chars":   fmt.Sprintf("%d", reducedChars),
 	}, s.now().UTC()); err != nil {
 		return pipeline.SimplifiedDOM{}, err
 	}

@@ -78,6 +78,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runProof(args[1:], stdout, stderr)
 	case "memory":
 		return r.runMemory(args[1:], stdout, stderr)
+	case "analytics":
+		return r.runAnalytics(args[1:], stdout, stderr)
 	case "prune":
 		return r.runPrune(args[1:], stdout, stderr)
 	case "mcp":
@@ -162,7 +164,8 @@ func writeRootUsage(w io.Writer) {
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
   needlex proof <trace-id|proof-id|chunk-id> [--json]
-  needlex memory <stats|search|prune> [args]
+  needlex memory <stats|search|prune|export|import|rebuild-index> [args]
+  needlex analytics <stats|recent|value-report> [args]
   needlex prune (--all | --older-than-hours N) [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
