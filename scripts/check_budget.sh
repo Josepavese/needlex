@@ -168,8 +168,12 @@ if [ "$REQUIRE_ADVISORY_LINT" -eq 1 ]; then
     if [ "$advisory_status" -eq 0 ]; then
       ADVISORY_LINT_STATUS="pass"
     else
-      ADVISORY_ISSUES=$(grep -c '^[^[:space:]].*:[0-9]\+:' "$TMPDIR_BUDGET/advisory.out" || true)
-      if [ "$ADVISORY_ISSUES" -gt 0 ]; then
+      if [ -f "$TMPDIR_BUDGET/advisory.out" ]; then
+        ADVISORY_ISSUES=$(grep -c '^[^[:space:]].*:[0-9]\+:' "$TMPDIR_BUDGET/advisory.out" || true)
+      else
+        ADVISORY_ISSUES=0
+      fi
+      if [ "${ADVISORY_ISSUES:-0}" -gt 0 ]; then
         ADVISORY_LINT_STATUS="issues"
       else
         ADVISORY_LINT_STATUS="error"
