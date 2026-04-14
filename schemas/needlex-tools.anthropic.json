@@ -342,6 +342,45 @@
         },
         "type": "object"
       }
+    },
+    {
+      "name": "analytics_stats",
+      "description": "Inspect Analytics PAL run counts, stage counts, freshness, and database path.",
+      "input_schema": {
+        "examples": [
+          {}
+        ],
+        "properties": {},
+        "type": "object"
+      }
+    },
+    {
+      "name": "analytics_recent_runs",
+      "description": "List recent Analytics PAL runs with compact WOW-facing savings and reuse fields first.",
+      "input_schema": {
+        "examples": [
+          {
+            "limit": 10
+          }
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "analytics_value_report",
+      "description": "Return the front-of-house Analytics PAL value report: chars saved, compression, bootstrap avoided, proof-backed delivery, and warm-state lift.",
+      "input_schema": {
+        "examples": [
+          {}
+        ],
+        "properties": {},
+        "type": "object"
+      }
     }
   ]
 }

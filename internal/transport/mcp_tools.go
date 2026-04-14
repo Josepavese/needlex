@@ -1,9 +1,11 @@
 package transport
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/store"
@@ -69,6 +71,12 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 		return r.callMCPMemoryImportTool(call.Arguments)
 	case "memory_rebuild_index":
 		return r.callMCPMemoryRebuildIndexTool(call.Arguments)
+	case "analytics_stats":
+		return r.callMCPAnalyticsStatsTool(call.Arguments)
+	case "analytics_recent_runs":
+		return r.callMCPAnalyticsRecentRunsTool(call.Arguments)
+	case "analytics_value_report":
+		return r.callMCPAnalyticsValueReportTool(call.Arguments)
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", call.Name)
 	}
@@ -207,6 +215,9 @@ func mcpTools() []mcpTool {
 		mcpMemoryExportTool(),
 		mcpMemoryImportTool(),
 		mcpMemoryRebuildIndexTool(),
+		mcpAnalyticsStatsTool(),
+		mcpAnalyticsRecentRunsTool(),
+		mcpAnalyticsValueReportTool(),
 	}
 }
 
@@ -521,6 +532,83 @@ func mcpMemoryRebuildIndexTool() mcpTool {
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"config_path": map[string]any{"type": "string"},
 		}), map[string]any{}),
+	}
+}
+
+func (r Runner) callMCPAnalyticsStatsTool(_ map[string]any) (map[string]any, error) {
+	stats, err := analytics.NewSQLiteStore(r.storeRoot).Stats(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":  "analytics_stats",
+		"stats": stats,
+	}
+	payload := map[string]any{
+		"kind":    "analytics_stats",
+		"stats":   stats,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPAnalyticsRecentRunsTool(args map[string]any) (map[string]any, error) {
+	runs, err := analytics.NewSQLiteStore(r.storeRoot).RecentRuns(context.Background(), intDefault(args, "limit", 10))
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind": "analytics_recent_runs",
+		"runs": runs,
+	}
+	payload := map[string]any{
+		"kind":    "analytics_recent_runs",
+		"runs":    runs,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func (r Runner) callMCPAnalyticsValueReportTool(_ map[string]any) (map[string]any, error) {
+	report, err := analytics.NewSQLiteStore(r.storeRoot).ValueReport(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":   "analytics_value_report",
+		"report": report,
+	}
+	payload := map[string]any{
+		"kind":    "analytics_value_report",
+		"report":  report,
+		"compact": compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
+func mcpAnalyticsStatsTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_stats",
+		Description: "Inspect Analytics PAL run counts, stage counts, freshness, and database path.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{}), map[string]any{}),
+	}
+}
+
+func mcpAnalyticsRecentRunsTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_recent_runs",
+		Description: "List recent Analytics PAL runs with compact WOW-facing savings and reuse fields first.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"limit": map[string]any{"type": "integer"},
+		}), map[string]any{"limit": 10}),
+	}
+}
+
+func mcpAnalyticsValueReportTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_value_report",
+		Description: "Return the front-of-house Analytics PAL value report: chars saved, compression, bootstrap avoided, proof-backed delivery, and warm-state lift.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{}), map[string]any{}),
 	}
 }
 

@@ -11,7 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 )
@@ -51,7 +53,7 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
 	}
-	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index"} {
+	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report"} {
 		if !strings.Contains(string(responses[1]), tool) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
@@ -413,6 +415,64 @@ func TestRunnerMCPMemoryTools(t *testing.T) {
 	}
 	assertMCPStructuredKeys(t, responses[1], "import", "compact")
 	assertMCPStructuredKeys(t, responses[2], "stats", "compact")
+}
+
+func TestRunnerMCPAnalyticsTools(t *testing.T) {
+	root := t.TempDir()
+	store := analytics.NewSQLiteStore(root)
+	if err := store.AppendRun(context.Background(), analytics.RunRecord{
+		RunID:                "run_1",
+		StartedAt:            time.Now().UTC().Add(-time.Second),
+		CompletedAt:          time.Now().UTC(),
+		Operation:            "query",
+		Surface:              "cli",
+		Profile:              "standard",
+		GoalHash:             "goal_hash",
+		GoalLengthChars:      12,
+		DiscoveryMode:        "web_search",
+		SelectedURL:          "https://example.com",
+		Provider:             "discovery_memory_same_site",
+		Success:              true,
+		TraceID:              "trace_1",
+		LatencyMS:            250,
+		PacketBytes:          128,
+		FinalContextChars:    100,
+		ChunkCount:           1,
+		SourceCount:          1,
+		LinkCount:            2,
+		ProofRefCount:        1,
+		ProofUsable:          true,
+		PublicBootstrapUsed:  false,
+		LocalMemoryUsed:      true,
+		TopicNodeUsed:        true,
+		SameSiteRecoveryUsed: true,
+		RawFetchChars:        1000,
+		RawFetchBytes:        1000,
+	}, nil); err != nil {
+		t.Fatalf("seed analytics db: %v", err)
+	}
+
+	input := framedMessages(
+		t,
+		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "analytics_stats", "arguments": map[string]any{}}},
+		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "analytics_recent_runs", "arguments": map[string]any{"limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "analytics_value_report", "arguments": map[string]any{}}},
+	)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	runner := Runner{loadConfig: config.Load, stdin: strings.NewReader(input), storeRoot: root}
+	code := runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	responses := decodeMCPResponses(t, stdout.Bytes())
+	if len(responses) != 4 {
+		t.Fatalf("expected 4 responses, got %d", len(responses))
+	}
+	assertMCPStructuredKeys(t, responses[1], "stats", "compact")
+	assertMCPStructuredKeys(t, responses[2], "runs", "compact")
+	assertMCPStructuredKeys(t, responses[3], "report", "compact")
 }
 
 func framedMessages(t *testing.T, messages ...map[string]any) string {
