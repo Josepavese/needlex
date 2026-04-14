@@ -481,7 +481,7 @@ func (s *Service) doBootstrapJSON(ctx context.Context, method, endpoint string, 
 	if err != nil {
 		return nil, "", err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, "", fmt.Errorf("bootstrap provider returned %d", resp.StatusCode)
 	}

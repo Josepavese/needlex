@@ -68,7 +68,7 @@ func (e OllamaTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]flo
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("memory embed upstream returned %d", resp.StatusCode)
 	}
@@ -103,7 +103,7 @@ func (e OpenAITextEmbedder) Embed(ctx context.Context, inputs []string) ([][]flo
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("memory embeddings upstream returned %d", resp.StatusCode)
 	}

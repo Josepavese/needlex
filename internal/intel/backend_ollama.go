@@ -62,7 +62,7 @@ func (r OllamaRuntime) Run(ctx context.Context, req ModelRequest) (ModelResponse
 	if err != nil {
 		return ModelResponse{}, err
 	}
-	defer httpResp.Body.Close()
+	defer httpResp.Body.Close() //nolint:errcheck
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		return ModelResponse{}, fmt.Errorf("ollama backend returned status %d", httpResp.StatusCode)
 	}

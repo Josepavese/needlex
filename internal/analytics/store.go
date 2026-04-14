@@ -232,12 +232,12 @@ func (s SQLiteStore) AppendRun(ctx context.Context, run RunRecord, stages []Stag
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin analytics tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer platform.Rollback(tx)
 	if err := s.upsertRun(ctx, tx, run); err != nil {
 		return err
 	}
@@ -363,7 +363,7 @@ func (s SQLiteStore) Stats(ctx context.Context) (Stats, error) {
 	if err != nil {
 		return Stats{}, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	var out Stats
 	out.DBPath = s.dbPath
 	for query, target := range map[string]*int{
@@ -396,7 +396,7 @@ func (s SQLiteStore) ValueReport(ctx context.Context) (ValueReport, error) {
 	if err != nil {
 		return ValueReport{}, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	var out ValueReport
 	row := conn.QueryRowContext(ctx, `
 SELECT
@@ -451,7 +451,7 @@ func (s SQLiteStore) RecentRuns(ctx context.Context, limit int) ([]RecentRun, er
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT run_id, completed_at, operation, surface, selected_url, provider, success, latency_ms,
        MAX(raw_fetch_chars - final_context_chars, 0), proof_usable, local_memory_used, public_bootstrap_used
@@ -462,7 +462,7 @@ LIMIT ?
 	if err != nil {
 		return nil, fmt.Errorf("query analytics recent runs: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	out := make([]RecentRun, 0, limit)
 	for rows.Next() {
 		var item RecentRun
@@ -492,7 +492,7 @@ func (s SQLiteStore) Hosts(ctx context.Context, limit int) ([]HostRollup, error)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT
   host,
@@ -512,7 +512,7 @@ LIMIT ?
 	if err != nil {
 		return nil, fmt.Errorf("query analytics hosts: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	out := []HostRollup{}
 	for rows.Next() {
 		var item HostRollup
@@ -535,7 +535,7 @@ func (s SQLiteStore) Providers(ctx context.Context, limit int) ([]ProviderRollup
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT
   provider,
@@ -555,7 +555,7 @@ LIMIT ?
 	if err != nil {
 		return nil, fmt.Errorf("query analytics providers: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	out := []ProviderRollup{}
 	for rows.Next() {
 		var item ProviderRollup
@@ -578,7 +578,7 @@ func (s SQLiteStore) Daily(ctx context.Context, limit int) ([]DailyRollup, error
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT
   substr(completed_at, 1, 10) AS day,
@@ -597,7 +597,7 @@ LIMIT ?
 	if err != nil {
 		return nil, fmt.Errorf("query analytics daily rollups: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	out := []DailyRollup{}
 	for rows.Next() {
 		var item DailyRollup
@@ -624,7 +624,7 @@ func (s SQLiteStore) ExportJSON(ctx context.Context, outDir string) (ExportStats
 	if err != nil {
 		return ExportStats{}, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	bundle, err := s.loadExportBundle(ctx)
 	if err != nil {
 		return ExportStats{}, err
@@ -736,11 +736,11 @@ func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
 		return nil, fmt.Errorf("open analytics db: %w", err)
 	}
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		platform.Close(db)
 		return nil, fmt.Errorf("ping analytics db: %w", err)
 	}
 	if err := s.ensureSchema(ctx, db); err != nil {
-		db.Close()
+		platform.Close(db)
 		return nil, err
 	}
 	return db, nil
@@ -778,7 +778,7 @@ func exportJSONLQuery(ctx context.Context, conn *sql.DB, path, query string) err
 	if err != nil {
 		return fmt.Errorf("query analytics export rows: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	columns, err := rows.Columns()
 	if err != nil {
 		return fmt.Errorf("analytics export columns: %w", err)
@@ -787,7 +787,7 @@ func exportJSONLQuery(ctx context.Context, conn *sql.DB, path, query string) err
 	if err != nil {
 		return fmt.Errorf("create analytics export file: %w", err)
 	}
-	defer file.Close()
+	defer platform.Close(file)
 	encoder := json.NewEncoder(file)
 	for rows.Next() {
 		values := make([]any, len(columns))

@@ -61,7 +61,6 @@ Warnings are printed in the budget report but do not fail the run.
 The hard lint set must stay high-signal and low-theater.
 
 Today it includes:
-- `bodyclose`
 - `errorlint`
 - `govet`
 - `ineffassign`
@@ -81,7 +80,22 @@ Today it adds pressure around:
 - `funlen`
 - `gocyclo`
 - `errorlint`
-- `bodyclose`
+
+Advisory pressure is split into two lanes:
+1. product advisory
+   - `internal`, `cmd`, `schemas`
+   - this is the main backlog signal for runtime quality work
+2. benchmark advisory
+   - `benchmarks`
+   - this is visible on purpose, but separated so benchmark debt does not drown product debt
+
+`bodyclose` is not in the hard or advisory set right now.
+
+That is intentional:
+- it produced low-confidence results in this repo
+- it was not a trustworthy enough signal to justify gate pressure
+
+If it becomes high-signal later, it can return through the normal ratchet process.
 
 Advisory lint should never be ignored forever, but it should not be promoted to hard gate until the repo can pass honestly.
 

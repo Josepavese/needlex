@@ -172,7 +172,7 @@ func (a OllamaSemanticAligner) Score(ctx context.Context, objective string, cand
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("semantic embed upstream returned %d", resp.StatusCode)
 	}
@@ -218,7 +218,7 @@ func (a OpenAISemanticAligner) Score(ctx context.Context, objective string, cand
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("semantic embeddings upstream returned %d", resp.StatusCode)
 	}

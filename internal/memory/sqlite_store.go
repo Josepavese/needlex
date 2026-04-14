@@ -82,7 +82,7 @@ func (s SQLiteStore) UpsertDocument(ctx context.Context, doc Document) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	_, err = conn.ExecContext(ctx, `
 INSERT INTO documents (
   url, final_url, host, path, title, semantic_summary, language,
@@ -142,12 +142,12 @@ func (s SQLiteStore) UpsertEdges(ctx context.Context, edges []Edge) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin discovery edges tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer platform.Rollback(tx)
 	stmt, err := tx.PrepareContext(ctx, `
 INSERT INTO edges (source_url, target_url, anchor_text, same_host, trace_ref, observed_at)
 VALUES (?, ?, ?, ?, ?, ?)
@@ -159,7 +159,7 @@ ON CONFLICT(source_url, target_url, anchor_text) DO UPDATE SET
 	if err != nil {
 		return fmt.Errorf("prepare discovery edges upsert: %w", err)
 	}
-	defer stmt.Close()
+	defer platform.Close(stmt)
 	for _, edge := range edges {
 		if strings.TrimSpace(edge.SourceURL) == "" || strings.TrimSpace(edge.TargetURL) == "" || strings.TrimSpace(edge.AnchorText) == "" {
 			continue
@@ -196,7 +196,7 @@ func (s SQLiteStore) UpsertEmbedding(ctx context.Context, emb Embedding, vector 
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	_, err = conn.ExecContext(ctx, `
 INSERT INTO embeddings (embedding_ref, document_url, model, backend, input_text, dimension, vector, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -235,7 +235,7 @@ func (s SQLiteStore) RefreshTopicNodes(ctx context.Context, doc Document) error 
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	for _, rootPath := range topicRootPaths(path) {
 		row, ok, err := loadTopicNodeRow(ctx, conn, host, rootPath)
 		if err != nil {
@@ -262,7 +262,7 @@ func (s SQLiteStore) SearchTopicNodes(ctx context.Context, vector []float32, lim
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT topic_key, host, root_path, representative_url, representative_title, semantic_summary,
        language, support_count, child_count, topic_depth, observed_at, updated_at, vector
@@ -271,7 +271,7 @@ FROM topic_nodes
 	if err != nil {
 		return nil, fmt.Errorf("query topic nodes: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	hints := normalizeDomainHints(domainHints)
 	out := make([]Candidate, 0, limit)
 	for rows.Next() {
@@ -352,7 +352,7 @@ func (s SQLiteStore) SearchByVector(ctx context.Context, vector []float32, limit
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT d.url, d.title, d.host, d.proof_refs_json, d.last_trace_id, e.vector
      , d.source_kind, d.stable_ratio, d.novelty_ratio, d.changed_recently, d.observed_at
@@ -362,7 +362,7 @@ JOIN embeddings e ON e.document_url = d.url
 	if err != nil {
 		return nil, fmt.Errorf("query discovery embeddings: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	hints := normalizeDomainHints(domainHints)
 	out := make([]Candidate, 0, limit)
 	for rows.Next() {
@@ -455,7 +455,7 @@ func (s SQLiteStore) ExpandAncestorRoots(ctx context.Context, urls []string, lim
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	out := make([]Candidate, 0, limit)
 	seen := map[string]struct{}{}
 	for _, rawURL := range clean {
@@ -558,7 +558,7 @@ func (s SQLiteStore) ExpandNeighbors(ctx context.Context, urls []string, limit i
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	out := make([]Candidate, 0, limit)
 	seen := map[string]struct{}{}
 	for _, sourceURL := range clean {
@@ -577,7 +577,7 @@ LIMIT ?
 			var rawURL, title, host, rawProofRefs, traceRef, anchor string
 			var sameHost int
 			if err := rows.Scan(&rawURL, &title, &host, &rawProofRefs, &traceRef, &anchor, &sameHost); err != nil {
-				rows.Close()
+				platform.Close(rows)
 				return nil, fmt.Errorf("scan discovery neighbor: %w", err)
 			}
 			if _, ok := seen[rawURL]; ok {
@@ -597,7 +597,7 @@ LIMIT ?
 			}
 			out = append(out, candidate)
 		}
-		rows.Close()
+		platform.Close(rows)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Score == out[j].Score {
@@ -655,7 +655,7 @@ func (s SQLiteStore) ExpandHosts(ctx context.Context, hosts []string, limit int)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	out := make([]Candidate, 0, limit)
 	seen := map[string]struct{}{}
 	for _, host := range cleanHosts {
@@ -674,7 +674,7 @@ LIMIT ?
 			var stableRatio, noveltyRatio float64
 			var changedRecently int
 			if err := rows.Scan(&rawURL, &title, &rowHost, &rawProofRefs, &traceRef, &sourceKind, &stableRatio, &noveltyRatio, &changedRecently, &observedAtRaw); err != nil {
-				rows.Close()
+				platform.Close(rows)
 				return nil, fmt.Errorf("scan discovery host expansion row: %w", err)
 			}
 			if _, ok := seen[rawURL]; ok {
@@ -719,7 +719,7 @@ LIMIT ?
 			}
 			out = append(out, candidate)
 		}
-		rows.Close()
+		platform.Close(rows)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Score == out[j].Score {
@@ -738,7 +738,7 @@ func (s SQLiteStore) GetStats(ctx context.Context) (Stats, error) {
 	if err != nil {
 		return Stats{}, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	stats := Stats{DBPath: s.dbPath}
 	for query, target := range map[string]*int{
 		"SELECT COUNT(*) FROM documents":   &stats.DocumentCount,
@@ -769,7 +769,7 @@ func (s SQLiteStore) Prune(ctx context.Context, policy PrunePolicy) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	return withTx(ctx, conn, func(tx *sql.Tx) error {
 		if err := pruneTable(ctx, tx, "documents", "url", "observed_at", policy.MaxDocuments); err != nil {
 			return err
@@ -789,7 +789,7 @@ func (s SQLiteStore) RebuildIndex(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	if _, err := conn.ExecContext(ctx, `DELETE FROM topic_nodes`); err != nil {
 		return fmt.Errorf("clear topic nodes during rebuild: %w", err)
 	}
@@ -801,16 +801,16 @@ func (s SQLiteStore) RebuildIndex(ctx context.Context) error {
 	for rows.Next() {
 		var host, path string
 		if err := rows.Scan(&host, &path); err != nil {
-			rows.Close()
+			platform.Close(rows)
 			return fmt.Errorf("scan document during topic rebuild: %w", err)
 		}
 		docs = append(docs, [2]string{host, path})
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		platform.Close(rows)
 		return fmt.Errorf("iterate documents during topic rebuild: %w", err)
 	}
-	rows.Close()
+	platform.Close(rows)
 	for _, item := range docs {
 		for _, rootPath := range topicRootPaths(item[1]) {
 			row, ok, err := loadTopicNodeRow(ctx, conn, item[0], rootPath)
@@ -849,7 +849,7 @@ func (s SQLiteStore) ExportJSONL(ctx context.Context, dir string) (ExportStats, 
 	if err != nil {
 		return ExportStats{}, err
 	}
-	defer conn.Close()
+	defer platform.Close(conn)
 	if err := os.MkdirAll(cleanDir, 0o755); err != nil {
 		return ExportStats{}, fmt.Errorf("create memory export dir: %w", err)
 	}
@@ -912,11 +912,11 @@ func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
 		return nil, fmt.Errorf("open discovery db: %w", err)
 	}
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		platform.Close(db)
 		return nil, fmt.Errorf("ping discovery db: %w", err)
 	}
 	if err := s.ensureSchema(ctx, db); err != nil {
-		db.Close()
+		platform.Close(db)
 		return nil, err
 	}
 	return db, nil
@@ -1002,7 +1002,7 @@ func withTx(ctx context.Context, db *sql.DB, fn func(*sql.Tx) error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer platform.Rollback(tx)
 	if err := fn(tx); err != nil {
 		return err
 	}
@@ -1205,7 +1205,7 @@ ORDER BY observed_at DESC, url ASC
 	if err != nil {
 		return 0, fmt.Errorf("query discovery documents export: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	return writeJSONL(path, rows, func() (exportDocumentRow, error) {
 		var row exportDocumentRow
 		var rawLocality, rawEntity, rawCategory, rawProof string
@@ -1236,7 +1236,7 @@ ORDER BY observed_at DESC, source_url ASC, target_url ASC
 	if err != nil {
 		return 0, fmt.Errorf("query discovery edges export: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	return writeJSONL(path, rows, func() (exportEdgeRow, error) {
 		var row exportEdgeRow
 		var sameHost int
@@ -1257,7 +1257,7 @@ ORDER BY updated_at DESC, embedding_ref ASC
 	if err != nil {
 		return 0, fmt.Errorf("query discovery embeddings export: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	return writeJSONL(path, rows, func() (exportEmbeddingRow, error) {
 		var row exportEmbeddingRow
 		var rawVector []byte
@@ -1283,7 +1283,7 @@ ORDER BY updated_at DESC, topic_key ASC
 	if err != nil {
 		return 0, fmt.Errorf("query topic nodes export: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	return writeJSONL(path, rows, func() (exportTopicNodeRow, error) {
 		var row exportTopicNodeRow
 		var rawVector []byte
@@ -1318,9 +1318,9 @@ func writeJSONL[T any](path string, rows *sql.Rows, next func() (T, error)) (int
 	if err != nil {
 		return 0, fmt.Errorf("create jsonl export %s: %w", path, err)
 	}
-	defer file.Close()
+	defer platform.Close(file)
 	writer := bufio.NewWriter(file)
-	defer writer.Flush()
+	defer platform.Flush(writer)
 	count := 0
 	for rows.Next() {
 		row, err := next()
@@ -1433,7 +1433,7 @@ func importTopicNodes(ctx context.Context, store SQLiteStore, path string) (int,
 		if err != nil {
 			return err
 		}
-		defer conn.Close()
+		defer platform.Close(conn)
 		vector, err := encodeVector(row.Vector)
 		if err != nil {
 			return err
@@ -1469,7 +1469,7 @@ func readJSONL(path string, consume func([]byte) error) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("open jsonl import %s: %w", path, err)
 	}
-	defer file.Close()
+	defer platform.Close(file)
 	reader := bufio.NewReader(file)
 	count := 0
 	for {
@@ -1502,7 +1502,7 @@ ORDER BY LENGTH(d.path) ASC, d.observed_at DESC, d.url ASC
 	if err != nil {
 		return topicNodeRow{}, false, fmt.Errorf("load topic node descendants: %w", err)
 	}
-	defer rows.Close()
+	defer platform.Close(rows)
 	docs := make([]topicDoc, 0, 8)
 	for rows.Next() {
 		var item topicDoc

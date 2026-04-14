@@ -33,6 +33,7 @@ REQUIRE_GOVET="${REQUIRE_GOVET:-1}"
 REQUIRE_STATICCHECK="${REQUIRE_STATICCHECK:-1}"
 REQUIRE_STRUCTURE_LINT="${REQUIRE_STRUCTURE_LINT:-1}"
 REQUIRE_ADVISORY_LINT="${REQUIRE_ADVISORY_LINT:-1}"
+REQUIRE_BENCHMARK_ADVISORY_LINT="${REQUIRE_BENCHMARK_ADVISORY_LINT:-1}"
 
 TOOLS_BIN="${TOOLS_BIN:-$(go env GOPATH 2>/dev/null)/bin}"
 if [ -n "$TOOLS_BIN" ] && [ -d "$TOOLS_BIN" ]; then
@@ -111,6 +112,8 @@ STRUCTURE_ISSUES=0
 STRUCTURE_LINT_STATUS="skipped"
 ADVISORY_ISSUES=0
 ADVISORY_LINT_STATUS="skipped"
+BENCHMARK_ADVISORY_ISSUES=0
+BENCHMARK_ADVISORY_LINT_STATUS="skipped"
 
 TMPDIR_BUDGET="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR_BUDGET"' EXIT
@@ -162,7 +165,7 @@ fi
 if [ "$REQUIRE_ADVISORY_LINT" -eq 1 ]; then
   if command -v golangci-lint >/dev/null 2>&1; then
     set +e
-    golangci-lint run --config governance/golangci.advisory.yml ./... --output.text.path "$TMPDIR_BUDGET/advisory.out" >/dev/null 2>&1
+    golangci-lint run --config governance/golangci.advisory.yml ./internal/... ./cmd/... ./schemas/... --output.text.path "$TMPDIR_BUDGET/advisory.out" >/dev/null 2>&1
     advisory_status=$?
     set -e
     if [ "$advisory_status" -eq 0 ]; then
@@ -181,6 +184,31 @@ if [ "$REQUIRE_ADVISORY_LINT" -eq 1 ]; then
     fi
   else
     ADVISORY_LINT_STATUS="missing"
+  fi
+fi
+
+if [ "$REQUIRE_BENCHMARK_ADVISORY_LINT" -eq 1 ]; then
+  if command -v golangci-lint >/dev/null 2>&1; then
+    set +e
+    golangci-lint run --config governance/golangci.advisory.yml ./benchmarks/... --output.text.path "$TMPDIR_BUDGET/benchmark_advisory.out" >/dev/null 2>&1
+    benchmark_advisory_status=$?
+    set -e
+    if [ "$benchmark_advisory_status" -eq 0 ]; then
+      BENCHMARK_ADVISORY_LINT_STATUS="pass"
+    else
+      if [ -f "$TMPDIR_BUDGET/benchmark_advisory.out" ]; then
+        BENCHMARK_ADVISORY_ISSUES=$(grep -c '^[^[:space:]].*:[0-9]\+:' "$TMPDIR_BUDGET/benchmark_advisory.out" || true)
+      else
+        BENCHMARK_ADVISORY_ISSUES=0
+      fi
+      if [ "${BENCHMARK_ADVISORY_ISSUES:-0}" -gt 0 ]; then
+        BENCHMARK_ADVISORY_LINT_STATUS="issues"
+      else
+        BENCHMARK_ADVISORY_LINT_STATUS="error"
+      fi
+    fi
+  else
+    BENCHMARK_ADVISORY_LINT_STATUS="missing"
   fi
 fi
 
@@ -220,6 +248,10 @@ fi
 if [ "$REQUIRE_ADVISORY_LINT" -eq 1 ]; then
   echo "ADVISORY_LINT_STATUS=$ADVISORY_LINT_STATUS"
   echo "ADVISORY_ISSUES=$ADVISORY_ISSUES"
+fi
+if [ "$REQUIRE_BENCHMARK_ADVISORY_LINT" -eq 1 ]; then
+  echo "BENCHMARK_ADVISORY_LINT_STATUS=$BENCHMARK_ADVISORY_LINT_STATUS"
+  echo "BENCHMARK_ADVISORY_ISSUES=$BENCHMARK_ADVISORY_ISSUES"
 fi
 
 if [ "$PROD_LOC" -gt "$HARD_MAX_PROD_LOC" ]; then echo "FAIL: production LOC exceeds hard limit"; FAIL=1; fi
@@ -268,8 +300,12 @@ if [ "$REQUIRE_STRUCTURE_LINT" -eq 1 ]; then
   esac
 fi
 if [ "$REQUIRE_ADVISORY_LINT" -eq 1 ] && [ "$ADVISORY_LINT_STATUS" = "issues" ]; then
-  echo "== Advisory Lint Sample =="
+  echo "== Product Advisory Lint Sample =="
   sed -n '1,20p' "$TMPDIR_BUDGET/advisory.out"
+fi
+if [ "$REQUIRE_BENCHMARK_ADVISORY_LINT" -eq 1 ] && [ "$BENCHMARK_ADVISORY_LINT_STATUS" = "issues" ]; then
+  echo "== Benchmark Advisory Lint Sample =="
+  sed -n '1,20p' "$TMPDIR_BUDGET/benchmark_advisory.out"
 fi
 
 if [ "$FAIL" -ne 0 ]; then

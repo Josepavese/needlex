@@ -10,22 +10,21 @@ linters:
     - errorlint
     - funlen
     - gocyclo
-    - bodyclose
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    funlen:
+      lines: 70
+      statements: 45
+    gocyclo:
+      min-complexity: 24
+
+formatters:
+  enable: []
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
-linters-settings:
-  funlen:
-    lines: 70
-    statements: 45
-  gocyclo:
-    min-complexity: 24
-  errcheck:
-    exclude-functions:
-      - fmt.Fprint
-      - fmt.Fprintf
-      - fmt.Fprintln
-      - (*bytes.Buffer).Write
-      - (*strings.Builder).WriteString
