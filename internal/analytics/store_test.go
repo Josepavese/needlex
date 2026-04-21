@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -123,5 +124,44 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected export file %s: %v", filepath.Base(path), err)
 		}
+	}
+}
+
+func TestObserveFailureRecordsFailedAttempt(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root)
+	startedAt := time.Now().UTC().Add(-250 * time.Millisecond)
+
+	err := ObserveFailure(context.Background(), store, FailureObservation{
+		Operation:     "query",
+		Surface:       "mcp",
+		Profile:       "standard",
+		Goal:          "find protocol docs",
+		SeedURL:       "https://example.com/missing",
+		DiscoveryMode: "off",
+		StartedAt:     startedAt,
+		Err:           fmt.Errorf("unexpected status code 404"),
+	})
+	if err != nil {
+		t.Fatalf("ObserveFailure() error = %v", err)
+	}
+
+	stats, err := store.Stats(context.Background())
+	if err != nil {
+		t.Fatalf("Stats() error = %v", err)
+	}
+	if stats.RunCount != 1 || stats.SuccessfulRuns != 0 || stats.QueryRuns != 1 || stats.StageEventCount != 1 {
+		t.Fatalf("unexpected failed stats: %+v", stats)
+	}
+
+	recent, err := store.RecentRuns(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("RecentRuns() error = %v", err)
+	}
+	if len(recent) != 1 {
+		t.Fatalf("expected one recent run, got %d", len(recent))
+	}
+	if recent[0].Success || recent[0].Surface != "mcp" || recent[0].Provider != "error:upstream_not_found" {
+		t.Fatalf("unexpected failed run: %+v", recent[0])
 	}
 }

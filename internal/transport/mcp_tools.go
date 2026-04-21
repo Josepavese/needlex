@@ -107,14 +107,14 @@ func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	resp, artifacts, err := r.executeCrawl(cfg, coreservice.CrawlRequest{
+	resp, artifacts, err := r.executeCrawlWithSurface(cfg, coreservice.CrawlRequest{
 		SeedURL:    stringArg(args, "seed_url"),
 		Profile:    stringArg(args, "profile"),
 		UserAgent:  stringArg(args, "user_agent"),
 		MaxPages:   intDefault(args, "max_pages", 0),
 		MaxDepth:   intDefault(args, "max_depth", 0),
 		SameDomain: boolArg(args, "same_domain"),
-	})
+	}, "mcp")
 	if err != nil {
 		return nil, err
 	}
@@ -135,13 +135,13 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 	if laneMax, ok := intArg(args, "lane_max"); ok {
 		cfg.Runtime.LaneMax = laneMax
 	}
-	resp, artifacts, err := r.executeQuery(cfg, coreservice.QueryRequest{
+	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
 		Goal:          stringArg(args, "goal"),
 		SeedURL:       stringArg(args, "seed_url"),
 		Profile:       stringArg(args, "profile"),
 		UserAgent:     stringArg(args, "user_agent"),
 		DiscoveryMode: stringArg(args, "discovery_mode"),
-	})
+	}, "mcp")
 	if err != nil {
 		return nil, err
 	}
@@ -184,12 +184,12 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 	if laneMax, ok := intArg(args, "lane_max"); ok {
 		cfg.Runtime.LaneMax = laneMax
 	}
-	resp, artifacts, err := r.executeRead(cfg, coreservice.ReadRequest{
+	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
 		URL:       stringArg(args, "url"),
 		Objective: stringArg(args, "objective"),
 		Profile:   stringArg(args, "profile"),
 		UserAgent: stringArg(args, "user_agent"),
-	})
+	}, "mcp")
 	if err != nil {
 		return nil, err
 	}

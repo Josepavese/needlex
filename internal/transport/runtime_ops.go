@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
@@ -15,10 +16,25 @@ import (
 )
 
 func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, crawlArtifacts, error) {
+	return r.executeCrawlWithSurface(cfg, req, "cli")
+}
+
+func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.CrawlRequest, surface string) (coreservice.CrawlResponse, crawlArtifacts, error) {
 	req = coreservice.PrepareCrawlRequestWithLocalState(r.storeRoot, req)
 
+	startedAt := time.Now().UTC()
 	resp, err := r.crawl(context.Background(), cfg, req)
 	if err != nil {
+		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
+			Operation:     "crawl",
+			Surface:       surface,
+			Profile:       req.Profile,
+			Goal:          req.SeedURL,
+			SeedURL:       req.SeedURL,
+			DiscoveryMode: crawlDiscoveryMode(req),
+			StartedAt:     startedAt,
+			Err:           err,
+		})
 		return coreservice.CrawlResponse{}, crawlArtifacts{}, err
 	}
 
@@ -40,17 +56,31 @@ func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (c
 			ChangedRecently: pageFingerprintChanged(r.storeRoot, page.Document.FinalURL),
 		})
 	}
-	r.observeAnalyticsCrawl(cfg, req, resp, storedRuns)
+	r.observeAnalyticsCrawl(cfg, surface, req, resp, storedRuns)
 	coreservice.ObserveCrawlResponseWithLocalState(r.storeRoot, req, resp)
 
 	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
 }
 
 func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, artifactPaths, error) {
+	return r.executeReadWithSurface(cfg, req, "cli")
+}
+
+func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRequest, surface string) (coreservice.ReadResponse, artifactPaths, error) {
 	req = coreservice.PrepareReadRequestWithLocalState(r.storeRoot, req)
 
+	startedAt := time.Now().UTC()
 	resp, err := r.read(context.Background(), cfg, req)
 	if err != nil {
+		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
+			Operation: "read",
+			Surface:   surface,
+			Profile:   req.Profile,
+			Goal:      req.Objective,
+			URL:       req.URL,
+			StartedAt: startedAt,
+			Err:       err,
+		})
 		return coreservice.ReadResponse{}, artifactPaths{}, err
 	}
 
@@ -77,7 +107,7 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
 		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
-	r.observeAnalyticsRead(cfg, req, resp)
+	r.observeAnalyticsRead(cfg, surface, req, resp)
 
 	return resp, artifactPaths{
 		TracePath:       tracePath,
@@ -87,10 +117,25 @@ func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (cor
 }
 
 func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, artifactPaths, error) {
+	return r.executeQueryWithSurface(cfg, req, "cli")
+}
+
+func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.QueryRequest, surface string) (coreservice.QueryResponse, artifactPaths, error) {
 	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req, cfg, intel.NewSemanticAligner(cfg, nil))
 	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(r.storeRoot)
+	startedAt := time.Now().UTC()
 	resp, err := r.query(context.Background(), cfg, req)
 	if err != nil {
+		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
+			Operation:     "query",
+			Surface:       surface,
+			Profile:       req.Profile,
+			Goal:          req.Goal,
+			SeedURL:       req.SeedURL,
+			DiscoveryMode: req.DiscoveryMode,
+			StartedAt:     startedAt,
+			Err:           err,
+		})
 		return coreservice.QueryResponse{}, artifactPaths{}, err
 	}
 
@@ -120,7 +165,7 @@ func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (c
 		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
 		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
-	r.observeAnalyticsQuery(cfg, req, resp)
+	r.observeAnalyticsQuery(cfg, surface, req, resp)
 
 	return resp, artifactPaths{
 		TracePath:       tracePath,
@@ -138,22 +183,34 @@ func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Obs
 	_ = service.Observe(context.Background(), observation)
 }
 
-func (r Runner) observeAnalyticsRead(cfg config.Config, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
+func (r Runner) observeAnalyticsRead(cfg config.Config, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactReadResponse(resp))
-	_ = analytics.ObserveRead(context.Background(), analytics.NewSQLiteStore(r.storeRoot), "cli", req, resp, packetBytes, stats)
+	_ = analytics.ObserveRead(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
 }
 
-func (r Runner) observeAnalyticsQuery(cfg config.Config, req coreservice.QueryRequest, resp coreservice.QueryResponse) {
+func (r Runner) observeAnalyticsQuery(cfg config.Config, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactQueryResponse(resp))
-	_ = analytics.ObserveQuery(context.Background(), analytics.NewSQLiteStore(r.storeRoot), "cli", req, resp, packetBytes, stats)
+	_ = analytics.ObserveQuery(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
 }
 
-func (r Runner) observeAnalyticsCrawl(cfg config.Config, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
+func (r Runner) observeAnalyticsCrawl(cfg config.Config, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactCrawlResponse(resp, crawlArtifacts{StoredRuns: storedRuns}))
-	_ = analytics.ObserveCrawl(context.Background(), analytics.NewSQLiteStore(r.storeRoot), "cli", req, resp, packetBytes, stats)
+	_ = analytics.ObserveCrawl(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
+}
+
+func (r Runner) observeAnalyticsFailure(cfg config.Config, failure analytics.FailureObservation) {
+	failure.MemoryStats = r.analyticsMemoryStats(cfg)
+	_ = analytics.ObserveFailure(context.Background(), analytics.NewSQLiteStore(r.storeRoot), failure)
+}
+
+func crawlDiscoveryMode(req coreservice.CrawlRequest) string {
+	if req.SameDomain {
+		return "same_site_links"
+	}
+	return "web_search"
 }
 
 func (r Runner) analyticsMemoryStats(cfg config.Config) memory.Stats {
