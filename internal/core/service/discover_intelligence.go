@@ -17,6 +17,15 @@ type candidateCluster struct {
 	Centrality map[int]float64
 }
 
+type candidateIntelligenceScorecard struct {
+	Similarity     float64
+	HostSimilarity float64
+	PageSimilarity float64
+	Centrality     float64
+	Boost          float64
+	Reasons        []string
+}
+
 func (s *Service) applyCandidateIntelligence(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
 	window := candidateIntelligenceWindow(candidates)
 	if window < 2 || strings.TrimSpace(goal) == "" {
@@ -78,64 +87,116 @@ func (s *Service) applyCandidateIntelligence(ctx context.Context, goal string, c
 
 	for i := 0; i < window; i++ {
 		cluster := clusterByIdx[i]
-		similarity := goalSimilarity[annotated[i].URL]
-		hostSim := hostSimilarity[annotated[i].URL]
-		pageSim := pageSimilarity[annotated[i].URL]
-		boost := minFloat(similarity*0.28, 0.20)
-		if cluster.ClusterSize() > 1 {
-			boost += 0.04 * float64(min(cluster.ClusterSize()-1, 2))
-		}
-		if cluster.Coherence > 0 {
-			boost += minFloat(cluster.Coherence*0.07, 0.08)
-		}
-		if centrality, ok := cluster.Centrality[i]; ok && centrality > 0 {
-			boost += minFloat(centrality*0.14, 0.16)
-		}
-		switch annotated[i].Metadata["resource_class"] {
-		case discoverycore.ResourceClassHTMLLike:
-			boost += 0.03
-		case discoverycore.ResourceClassMediaAsset:
-			boost -= 0.12
-		case discoverycore.ResourceClassArchiveFile:
-			boost -= 0.08
-		case discoverycore.ResourceClassStructured:
-			boost -= 0.02
-		}
-		if pageSim >= 0.24 && hostSim >= 0.16 {
-			boost += 0.12
-			annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_identity_alignment")
-		}
-		if pageSim >= 0.24 && hostSim > 0 && hostSim < 0.10 {
-			boost -= 0.18
-			annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_identity_mismatch")
-		}
-		if boost != 0 {
-			annotated[i].Score += boost
-			annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_intelligence")
-			if cluster.ClusterSize() > 1 {
-				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_cluster_support")
-			}
-			if similarity > 0 {
-				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_goal_grounding")
-			}
-			if centrality, ok := cluster.Centrality[i]; ok && centrality > 0 {
-				annotated[i].Reason = discoverycore.AppendUniqueReason(annotated[i].Reason, "candidate_graph_centrality")
-			}
-		}
-		annotated[i].Metadata = discoverycore.MergeMetadata(annotated[i].Metadata, map[string]string{
-			"candidate_goal_similarity": fmt.Sprintf("%.3f", similarity),
-			"candidate_host_similarity": fmt.Sprintf("%.3f", hostSim),
-			"candidate_page_similarity": fmt.Sprintf("%.3f", pageSim),
-			"cluster_id":                cluster.ID,
-			"cluster_size":              fmt.Sprintf("%d", cluster.ClusterSize()),
-			"cluster_family":            cluster.Family,
-			"cluster_coherence":         fmt.Sprintf("%.3f", cluster.Coherence),
-			"cluster_centrality":        fmt.Sprintf("%.3f", cluster.Centrality[i]),
-		})
+		card := scoreCandidateIntelligence(annotated[i], cluster, i, goalSimilarity, hostSimilarity, pageSimilarity)
+		applyCandidateIntelligenceScore(&annotated[i], card)
+		annotated[i].Metadata = discoverycore.MergeMetadata(annotated[i].Metadata, candidateIntelligenceMetadata(cluster, card))
 	}
 	applyClusterRepresentativeSelection(annotated[:window], clusterByIdx, goalSimilarity)
 	discoverycore.SortCandidates(annotated)
 	return annotated
+}
+
+func scoreCandidateIntelligence(
+	candidate DiscoverCandidate,
+	cluster candidateCluster,
+	idx int,
+	goalSimilarity map[string]float64,
+	hostSimilarity map[string]float64,
+	pageSimilarity map[string]float64,
+) candidateIntelligenceScorecard {
+	card := candidateIntelligenceScorecard{
+		Similarity:     goalSimilarity[candidate.URL],
+		HostSimilarity: hostSimilarity[candidate.URL],
+		PageSimilarity: pageSimilarity[candidate.URL],
+		Centrality:     cluster.Centrality[idx],
+	}
+	card.Boost = minFloat(card.Similarity*0.28, 0.20)
+	card.Boost += clusterIntelligenceBoost(cluster, card.Centrality)
+	card.Boost += resourceClassIntelligenceBoost(candidate.Metadata["resource_class"])
+	if boost, reason := identityAlignmentBoost(card.PageSimilarity, card.HostSimilarity); reason != "" {
+		card.Boost += boost
+		card.Reasons = append(card.Reasons, reason)
+	}
+	card.Reasons = append(card.Reasons, intelligenceBoostReasons(cluster, card)...)
+	return card
+}
+
+func clusterIntelligenceBoost(cluster candidateCluster, centrality float64) float64 {
+	boost := 0.0
+	if cluster.ClusterSize() > 1 {
+		boost += 0.04 * float64(min(cluster.ClusterSize()-1, 2))
+	}
+	if cluster.Coherence > 0 {
+		boost += minFloat(cluster.Coherence*0.07, 0.08)
+	}
+	if centrality > 0 {
+		boost += minFloat(centrality*0.14, 0.16)
+	}
+	return boost
+}
+
+func resourceClassIntelligenceBoost(class string) float64 {
+	switch class {
+	case discoverycore.ResourceClassHTMLLike:
+		return 0.03
+	case discoverycore.ResourceClassMediaAsset:
+		return -0.12
+	case discoverycore.ResourceClassArchiveFile:
+		return -0.08
+	case discoverycore.ResourceClassStructured:
+		return -0.02
+	default:
+		return 0
+	}
+}
+
+func identityAlignmentBoost(pageSim, hostSim float64) (float64, string) {
+	if pageSim >= 0.24 && hostSim >= 0.16 {
+		return 0.12, "candidate_identity_alignment"
+	}
+	if pageSim >= 0.24 && hostSim > 0 && hostSim < 0.10 {
+		return -0.18, "candidate_identity_mismatch"
+	}
+	return 0, ""
+}
+
+func intelligenceBoostReasons(cluster candidateCluster, card candidateIntelligenceScorecard) []string {
+	if card.Boost == 0 {
+		return nil
+	}
+	reasons := []string{"candidate_intelligence"}
+	if cluster.ClusterSize() > 1 {
+		reasons = append(reasons, "candidate_cluster_support")
+	}
+	if card.Similarity > 0 {
+		reasons = append(reasons, "candidate_goal_grounding")
+	}
+	if card.Centrality > 0 {
+		reasons = append(reasons, "candidate_graph_centrality")
+	}
+	return reasons
+}
+
+func applyCandidateIntelligenceScore(candidate *DiscoverCandidate, card candidateIntelligenceScorecard) {
+	if card.Boost != 0 {
+		candidate.Score += card.Boost
+	}
+	for _, reason := range card.Reasons {
+		candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, reason)
+	}
+}
+
+func candidateIntelligenceMetadata(cluster candidateCluster, card candidateIntelligenceScorecard) map[string]string {
+	return map[string]string{
+		"candidate_goal_similarity": fmt.Sprintf("%.3f", card.Similarity),
+		"candidate_host_similarity": fmt.Sprintf("%.3f", card.HostSimilarity),
+		"candidate_page_similarity": fmt.Sprintf("%.3f", card.PageSimilarity),
+		"cluster_id":                cluster.ID,
+		"cluster_size":              fmt.Sprintf("%d", cluster.ClusterSize()),
+		"cluster_family":            cluster.Family,
+		"cluster_coherence":         fmt.Sprintf("%.3f", cluster.Coherence),
+		"cluster_centrality":        fmt.Sprintf("%.3f", card.Centrality),
+	}
 }
 
 func candidateIntelligenceWindow(candidates []DiscoverCandidate) int {
@@ -270,85 +331,126 @@ func buildCandidateClusters(candidates []DiscoverCandidate, goalSimilarity map[s
 	if len(candidates) == 0 {
 		return nil
 	}
-	parent := make([]int, len(candidates))
-	for i := range parent {
-		parent[i] = i
-	}
-	find := func(x int) int {
-		for parent[x] != x {
-			parent[x] = parent[parent[x]]
-			x = parent[x]
-		}
-		return x
-	}
-	union := func(a, b int) {
-		ra, rb := find(a), find(b)
-		if ra != rb {
-			parent[rb] = ra
-		}
-	}
+	uf := newCandidateUnionFind(len(candidates))
 	for i := 0; i < len(candidates); i++ {
 		for j := i + 1; j < len(candidates); j++ {
-			left, right := candidates[i], candidates[j]
-			edgeWeight := graph.weights[i][j]
-			if sameCandidateFamily(left.URL, right.URL) || edgeWeight >= 0.68 {
-				union(i, j)
-				continue
-			}
-			if goalSimilarity[left.URL] >= 0.28 && goalSimilarity[right.URL] >= 0.28 && edgeWeight >= 0.48 {
-				union(i, j)
+			if shouldUnionCandidates(candidates[i], candidates[j], graph.weights[i][j], goalSimilarity) {
+				uf.union(i, j)
 			}
 		}
 	}
-	groups := map[int][]int{}
-	for i := range candidates {
-		groups[find(i)] = append(groups[find(i)], i)
-	}
+	groups := uf.groups(len(candidates))
 	out := make([]candidateCluster, 0, len(groups))
 	seq := 1
 	for _, idxs := range groups {
-		centrality := map[int]float64{}
-		sumCoherence := 0.0
-		familyCounts := map[string]int{}
-		for _, idx := range idxs {
-			if family, ok := candidateFamily(candidates[idx].URL); ok {
-				familyCounts[family]++
-			}
-			sumCoherence += goalSimilarity[candidates[idx].URL]
-			for _, other := range idxs {
-				if idx == other {
-					continue
-				}
-				centrality[idx] += graph.weights[idx][other]
-			}
-		}
-		maxCentrality := 0.0
-		for _, value := range centrality {
-			maxCentrality = maxFloat(maxCentrality, value)
-		}
-		if maxCentrality > 0 {
-			for idx, value := range centrality {
-				centrality[idx] = value / maxCentrality
-			}
-		}
-		family := ""
-		familyCount := -1
-		for candidateFamily, count := range familyCounts {
-			if count > familyCount {
-				family = candidateFamily
-				familyCount = count
-			}
-		}
-		out = append(out, candidateCluster{
-			ID:         fmt.Sprintf("cluster_%02d", seq),
-			MemberIdx:  idxs,
-			Family:     family,
-			Coherence:  sumCoherence / float64(len(idxs)),
-			Centrality: centrality,
-		})
+		out = append(out, buildCandidateCluster(seq, idxs, candidates, goalSimilarity, graph))
 		seq++
 	}
 	return out
+}
+
+type candidateUnionFind struct {
+	parent []int
+}
+
+func newCandidateUnionFind(size int) candidateUnionFind {
+	parent := make([]int, size)
+	for i := range parent {
+		parent[i] = i
+	}
+	return candidateUnionFind{parent: parent}
+}
+
+func (u candidateUnionFind) find(x int) int {
+	for u.parent[x] != x {
+		u.parent[x] = u.parent[u.parent[x]]
+		x = u.parent[x]
+	}
+	return x
+}
+
+func (u candidateUnionFind) union(a, b int) {
+	ra, rb := u.find(a), u.find(b)
+	if ra != rb {
+		u.parent[rb] = ra
+	}
+}
+
+func (u candidateUnionFind) groups(size int) map[int][]int {
+	groups := map[int][]int{}
+	for i := 0; i < size; i++ {
+		groups[u.find(i)] = append(groups[u.find(i)], i)
+	}
+	return groups
+}
+
+func shouldUnionCandidates(left, right DiscoverCandidate, edgeWeight float64, goalSimilarity map[string]float64) bool {
+	if sameCandidateFamily(left.URL, right.URL) || edgeWeight >= 0.68 {
+		return true
+	}
+	return goalSimilarity[left.URL] >= 0.28 && goalSimilarity[right.URL] >= 0.28 && edgeWeight >= 0.48
+}
+
+func buildCandidateCluster(seq int, idxs []int, candidates []DiscoverCandidate, goalSimilarity map[string]float64, graph candidateSemanticGraph) candidateCluster {
+	return candidateCluster{
+		ID:         fmt.Sprintf("cluster_%02d", seq),
+		MemberIdx:  idxs,
+		Family:     dominantClusterFamily(idxs, candidates),
+		Coherence:  clusterCoherence(idxs, candidates, goalSimilarity),
+		Centrality: clusterCentrality(idxs, graph),
+	}
+}
+
+func dominantClusterFamily(idxs []int, candidates []DiscoverCandidate) string {
+	familyCounts := map[string]int{}
+	for _, idx := range idxs {
+		if family, ok := candidateFamily(candidates[idx].URL); ok {
+			familyCounts[family]++
+		}
+	}
+	family := ""
+	familyCount := -1
+	for candidateFamily, count := range familyCounts {
+		if count > familyCount {
+			family = candidateFamily
+			familyCount = count
+		}
+	}
+	return family
+}
+
+func clusterCoherence(idxs []int, candidates []DiscoverCandidate, goalSimilarity map[string]float64) float64 {
+	sum := 0.0
+	for _, idx := range idxs {
+		sum += goalSimilarity[candidates[idx].URL]
+	}
+	return sum / float64(len(idxs))
+}
+
+func clusterCentrality(idxs []int, graph candidateSemanticGraph) map[int]float64 {
+	centrality := map[int]float64{}
+	for _, idx := range idxs {
+		for _, other := range idxs {
+			if idx != other {
+				centrality[idx] += graph.weights[idx][other]
+			}
+		}
+	}
+	return normalizeCentrality(centrality)
+}
+
+func normalizeCentrality(centrality map[int]float64) map[int]float64 {
+	maxCentrality := 0.0
+	for _, value := range centrality {
+		maxCentrality = maxFloat(maxCentrality, value)
+	}
+	if maxCentrality == 0 {
+		return centrality
+	}
+	for idx, value := range centrality {
+		centrality[idx] = value / maxCentrality
+	}
+	return centrality
 }
 
 func applyClusterRepresentativeSelection(candidates []DiscoverCandidate, clusterByIdx map[int]candidateCluster, goalSimilarity map[string]float64) {

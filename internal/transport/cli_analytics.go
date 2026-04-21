@@ -31,6 +31,10 @@ type analyticsProvidersResult struct {
 	Providers []analytics.ProviderRollup `json:"providers"`
 }
 
+type analyticsFailuresResult struct {
+	Failures []analytics.FailureRollup `json:"failures"`
+}
+
 type analyticsDailyResult struct {
 	Days []analytics.DailyRollup `json:"days"`
 }
@@ -40,7 +44,7 @@ type analyticsExportResult struct {
 }
 
 func writeAnalyticsUsage(w io.Writer) {
-	writeUsage(w, "needlex analytics <stats|recent|value-report|hosts|providers|daily|export> [args]")
+	writeUsage(w, "needlex analytics <stats|recent|value-report|hosts|providers|failures|daily|export> [args]")
 }
 
 func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
@@ -59,6 +63,8 @@ func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
 		return r.runAnalyticsHosts(args[1:], stdout, stderr)
 	case "providers":
 		return r.runAnalyticsProviders(args[1:], stdout, stderr)
+	case "failures":
+		return r.runAnalyticsFailures(args[1:], stdout, stderr)
 	case "daily":
 		return r.runAnalyticsDaily(args[1:], stdout, stderr)
 	case "export":
@@ -251,6 +257,40 @@ func (r Runner) runAnalyticsProviders(args []string, stdout, stderr io.Writer) i
 		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", provider.ProofBackedRate*100)
 		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", provider.PublicBootstrapUsedRate*100)
 		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", provider.LocalMemoryUsedRate*100)
+	}
+	return 0
+}
+
+func (r Runner) runAnalyticsFailures(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("analytics failures", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	var jsonOut bool
+	var limit int
+	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.IntVar(&limit, "limit", 20, "number of failure classes")
+	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		writeUsage(stderr, "needlex analytics failures [--limit N] [--json]")
+		return 2
+	}
+	failures, err := analytics.NewSQLiteStore(r.storeRoot).Failures(context.Background(), limit)
+	if err != nil {
+		fmt.Fprintf(stderr, "analytics failures failed: %v\n", err)
+		return 1
+	}
+	if jsonOut {
+		return writeJSON(stdout, stderr, analyticsFailuresResult{Failures: failures})
+	}
+	fmt.Fprintf(stdout, "Failures: %d\n", len(failures))
+	for i, failure := range failures {
+		fmt.Fprintf(stdout, "%d. %s\n", i+1, failure.FailureClass)
+		fmt.Fprintf(stdout, "   Runs: %d\n", failure.RunCount)
+		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", failure.AvgLatencyMS)
+		if strings.TrimSpace(failure.LastSeenAt) != "" {
+			fmt.Fprintf(stdout, "   Last Seen: %s\n", failure.LastSeenAt)
+		}
 	}
 	return 0
 }

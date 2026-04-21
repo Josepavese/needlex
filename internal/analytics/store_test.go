@@ -107,6 +107,14 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 		t.Fatalf("unexpected providers: %+v", providers)
 	}
 
+	failures, err := store.Failures(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("failures: %v", err)
+	}
+	if len(failures) != 0 {
+		t.Fatalf("unexpected failures: %+v", failures)
+	}
+
 	daily, err := store.Daily(context.Background(), 10)
 	if err != nil {
 		t.Fatalf("daily: %v", err)
@@ -161,7 +169,15 @@ func TestObserveFailureRecordsFailedAttempt(t *testing.T) {
 	if len(recent) != 1 {
 		t.Fatalf("expected one recent run, got %d", len(recent))
 	}
-	if recent[0].Success || recent[0].Surface != "mcp" || recent[0].Provider != "error:upstream_not_found" {
+	if recent[0].Success || recent[0].Surface != "mcp" || recent[0].Provider != "error:upstream_not_found" || recent[0].FailureClass != "upstream_not_found" {
 		t.Fatalf("unexpected failed run: %+v", recent[0])
+	}
+
+	failures, err := store.Failures(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("Failures() error = %v", err)
+	}
+	if len(failures) != 1 || failures[0].FailureClass != "upstream_not_found" || failures[0].RunCount != 1 {
+		t.Fatalf("unexpected failure rollups: %+v", failures)
 	}
 }

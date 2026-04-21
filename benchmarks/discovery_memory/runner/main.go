@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"hash/fnv"
@@ -178,9 +179,9 @@ func benchmarkCases(all []seededCase) []seededCase {
 
 func runCase(binaryPath, embeddingURL string, item seededCase) caseResult {
 	coldDir, _ := os.MkdirTemp("", "needlex-memory-cold-*")
-	defer os.RemoveAll(coldDir)
+	defer func() { _ = os.RemoveAll(coldDir) }()
 	warmDir, _ := os.MkdirTemp("", "needlex-memory-warm-*")
-	defer os.RemoveAll(warmDir)
+	defer func() { _ = os.RemoveAll(warmDir) }()
 
 	coldConfig := mustWriteConfig(coldDir, embeddingURL)
 	warmConfig := mustWriteConfig(warmDir, embeddingURL)
@@ -206,7 +207,8 @@ func runWarmup(binaryPath, workDir, configPath, pageURL string) error {
 	cmd.Dir = workDir
 	_, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("%s", strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return err
@@ -315,7 +317,8 @@ func runNeedle(binaryPath, workDir string, args ...string) ([]byte, error) {
 	cmd.Dir = workDir
 	raw, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, fmt.Errorf("%s", strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return nil, err

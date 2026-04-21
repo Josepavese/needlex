@@ -11,6 +11,11 @@ import (
 	"github.com/josepavese/needlex/internal/store"
 )
 
+type mcpToolSpec struct {
+	Definition mcpTool
+	Handler    func(Runner, map[string]any) (map[string]any, error)
+}
+
 func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 	handler, ok := r.mcpToolHandlers()[call.Name]
 	if !ok {
@@ -20,28 +25,14 @@ func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 }
 
 func (r Runner) mcpToolHandlers() map[string]func(map[string]any) (map[string]any, error) {
-	return map[string]func(map[string]any) (map[string]any, error){
-		"web_crawl":              r.callMCPCrawlTool,
-		"web_query":              r.callMCPQueryTool,
-		"web_read":               r.callMCPReadTool,
-		"web_replay":             r.callMCPReplayTool,
-		"web_diff":               r.callMCPDiffTool,
-		"web_proof":              r.callMCPProofTool,
-		"web_prune":              r.callMCPPruneTool,
-		"memory_stats":           r.callMCPMemoryStatsTool,
-		"memory_search":          r.callMCPMemorySearchTool,
-		"memory_prune":           r.callMCPMemoryPruneTool,
-		"memory_export":          r.callMCPMemoryExportTool,
-		"memory_import":          r.callMCPMemoryImportTool,
-		"memory_rebuild_index":   r.callMCPMemoryRebuildIndexTool,
-		"analytics_stats":        r.callMCPAnalyticsStatsTool,
-		"analytics_recent_runs":  r.callMCPAnalyticsRecentRunsTool,
-		"analytics_value_report": r.callMCPAnalyticsValueReportTool,
-		"analytics_hosts":        r.callMCPAnalyticsHostsTool,
-		"analytics_providers":    r.callMCPAnalyticsProvidersTool,
-		"analytics_daily":        r.callMCPAnalyticsDailyTool,
-		"analytics_export":       r.callMCPAnalyticsExportTool,
+	out := make(map[string]func(map[string]any) (map[string]any, error))
+	for _, spec := range mcpToolSpecs() {
+		handler := spec.Handler
+		out[spec.Definition.Name] = func(args map[string]any) (map[string]any, error) {
+			return handler(r, args)
+		}
 	}
+	return out
 }
 
 func (r Runner) callMCPReplayTool(args map[string]any) (map[string]any, error) {
@@ -221,27 +212,37 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 }
 
 func mcpTools() []mcpTool {
-	return []mcpTool{
-		mcpCrawlTool(),
-		mcpQueryTool(),
-		mcpReadTool(),
-		mcpReplayTool(),
-		mcpDiffTool(),
-		mcpProofTool(),
-		mcpPruneTool(),
-		mcpMemoryStatsTool(),
-		mcpMemorySearchTool(),
-		mcpMemoryPruneTool(),
-		mcpMemoryExportTool(),
-		mcpMemoryImportTool(),
-		mcpMemoryRebuildIndexTool(),
-		mcpAnalyticsStatsTool(),
-		mcpAnalyticsRecentRunsTool(),
-		mcpAnalyticsValueReportTool(),
-		mcpAnalyticsHostsTool(),
-		mcpAnalyticsProvidersTool(),
-		mcpAnalyticsDailyTool(),
-		mcpAnalyticsExportTool(),
+	specs := mcpToolSpecs()
+	out := make([]mcpTool, 0, len(specs))
+	for _, spec := range specs {
+		out = append(out, spec.Definition)
+	}
+	return out
+}
+
+func mcpToolSpecs() []mcpToolSpec {
+	return []mcpToolSpec{
+		{Definition: mcpCrawlTool(), Handler: Runner.callMCPCrawlTool},
+		{Definition: mcpQueryTool(), Handler: Runner.callMCPQueryTool},
+		{Definition: mcpReadTool(), Handler: Runner.callMCPReadTool},
+		{Definition: mcpReplayTool(), Handler: Runner.callMCPReplayTool},
+		{Definition: mcpDiffTool(), Handler: Runner.callMCPDiffTool},
+		{Definition: mcpProofTool(), Handler: Runner.callMCPProofTool},
+		{Definition: mcpPruneTool(), Handler: Runner.callMCPPruneTool},
+		{Definition: mcpMemoryStatsTool(), Handler: Runner.callMCPMemoryStatsTool},
+		{Definition: mcpMemorySearchTool(), Handler: Runner.callMCPMemorySearchTool},
+		{Definition: mcpMemoryPruneTool(), Handler: Runner.callMCPMemoryPruneTool},
+		{Definition: mcpMemoryExportTool(), Handler: Runner.callMCPMemoryExportTool},
+		{Definition: mcpMemoryImportTool(), Handler: Runner.callMCPMemoryImportTool},
+		{Definition: mcpMemoryRebuildIndexTool(), Handler: Runner.callMCPMemoryRebuildIndexTool},
+		{Definition: mcpAnalyticsStatsTool(), Handler: Runner.callMCPAnalyticsStatsTool},
+		{Definition: mcpAnalyticsRecentRunsTool(), Handler: Runner.callMCPAnalyticsRecentRunsTool},
+		{Definition: mcpAnalyticsValueReportTool(), Handler: Runner.callMCPAnalyticsValueReportTool},
+		{Definition: mcpAnalyticsHostsTool(), Handler: Runner.callMCPAnalyticsHostsTool},
+		{Definition: mcpAnalyticsProvidersTool(), Handler: Runner.callMCPAnalyticsProvidersTool},
+		{Definition: mcpAnalyticsFailuresTool(), Handler: Runner.callMCPAnalyticsFailuresTool},
+		{Definition: mcpAnalyticsDailyTool(), Handler: Runner.callMCPAnalyticsDailyTool},
+		{Definition: mcpAnalyticsExportTool(), Handler: Runner.callMCPAnalyticsExportTool},
 	}
 }
 
@@ -644,6 +645,23 @@ func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]a
 	return mcpToolResult(payload, compact), nil
 }
 
+func (r Runner) callMCPAnalyticsFailuresTool(args map[string]any) (map[string]any, error) {
+	failures, err := analytics.NewSQLiteStore(r.storeRoot).Failures(context.Background(), intDefault(args, "limit", 20))
+	if err != nil {
+		return nil, err
+	}
+	compact := map[string]any{
+		"kind":     "analytics_failures",
+		"failures": failures,
+	}
+	payload := map[string]any{
+		"kind":     "analytics_failures",
+		"failures": failures,
+		"compact":  compact,
+	}
+	return mcpToolResult(payload, compact), nil
+}
+
 func (r Runner) callMCPAnalyticsDailyTool(args map[string]any) (map[string]any, error) {
 	days, err := analytics.NewSQLiteStore(r.storeRoot).Daily(context.Background(), intDefault(args, "limit", 30))
 	if err != nil {
@@ -722,6 +740,16 @@ func mcpAnalyticsProvidersTool() mcpTool {
 	return mcpTool{
 		Name:        "analytics_providers",
 		Description: "Return provider-level Analytics PAL rollups to separate local-first wins, public bootstrap dependence, and provider-specific cost patterns.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"limit": map[string]any{"type": "integer"},
+		}), map[string]any{"limit": 20}),
+	}
+}
+
+func mcpAnalyticsFailuresTool() mcpTool {
+	return mcpTool{
+		Name:        "analytics_failures",
+		Description: "Return failure-class rollups from Analytics PAL so maintainers can distinguish blocks, timeouts, missing pages, unsupported content, and empty candidates.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"limit": map[string]any{"type": "integer"},
 		}), map[string]any{"limit": 20}),

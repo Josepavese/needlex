@@ -37,13 +37,16 @@ They include:
 - `staticcheck`
 - structural lint hard set via `golangci-lint`
 - hard ceilings on:
-  - total production LOC
+  - total production LOC, excluding benchmark runners
   - average file LOC
   - internal package count
   - runtime dependency count
   - count of files over 300/350 LOC
   - largest file LOC
   - largest package LOC
+
+Benchmark LOC is reported separately as `BENCHMARK_LOC`.
+Benchmarks keep their own advisory lint lane because they are operational evidence tooling, not installed runtime product code.
 
 ## Target Pressure
 

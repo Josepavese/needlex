@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net/url"
@@ -124,6 +125,13 @@ type summary struct {
 	FamilyBreakdown     []familySummary `json:"family_breakdown,omitempty"`
 }
 
+type seededSummaryAgg struct {
+	failureCounts                                                   map[string]int
+	families                                                        map[string][]caseResult
+	runtimeOKCount, qualityPassCount, passCount, urlPass, proofPass int
+	latencyTotal, bytesTotal                                        int64
+}
+
 type report struct {
 	GeneratedAtUTC string       `json:"generated_at_utc"`
 	CorpusVersion  string       `json:"corpus_version"`
@@ -216,50 +224,9 @@ func runCase(binaryPath string, item seededCase) caseResult {
 
 	switch item.TaskType {
 	case "same_site_query_routing":
-		payload, raw, err := runNeedleJSON(binaryPath, "query", item.SeedURL, "--goal", item.Goal, "--json")
-		if err != nil {
-			row.Error = err.Error()
-			row.FailureClasses = append(row.FailureClasses, classifyExecutionError(err.Error()))
-			return row
-		}
-		row.RuntimeOK = true
-		var out compactQuery
-		if err := json.Unmarshal(payload, &out); err != nil {
-			row.Error = err.Error()
-			row.FailureClasses = append(row.FailureClasses, "decode_error")
-			return row
-		}
-		row.ActualURL = strings.TrimSpace(out.SelectedURL)
-		row.SelectedURLPass = sameCanonicalURL(row.ActualURL, item.ExpectedURL)
-		row.SummaryPresent = strings.TrimSpace(out.Summary) != ""
-		row.ChunkCount = len(out.Chunks)
-		row.PacketBytes = len(raw)
-		row.LatencyMS = out.CostReport.LatencyMS
-		row.UncertaintyLevel = uncertaintyLevelFromMap(out.Uncertainty)
-		row.SelectionWhy = append([]string{}, out.SelectionWhy...)
-		row.ProofRef, row.ProofUsable = verifyProof(binaryPath, out.Chunks, item.MustExposeProof)
+		row = runSeededQuery(binaryPath, item, row)
 	case "read_page_understanding", "read_then_answer":
-		payload, raw, err := runNeedleJSON(binaryPath, "read", item.SeedURL, "--json")
-		if err != nil {
-			row.Error = err.Error()
-			row.FailureClasses = append(row.FailureClasses, classifyExecutionError(err.Error()))
-			return row
-		}
-		row.RuntimeOK = true
-		var out compactRead
-		if err := json.Unmarshal(payload, &out); err != nil {
-			row.Error = err.Error()
-			row.FailureClasses = append(row.FailureClasses, "decode_error")
-			return row
-		}
-		row.ActualURL = strings.TrimSpace(out.URL)
-		row.SelectedURLPass = sameCanonicalURL(row.ActualURL, item.ExpectedURL)
-		row.SummaryPresent = strings.TrimSpace(out.Summary) != ""
-		row.ChunkCount = len(out.Chunks)
-		row.PacketBytes = len(raw)
-		row.LatencyMS = out.CostReport.LatencyMS
-		row.UncertaintyLevel = uncertaintyLevelFromMap(out.Uncertainty)
-		row.ProofRef, row.ProofUsable = verifyProof(binaryPath, out.Chunks, item.MustExposeProof)
+		row = runSeededRead(binaryPath, item, row)
 	default:
 		row.Error = "unsupported task type"
 		row.FailureClasses = append(row.FailureClasses, "unsupported_task_type")
@@ -272,11 +239,63 @@ func runCase(binaryPath string, item seededCase) caseResult {
 	return row
 }
 
+func runSeededQuery(binaryPath string, item seededCase, row caseResult) caseResult {
+	payload, raw, err := runNeedleJSON(binaryPath, "query", item.SeedURL, "--goal", item.Goal, "--json")
+	if err != nil {
+		row.Error = err.Error()
+		row.FailureClasses = append(row.FailureClasses, classifyExecutionError(err.Error()))
+		return row
+	}
+	var out compactQuery
+	if err := json.Unmarshal(payload, &out); err != nil {
+		row.Error = err.Error()
+		row.FailureClasses = append(row.FailureClasses, "decode_error")
+		return row
+	}
+	row.RuntimeOK = true
+	row.ActualURL = strings.TrimSpace(out.SelectedURL)
+	row.SelectedURLPass = sameCanonicalURL(row.ActualURL, item.ExpectedURL)
+	row.SummaryPresent = strings.TrimSpace(out.Summary) != ""
+	row.ChunkCount = len(out.Chunks)
+	row.PacketBytes = len(raw)
+	row.LatencyMS = out.CostReport.LatencyMS
+	row.UncertaintyLevel = uncertaintyLevelFromMap(out.Uncertainty)
+	row.SelectionWhy = append([]string{}, out.SelectionWhy...)
+	row.ProofRef, row.ProofUsable = verifyProof(binaryPath, out.Chunks, item.MustExposeProof)
+	return row
+}
+
+func runSeededRead(binaryPath string, item seededCase, row caseResult) caseResult {
+	payload, raw, err := runNeedleJSON(binaryPath, "read", item.SeedURL, "--json")
+	if err != nil {
+		row.Error = err.Error()
+		row.FailureClasses = append(row.FailureClasses, classifyExecutionError(err.Error()))
+		return row
+	}
+	var out compactRead
+	if err := json.Unmarshal(payload, &out); err != nil {
+		row.Error = err.Error()
+		row.FailureClasses = append(row.FailureClasses, "decode_error")
+		return row
+	}
+	row.RuntimeOK = true
+	row.ActualURL = strings.TrimSpace(out.URL)
+	row.SelectedURLPass = sameCanonicalURL(row.ActualURL, item.ExpectedURL)
+	row.SummaryPresent = strings.TrimSpace(out.Summary) != ""
+	row.ChunkCount = len(out.Chunks)
+	row.PacketBytes = len(raw)
+	row.LatencyMS = out.CostReport.LatencyMS
+	row.UncertaintyLevel = uncertaintyLevelFromMap(out.Uncertainty)
+	row.ProofRef, row.ProofUsable = verifyProof(binaryPath, out.Chunks, item.MustExposeProof)
+	return row
+}
+
 func runNeedleJSON(binaryPath string, args ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(binaryPath, args...)
 	raw, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, raw, fmt.Errorf("%s", strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return nil, raw, err
@@ -353,80 +372,92 @@ func uncertaintyLevelFromMap(value map[string]any) string {
 }
 
 func summarize(results []caseResult) summary {
-	failureCounts := make(map[string]int)
-	familyAgg := make(map[string][]caseResult)
-	var runtimeOKCount, qualityPassCount, passCount, urlPassCount, proofPassCount int
-	var latencyTotal, bytesTotal int64
+	agg := seededSummaryAgg{failureCounts: map[string]int{}, families: map[string][]caseResult{}}
 	for _, row := range results {
-		familyAgg[row.Family] = append(familyAgg[row.Family], row)
-		if row.RuntimeOK {
-			runtimeOKCount++
-		}
-		if row.QualityPass {
-			qualityPassCount++
-		}
-		if row.Pass {
-			passCount++
-		}
-		if row.SelectedURLPass {
-			urlPassCount++
-		}
-		if row.ProofUsable {
-			proofPassCount++
-		}
-		latencyTotal += row.LatencyMS
-		bytesTotal += int64(row.PacketBytes)
-		for _, failure := range row.FailureClasses {
-			failureCounts[failure]++
-		}
-	}
-	families := make([]familySummary, 0, len(familyAgg))
-	for family, rows := range familyAgg {
-		var fRuntimeOK, fQualityPass, fPass, fURLPass, fProofPass int
-		var fLatency, fBytes int64
-		for _, row := range rows {
-			if row.RuntimeOK {
-				fRuntimeOK++
-			}
-			if row.QualityPass {
-				fQualityPass++
-			}
-			if row.Pass {
-				fPass++
-			}
-			if row.SelectedURLPass {
-				fURLPass++
-			}
-			if row.ProofUsable {
-				fProofPass++
-			}
-			fLatency += row.LatencyMS
-			fBytes += int64(row.PacketBytes)
-		}
-		families = append(families, familySummary{
-			Family:              family,
-			CaseCount:           len(rows),
-			RuntimeSuccessRate:  evalutil.Ratio(fRuntimeOK, len(rows)),
-			QualityPassRate:     evalutil.Ratio(fQualityPass, len(rows)),
-			PassRate:            evalutil.Ratio(fPass, len(rows)),
-			SelectedURLPassRate: evalutil.Ratio(fURLPass, len(rows)),
-			ProofUsabilityRate:  evalutil.Ratio(fProofPass, len(rows)),
-			AvgLatencyMS:        averageInt64(fLatency, len(rows)),
-			AvgPacketBytes:      averageInt64(fBytes, len(rows)),
-		})
+		agg.record(row)
 	}
 	return summary{
 		CaseCount:           len(results),
-		RuntimeSuccessRate:  evalutil.Ratio(runtimeOKCount, len(results)),
-		QualityPassRate:     evalutil.Ratio(qualityPassCount, len(results)),
-		PassRate:            evalutil.Ratio(passCount, len(results)),
-		SelectedURLPassRate: evalutil.Ratio(urlPassCount, len(results)),
-		ProofUsabilityRate:  evalutil.Ratio(proofPassCount, len(results)),
-		AvgLatencyMS:        averageInt64(latencyTotal, len(results)),
-		AvgPacketBytes:      averageInt64(bytesTotal, len(results)),
-		FailureClassCounts:  failureCounts,
-		FamilyBreakdown:     families,
+		RuntimeSuccessRate:  evalutil.Ratio(agg.runtimeOKCount, len(results)),
+		QualityPassRate:     evalutil.Ratio(agg.qualityPassCount, len(results)),
+		PassRate:            evalutil.Ratio(agg.passCount, len(results)),
+		SelectedURLPassRate: evalutil.Ratio(agg.urlPass, len(results)),
+		ProofUsabilityRate:  evalutil.Ratio(agg.proofPass, len(results)),
+		AvgLatencyMS:        averageInt64(agg.latencyTotal, len(results)),
+		AvgPacketBytes:      averageInt64(agg.bytesTotal, len(results)),
+		FailureClassCounts:  agg.failureCounts,
+		FamilyBreakdown:     seededFamilySummaries(agg.families),
 	}
+}
+
+func (a *seededSummaryAgg) record(row caseResult) {
+	a.families[row.Family] = append(a.families[row.Family], row)
+	if row.RuntimeOK {
+		a.runtimeOKCount++
+	}
+	if row.QualityPass {
+		a.qualityPassCount++
+	}
+	if row.Pass {
+		a.passCount++
+	}
+	if row.SelectedURLPass {
+		a.urlPass++
+	}
+	if row.ProofUsable {
+		a.proofPass++
+	}
+	a.latencyTotal += row.LatencyMS
+	a.bytesTotal += int64(row.PacketBytes)
+	for _, failure := range row.FailureClasses {
+		a.failureCounts[failure]++
+	}
+}
+
+func seededFamilySummaries(familyAgg map[string][]caseResult) []familySummary {
+	families := make([]familySummary, 0, len(familyAgg))
+	for family, rows := range familyAgg {
+		families = append(families, summarizeSeededFamily(family, rows))
+	}
+	return families
+}
+
+func summarizeSeededFamily(family string, rows []caseResult) familySummary {
+	agg := seededSummaryAgg{}
+	for _, row := range rows {
+		agg.recordFamilyOnly(row)
+	}
+	return familySummary{
+		Family:              family,
+		CaseCount:           len(rows),
+		RuntimeSuccessRate:  evalutil.Ratio(agg.runtimeOKCount, len(rows)),
+		QualityPassRate:     evalutil.Ratio(agg.qualityPassCount, len(rows)),
+		PassRate:            evalutil.Ratio(agg.passCount, len(rows)),
+		SelectedURLPassRate: evalutil.Ratio(agg.urlPass, len(rows)),
+		ProofUsabilityRate:  evalutil.Ratio(agg.proofPass, len(rows)),
+		AvgLatencyMS:        averageInt64(agg.latencyTotal, len(rows)),
+		AvgPacketBytes:      averageInt64(agg.bytesTotal, len(rows)),
+	}
+}
+
+func (a *seededSummaryAgg) recordFamilyOnly(row caseResult) {
+	if row.RuntimeOK {
+		a.runtimeOKCount++
+	}
+	if row.QualityPass {
+		a.qualityPassCount++
+	}
+	if row.Pass {
+		a.passCount++
+	}
+	if row.SelectedURLPass {
+		a.urlPass++
+	}
+	if row.ProofUsable {
+		a.proofPass++
+	}
+	a.latencyTotal += row.LatencyMS
+	a.bytesTotal += int64(row.PacketBytes)
 }
 
 func averageInt64(total int64, count int) int64 {

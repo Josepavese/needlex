@@ -159,7 +159,7 @@ func runDiscoveryCase(item discoveryCase) (discoveryRow, error) {
 		if err != nil {
 			return row, err
 		}
-		defer os.RemoveAll(root)
+		defer func() { _ = os.RemoveAll(root) }()
 		_, _, _ = store.NewCandidateStore(root).Observe(store.CandidateObservation{URL: seedURL, Title: "Proof Replay Deterministic Guide", Source: "seedless_eval"})
 		req := coreservice.PrepareQueryRequestWithLocalState(root, coreservice.QueryRequest{Goal: item.Goal, DiscoveryMode: coreservice.QueryDiscoverySameSite}, cfg, intel.NewSemanticAligner(cfg, seed.Client()))
 		resp, err := svc.Query(context.Background(), req)

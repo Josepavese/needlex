@@ -45,10 +45,20 @@ mapfile -t GO_FILES < <(find . -type f -name '*.go' \
   ! -path './vendor/*' \
   ! -path './.git/*' \
   ! -path './testdata/*' \
+  ! -path './benchmarks/*' \
   ! -path './.agent/*' \
   ! -path './docs/*' \
   ! -path './scripts/*' \
   | sort)
+
+if [ -d benchmarks ]; then
+  mapfile -t BENCHMARK_GO_FILES < <(find ./benchmarks -type f -name '*.go' \
+    ! -name '*_test.go' \
+    ! -path './benchmarks/*/testdata/*' \
+    | sort)
+else
+  BENCHMARK_GO_FILES=()
+fi
 
 PROD_LOC=0
 MAX_FILE_LOC_OBSERVED=0
@@ -69,6 +79,11 @@ done
 GO_FILE_COUNT="${#GO_FILES[@]}"
 AVG_FILE_LOC=0
 if [ "$GO_FILE_COUNT" -gt 0 ]; then AVG_FILE_LOC=$((PROD_LOC / GO_FILE_COUNT)); fi
+
+BENCHMARK_LOC=0
+for f in "${BENCHMARK_GO_FILES[@]}"; do
+  BENCHMARK_LOC=$((BENCHMARK_LOC + $(wc -l < "$f")))
+done
 
 if [ -d internal ]; then
   INTERNAL_PACKAGES=$(find internal -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
@@ -227,6 +242,8 @@ echo "ROOT=$PWD"
 echo "BASELINE_FILE=$BASELINE_FILE"
 echo "PROD_LOC=$PROD_LOC (hard $HARD_MAX_PROD_LOC, target $TARGET_MAX_PROD_LOC)"
 echo "GO_FILE_COUNT=$GO_FILE_COUNT"
+echo "BENCHMARK_LOC=$BENCHMARK_LOC"
+echo "BENCHMARK_GO_FILE_COUNT=${#BENCHMARK_GO_FILES[@]}"
 echo "AVG_FILE_LOC=$AVG_FILE_LOC (hard $HARD_MAX_AVG_FILE_LOC, target $TARGET_MAX_AVG_FILE_LOC)"
 echo "INTERNAL_PACKAGES=$INTERNAL_PACKAGES (hard $HARD_MAX_INTERNAL_PACKAGES, target $TARGET_MAX_INTERNAL_PACKAGES)"
 echo "RUNTIME_DEPS=$RUNTIME_DEPS (hard $HARD_MAX_RUNTIME_DEPS, target $TARGET_MAX_RUNTIME_DEPS)"

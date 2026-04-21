@@ -15,3 +15,6 @@ go test ./... -count=1
 
 echo '-- bash scripts/check_budget.sh .'
 bash scripts/check_budget.sh .
+
+echo '-- bash scripts/check_skills.sh .'
+bash scripts/check_skills.sh .

@@ -69,6 +69,8 @@ Guardrail:
 5. `replay`
 6. `diff`
 7. `memory stats/search/prune`
+8. `analytics stats/recent/value-report`
+9. `doctor`
 
 Default output is AI-first:
 1. compact packet first
@@ -83,6 +85,8 @@ Default output is AI-first:
 needlex read https://example.com --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
+needlex analytics value-report
+needlex doctor
 ```
 
 ## Install

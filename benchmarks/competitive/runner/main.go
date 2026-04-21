@@ -148,6 +148,27 @@ type runCache struct {
 	Entries map[string]competitorResult `json:"entries"`
 }
 
+type competitiveOptions struct {
+	outPath        string
+	casesPath      string
+	competitorsArg string
+	cachePath      string
+}
+
+type competitorAgg struct {
+	category                                                                       string
+	configured                                                                     bool
+	caseCount, supported, runtimeOK, qualityPass, selectedPass, proofPass, skipped int
+	factCoverageTotal                                                              float64
+	claimToSourceTotal                                                             int
+	claimToSourceCount                                                             int
+	postProcessingTotal                                                            int
+	cachedCount                                                                    int
+	hopTotal                                                                       int
+	hopCount                                                                       int
+	latencyTotal, bytesTotal                                                       int64
+}
+
 type adapter interface {
 	Name() string
 	Category() string
@@ -158,88 +179,93 @@ type adapter interface {
 }
 
 func main() {
-	var outPath, casesPath, competitorsArg, cachePath string
-	flag.StringVar(&outPath, "out", "improvements/competitive-benchmark-latest.json", "output report path")
-	flag.StringVar(&casesPath, "cases", "benchmarks/corpora/competitive-corpus-v1.json", "competitive corpus path")
-	flag.StringVar(&competitorsArg, "competitors", "needlex,jina,firecrawl,tavily,exa,brave-search,vercel-browser-agent", "comma-separated competitor list")
-	flag.StringVar(&cachePath, "cache", ".needlex/competitive-benchmark-cache.json", "local cache path for reusable competitor results")
-	flag.Parse()
-
-	c, err := loadCorpus(casesPath)
+	opts := parseCompetitiveOptions()
+	c, err := loadCorpus(opts.casesPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load corpus: %v\n", err)
 		os.Exit(1)
 	}
 
-	adapters, err := resolveAdapters(splitCSV(competitorsArg))
+	adapters, err := resolveAdapters(splitCSV(opts.competitorsArg))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "resolve adapters: %v\n", err)
 		os.Exit(1)
 	}
 
-	cache, err := loadRunCache(cachePath)
+	cache, err := loadRunCache(opts.cachePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load cache: %v\n", err)
 		os.Exit(1)
 	}
 
-	results := make([]caseResult, 0, len(c.Cases))
-	for i, item := range c.Cases {
-		fmt.Printf("[competitive] %s case %d/%d start id=%s family=%s task=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID, item.Family, item.TaskType)
-		row := caseResult{ID: item.ID, Family: item.Family, Language: item.Language, TaskType: item.TaskType, SeedURL: item.SeedURL, Goal: item.Goal, ExpectedURL: item.ExpectedURL}
-		for _, a := range adapters {
-			configured, reason := a.Availability()
-			if !configured {
-				row.Results = append(row.Results, competitorResult{Competitor: a.Name(), Category: a.Category(), Configured: false, Skipped: true, SkipReason: reason})
-				continue
-			}
-			if !a.Supports(item) {
-				row.Results = append(row.Results, competitorResult{Competitor: a.Name(), Category: a.Category(), Configured: true, Supported: false, Skipped: true, SkipReason: "unsupported_task"})
-				continue
-			}
-			if cacheableCompetitor(a.Name()) {
-				cacheKey := makeCacheKey(c.Version, a.Name(), item)
-				if cached, ok := cache.Entries[cacheKey]; ok {
-					enrichDerivedMetrics(item, &cached)
-					cached.Competitor = a.Name()
-					cached.Category = a.Category()
-					cached.Configured = true
-					cached.Supported = true
-					cached.Cached = true
-					row.Results = append(row.Results, cached)
-					continue
-				}
-				res := a.Run(context.Background(), item)
-				enrichDerivedMetrics(item, &res)
-				res.Competitor = a.Name()
-				res.Category = a.Category()
-				res.Configured = true
-				res.Supported = true
-				cache.Entries[cacheKey] = res
-				row.Results = append(row.Results, res)
-				continue
-			}
-			res := a.Run(context.Background(), item)
-			enrichDerivedMetrics(item, &res)
-			res.Competitor = a.Name()
-			res.Category = a.Category()
-			res.Configured = true
-			res.Supported = true
-			row.Results = append(row.Results, res)
-		}
-		results = append(results, row)
-	}
-
+	results := runCompetitiveCases(c, adapters, cache)
 	rep := report{GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339), CorpusVersion: c.Version, Competitors: summarizeByCompetitor(results, adapters), Cases: results}
-	if err := evalutil.WriteJSON(outPath, rep); err != nil {
+	if err := evalutil.WriteJSON(opts.outPath, rep); err != nil {
 		fmt.Fprintf(os.Stderr, "write report: %v\n", err)
 		os.Exit(1)
 	}
-	if err := saveRunCache(cachePath, cache); err != nil {
+	if err := saveRunCache(opts.cachePath, cache); err != nil {
 		fmt.Fprintf(os.Stderr, "write cache: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Competitive benchmark written to %s\n", outPath)
+	fmt.Printf("Competitive benchmark written to %s\n", opts.outPath)
+}
+
+func parseCompetitiveOptions() competitiveOptions {
+	var opts competitiveOptions
+	flag.StringVar(&opts.outPath, "out", "improvements/competitive-benchmark-latest.json", "output report path")
+	flag.StringVar(&opts.casesPath, "cases", "benchmarks/corpora/competitive-corpus-v1.json", "competitive corpus path")
+	flag.StringVar(&opts.competitorsArg, "competitors", "needlex,jina,firecrawl,tavily,exa,brave-search,vercel-browser-agent", "comma-separated competitor list")
+	flag.StringVar(&opts.cachePath, "cache", ".needlex/competitive-benchmark-cache.json", "local cache path for reusable competitor results")
+	flag.Parse()
+	return opts
+}
+
+func runCompetitiveCases(c corpus, adapters []adapter, cache runCache) []caseResult {
+	results := make([]caseResult, 0, len(c.Cases))
+	for i, item := range c.Cases {
+		fmt.Printf("[competitive] %s case %d/%d start id=%s family=%s task=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID, item.Family, item.TaskType)
+		results = append(results, runCompetitiveCase(c.Version, item, adapters, cache))
+	}
+	return results
+}
+
+func runCompetitiveCase(corpusVersion string, item seededCase, adapters []adapter, cache runCache) caseResult {
+	row := caseResult{ID: item.ID, Family: item.Family, Language: item.Language, TaskType: item.TaskType, SeedURL: item.SeedURL, Goal: item.Goal, ExpectedURL: item.ExpectedURL}
+	for _, a := range adapters {
+		row.Results = append(row.Results, runCompetitiveAdapter(corpusVersion, item, a, cache))
+	}
+	return row
+}
+
+func runCompetitiveAdapter(corpusVersion string, item seededCase, a adapter, cache runCache) competitorResult {
+	configured, reason := a.Availability()
+	if !configured {
+		return competitorResult{Competitor: a.Name(), Category: a.Category(), Configured: false, Skipped: true, SkipReason: reason}
+	}
+	if !a.Supports(item) {
+		return competitorResult{Competitor: a.Name(), Category: a.Category(), Configured: true, Supported: false, Skipped: true, SkipReason: "unsupported_task"}
+	}
+	if cacheableCompetitor(a.Name()) {
+		cacheKey := makeCacheKey(corpusVersion, a.Name(), item)
+		if cached, ok := cache.Entries[cacheKey]; ok {
+			return finalizeCompetitiveResult(item, a, cached, true)
+		}
+		res := finalizeCompetitiveResult(item, a, a.Run(context.Background(), item), false)
+		cache.Entries[cacheKey] = res
+		return res
+	}
+	return finalizeCompetitiveResult(item, a, a.Run(context.Background(), item), false)
+}
+
+func finalizeCompetitiveResult(item seededCase, a adapter, res competitorResult, cached bool) competitorResult {
+	enrichDerivedMetrics(item, &res)
+	res.Competitor = a.Name()
+	res.Category = a.Category()
+	res.Configured = true
+	res.Supported = true
+	res.Cached = cached
+	return res
 }
 
 func loadCorpus(path string) (corpus, error) {
@@ -356,67 +382,67 @@ func (a *needleXAdapter) Availability() (bool, string) {
 }
 func (a *needleXAdapter) Supports(seededCase) bool { return true }
 func (a *needleXAdapter) Run(_ context.Context, item seededCase) competitorResult {
-	res := competitorResult{}
 	switch item.TaskType {
 	case "same_site_query_routing":
-		payload, raw, err := runNeedleJSON(a.binaryPath, "query", item.SeedURL, "--goal", item.Goal, "--json")
-		if err != nil {
-			res.Error = err.Error()
-			res.FailureClasses = []string{classifyExecutionError(err.Error())}
-			return res
-		}
-		res.RuntimeOK = true
-		var out compactQuery
-		if err := json.Unmarshal(payload, &out); err != nil {
-			res.Error = err.Error()
-			res.FailureClasses = []string{"decode_error"}
-			return res
-		}
-		res.ActualURL = strings.TrimSpace(out.SelectedURL)
-		res.SelectedURLPass = sameCanonicalURL(res.ActualURL, item.ExpectedURL)
-		res.SummaryPresent = strings.TrimSpace(out.Summary) != ""
-		res.ChunkCount = len(out.Chunks)
-		res.PacketBytes = len(raw)
-		res.LatencyMS = out.CostReport.LatencyMS
-		res.SelectionWhy = append([]string{}, out.SelectionWhy...)
-		res.ProofUsable = verifyNeedleProof(a.binaryPath, out.Chunks, item.MustExposeProof)
-		text := buildNeedleText(out.Summary, out.Chunks)
-		res.FactCoverage, res.CoveredFacts, res.MissingFacts = evaluateFactCoverage(text, item.MustContainFacts)
-		res.ClaimToSourceSteps = estimateClaimToSourceSteps(res)
-		res.PostProcessingBurden = estimatePostProcessingBurden(item, res)
-		res.HopCountToTarget = estimateHopCountToTarget(item, res.SelectedURLPass)
+		return a.runQueryRouting(item)
 	case "read_page_understanding", "read_then_answer":
-		payload, raw, err := runNeedleJSON(a.binaryPath, "read", item.SeedURL, "--json")
-		if err != nil {
-			res.Error = err.Error()
-			res.FailureClasses = []string{classifyExecutionError(err.Error())}
-			return res
-		}
-		res.RuntimeOK = true
-		var out compactRead
-		if err := json.Unmarshal(payload, &out); err != nil {
-			res.Error = err.Error()
-			res.FailureClasses = []string{"decode_error"}
-			return res
-		}
-		res.ActualURL = strings.TrimSpace(out.URL)
-		res.SelectedURLPass = sameCanonicalURL(res.ActualURL, item.ExpectedURL)
-		res.SummaryPresent = strings.TrimSpace(out.Summary) != ""
-		res.ChunkCount = len(out.Chunks)
-		res.PacketBytes = len(raw)
-		res.LatencyMS = out.CostReport.LatencyMS
-		res.ProofUsable = verifyNeedleProof(a.binaryPath, out.Chunks, item.MustExposeProof)
-		text := buildNeedleText(out.Summary, out.Chunks)
-		res.FactCoverage, res.CoveredFacts, res.MissingFacts = evaluateFactCoverage(text, item.MustContainFacts)
-		res.ClaimToSourceSteps = estimateClaimToSourceSteps(res)
-		res.PostProcessingBurden = estimatePostProcessingBurden(item, res)
-		res.HopCountToTarget = estimateHopCountToTarget(item, res.SelectedURLPass)
+		return a.runReadTask(item)
 	default:
-		res.Skipped = true
-		res.SkipReason = "unsupported_task"
-		return res
+		return competitorResult{Skipped: true, SkipReason: "unsupported_task"}
 	}
-	res.FailureClasses = classifyQualityFailures(res, item, a.ProofComparable())
+}
+
+func (a *needleXAdapter) runQueryRouting(item seededCase) competitorResult {
+	payload, raw, err := runNeedleJSON(a.binaryPath, "query", item.SeedURL, "--goal", item.Goal, "--json")
+	if err != nil {
+		return competitorResult{Error: err.Error(), FailureClasses: []string{classifyExecutionError(err.Error())}}
+	}
+	var out compactQuery
+	if err := json.Unmarshal(payload, &out); err != nil {
+		return competitorResult{Error: err.Error(), FailureClasses: []string{"decode_error"}}
+	}
+	res := competitorResult{
+		RuntimeOK:       true,
+		ActualURL:       strings.TrimSpace(out.SelectedURL),
+		SelectedURLPass: sameCanonicalURL(strings.TrimSpace(out.SelectedURL), item.ExpectedURL),
+		SummaryPresent:  strings.TrimSpace(out.Summary) != "",
+		ChunkCount:      len(out.Chunks),
+		PacketBytes:     len(raw),
+		LatencyMS:       out.CostReport.LatencyMS,
+		SelectionWhy:    append([]string{}, out.SelectionWhy...),
+		ProofUsable:     verifyNeedleProof(a.binaryPath, out.Chunks, item.MustExposeProof),
+	}
+	return finalizeNeedleResult(item, res, buildNeedleText(out.Summary, out.Chunks), a.ProofComparable())
+}
+
+func (a *needleXAdapter) runReadTask(item seededCase) competitorResult {
+	payload, raw, err := runNeedleJSON(a.binaryPath, "read", item.SeedURL, "--json")
+	if err != nil {
+		return competitorResult{Error: err.Error(), FailureClasses: []string{classifyExecutionError(err.Error())}}
+	}
+	var out compactRead
+	if err := json.Unmarshal(payload, &out); err != nil {
+		return competitorResult{Error: err.Error(), FailureClasses: []string{"decode_error"}}
+	}
+	res := competitorResult{
+		RuntimeOK:       true,
+		ActualURL:       strings.TrimSpace(out.URL),
+		SelectedURLPass: sameCanonicalURL(strings.TrimSpace(out.URL), item.ExpectedURL),
+		SummaryPresent:  strings.TrimSpace(out.Summary) != "",
+		ChunkCount:      len(out.Chunks),
+		PacketBytes:     len(raw),
+		LatencyMS:       out.CostReport.LatencyMS,
+		ProofUsable:     verifyNeedleProof(a.binaryPath, out.Chunks, item.MustExposeProof),
+	}
+	return finalizeNeedleResult(item, res, buildNeedleText(out.Summary, out.Chunks), a.ProofComparable())
+}
+
+func finalizeNeedleResult(item seededCase, res competitorResult, text string, proofComparable bool) competitorResult {
+	res.FactCoverage, res.CoveredFacts, res.MissingFacts = evaluateFactCoverage(text, item.MustContainFacts)
+	res.ClaimToSourceSteps = estimateClaimToSourceSteps(res)
+	res.PostProcessingBurden = estimatePostProcessingBurden(item, res)
+	res.HopCountToTarget = estimateHopCountToTarget(item, res.SelectedURLPass)
+	res.FailureClasses = classifyQualityFailures(res, item, proofComparable)
 	res.QualityPass = len(res.FailureClasses) == 0
 	return res
 }
@@ -439,7 +465,7 @@ func (j jinaAdapter) Run(_ context.Context, item seededCase) competitorResult {
 		res.FailureClasses = []string{classifyExecutionError(err.Error())}
 		return res
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		res.Error = fmt.Sprintf("unexpected status %d", resp.StatusCode)
 		res.FailureClasses = []string{"runtime_error"}
@@ -677,23 +703,10 @@ func (a envSkippedAdapter) Run(context.Context, seededCase) competitorResult {
 }
 
 func summarizeByCompetitor(rows []caseResult, adapters []adapter) []competitorSummary {
-	type agg struct {
-		category                                                                       string
-		configured                                                                     bool
-		caseCount, supported, runtimeOK, qualityPass, selectedPass, proofPass, skipped int
-		factCoverageTotal                                                              float64
-		claimToSourceTotal                                                             int
-		claimToSourceCount                                                             int
-		postProcessingTotal                                                            int
-		cachedCount                                                                    int
-		hopTotal                                                                       int
-		hopCount                                                                       int
-		latencyTotal, bytesTotal                                                       int64
-	}
-	by := map[string]*agg{}
+	by := map[string]*competitorAgg{}
 	for _, a := range adapters {
 		configured, _ := a.Availability()
-		by[a.Name()] = &agg{category: a.Category(), configured: configured}
+		by[a.Name()] = &competitorAgg{category: a.Category(), configured: configured}
 	}
 	for _, row := range rows {
 		for _, res := range row.Results {
@@ -701,82 +714,103 @@ func summarizeByCompetitor(rows []caseResult, adapters []adapter) []competitorSu
 			if a == nil {
 				continue
 			}
-			a.caseCount++
-			if res.Supported {
-				a.supported++
-			}
-			if res.Skipped {
-				a.skipped++
-				continue
-			}
-			if res.RuntimeOK {
-				a.runtimeOK++
-			}
-			if res.QualityPass {
-				a.qualityPass++
-			}
-			if res.SelectedURLPass {
-				a.selectedPass++
-			}
-			if res.ProofUsable {
-				a.proofPass++
-			}
-			a.factCoverageTotal += res.FactCoverage
-			a.postProcessingTotal += res.PostProcessingBurden
-			if res.ClaimToSourceSteps != nil {
-				a.claimToSourceTotal += *res.ClaimToSourceSteps
-				a.claimToSourceCount++
-			}
-			if res.Cached {
-				a.cachedCount++
-			}
-			if res.HopCountToTarget != nil {
-				a.hopTotal += *res.HopCountToTarget
-				a.hopCount++
-			}
-			a.latencyTotal += res.LatencyMS
-			a.bytesTotal += int64(res.PacketBytes)
+			recordCompetitorResult(a, res)
 		}
 	}
 	out := make([]competitorSummary, 0, len(by))
 	for name, a := range by {
-		den := max(a.caseCount-a.skipped, 1)
-		out = append(out, competitorSummary{
-			Competitor:                name,
-			Category:                  a.category,
-			CaseCount:                 a.caseCount,
-			Configured:                a.configured,
-			SupportedRate:             evalutil.Ratio(a.supported, max(a.caseCount, 1)),
-			RuntimeSuccessRate:        evalutil.Ratio(a.runtimeOK, den),
-			QualityPassRate:           evalutil.Ratio(a.qualityPass, den),
-			SelectedURLPassRate:       evalutil.Ratio(a.selectedPass, den),
-			ProofUsabilityRate:        evalutil.Ratio(a.proofPass, den),
-			FactCoverageRate:          a.factCoverageTotal / float64(den),
-			ClaimToSourceCoverageRate: evalutil.Ratio(a.claimToSourceCount, den),
-			AvgClaimToSourceSteps:     averageFloat64(float64(a.claimToSourceTotal), a.claimToSourceCount),
-			AvgPostProcessingBurden:   averageFloat64(float64(a.postProcessingTotal), den),
-			CachedReuseRate:           evalutil.Ratio(a.cachedCount, den),
-			CachedReuseCount:          a.cachedCount,
-			AvgHopCountToTarget:       averageFloat64(float64(a.hopTotal), a.hopCount),
-			AvgLatencyMS:              averageInt64(a.latencyTotal, den),
-			AvgPacketBytes:            averageInt64(a.bytesTotal, den),
-			SkippedCases:              a.skipped,
-		})
+		out = append(out, competitorSummaryFromAgg(name, a))
 	}
-	var baselineBytes int64
+	applyPacketReductionBaseline(out)
+	sort.Slice(out, func(i, j int) bool { return out[i].Competitor < out[j].Competitor })
+	return out
+}
+
+func recordCompetitorResult(a *competitorAgg, res competitorResult) {
+	a.caseCount++
+	if res.Supported {
+		a.supported++
+	}
+	if res.Skipped {
+		a.skipped++
+		return
+	}
+	recordCompetitorQuality(a, res)
+}
+
+func recordCompetitorQuality(a *competitorAgg, res competitorResult) {
+	if res.RuntimeOK {
+		a.runtimeOK++
+	}
+	if res.QualityPass {
+		a.qualityPass++
+	}
+	if res.SelectedURLPass {
+		a.selectedPass++
+	}
+	if res.ProofUsable {
+		a.proofPass++
+	}
+	a.factCoverageTotal += res.FactCoverage
+	a.postProcessingTotal += res.PostProcessingBurden
+	a.latencyTotal += res.LatencyMS
+	a.bytesTotal += int64(res.PacketBytes)
+	recordOptionalCompetitorMetrics(a, res)
+}
+
+func recordOptionalCompetitorMetrics(a *competitorAgg, res competitorResult) {
+	if res.ClaimToSourceSteps != nil {
+		a.claimToSourceTotal += *res.ClaimToSourceSteps
+		a.claimToSourceCount++
+	}
+	if res.Cached {
+		a.cachedCount++
+	}
+	if res.HopCountToTarget != nil {
+		a.hopTotal += *res.HopCountToTarget
+		a.hopCount++
+	}
+}
+
+func competitorSummaryFromAgg(name string, a *competitorAgg) competitorSummary {
+	den := max(a.caseCount-a.skipped, 1)
+	return competitorSummary{
+		Competitor:                name,
+		Category:                  a.category,
+		CaseCount:                 a.caseCount,
+		Configured:                a.configured,
+		SupportedRate:             evalutil.Ratio(a.supported, max(a.caseCount, 1)),
+		RuntimeSuccessRate:        evalutil.Ratio(a.runtimeOK, den),
+		QualityPassRate:           evalutil.Ratio(a.qualityPass, den),
+		SelectedURLPassRate:       evalutil.Ratio(a.selectedPass, den),
+		ProofUsabilityRate:        evalutil.Ratio(a.proofPass, den),
+		FactCoverageRate:          a.factCoverageTotal / float64(den),
+		ClaimToSourceCoverageRate: evalutil.Ratio(a.claimToSourceCount, den),
+		AvgClaimToSourceSteps:     averageFloat64(float64(a.claimToSourceTotal), a.claimToSourceCount),
+		AvgPostProcessingBurden:   averageFloat64(float64(a.postProcessingTotal), den),
+		CachedReuseRate:           evalutil.Ratio(a.cachedCount, den),
+		CachedReuseCount:          a.cachedCount,
+		AvgHopCountToTarget:       averageFloat64(float64(a.hopTotal), a.hopCount),
+		AvgLatencyMS:              averageInt64(a.latencyTotal, den),
+		AvgPacketBytes:            averageInt64(a.bytesTotal, den),
+		SkippedCases:              a.skipped,
+	}
+}
+
+func applyPacketReductionBaseline(out []competitorSummary) {
+	baselineBytes := int64(0)
 	for i := range out {
 		if out[i].Competitor == "jina" && out[i].AvgPacketBytes > 0 {
 			baselineBytes = out[i].AvgPacketBytes
 			break
 		}
 	}
-	if baselineBytes > 0 {
-		for i := range out {
-			out[i].PacketReductionVsBaseline = computePacketReductionVsBaseline(out[i].AvgPacketBytes, baselineBytes)
-		}
+	if baselineBytes == 0 {
+		return
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Competitor < out[j].Competitor })
-	return out
+	for i := range out {
+		out[i].PacketReductionVsBaseline = computePacketReductionVsBaseline(out[i].AvgPacketBytes, baselineBytes)
+	}
 }
 
 func classifyQualityFailures(res competitorResult, item seededCase, requireProof bool) []string {
@@ -859,7 +893,8 @@ func runNeedleJSON(binaryPath string, args ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(binaryPath, args...)
 	raw, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, raw, errors.New(strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return nil, raw, err
@@ -1277,7 +1312,7 @@ func doJSONRequest(ctx context.Context, method, endpoint, apiKey string, body an
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -1308,7 +1343,7 @@ func doJSONRequestWithHeaders(ctx context.Context, method, endpoint string, head
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -1335,7 +1370,7 @@ func doGETJSONWithHeaders(ctx context.Context, endpoint string, headers map[stri
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

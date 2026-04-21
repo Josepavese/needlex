@@ -30,6 +30,7 @@ Macrostep:
 2. Hard gates block real regressions, not aesthetic disagreement.
 3. Targets apply pressure without pretending the repo is already smaller than it is.
 4. Advisory checks should produce actionable fronts, not generic shame.
+5. Runtime/product budget and benchmark evidence tooling must be measured separately.
 
 ## Required Baseline Collection
 
@@ -83,3 +84,6 @@ A valid governance macrostep should leave behind:
 2. updated docs
 3. updated workflow or CI checks if applicable
 4. a clear explanation of what is hard, what is target, and what is advisory
+
+`PROD_LOC` is the installed/runtime product surface and excludes `benchmarks/`.
+Benchmark runners are reported as `BENCHMARK_LOC` and governed through the benchmark advisory lint lane.

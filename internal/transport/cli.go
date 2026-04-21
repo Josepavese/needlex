@@ -86,6 +86,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runMCP(args[1:], stdout, stderr)
 	case "tool-catalog":
 		return r.runToolCatalog(args[1:], stdout, stderr)
+	case "doctor":
+		return r.runDoctor(args[1:], stdout, stderr)
 	case "version":
 		return r.runVersion(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
@@ -169,6 +171,7 @@ func writeRootUsage(w io.Writer) {
   needlex prune (--all | --older-than-hours N) [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
+  needlex doctor [--json]
   needlex version
 
 Hint:

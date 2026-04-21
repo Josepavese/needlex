@@ -11,13 +11,13 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/failure"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/store"
@@ -44,11 +44,10 @@ type DiscoverWebResponse struct {
 const webProbeLimit = 5
 
 func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, error) {
-	if strings.TrimSpace(req.Goal) == "" {
-		return DiscoverWebResponse{}, fmt.Errorf("discover web request goal must not be empty")
-	}
-	if req.MaxCandidates <= 0 {
-		req.MaxCandidates = 5
+	var err error
+	req, err = normalizeDiscoverWebRequest(req)
+	if err != nil {
+		return DiscoverWebResponse{}, err
 	}
 	if strings.TrimSpace(req.SeedURL) != "" {
 		if native, ok := s.discoverWebLocalFirst(ctx, req); ok {
@@ -56,174 +55,124 @@ func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (Disc
 		}
 	}
 
-	providers := s.orderedDiscoveryProviders(discoverycore.WebSearchProviders(s.webDiscoverBaseURL))
-	var (
-		discoveryURL  string
-		providerNames []string
-		lastErr       error
-	)
-	candidates := discoverycore.NewSet(nil)
-	queries := req.Queries
-	if len(queries) == 0 {
-		queries = []string{req.Goal}
+	bootstrap := s.collectWebBootstrapCandidates(ctx, req)
+	if len(bootstrap.Candidates.Sorted()) == 0 {
+		return DiscoverWebResponse{}, bootstrap.NoCandidateError()
 	}
-	for _, providerBaseURL := range providers {
-		providerName := discoverycore.ProviderName(providerBaseURL)
-		providerUsed := false
-		for _, query := range queries {
-			bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req, query)
-			if err != nil {
-				s.observeDiscoveryProvider(providerName, classifyDiscoveryProviderOutcome(err))
-				if isProviderUnavailable(err) {
-					break
-				}
-				lastErr = err
-				if discoveryProviderLevelFailure(err) {
-					break
-				}
-				continue
-			}
-			s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
-			if discoveryURL == "" {
-				discoveryURL = bootURL
-			}
-			candidates.Merge(bootstrapped)
-			providerUsed = true
-		}
-		if providerUsed {
-			providerNames = append(providerNames, providerName)
-		}
-	}
-	if len(candidates.Sorted()) == 0 && len(queries) > 1 {
-		for _, providerBaseURL := range providers {
-			providerName := discoverycore.ProviderName(providerBaseURL)
-			bootstrapped, bootURL, err := s.discoverWebBootstrap(ctx, providerBaseURL, req, req.Goal)
-			if err != nil {
-				s.observeDiscoveryProvider(providerName, classifyDiscoveryProviderOutcome(err))
-				if isProviderUnavailable(err) {
-					continue
-				}
-				lastErr = err
-				continue
-			}
-			s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
-			if discoveryURL == "" {
-				discoveryURL = bootURL
-			}
-			candidates.Merge(bootstrapped)
-			if !slices.Contains(providerNames, providerName) {
-				providerNames = append(providerNames, providerName)
-			}
-		}
-	}
-	if len(candidates.Sorted()) == 0 {
-		if lastErr != nil {
-			return DiscoverWebResponse{}, lastErr
-		}
-		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
-	}
-	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates.Sorted())
-	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, bootstrapped, req.MaxCandidates)
-	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Limited(req.MaxCandidates)
-	filtered = canonicalizeCandidateFamilies(filtered)
-	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
-	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
-	filtered = s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
+	filtered := s.finalizeWebCandidates(ctx, req, bootstrap.Candidates.Sorted())
 	if len(filtered) == 0 {
 		return DiscoverWebResponse{}, fmt.Errorf("discover web returned no candidates")
 	}
 
 	return DiscoverWebResponse{
 		SeedURL:      req.SeedURL,
-		Provider:     strings.Join(providerNames, ","),
+		Provider:     strings.Join(bootstrap.ProviderNames, ","),
 		SelectedURL:  filtered[0].URL,
-		DiscoveryURL: discoveryURL,
+		DiscoveryURL: bootstrap.DiscoveryURL,
 		Candidates:   filtered,
 	}, nil
 }
 
-func (s *Service) orderedDiscoveryProviders(providers []string) []string {
-	if len(providers) < 2 {
-		return providers
+type webBootstrapCollection struct {
+	Candidates    discoverycore.Set
+	DiscoveryURL  string
+	ProviderNames []string
+	LastErr       error
+}
+
+func normalizeDiscoverWebRequest(req DiscoverWebRequest) (DiscoverWebRequest, error) {
+	if strings.TrimSpace(req.Goal) == "" {
+		return DiscoverWebRequest{}, fmt.Errorf("discover web request goal must not be empty")
 	}
-	type providerSlot struct {
-		baseURL string
-		index   int
-		state   store.DiscoveryProviderState
-		ok      bool
+	if req.MaxCandidates <= 0 {
+		req.MaxCandidates = 5
 	}
-	at := s.now().UTC()
-	slots := make([]providerSlot, 0, len(providers))
-	for index, provider := range providers {
-		state, err := s.discoveryProviders.Load(discoverycore.ProviderName(provider))
-		slots = append(slots, providerSlot{
-			baseURL: provider,
-			index:   index,
-			state:   state,
-			ok:      err == nil,
-		})
+	return req, nil
+}
+
+func (s *Service) collectWebBootstrapCandidates(ctx context.Context, req DiscoverWebRequest) webBootstrapCollection {
+	providers := s.discoveryProviderAdapters(discoverycore.WebSearchProviders(s.webDiscoverBaseURL))
+	queries := req.Queries
+	if len(queries) == 0 {
+		queries = []string{req.Goal}
 	}
-	sort.SliceStable(slots, func(i, j int) bool {
-		left, right := slots[i], slots[j]
-		leftCooling := left.ok && left.state.CoolingDown(at)
-		rightCooling := right.ok && right.state.CoolingDown(at)
-		if leftCooling != rightCooling {
-			return !leftCooling
+	collection := webBootstrapCollection{Candidates: discoverycore.NewSet(nil)}
+	for _, provider := range providers {
+		collection.MergeProviderResult(s.bootstrapProviderQueries(ctx, provider, req, queries, true))
+	}
+	if len(collection.Candidates.Sorted()) == 0 && len(queries) > 1 {
+		for _, provider := range providers {
+			collection.MergeProviderResult(s.bootstrapProviderQueries(ctx, provider, req, []string{req.Goal}, false))
 		}
-		leftScore := 0.0
-		rightScore := 0.0
-		if left.ok {
-			leftScore = left.state.HealthScore(at)
+	}
+	return collection
+}
+
+func (s *Service) bootstrapProviderQueries(ctx context.Context, provider discoveryProviderAdapter, req DiscoverWebRequest, queries []string, stopOnProviderFailure bool) webBootstrapCollection {
+	out := webBootstrapCollection{Candidates: discoverycore.NewSet(nil)}
+	providerName := provider.Name()
+	for _, query := range queries {
+		bootstrapped, bootURL, err := provider.Bootstrap(ctx, req, query)
+		if err != nil {
+			s.observeDiscoveryProvider(providerName, classifyDiscoveryProviderOutcome(err))
+			out.LastErr = err
+			if isProviderUnavailable(err) || (stopOnProviderFailure && discoveryProviderLevelFailure(err)) {
+				break
+			}
+			continue
 		}
-		if right.ok {
-			rightScore = right.state.HealthScore(at)
-		}
-		if leftScore != rightScore {
-			return leftScore > rightScore
-		}
-		return left.index < right.index
-	})
-	out := make([]string, 0, len(slots))
-	for _, slot := range slots {
-		out = append(out, slot.baseURL)
+		s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
+		out.DiscoveryURL = bootURL
+		out.Candidates.Merge(bootstrapped)
+		out.ProviderNames = append(out.ProviderNames, providerName)
 	}
 	return out
 }
 
-func (s *Service) observeDiscoveryProvider(name, outcome string) {
-	if strings.TrimSpace(name) == "" || strings.TrimSpace(outcome) == "" {
-		return
+func (c *webBootstrapCollection) MergeProviderResult(in webBootstrapCollection) {
+	if in.LastErr != nil {
+		c.LastErr = in.LastErr
 	}
-	_, _, _ = s.discoveryProviders.Observe(store.DiscoveryProviderObservation{
-		Name:                name,
-		Outcome:             outcome,
-		FailureCooldown:     time.Duration(s.cfg.Discovery.ProviderFailureCooldownMS) * time.Millisecond,
-		BlockedCooldown:     time.Duration(s.cfg.Discovery.ProviderBlockedCooldownMS) * time.Millisecond,
-		TimeoutCooldown:     time.Duration(s.cfg.Discovery.ProviderTimeoutCooldownMS) * time.Millisecond,
-		UnavailableCooldown: time.Duration(s.cfg.Discovery.ProviderUnavailableCooldownMS) * time.Millisecond,
-	})
+	if c.DiscoveryURL == "" {
+		c.DiscoveryURL = in.DiscoveryURL
+	}
+	c.Candidates.Merge(in.Candidates.Sorted())
+	for _, providerName := range in.ProviderNames {
+		if !slices.Contains(c.ProviderNames, providerName) {
+			c.ProviderNames = append(c.ProviderNames, providerName)
+		}
+	}
+}
+
+func (c webBootstrapCollection) NoCandidateError() error {
+	if c.LastErr != nil {
+		return c.LastErr
+	}
+	return fmt.Errorf("discover web returned no candidates")
+}
+
+func (s *Service) finalizeWebCandidates(ctx context.Context, req DiscoverWebRequest, candidates []DiscoverCandidate) []DiscoverCandidate {
+	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates)
+	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, bootstrapped, req.MaxCandidates)
+	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Limited(req.MaxCandidates)
+	filtered = canonicalizeCandidateFamilies(filtered)
+	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
+	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
+	return s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
 }
 
 func classifyDiscoveryProviderOutcome(err error) string {
 	if err == nil {
 		return store.DiscoveryProviderOutcomeSuccess
 	}
-	if isProviderUnavailable(err) {
+	class := failure.Classify(err)
+	if isProviderUnavailable(err) || class == failure.ClassUnavailableUpstream {
 		return store.DiscoveryProviderOutcomeUnavailable
 	}
-	text := strings.ToLower(strings.TrimSpace(err.Error()))
-	switch {
-	case strings.Contains(text, "anti-bot challenge"),
-		strings.Contains(text, "rate limit"),
-		strings.Contains(text, "unexpected status code 403"),
-		strings.Contains(text, "unexpected status code 429"),
-		strings.Contains(text, "bootstrap provider returned 403"),
-		strings.Contains(text, "bootstrap provider returned 429"):
+	switch class {
+	case failure.ClassProviderBlocked:
 		return store.DiscoveryProviderOutcomeBlocked
-	case strings.Contains(text, "deadline exceeded"),
-		strings.Contains(text, "timeout"),
-		strings.Contains(text, "context deadline exceeded"),
-		strings.Contains(text, "client.timeout exceeded"):
+	case failure.ClassUpstreamTimeout:
 		return store.DiscoveryProviderOutcomeTimeout
 	default:
 		return store.DiscoveryProviderOutcomeFailure
@@ -231,12 +180,7 @@ func classifyDiscoveryProviderOutcome(err error) string {
 }
 
 func discoveryProviderLevelFailure(err error) bool {
-	switch classifyDiscoveryProviderOutcome(err) {
-	case store.DiscoveryProviderOutcomeBlocked, store.DiscoveryProviderOutcomeTimeout, store.DiscoveryProviderOutcomeUnavailable:
-		return true
-	default:
-		return false
-	}
+	return failure.IsProviderLevel(failure.Classify(err)) || isProviderUnavailable(err)
 }
 
 func canonicalizeCandidateFamilies(candidates []DiscoverCandidate) []DiscoverCandidate {
@@ -661,7 +605,15 @@ func extractLiteralURLCandidates(goal string, candidate DiscoverCandidate, final
 		return nil
 	}
 	sourceClass := discoverycore.ResourceClass(finalURL)
+	literalLinks := sameFamilyLiteralLinks(finalFamily, candidate, rawHTML, dom, sourceClass)
+	if len(literalLinks) == 0 {
+		return nil
+	}
+	scored := discoverycore.ScoreCandidates(goal, "", discoverycore.JoinNonEmpty(dom.Title, candidate.Label), literalLinks, domainHints)
+	return literalDiscoverCandidates(scored, candidate, dom, sourceClass)
+}
 
+func literalSearchTexts(rawHTML string, dom pipeline.SimplifiedDOM, sourceClass string) []string {
 	texts := make([]string, 0, len(dom.Nodes)+2)
 	if sourceClass != discoverycore.ResourceClassHTMLLike {
 		if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
@@ -676,10 +628,13 @@ func extractLiteralURLCandidates(goal string, candidate DiscoverCandidate, final
 			texts = append(texts, trimmed)
 		}
 	}
+	return texts
+}
 
+func sameFamilyLiteralLinks(finalFamily string, candidate DiscoverCandidate, rawHTML string, dom pipeline.SimplifiedDOM, sourceClass string) []discoverycore.LinkCandidate {
 	literalLinks := make([]discoverycore.LinkCandidate, 0, 4)
 	seen := map[string]struct{}{}
-	for _, text := range texts {
+	for _, text := range literalSearchTexts(rawHTML, dom, sourceClass) {
 		for _, raw := range literalURLPattern.FindAllString(text, -1) {
 			literalURL := trimLiteralURL(raw)
 			if literalURL == "" {
@@ -705,11 +660,10 @@ func extractLiteralURLCandidates(goal string, candidate DiscoverCandidate, final
 			break
 		}
 	}
-	if len(literalLinks) == 0 {
-		return nil
-	}
+	return literalLinks
+}
 
-	scored := discoverycore.ScoreCandidates(goal, "", discoverycore.JoinNonEmpty(dom.Title, candidate.Label), literalLinks, domainHints)
+func literalDiscoverCandidates(scored []discoverycore.Candidate, candidate DiscoverCandidate, dom pipeline.SimplifiedDOM, sourceClass string) []DiscoverCandidate {
 	out := make([]DiscoverCandidate, 0, min(len(scored), 2))
 	for _, item := range scored {
 		resourceClass := discoverycore.ResourceClass(item.URL)
@@ -811,20 +765,30 @@ func (s *Service) selectIdentityReferenceCandidates(ctx context.Context, goal st
 	if len(refs) == 0 {
 		return nil
 	}
+	baseLinks, relationByURL := identityBaseLinks(source.URL, refs)
+	scored := discoverycore.ScoreCandidates(goal, "", source.Label, baseLinks, nil)
+	if len(scored) == 0 {
+		return nil
+	}
+	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, identitySemanticCandidates(source, scored))
+	return identityDiscoverCandidates(source, scored, relationByURL, goalSimilarity)
+}
+
+func identityBaseLinks(sourceURL string, refs []identityReferenceCandidate) ([]discoverycore.LinkCandidate, map[string]string) {
 	baseLinks := make([]discoverycore.LinkCandidate, 0, len(refs))
 	relationByURL := make(map[string]string, len(refs))
-	sourceURL := strings.TrimSpace(source.URL)
+	cleanSourceURL := strings.TrimSpace(sourceURL)
 	for _, ref := range refs {
-		if strings.TrimSpace(ref.URL) == sourceURL {
+		if strings.TrimSpace(ref.URL) == cleanSourceURL {
 			continue
 		}
 		baseLinks = append(baseLinks, discoverycore.LinkCandidate{URL: ref.URL, Label: ref.Label})
 		relationByURL[ref.URL] = ref.Relation
 	}
-	scored := discoverycore.ScoreCandidates(goal, "", source.Label, baseLinks, nil)
-	if len(scored) == 0 {
-		return nil
-	}
+	return baseLinks, relationByURL
+}
+
+func identitySemanticCandidates(source DiscoverCandidate, scored []discoverycore.Candidate) []intel.SemanticCandidate {
 	semanticCandidates := make([]intel.SemanticCandidate, 0, len(scored))
 	for _, candidate := range scored {
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
@@ -838,7 +802,10 @@ func (s *Service) selectIdentityReferenceCandidates(ctx context.Context, goal st
 			),
 		})
 	}
-	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, semanticCandidates)
+	return semanticCandidates
+}
+
+func identityDiscoverCandidates(source DiscoverCandidate, scored []discoverycore.Candidate, relationByURL map[string]string, goalSimilarity map[string]float64) []DiscoverCandidate {
 	sourceFamily, _ := candidateFamily(source.URL)
 	out := make([]DiscoverCandidate, 0, 2)
 	for _, candidate := range scored {
@@ -987,20 +954,32 @@ type endpointExtractorResult struct {
 	Confidence      float64 `json:"confidence"`
 }
 
+type endpointPageInput struct {
+	PageURL     string   `json:"page_url"`
+	PageTitle   string   `json:"page_title"`
+	LiteralURLs []string `json:"literal_urls"`
+}
+
 func (s *Service) maybePromoteEndpointCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidates []DiscoverCandidate) []DiscoverCandidate {
 	backend := strings.TrimSpace(s.cfg.Models.Backend)
 	if len(candidates) == 0 || (backend != intel.BackendOpenAICompatible && backend != intel.BackendOllama) {
 		return candidates
 	}
-
-	type pageInput struct {
-		PageURL     string   `json:"page_url"`
-		PageTitle   string   `json:"page_title"`
-		LiteralURLs []string `json:"literal_urls"`
+	pageInputs, allowed := s.collectEndpointPageInputs(ctx, goal, userAgent, candidates)
+	if len(pageInputs) == 0 {
+		return candidates
 	}
-	pageInputs := make([]pageInput, 0, min(len(candidates), 4))
-	allowed := map[string]pageInput{}
+	out, ok := s.runEndpointExtractor(ctx, goal, domainHints, pageInputs)
+	selectedPage, found := allowed[out.SelectedURL]
+	if !ok || !found || out.Confidence < 0.55 {
+		return candidates
+	}
+	return promoteEndpointCandidate(candidates, selectedPage, out)
+}
 
+func (s *Service) collectEndpointPageInputs(ctx context.Context, goal, userAgent string, candidates []DiscoverCandidate) ([]endpointPageInput, map[string]endpointPageInput) {
+	pageInputs := make([]endpointPageInput, 0, min(len(candidates), 4))
+	allowed := map[string]endpointPageInput{}
 	for _, candidate := range s.orderEndpointCandidates(ctx, goal, candidates, min(len(candidates), 4)) {
 		rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(candidate.URL, effectiveUserAgent(userAgent, true)))
 		if err != nil {
@@ -1014,7 +993,7 @@ func (s *Service) maybePromoteEndpointCandidate(ctx context.Context, goal, userA
 		if len(literals) == 0 {
 			continue
 		}
-		input := pageInput{
+		input := endpointPageInput{
 			PageURL:     strings.TrimSpace(rawPage.FinalURL),
 			PageTitle:   strings.TrimSpace(dom.Title),
 			LiteralURLs: literals,
@@ -1024,10 +1003,10 @@ func (s *Service) maybePromoteEndpointCandidate(ctx context.Context, goal, userA
 			allowed[literal] = input
 		}
 	}
-	if len(pageInputs) == 0 {
-		return candidates
-	}
+	return pageInputs, allowed
+}
 
+func (s *Service) runEndpointExtractor(ctx context.Context, goal string, domainHints []string, pageInputs []endpointPageInput) (endpointExtractorResult, bool) {
 	modelReq := intel.ModelRequest{
 		Task:            intel.TaskEndpointExtract,
 		ModelClass:      intel.ModelClassMicroSolver,
@@ -1043,18 +1022,17 @@ func (s *Service) maybePromoteEndpointCandidate(ctx context.Context, goal, userA
 	}
 	resp, err := s.runtime.Run(ctx, modelReq)
 	if err != nil {
-		return candidates
+		return endpointExtractorResult{}, false
 	}
 	var out endpointExtractorResult
 	if err := json.Unmarshal([]byte(resp.OutputJSON), &out); err != nil {
-		return candidates
+		return endpointExtractorResult{}, false
 	}
 	out.SelectedURL = strings.TrimSpace(out.SelectedURL)
-	selectedPage, ok := allowed[out.SelectedURL]
-	if !ok || out.Confidence < 0.55 {
-		return candidates
-	}
+	return out, true
+}
 
+func promoteEndpointCandidate(candidates []DiscoverCandidate, selectedPage endpointPageInput, out endpointExtractorResult) []DiscoverCandidate {
 	boosted := append([]DiscoverCandidate{}, candidates...)
 	boosted = append(boosted, DiscoverCandidate{
 		URL:   out.SelectedURL,

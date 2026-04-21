@@ -109,86 +109,108 @@ type report struct {
 	Regressions      []string      `json:"regressions,omitempty"`
 }
 
-func main() {
-	var (
-		outPath        string
-		baselinePath   string
-		casesPath      string
-		updateBaseline bool
-	)
-	flag.StringVar(&outPath, "out", "improvements/live-read-latest.json", "output report path")
-	flag.StringVar(&baselinePath, "baseline", "improvements/live-read-baseline.json", "baseline report path")
-	flag.StringVar(&casesPath, "cases", envOr("NEEDLEX_LIVE_READ_CASES", ""), "optional cases JSON path")
-	flag.BoolVar(&updateBaseline, "update-baseline", false, "overwrite baseline with latest report")
-	flag.Parse()
+type liveOptions struct {
+	outPath        string
+	baselinePath   string
+	casesPath      string
+	updateBaseline bool
+}
 
+func main() {
+	opts := parseLiveOptions()
 	externalCommand := strings.TrimSpace(os.Getenv("NEEDLEX_EXTERNAL_BASELINE_CMD"))
 	compareEnabled := useLiveCompare()
-	compareBackend := strings.TrimSpace(os.Getenv("NEEDLEX_MODELS_BACKEND"))
-	if !compareEnabled {
-		compareBackend = ""
-	}
 
-	cases, err := loadCases(casesPath)
+	cases, err := loadCases(opts.casesPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load cases: %v\n", err)
 		os.Exit(1)
 	}
-	results := make([]caseResult, 0, len(cases))
-	fmt.Printf("[live] %s evaluation start cases=%d compare=%t backend=%s\n", time.Now().Format("15:04:05"), len(cases), compareEnabled, nonEmpty(compareBackend, "noop"))
-	for i, item := range cases {
-		fmt.Printf("[live] %s case %d/%d start name=%s family=%s objective=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.Name, nonEmpty(item.Family, "uncategorized"), nonEmpty(item.Objective, "-"))
-		result := runCase(item, externalCommand, compareEnabled)
-		results = append(results, result)
-		fmt.Printf("[live] %s case %d/%d done name=%s baseline=%s latency=%dms context=%.2f",
-			time.Now().Format("15:04:05"),
-			i+1,
-			len(cases),
-			item.Name,
-			statusLabel(result.Baseline.Success),
-			result.Baseline.LatencyMS,
-			result.Baseline.ContextAlignment,
-		)
-		if compareEnabled {
-			fmt.Printf(" compare=%s latency=%dms context=%.2f interventions=%d accepted=%d rejected=%d",
-				statusLabel(result.Compare.Success),
-				result.Compare.LatencyMS,
-				result.Compare.ContextAlignment,
-				result.Compare.Interventions,
-				result.Compare.Accepted,
-				result.Compare.Rejected,
-			)
-		}
-		fmt.Println()
-	}
+	results := runLiveCases(cases, externalCommand, compareEnabled)
 
 	rep := report{
 		GeneratedAtUTC:   time.Now().UTC().Format(time.RFC3339),
 		ExternalBaseline: externalCommand,
 		CompareEnabled:   compareEnabled,
-		CompareBackend:   compareBackend,
+		CompareBackend:   liveCompareBackend(compareEnabled),
 		Summary:          summarizeResults(results, compareEnabled),
 		Results:          results,
 	}
 
-	if prior, err := loadReport(baselinePath); err == nil {
+	if prior, err := loadReport(opts.baselinePath); err == nil {
 		rep.Regressions = compareReports(prior, rep)
 	}
 
-	if err := evalutil.WriteJSON(outPath, rep); err != nil {
+	if err := evalutil.WriteJSON(opts.outPath, rep); err != nil {
 		fmt.Fprintf(os.Stderr, "write report: %v\n", err)
 		os.Exit(1)
 	}
-	if updateBaseline {
-		if err := evalutil.WriteJSON(baselinePath, rep); err != nil {
+	if opts.updateBaseline {
+		if err := evalutil.WriteJSON(opts.baselinePath, rep); err != nil {
 			fmt.Fprintf(os.Stderr, "write baseline: %v\n", err)
 			os.Exit(1)
 		}
 	}
 
-	fmt.Printf("Live read evaluation written to %s\n", outPath)
-	if updateBaseline {
-		fmt.Printf("Baseline updated at %s\n", baselinePath)
+	printLiveReport(opts, rep)
+}
+
+func parseLiveOptions() liveOptions {
+	var opts liveOptions
+	flag.StringVar(&opts.outPath, "out", "improvements/live-read-latest.json", "output report path")
+	flag.StringVar(&opts.baselinePath, "baseline", "improvements/live-read-baseline.json", "baseline report path")
+	flag.StringVar(&opts.casesPath, "cases", envOr("NEEDLEX_LIVE_READ_CASES", ""), "optional cases JSON path")
+	flag.BoolVar(&opts.updateBaseline, "update-baseline", false, "overwrite baseline with latest report")
+	flag.Parse()
+	return opts
+}
+
+func liveCompareBackend(compareEnabled bool) string {
+	if !compareEnabled {
+		return ""
+	}
+	return strings.TrimSpace(os.Getenv("NEEDLEX_MODELS_BACKEND"))
+}
+
+func runLiveCases(cases []evalCase, externalCommand string, compareEnabled bool) []caseResult {
+	results := make([]caseResult, 0, len(cases))
+	fmt.Printf("[live] %s evaluation start cases=%d compare=%t backend=%s\n", time.Now().Format("15:04:05"), len(cases), compareEnabled, nonEmpty(liveCompareBackend(compareEnabled), "noop"))
+	for i, item := range cases {
+		fmt.Printf("[live] %s case %d/%d start name=%s family=%s objective=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.Name, nonEmpty(item.Family, "uncategorized"), nonEmpty(item.Objective, "-"))
+		result := runCase(item, externalCommand, compareEnabled)
+		results = append(results, result)
+		printLiveCaseProgress(i, len(cases), item, result, compareEnabled)
+	}
+	return results
+}
+
+func printLiveCaseProgress(idx, total int, item evalCase, result caseResult, compareEnabled bool) {
+	fmt.Printf("[live] %s case %d/%d done name=%s baseline=%s latency=%dms context=%.2f",
+		time.Now().Format("15:04:05"),
+		idx+1,
+		total,
+		item.Name,
+		statusLabel(result.Baseline.Success),
+		result.Baseline.LatencyMS,
+		result.Baseline.ContextAlignment,
+	)
+	if compareEnabled {
+		fmt.Printf(" compare=%s latency=%dms context=%.2f interventions=%d accepted=%d rejected=%d",
+			statusLabel(result.Compare.Success),
+			result.Compare.LatencyMS,
+			result.Compare.ContextAlignment,
+			result.Compare.Interventions,
+			result.Compare.Accepted,
+			result.Compare.Rejected,
+		)
+	}
+	fmt.Println()
+}
+
+func printLiveReport(opts liveOptions, rep report) {
+	fmt.Printf("Live read evaluation written to %s\n", opts.outPath)
+	if opts.updateBaseline {
+		fmt.Printf("Baseline updated at %s\n", opts.baselinePath)
 	}
 	for _, result := range rep.Results {
 		fmt.Printf("- %s: baseline=%s context=%.2f noise=%d latency=%dms",
@@ -288,28 +310,11 @@ func runCase(item evalCase, externalCommand string, compareEnabled bool) caseRes
 }
 
 func runReadVariant(item evalCase, useLiveBackend bool) readMetrics {
-	cfg := config.Defaults()
-	cfg.Runtime.TimeoutMS = item.TimeoutMS
-	cfg.Budget.MaxLatencyMS = maxInt64(cfg.Budget.MaxLatencyMS, item.TimeoutMS)
-	clientTimeoutMS := item.TimeoutMS
-	backend := "noop"
-
-	if useLiveBackend {
-		liveCfg, err := config.Load("")
-		if err != nil {
-			return readMetrics{Backend: "config_error", Error: err.Error()}
-		}
-		liveCfg.Runtime.TimeoutMS = item.TimeoutMS
-		liveCfg.Budget.MaxLatencyMS = maxInt64(liveCfg.Budget.MaxLatencyMS, item.TimeoutMS)
-		cfg = liveCfg
-		backend = strings.TrimSpace(cfg.Models.Backend)
-		clientTimeoutMS = maxInt64(clientTimeoutMS, cfg.Budget.MaxLatencyMS)
-		clientTimeoutMS = maxInt64(clientTimeoutMS, cfg.Models.MicroTimeoutMS)
-		clientTimeoutMS = maxInt64(clientTimeoutMS, cfg.Models.StructuredTimeoutMS)
-		clientTimeoutMS = maxInt64(clientTimeoutMS, cfg.Models.SpecialistTimeoutMS)
+	cfg, backend, clientTimeoutMS, err := liveReadConfig(item, useLiveBackend)
+	if err != nil {
+		return readMetrics{Backend: backend, Error: err.Error()}
 	}
 	client := &http.Client{Timeout: time.Duration(clientTimeoutMS) * time.Millisecond}
-
 	svc, err := coreservice.New(cfg, client)
 	if err != nil {
 		return readMetrics{Backend: backend, Error: err.Error()}
@@ -319,25 +324,55 @@ func runReadVariant(item evalCase, useLiveBackend bool) readMetrics {
 	if err != nil {
 		return readMetrics{Backend: backend, Error: err.Error()}
 	}
-	defer os.RemoveAll(storeRoot)
+	defer func() { _ = os.RemoveAll(storeRoot) }()
 
-	readReq := coreservice.ReadRequest{
+	readReq := liveReadRequest(item)
+	warmResp, err := readWithWarmMemory(svc, storeRoot, readReq)
+	if err != nil {
+		return readMetrics{Backend: backend, Error: err.Error()}
+	}
+	return liveReadMetrics(item, backend, warmResp, client)
+}
+
+func liveReadConfig(item evalCase, useLiveBackend bool) (config.Config, string, int64, error) {
+	cfg := config.Defaults()
+	cfg.Runtime.TimeoutMS = item.TimeoutMS
+	cfg.Budget.MaxLatencyMS = maxInt64(cfg.Budget.MaxLatencyMS, item.TimeoutMS)
+	if !useLiveBackend {
+		return cfg, "noop", item.TimeoutMS, nil
+	}
+	liveCfg, err := config.Load("")
+	if err != nil {
+		return cfg, "config_error", 0, err
+	}
+	liveCfg.Runtime.TimeoutMS = item.TimeoutMS
+	liveCfg.Budget.MaxLatencyMS = maxInt64(liveCfg.Budget.MaxLatencyMS, item.TimeoutMS)
+	timeoutMS := maxInt64(item.TimeoutMS, liveCfg.Budget.MaxLatencyMS)
+	timeoutMS = maxInt64(timeoutMS, liveCfg.Models.MicroTimeoutMS)
+	timeoutMS = maxInt64(timeoutMS, liveCfg.Models.StructuredTimeoutMS)
+	timeoutMS = maxInt64(timeoutMS, liveCfg.Models.SpecialistTimeoutMS)
+	return liveCfg, strings.TrimSpace(liveCfg.Models.Backend), timeoutMS, nil
+}
+
+func liveReadRequest(item evalCase) coreservice.ReadRequest {
+	return coreservice.ReadRequest{
 		URL:        item.URL,
 		Objective:  item.Objective,
 		Profile:    core.ProfileStandard,
 		RenderHint: true,
 	}
+}
+
+func readWithWarmMemory(svc *coreservice.Service, storeRoot string, readReq coreservice.ReadRequest) (coreservice.ReadResponse, error) {
 	readResp, err := svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq))
 	if err != nil {
-		return readMetrics{Backend: backend, Error: err.Error()}
+		return coreservice.ReadResponse{}, err
 	}
 	coreservice.ObserveReadResponseWithLocalState(storeRoot, readReq, readResp)
-	warmReq := coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq)
-	warmResp, err := svc.Read(context.Background(), warmReq)
-	if err != nil {
-		return readMetrics{Backend: backend, Error: err.Error()}
-	}
+	return svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq))
+}
 
+func liveReadMetrics(item evalCase, backend string, warmResp coreservice.ReadResponse, client *http.Client) readMetrics {
 	text := mergeChunkText(warmResp.ResultPack.Chunks)
 	semanticAlignment := semanticAlignmentForChunks(item.Objective, warmResp.ResultPack.Chunks, client)
 	interventions, accepted, rejected := traceInterventions(warmResp.Trace)
@@ -455,7 +490,7 @@ func runExternalBaseline(url string, timeoutMS int64, command string) (string, e
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	rawHTML, err := io.ReadAll(io.LimitReader(resp.Body, 4_000_000))
 	if err != nil {
@@ -529,97 +564,133 @@ func summarizeResults(results []caseResult, compareEnabled bool) reportSummary {
 	if len(results) == 0 {
 		return summary
 	}
-	families := map[string]*familyAgg{}
-	runtimeErrorSet := map[string]struct{}{}
-	clusterSet := map[string]struct{}{}
-	baselineSuccess := 0
-	compareSuccess := 0
-	var baselineLatency int64
-	var compareLatency int64
-	var baselineContext float64
-	var compareContext float64
-
+	agg := newSummaryAgg(compareEnabled)
 	for _, item := range results {
-		if item.Baseline.Success {
-			baselineSuccess++
-		}
-		baselineLatency += item.Baseline.LatencyMS
-		baselineContext += item.Baseline.ContextAlignment
-		summary.AcceptedInterventions += item.Compare.Accepted
-		summary.RejectedInterventions += item.Compare.Rejected
-		if compareEnabled && item.Compare.Success {
-			compareSuccess++
-		}
-		if compareEnabled {
-			compareLatency += item.Compare.LatencyMS
-			compareContext += item.Compare.ContextAlignment
-		}
-
-		family := nonEmpty(strings.TrimSpace(item.Family), "uncategorized")
-		agg := families[family]
-		if agg == nil {
-			agg = &familyAgg{name: family}
-			families[family] = agg
-		}
-		agg.count++
-		if item.Baseline.Success {
-			agg.baselineSuccess++
-		}
-		agg.baselineLatency += item.Baseline.LatencyMS
-		agg.baselineContext += item.Baseline.ContextAlignment
-		if compareEnabled {
-			if item.Compare.Success {
-				agg.compareSuccess++
-			}
-			agg.compareLatency += item.Compare.LatencyMS
-			agg.compareContext += item.Compare.ContextAlignment
-			agg.accepted += item.Compare.Accepted
-			agg.rejected += item.Compare.Rejected
-		}
-
-		if compareEnabled && strings.TrimSpace(item.Compare.Error) != "" {
-			runtimeErrorSet[item.Name] = struct{}{}
-			agg.runtimeErrors++
-			clusterSet[classifyCompareFailure(item.Compare.Error, item.Compare.ValidatorMessages)] = struct{}{}
-		}
+		agg.record(item)
 	}
 
-	summary.BaselineSuccessRate = float64(baselineSuccess) / float64(len(results))
-	summary.AvgBaselineLatencyMS = baselineLatency / int64(len(results))
-	summary.AvgBaselineContext = baselineContext / float64(len(results))
-	if compareEnabled {
-		summary.CompareSuccessRate = float64(compareSuccess) / float64(len(results))
-		summary.AvgCompareLatencyMS = compareLatency / int64(len(results))
-		summary.AvgCompareContext = compareContext / float64(len(results))
-	}
-	for name := range runtimeErrorSet {
-		summary.RuntimeErrorCases = append(summary.RuntimeErrorCases, name)
-	}
-	slices.Sort(summary.RuntimeErrorCases)
-	for cluster := range clusterSet {
-		summary.FailureClusters = append(summary.FailureClusters, cluster)
-	}
-	slices.Sort(summary.FailureClusters)
-	for _, family := range sortedFamilyKeys(families) {
-		agg := families[family]
-		entry := familySummary{
-			Family:               agg.name,
-			CaseCount:            agg.count,
-			BaselineSuccessRate:  float64(agg.baselineSuccess) / float64(agg.count),
-			AvgBaselineLatencyMS: agg.baselineLatency / int64(agg.count),
-			AvgBaselineContext:   agg.baselineContext / float64(agg.count),
-		}
-		if compareEnabled {
-			entry.CompareSuccessRate = float64(agg.compareSuccess) / float64(agg.count)
-			entry.AvgCompareLatencyMS = agg.compareLatency / int64(agg.count)
-			entry.AvgCompareContext = agg.compareContext / float64(agg.count)
-			entry.RuntimeErrorCount = agg.runtimeErrors
-			entry.AcceptedInterventions = agg.accepted
-			entry.RejectedInterventions = agg.rejected
-		}
-		summary.Families = append(summary.Families, entry)
-	}
+	summary.applyTotals(agg)
+	summary.RuntimeErrorCases = sortedSetKeys(agg.runtimeErrorSet)
+	summary.FailureClusters = sortedSetKeys(agg.clusterSet)
+	summary.Families = familySummaries(agg.families, compareEnabled)
 	return summary
+}
+
+func newSummaryAgg(compareEnabled bool) summaryAgg {
+	return summaryAgg{
+		families:        map[string]*familyAgg{},
+		runtimeErrorSet: map[string]struct{}{},
+		clusterSet:      map[string]struct{}{},
+		compareEnabled:  compareEnabled,
+	}
+}
+
+func (a *summaryAgg) record(item caseResult) {
+	a.recordTotals(item)
+	family := a.family(nonEmpty(strings.TrimSpace(item.Family), "uncategorized"))
+	family.record(item, a.compareEnabled)
+	if a.compareEnabled && strings.TrimSpace(item.Compare.Error) != "" {
+		a.runtimeErrorSet[item.Name] = struct{}{}
+		family.runtimeErrors++
+		a.clusterSet[classifyCompareFailure(item.Compare.Error, item.Compare.ValidatorMessages)] = struct{}{}
+	}
+}
+
+func (a *summaryAgg) recordTotals(item caseResult) {
+	if item.Baseline.Success {
+		a.baselineSuccess++
+	}
+	a.baselineLatency += item.Baseline.LatencyMS
+	a.baselineContext += item.Baseline.ContextAlignment
+	a.acceptedTotal += item.Compare.Accepted
+	a.rejectedTotal += item.Compare.Rejected
+	if a.compareEnabled && item.Compare.Success {
+		a.compareSuccess++
+	}
+	if a.compareEnabled {
+		a.compareLatency += item.Compare.LatencyMS
+		a.compareContext += item.Compare.ContextAlignment
+	}
+}
+
+func (a *summaryAgg) family(name string) *familyAgg {
+	agg := a.families[name]
+	if agg == nil {
+		agg = &familyAgg{name: name}
+		a.families[name] = agg
+	}
+	return agg
+}
+
+func (a *familyAgg) record(item caseResult, compareEnabled bool) {
+	a.count++
+	if item.Baseline.Success {
+		a.baselineSuccess++
+	}
+	a.baselineLatency += item.Baseline.LatencyMS
+	a.baselineContext += item.Baseline.ContextAlignment
+	if compareEnabled {
+		a.recordCompare(item.Compare)
+	}
+}
+
+func (a *familyAgg) recordCompare(compare readMetrics) {
+	if compare.Success {
+		a.compareSuccess++
+	}
+	a.compareLatency += compare.LatencyMS
+	a.compareContext += compare.ContextAlignment
+	a.accepted += compare.Accepted
+	a.rejected += compare.Rejected
+}
+
+func (s *reportSummary) applyTotals(agg summaryAgg) {
+	s.AcceptedInterventions = agg.acceptedTotal
+	s.RejectedInterventions = agg.rejectedTotal
+	s.BaselineSuccessRate = float64(agg.baselineSuccess) / float64(s.CaseCount)
+	s.AvgBaselineLatencyMS = agg.baselineLatency / int64(s.CaseCount)
+	s.AvgBaselineContext = agg.baselineContext / float64(s.CaseCount)
+	if agg.compareEnabled {
+		s.CompareSuccessRate = float64(agg.compareSuccess) / float64(s.CaseCount)
+		s.AvgCompareLatencyMS = agg.compareLatency / int64(s.CaseCount)
+		s.AvgCompareContext = agg.compareContext / float64(s.CaseCount)
+	}
+}
+
+func familySummaries(families map[string]*familyAgg, compareEnabled bool) []familySummary {
+	out := make([]familySummary, 0, len(families))
+	for _, family := range sortedFamilyKeys(families) {
+		out = append(out, families[family].summary(compareEnabled))
+	}
+	return out
+}
+
+func (a *familyAgg) summary(compareEnabled bool) familySummary {
+	entry := familySummary{
+		Family:               a.name,
+		CaseCount:            a.count,
+		BaselineSuccessRate:  float64(a.baselineSuccess) / float64(a.count),
+		AvgBaselineLatencyMS: a.baselineLatency / int64(a.count),
+		AvgBaselineContext:   a.baselineContext / float64(a.count),
+	}
+	if compareEnabled {
+		entry.CompareSuccessRate = float64(a.compareSuccess) / float64(a.count)
+		entry.AvgCompareLatencyMS = a.compareLatency / int64(a.count)
+		entry.AvgCompareContext = a.compareContext / float64(a.count)
+		entry.RuntimeErrorCount = a.runtimeErrors
+		entry.AcceptedInterventions = a.accepted
+		entry.RejectedInterventions = a.rejected
+	}
+	return entry
+}
+
+func sortedSetKeys(set map[string]struct{}) []string {
+	out := make([]string, 0, len(set))
+	for key := range set {
+		out = append(out, key)
+	}
+	slices.Sort(out)
+	return out
 }
 
 func sortedFamilyKeys(m map[string]*familyAgg) []string {
@@ -643,6 +714,21 @@ type familyAgg struct {
 	runtimeErrors   int
 	accepted        int
 	rejected        int
+}
+
+type summaryAgg struct {
+	families        map[string]*familyAgg
+	runtimeErrorSet map[string]struct{}
+	clusterSet      map[string]struct{}
+	baselineSuccess int
+	compareSuccess  int
+	baselineLatency int64
+	compareLatency  int64
+	baselineContext float64
+	compareContext  float64
+	acceptedTotal   int
+	rejectedTotal   int
+	compareEnabled  bool
 }
 
 func classifyCompareFailure(err string, validatorMessages []string) string {

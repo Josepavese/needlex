@@ -417,6 +417,23 @@
       }
     },
     {
+      "name": "analytics_failures",
+      "description": "Return failure-class rollups from Analytics PAL so maintainers can distinguish blocks, timeouts, missing pages, unsupported content, and empty candidates.",
+      "input_schema": {
+        "examples": [
+          {
+            "limit": 20
+          }
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
       "name": "analytics_daily",
       "description": "Return day-level Analytics PAL rollups for trend tracking, regression detection, and release-to-release comparison.",
       "input_schema": {

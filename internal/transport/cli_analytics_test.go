@@ -92,6 +92,16 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 
 	stdout.Reset()
 	stderr.Reset()
+	code = runner.Run([]string{"analytics", "failures"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("analytics failures exit=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Failures: 0") {
+		t.Fatalf("unexpected analytics failures output: %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
 	code = runner.Run([]string{"analytics", "daily"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("analytics daily exit=%d stderr=%q", code, stderr.String())
@@ -123,5 +133,32 @@ func TestRunnerHelpListsAnalyticsCommand(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "needlex analytics") {
 		t.Fatalf("expected help to include analytics command, got %q", stdout.String())
+	}
+}
+
+func TestRunnerDoctorReportsStateRootAndDatabases(t *testing.T) {
+	root := t.TempDir()
+	runner := NewRunner()
+	runner.storeRoot = root
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"doctor"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("doctor exit=%d stderr=%q", code, stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "Needle-X Doctor") || !strings.Contains(out, "State Root: "+root) || !strings.Contains(out, "Analytics DB:") || !strings.Contains(out, "Discovery DB:") {
+		t.Fatalf("unexpected doctor output: %q", out)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = runner.Run([]string{"doctor", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("doctor json exit=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"state_root":`) || !strings.Contains(stdout.String(), `"analytics_db_path":`) {
+		t.Fatalf("unexpected doctor json: %q", stdout.String())
 	}
 }

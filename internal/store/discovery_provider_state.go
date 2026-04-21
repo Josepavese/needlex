@@ -87,74 +87,104 @@ func (s DiscoveryProviderStateStore) Observe(observation DiscoveryProviderObserv
 	if name == "" {
 		return DiscoveryProviderState{}, "", fmt.Errorf("discovery provider name is required")
 	}
-	state, err := s.Load(name)
-	if err != nil && !errors.Is(err, ErrDiscoveryProviderStateNotFound) {
+	state, err := s.loadOrNewProviderState(name)
+	if err != nil {
 		return DiscoveryProviderState{}, "", err
 	}
-	if errors.Is(err, ErrDiscoveryProviderStateNotFound) {
-		state = DiscoveryProviderState{Name: name}
-	}
-
 	now := s.now().UTC()
-	state.Name = name
-	state.UpdatedAt = now
-	state.LastOutcome = strings.TrimSpace(observation.Outcome)
-	cooldown := time.Duration(0)
-
-	switch state.LastOutcome {
-	case DiscoveryProviderOutcomeSuccess:
-		state.SuccessCount++
-		state.ConsecutiveFailures = 0
-		state.CooldownUntil = time.Time{}
-		state.LastSuccessAt = now
-	case DiscoveryProviderOutcomeBlocked:
-		state.BlockedCount++
-		state.ConsecutiveFailures++
-		state.LastBlockedAt = now
-		state.LastFailureAt = now
-		cooldown = observation.BlockedCooldown
-	case DiscoveryProviderOutcomeTimeout:
-		state.TimeoutCount++
-		state.ConsecutiveFailures++
-		state.LastTimeoutAt = now
-		state.LastFailureAt = now
-		cooldown = observation.TimeoutCooldown
-	case DiscoveryProviderOutcomeUnavailable:
-		state.UnavailableCount++
-		state.ConsecutiveFailures++
-		state.LastFailureAt = now
-		cooldown = observation.UnavailableCooldown
-	case DiscoveryProviderOutcomeFailure:
-		state.FailureCount++
-		state.ConsecutiveFailures++
-		state.LastFailureAt = now
-		cooldown = observation.FailureCooldown
-	default:
-		return DiscoveryProviderState{}, "", fmt.Errorf("invalid discovery provider outcome %q", observation.Outcome)
+	if err := state.applyObservation(observation, now); err != nil {
+		return DiscoveryProviderState{}, "", err
 	}
-	if cooldown > 0 {
-		until := now.Add(cooldown)
-		if until.After(state.CooldownUntil) {
-			state.CooldownUntil = until
-		}
-	}
-
 	if err := state.Validate(); err != nil {
 		return DiscoveryProviderState{}, "", err
 	}
+	path, err := s.saveProviderState(state)
+	return state, path, err
+}
+
+func (s DiscoveryProviderStateStore) loadOrNewProviderState(name string) (DiscoveryProviderState, error) {
+	state, err := s.Load(name)
+	if err == nil {
+		return state, nil
+	}
+	if errors.Is(err, ErrDiscoveryProviderStateNotFound) {
+		return DiscoveryProviderState{Name: name}, nil
+	}
+	return DiscoveryProviderState{}, err
+}
+
+func (s DiscoveryProviderStateStore) saveProviderState(state DiscoveryProviderState) (string, error) {
 	dir := filepath.Join(s.root, "discovery", "providers")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return DiscoveryProviderState{}, "", fmt.Errorf("create discovery provider dir: %w", err)
+		return "", fmt.Errorf("create discovery provider dir: %w", err)
 	}
-	path := filepath.Join(dir, sanitizeID(name)+".json")
+	path := filepath.Join(dir, sanitizeID(state.Name)+".json")
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
-		return DiscoveryProviderState{}, "", fmt.Errorf("encode discovery provider state: %w", err)
+		return "", fmt.Errorf("encode discovery provider state: %w", err)
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return DiscoveryProviderState{}, "", fmt.Errorf("write discovery provider state: %w", err)
+		return "", fmt.Errorf("write discovery provider state: %w", err)
 	}
-	return state, path, nil
+	return path, nil
+}
+
+func (s *DiscoveryProviderState) applyObservation(observation DiscoveryProviderObservation, now time.Time) error {
+	s.Name = strings.TrimSpace(observation.Name)
+	s.UpdatedAt = now
+	s.LastOutcome = strings.TrimSpace(observation.Outcome)
+	cooldown, err := s.recordOutcome(now, observation)
+	if err != nil {
+		return err
+	}
+	s.applyCooldown(now, cooldown)
+	return nil
+}
+
+func (s *DiscoveryProviderState) recordOutcome(now time.Time, observation DiscoveryProviderObservation) (time.Duration, error) {
+	switch s.LastOutcome {
+	case DiscoveryProviderOutcomeSuccess:
+		s.SuccessCount++
+		s.ConsecutiveFailures = 0
+		s.CooldownUntil = time.Time{}
+		s.LastSuccessAt = now
+		return 0, nil
+	case DiscoveryProviderOutcomeBlocked:
+		s.BlockedCount++
+		s.recordFailure(now)
+		s.LastBlockedAt = now
+		return observation.BlockedCooldown, nil
+	case DiscoveryProviderOutcomeTimeout:
+		s.TimeoutCount++
+		s.recordFailure(now)
+		s.LastTimeoutAt = now
+		return observation.TimeoutCooldown, nil
+	case DiscoveryProviderOutcomeUnavailable:
+		s.UnavailableCount++
+		s.recordFailure(now)
+		return observation.UnavailableCooldown, nil
+	case DiscoveryProviderOutcomeFailure:
+		s.FailureCount++
+		s.recordFailure(now)
+		return observation.FailureCooldown, nil
+	default:
+		return 0, fmt.Errorf("invalid discovery provider outcome %q", observation.Outcome)
+	}
+}
+
+func (s *DiscoveryProviderState) recordFailure(now time.Time) {
+	s.ConsecutiveFailures++
+	s.LastFailureAt = now
+}
+
+func (s *DiscoveryProviderState) applyCooldown(now time.Time, cooldown time.Duration) {
+	if cooldown <= 0 {
+		return
+	}
+	until := now.Add(cooldown)
+	if until.After(s.CooldownUntil) {
+		s.CooldownUntil = until
+	}
 }
 
 func (s DiscoveryProviderState) Validate() error {

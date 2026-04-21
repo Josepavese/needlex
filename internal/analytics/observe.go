@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/failure"
 	"github.com/josepavese/needlex/internal/memory"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -96,7 +96,7 @@ func ObserveFailure(ctx context.Context, store SQLiteStore, obs FailureObservati
 		completedAt = startedAt
 	}
 	errText := failureMessage(obs.Err)
-	failureClass := classifyFailure(obs.Err)
+	failureClass := failure.Classify(obs.Err).String()
 	operation := firstNonEmpty(obs.Operation, "unknown")
 	selectedURL := firstNonEmpty(obs.URL, obs.SeedURL)
 	runID := prefixedHash("analytics_failure", operation, obs.Surface, obs.Goal, obs.SeedURL, obs.URL, completedAt.Format(time.RFC3339Nano), errText)
@@ -114,6 +114,7 @@ func ObserveFailure(ctx context.Context, store SQLiteStore, obs FailureObservati
 		Host:                 hostFromURL(selectedURL),
 		SelectedURL:          selectedURL,
 		Provider:             firstNonEmpty(obs.Provider, "error:"+failureClass),
+		FailureClass:         failureClass,
 		Success:              false,
 		TraceID:              prefixedHash("analytics_failure_trace", runID),
 		LatencyMS:            completedAt.Sub(startedAt).Milliseconds(),
@@ -340,30 +341,6 @@ func failureMessage(err error) string {
 		return "unknown error"
 	}
 	return strings.TrimSpace(err.Error())
-}
-
-func classifyFailure(err error) string {
-	if err == nil {
-		return "runtime_error"
-	}
-	text := strings.ToLower(err.Error())
-	switch {
-	case strings.Contains(text, "unexpected status code 403"), strings.Contains(text, "unexpected status code 429"), strings.Contains(text, "anti-bot"), strings.Contains(text, "blocked"):
-		return "provider_blocked"
-	case strings.Contains(text, "unexpected status code 404"):
-		return "upstream_not_found"
-	case strings.Contains(text, "timeout"), strings.Contains(text, "deadline exceeded"):
-		return "upstream_timeout"
-	case strings.Contains(text, "unsupported content type"):
-		return "unsupported_content_type"
-	case strings.Contains(text, "empty candidates"), strings.Contains(text, "no candidates"):
-		return "empty_candidates"
-	default:
-		if errors.Is(err, context.DeadlineExceeded) {
-			return "upstream_timeout"
-		}
-		return "runtime_error"
-	}
 }
 
 func truncate(value string, max int) string {

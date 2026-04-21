@@ -1,0 +1,69 @@
+package memory
+
+var sqliteSchemaStatements = []string{
+	`CREATE TABLE IF NOT EXISTS documents (
+	  url TEXT PRIMARY KEY,
+	  final_url TEXT NOT NULL,
+	  host TEXT NOT NULL,
+	  path TEXT NOT NULL,
+	  title TEXT NOT NULL,
+	  semantic_summary TEXT NOT NULL,
+	  language TEXT,
+	  locality_hints_json TEXT NOT NULL,
+	  entity_hints_json TEXT NOT NULL,
+	  category_hints_json TEXT NOT NULL,
+	  proof_refs_json TEXT NOT NULL,
+	  last_trace_id TEXT NOT NULL,
+	  source_kind TEXT NOT NULL,
+	  stable_ratio REAL NOT NULL,
+	  novelty_ratio REAL NOT NULL,
+	  changed_recently INTEGER NOT NULL,
+	  observed_at TEXT NOT NULL,
+	  updated_at TEXT NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_documents_host ON documents(host)`,
+	`CREATE INDEX IF NOT EXISTS idx_documents_observed_at ON documents(observed_at)`,
+	`CREATE TABLE IF NOT EXISTS edges (
+	  source_url TEXT NOT NULL,
+	  target_url TEXT NOT NULL,
+	  anchor_text TEXT NOT NULL,
+	  same_host INTEGER NOT NULL,
+	  trace_ref TEXT NOT NULL,
+	  observed_at TEXT NOT NULL,
+	  PRIMARY KEY (source_url, target_url, anchor_text)
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_edges_source_url ON edges(source_url)`,
+	`CREATE INDEX IF NOT EXISTS idx_edges_target_url ON edges(target_url)`,
+	`CREATE TABLE IF NOT EXISTS embeddings (
+	  embedding_ref TEXT PRIMARY KEY,
+	  document_url TEXT NOT NULL UNIQUE,
+	  model TEXT NOT NULL,
+	  backend TEXT NOT NULL,
+	  input_text TEXT NOT NULL,
+	  dimension INTEGER NOT NULL,
+	  vector BLOB NOT NULL,
+	  created_at TEXT NOT NULL,
+	  updated_at TEXT NOT NULL
+	)`,
+	`CREATE TABLE IF NOT EXISTS topic_nodes (
+	  topic_key TEXT PRIMARY KEY,
+	  host TEXT NOT NULL,
+	  root_path TEXT NOT NULL,
+	  representative_url TEXT NOT NULL,
+	  representative_title TEXT NOT NULL,
+	  semantic_summary TEXT NOT NULL,
+	  language TEXT,
+	  support_count INTEGER NOT NULL,
+	  child_count INTEGER NOT NULL,
+	  topic_depth INTEGER NOT NULL,
+	  observed_at TEXT NOT NULL,
+	  updated_at TEXT NOT NULL,
+	  vector BLOB NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_topic_nodes_host ON topic_nodes(host)`,
+	`CREATE TABLE IF NOT EXISTS memory_state (
+	  key TEXT PRIMARY KEY,
+	  value TEXT NOT NULL,
+	  updated_at TEXT NOT NULL
+	)`,
+}

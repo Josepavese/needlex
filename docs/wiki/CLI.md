@@ -15,7 +15,8 @@ needlex
 5. `needlex replay <trace-id> --json`
 6. `needlex diff <trace-a> <trace-b> --json`
 7. `needlex memory stats|search|prune|export|import|rebuild-index`
-8. `needlex analytics stats|recent|value-report|hosts|providers|daily|export`
+8. `needlex analytics stats|recent|value-report|hosts|providers|failures|daily|export`
+9. `needlex doctor [--json]`
 
 ## Minimal Examples
 
@@ -24,7 +25,9 @@ needlex read https://example.com --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
 needlex analytics value-report
+needlex analytics failures
 needlex analytics daily --limit 30
+needlex doctor
 ```
 
 ## Output Rule
@@ -34,6 +37,22 @@ Default JSON is compact and AI-first:
 2. proof-aware
 3. diagnostics only when needed
 4. `read` and `query` include a compact `analytics` footer so the value delivered by Needle-X is visible inline
+
+## Doctor
+
+Use `doctor` when install, MCP, analytics, or local state behavior looks inconsistent:
+
+```bash
+needlex doctor
+needlex doctor --json
+```
+
+It reports:
+1. installed version and executable path
+2. `NEEDLEX_HOME` and effective state root
+3. analytics and discovery database paths
+4. local state subdirectories
+5. active MCP processes when detectable
 
 ## Next
 

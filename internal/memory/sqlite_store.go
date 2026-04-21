@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -49,6 +50,28 @@ type topicDoc struct {
 	Vector     []float32
 }
 
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+type memoryDocumentRow struct {
+	URL             string
+	Title           string
+	Host            string
+	RawProofRefs    string
+	TraceRef        string
+	SourceKind      string
+	ObservedAtRaw   string
+	StableRatio     float64
+	NoveltyRatio    float64
+	ChangedRecently int
+}
+
+type embeddingCandidateRow struct {
+	memoryDocumentRow
+	RawVector []byte
+}
+
 func NewSQLiteStore(root, relativePath string) SQLiteStore {
 	cleanRoot := strings.TrimSpace(root)
 	if cleanRoot == "" {
@@ -56,7 +79,7 @@ func NewSQLiteStore(root, relativePath string) SQLiteStore {
 	}
 	cleanPath := strings.TrimSpace(relativePath)
 	if cleanPath == "" {
-		cleanPath = "discovery/discovery.db"
+		cleanPath = platform.DefaultDiscoveryDBRelativePath
 	}
 	if filepath.IsAbs(cleanPath) {
 		return SQLiteStore{root: cleanRoot, dbPath: cleanPath}
@@ -255,9 +278,7 @@ func (s SQLiteStore) SearchTopicNodes(ctx context.Context, vector []float32, lim
 	if len(vector) == 0 {
 		return nil, nil
 	}
-	if limit <= 0 {
-		limit = 5
-	}
+	limit = normalizedCandidateLimit(limit)
 	conn, err := s.open(ctx)
 	if err != nil {
 		return nil, err
@@ -275,79 +296,30 @@ FROM topic_nodes
 	hints := normalizeDomainHints(domainHints)
 	out := make([]Candidate, 0, limit)
 	for rows.Next() {
-		var row topicNodeRow
-		if err := rows.Scan(
-			&row.TopicKey,
-			&row.Host,
-			&row.RootPath,
-			&row.RepresentativeURL,
-			&row.RepresentativeTitle,
-			&row.SemanticSummary,
-			&row.Language,
-			&row.SupportCount,
-			&row.ChildCount,
-			&row.TopicDepth,
-			&row.ObservedAt,
-			&row.UpdatedAt,
-			&row.Vector,
-		); err != nil {
+		row, err := scanTopicNodeRow(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan topic node: %w", err)
 		}
-		storedVector, err := decodeVector(row.Vector)
+		candidate, ok, err := topicNodeCandidate(row, vector, hints)
 		if err != nil {
-			return nil, fmt.Errorf("decode topic node vector: %w", err)
+			return nil, err
 		}
-		similarity := cosineSimilarity(vector, storedVector)
-		if similarity <= 0 {
+		if !ok {
 			continue
 		}
-		score := similarity*3.15 + topicSupportBoost(row.SupportCount, row.ChildCount) + topicDepthBoost(row.TopicDepth)
-		reasons := []string{"semantic_goal_alignment", "local_memory_hit", "topic_node_retrieval"}
-		if hasDomainHint(row.Host, hints) {
-			score += 0.2
-			reasons = append(reasons, "domain_hint_match")
-		}
-		if observedAt, ok := parseObservedAt(row.ObservedAt); ok {
-			if boost := recentObservationBoost(observedAt); boost > 0 {
-				score += boost
-				reasons = append(reasons, "recent_local_evidence")
-			}
-		}
-		if row.ChildCount > 0 {
-			reasons = append(reasons, "topic_child_coverage")
-		}
-		out = append(out, Candidate{
-			URL:        row.RepresentativeURL,
-			Title:      firstNonEmpty(row.RepresentativeTitle, row.SemanticSummary),
-			Host:       row.Host,
-			Score:      score,
-			Reasons:    reasons,
-			Source:     "discovery_memory_topic",
-			ObservedAt: parseObservedAtOrZero(row.ObservedAt),
-		})
+		out = append(out, candidate)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate topic nodes: %w", err)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score == out[j].Score {
-			return out[i].URL < out[j].URL
-		}
-		return out[i].Score > out[j].Score
-	})
-	if len(out) > limit {
-		out = out[:limit]
-	}
-	return out, nil
+	return rankMemoryCandidates(out, limit), nil
 }
 
 func (s SQLiteStore) SearchByVector(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error) {
 	if len(vector) == 0 {
 		return nil, nil
 	}
-	if limit <= 0 {
-		limit = 5
-	}
+	limit = normalizedCandidateLimit(limit)
 	conn, err := s.open(ctx)
 	if err != nil {
 		return nil, err
@@ -366,81 +338,198 @@ JOIN embeddings e ON e.document_url = d.url
 	hints := normalizeDomainHints(domainHints)
 	out := make([]Candidate, 0, limit)
 	for rows.Next() {
-		var rawURL, title, host, rawProofRefs, traceRef, sourceKind, observedAtRaw string
-		var rawVector []byte
-		var stableRatio, noveltyRatio float64
-		var changedRecently int
-		if err := rows.Scan(&rawURL, &title, &host, &rawProofRefs, &traceRef, &rawVector, &sourceKind, &stableRatio, &noveltyRatio, &changedRecently, &observedAtRaw); err != nil {
+		row, err := scanEmbeddingCandidateRow(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan discovery embedding row: %w", err)
 		}
-		storedVector, err := decodeVector(rawVector)
+		candidate, ok, err := vectorMemoryCandidate(row, vector, hints)
 		if err != nil {
-			return nil, fmt.Errorf("decode discovery vector: %w", err)
+			return nil, err
 		}
-		similarity := cosineSimilarity(vector, storedVector)
-		if similarity <= 0 {
+		if !ok {
 			continue
-		}
-		reasons := []string{"semantic_goal_alignment", "local_memory_hit"}
-		score := similarity * 3
-		if hasDomainHint(host, hints) {
-			score += 0.2
-			reasons = append(reasons, "domain_hint_match")
-		}
-		if observedAt, ok := parseObservedAt(observedAtRaw); ok {
-			recencyBoost := recentObservationBoost(observedAt)
-			if recencyBoost > 0 {
-				score += recencyBoost
-				reasons = append(reasons, "recent_local_evidence")
-			}
-		}
-		if stableRatio > 0 {
-			score += stableRatio * 0.08
-			reasons = append(reasons, "stable_page")
-		}
-		if noveltyRatio > 0 {
-			score += noveltyRatio * 0.08
-			reasons = append(reasons, "novel_page")
-		}
-		if changedRecently == 1 {
-			score += 0.06
-			reasons = append(reasons, "changed_recently")
-		}
-		proofRefs := decodeStringSlice(rawProofRefs)
-		candidate := Candidate{
-			URL:             rawURL,
-			Title:           title,
-			Host:            host,
-			Score:           score,
-			Reasons:         reasons,
-			TraceRef:        traceRef,
-			Source:          firstNonEmpty(sourceKind, "discovery_memory"),
-			Distance:        1 - similarity,
-			ObservedAt:      parseObservedAtOrZero(observedAtRaw),
-			StableRatio:     stableRatio,
-			NoveltyRatio:    noveltyRatio,
-			ChangedRecently: changedRecently == 1,
-		}
-		if len(proofRefs) > 0 {
-			candidate.ProofRef = proofRefs[0]
-			candidate.Score += 0.08
-			candidate.Reasons = append(candidate.Reasons, "proof_backed_page")
 		}
 		out = append(out, candidate)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate discovery embeddings: %w", err)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score == out[j].Score {
-			return out[i].URL < out[j].URL
-		}
-		return out[i].Score > out[j].Score
-	})
-	if len(out) > limit {
-		out = out[:limit]
+	return rankMemoryCandidates(out, limit), nil
+}
+
+func normalizedCandidateLimit(limit int) int {
+	if limit <= 0 {
+		return 5
 	}
-	return out, nil
+	return limit
+}
+
+func scanTopicNodeRow(scanner rowScanner) (topicNodeRow, error) {
+	var row topicNodeRow
+	err := scanner.Scan(
+		&row.TopicKey,
+		&row.Host,
+		&row.RootPath,
+		&row.RepresentativeURL,
+		&row.RepresentativeTitle,
+		&row.SemanticSummary,
+		&row.Language,
+		&row.SupportCount,
+		&row.ChildCount,
+		&row.TopicDepth,
+		&row.ObservedAt,
+		&row.UpdatedAt,
+		&row.Vector,
+	)
+	return row, err
+}
+
+func scanMemoryDocumentRow(scanner rowScanner) (memoryDocumentRow, error) {
+	var row memoryDocumentRow
+	err := scanner.Scan(
+		&row.URL,
+		&row.Title,
+		&row.Host,
+		&row.RawProofRefs,
+		&row.TraceRef,
+		&row.SourceKind,
+		&row.StableRatio,
+		&row.NoveltyRatio,
+		&row.ChangedRecently,
+		&row.ObservedAtRaw,
+	)
+	return row, err
+}
+
+func scanEmbeddingCandidateRow(scanner rowScanner) (embeddingCandidateRow, error) {
+	var row embeddingCandidateRow
+	err := scanner.Scan(
+		&row.URL,
+		&row.Title,
+		&row.Host,
+		&row.RawProofRefs,
+		&row.TraceRef,
+		&row.RawVector,
+		&row.SourceKind,
+		&row.StableRatio,
+		&row.NoveltyRatio,
+		&row.ChangedRecently,
+		&row.ObservedAtRaw,
+	)
+	return row, err
+}
+
+func topicNodeCandidate(row topicNodeRow, vector []float32, hints []string) (Candidate, bool, error) {
+	storedVector, err := decodeVector(row.Vector)
+	if err != nil {
+		return Candidate{}, false, fmt.Errorf("decode topic node vector: %w", err)
+	}
+	similarity := cosineSimilarity(vector, storedVector)
+	if similarity <= 0 {
+		return Candidate{}, false, nil
+	}
+	score := similarity*3.15 + topicSupportBoost(row.SupportCount, row.ChildCount) + topicDepthBoost(row.TopicDepth)
+	reasons := []string{"semantic_goal_alignment", "local_memory_hit", "topic_node_retrieval"}
+	score, reasons = applyDomainAndRecencyEvidence(score, reasons, row.Host, row.ObservedAt, hints)
+	if row.ChildCount > 0 {
+		reasons = append(reasons, "topic_child_coverage")
+	}
+	return Candidate{
+		URL:        row.RepresentativeURL,
+		Title:      firstNonEmpty(row.RepresentativeTitle, row.SemanticSummary),
+		Host:       row.Host,
+		Score:      score,
+		Reasons:    reasons,
+		Source:     "discovery_memory_topic",
+		ObservedAt: parseObservedAtOrZero(row.ObservedAt),
+	}, true, nil
+}
+
+func vectorMemoryCandidate(row embeddingCandidateRow, vector []float32, hints []string) (Candidate, bool, error) {
+	storedVector, err := decodeVector(row.RawVector)
+	if err != nil {
+		return Candidate{}, false, fmt.Errorf("decode discovery vector: %w", err)
+	}
+	similarity := cosineSimilarity(vector, storedVector)
+	if similarity <= 0 {
+		return Candidate{}, false, nil
+	}
+	score, reasons := applyDocumentEvidence(similarity*3, []string{"semantic_goal_alignment", "local_memory_hit"}, row.memoryDocumentRow, hints, 0.08, true)
+	candidate := baseDocumentCandidate(row.memoryDocumentRow, score, reasons, firstNonEmpty(row.SourceKind, "discovery_memory"))
+	candidate.Distance = 1 - similarity
+	return candidate, true, nil
+}
+
+func baseDocumentCandidate(row memoryDocumentRow, score float64, reasons []string, source string) Candidate {
+	candidate := Candidate{
+		URL:             row.URL,
+		Title:           row.Title,
+		Host:            row.Host,
+		Score:           score,
+		Reasons:         reasons,
+		TraceRef:        row.TraceRef,
+		Source:          source,
+		ObservedAt:      parseObservedAtOrZero(row.ObservedAtRaw),
+		StableRatio:     row.StableRatio,
+		NoveltyRatio:    row.NoveltyRatio,
+		ChangedRecently: row.ChangedRecently == 1,
+	}
+	return addProofEvidence(candidate, row.RawProofRefs, 0.08)
+}
+
+func applyDocumentEvidence(score float64, reasons []string, row memoryDocumentRow, hints []string, ratioWeight float64, includeChanged bool) (float64, []string) {
+	score, reasons = applyDomainAndRecencyEvidence(score, reasons, row.Host, row.ObservedAtRaw, hints)
+	if row.StableRatio > 0 {
+		score += row.StableRatio * ratioWeight
+		reasons = append(reasons, "stable_page")
+	}
+	if row.NoveltyRatio > 0 {
+		score += row.NoveltyRatio * ratioWeight
+		reasons = append(reasons, "novel_page")
+	}
+	if includeChanged && row.ChangedRecently == 1 {
+		score += 0.06
+		reasons = append(reasons, "changed_recently")
+	}
+	return score, reasons
+}
+
+func applyDomainAndRecencyEvidence(score float64, reasons []string, host, observedAtRaw string, hints []string) (float64, []string) {
+	if hasDomainHint(host, hints) {
+		score += 0.2
+		reasons = append(reasons, "domain_hint_match")
+	}
+	if observedAt, ok := parseObservedAt(observedAtRaw); ok {
+		if boost := recentObservationBoost(observedAt); boost > 0 {
+			score += boost
+			reasons = append(reasons, "recent_local_evidence")
+		}
+	}
+	return score, reasons
+}
+
+func addProofEvidence(candidate Candidate, rawProofRefs string, boost float64) Candidate {
+	proofRefs := decodeStringSlice(rawProofRefs)
+	if len(proofRefs) == 0 {
+		return candidate
+	}
+	candidate.ProofRef = proofRefs[0]
+	candidate.Score += boost
+	candidate.Reasons = append(candidate.Reasons, "proof_backed_page")
+	return candidate
+}
+
+func rankMemoryCandidates(candidates []Candidate, limit int) []Candidate {
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if candidates[i].Score == candidates[j].Score {
+			return candidates[i].URL < candidates[j].URL
+		}
+		return candidates[i].Score > candidates[j].Score
+	})
+	if len(candidates) > limit {
+		return candidates[:limit]
+	}
+	return candidates
 }
 
 func (s SQLiteStore) ExpandAncestorRoots(ctx context.Context, urls []string, limit int) ([]Candidate, error) {
@@ -448,9 +537,7 @@ func (s SQLiteStore) ExpandAncestorRoots(ctx context.Context, urls []string, lim
 	if len(clean) == 0 {
 		return nil, nil
 	}
-	if limit <= 0 {
-		limit = 5
-	}
+	limit = normalizedCandidateLimit(limit)
 	conn, err := s.open(ctx)
 	if err != nil {
 		return nil, err
@@ -464,86 +551,86 @@ func (s SQLiteStore) ExpandAncestorRoots(ctx context.Context, urls []string, lim
 			if len(out) >= limit {
 				break
 			}
-			var rowURL, title, rowHost, rawProofRefs, traceRef, sourceKind, observedAtRaw string
-			var stableRatio, noveltyRatio float64
-			var changedRecently int
-			err := conn.QueryRowContext(ctx, `
+			candidate, ok, err := loadAncestorRootCandidate(ctx, conn, host, ancestor)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				continue
+			}
+			if _, ok := seen[candidate.URL]; ok {
+				continue
+			}
+			seen[candidate.URL] = struct{}{}
+			out = append(out, candidate)
+		}
+	}
+	return rankMemoryCandidates(out, limit), nil
+}
+
+func loadAncestorRootCandidate(ctx context.Context, conn *sql.DB, host, ancestor string) (Candidate, bool, error) {
+	row, ok, err := loadMemoryDocumentRow(ctx, conn, `
 SELECT url, title, host, proof_refs_json, last_trace_id, source_kind, stable_ratio, novelty_ratio, changed_recently, observed_at
 FROM documents
 WHERE host = ? AND path = ?
 LIMIT 1
-`, host, ancestor).Scan(&rowURL, &title, &rowHost, &rawProofRefs, &traceRef, &sourceKind, &stableRatio, &noveltyRatio, &changedRecently, &observedAtRaw)
-			if err == sql.ErrNoRows {
-				continue
-			}
-			if err != nil {
-				return nil, fmt.Errorf("expand ancestor roots: %w", err)
-			}
-			if _, ok := seen[rowURL]; ok {
-				continue
-			}
-			seen[rowURL] = struct{}{}
-			var supportCount int
-			prefix := ancestor + "/%"
-			if err := conn.QueryRowContext(ctx, `
+`, host, ancestor)
+	if err != nil || !ok {
+		return Candidate{}, ok, err
+	}
+	supportCount, err := ancestorSupportCount(ctx, conn, host, ancestor)
+	if err != nil {
+		return Candidate{}, false, err
+	}
+	if supportCount < 2 {
+		return Candidate{}, false, nil
+	}
+	return ancestorRootCandidate(row, supportCount), true, nil
+}
+
+func loadMemoryDocumentRow(ctx context.Context, conn *sql.DB, query string, args ...any) (memoryDocumentRow, bool, error) {
+	row, err := scanMemoryDocumentRow(conn.QueryRowContext(ctx, query, args...))
+	if errors.Is(err, sql.ErrNoRows) {
+		return memoryDocumentRow{}, false, nil
+	}
+	if err != nil {
+		return memoryDocumentRow{}, false, fmt.Errorf("load memory document row: %w", err)
+	}
+	return row, true, nil
+}
+
+func ancestorSupportCount(ctx context.Context, conn *sql.DB, host, ancestor string) (int, error) {
+	var supportCount int
+	prefix := ancestor + "/%"
+	err := conn.QueryRowContext(ctx, `
 SELECT COUNT(*) FROM documents
 WHERE host = ? AND (path = ? OR path LIKE ?)
-`, host, ancestor, prefix).Scan(&supportCount); err != nil {
-				return nil, fmt.Errorf("count ancestor root descendants: %w", err)
-			}
-			if supportCount < 2 {
-				continue
-			}
-			reasons := []string{"family_root_inference"}
-			score := 1.4 + minFloat(0.9, float64(supportCount-1)*0.32)
-			if observedAt, ok := parseObservedAt(observedAtRaw); ok {
-				recencyBoost := recentObservationBoost(observedAt)
-				if recencyBoost > 0 {
-					score += recencyBoost
-					reasons = append(reasons, "recent_local_evidence")
-				}
-			}
-			if stableRatio > 0 {
-				score += stableRatio * 0.05
-				reasons = append(reasons, "stable_page")
-			}
-			reasons = append(reasons, "semantic_family_support")
-			if noveltyRatio > 0 {
-				score += noveltyRatio * 0.05
-				reasons = append(reasons, "novel_page")
-			}
-			candidate := Candidate{
-				URL:             rowURL,
-				Title:           title,
-				Host:            rowHost,
-				Score:           score,
-				Reasons:         reasons,
-				TraceRef:        traceRef,
-				Source:          firstNonEmpty(sourceKind, "discovery_memory_root"),
-				ObservedAt:      parseObservedAtOrZero(observedAtRaw),
-				StableRatio:     stableRatio,
-				NoveltyRatio:    noveltyRatio,
-				ChangedRecently: changedRecently == 1,
-			}
-			proofRefs := decodeStringSlice(rawProofRefs)
-			if len(proofRefs) > 0 {
-				candidate.ProofRef = proofRefs[0]
-				candidate.Score += 0.06
-				candidate.Reasons = append(candidate.Reasons, "proof_backed_page")
-			}
-			out = append(out, candidate)
-		}
+`, host, ancestor, prefix).Scan(&supportCount)
+	if err != nil {
+		return 0, fmt.Errorf("count ancestor root descendants: %w", err)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score == out[j].Score {
-			return out[i].URL < out[j].URL
-		}
-		return out[i].Score > out[j].Score
-	})
-	if len(out) > limit {
-		out = out[:limit]
+	return supportCount, nil
+}
+
+func ancestorRootCandidate(row memoryDocumentRow, supportCount int) Candidate {
+	score := 1.4 + minFloat(0.9, float64(supportCount-1)*0.32)
+	reasons := []string{"family_root_inference"}
+	score, reasons = applyDocumentEvidence(score, reasons, row, nil, 0.05, false)
+	reasons = append(reasons, "semantic_family_support")
+	candidate := Candidate{
+		URL:             row.URL,
+		Title:           row.Title,
+		Host:            row.Host,
+		Score:           score,
+		Reasons:         reasons,
+		TraceRef:        row.TraceRef,
+		Source:          firstNonEmpty(row.SourceKind, "discovery_memory_root"),
+		ObservedAt:      parseObservedAtOrZero(row.ObservedAtRaw),
+		StableRatio:     row.StableRatio,
+		NoveltyRatio:    row.NoveltyRatio,
+		ChangedRecently: row.ChangedRecently == 1,
 	}
-	return out, nil
+	return addProofEvidence(candidate, row.RawProofRefs, 0.06)
 }
 
 func (s SQLiteStore) ExpandNeighbors(ctx context.Context, urls []string, limit int) ([]Candidate, error) {
@@ -648,9 +735,7 @@ func (s SQLiteStore) ExpandHosts(ctx context.Context, hosts []string, limit int)
 	if len(cleanHosts) == 0 {
 		return nil, nil
 	}
-	if limit <= 0 {
-		limit = 5
-	}
+	limit = normalizedCandidateLimit(limit)
 	conn, err := s.open(ctx)
 	if err != nil {
 		return nil, err
@@ -670,67 +755,39 @@ LIMIT ?
 			return nil, fmt.Errorf("expand discovery hosts: %w", err)
 		}
 		for rows.Next() {
-			var rawURL, title, rowHost, rawProofRefs, traceRef, sourceKind, observedAtRaw string
-			var stableRatio, noveltyRatio float64
-			var changedRecently int
-			if err := rows.Scan(&rawURL, &title, &rowHost, &rawProofRefs, &traceRef, &sourceKind, &stableRatio, &noveltyRatio, &changedRecently, &observedAtRaw); err != nil {
+			row, err := scanMemoryDocumentRow(rows)
+			if err != nil {
 				platform.Close(rows)
 				return nil, fmt.Errorf("scan discovery host expansion row: %w", err)
 			}
-			if _, ok := seen[rawURL]; ok {
+			if _, ok := seen[row.URL]; ok {
 				continue
 			}
-			seen[rawURL] = struct{}{}
-			reasons := []string{"host_memory_recall"}
-			score := 0.78
-			if observedAt, ok := parseObservedAt(observedAtRaw); ok {
-				recencyBoost := recentObservationBoost(observedAt)
-				if recencyBoost > 0 {
-					score += recencyBoost
-					reasons = append(reasons, "recent_local_evidence")
-				}
-			}
-			if stableRatio > 0 {
-				score += stableRatio * 0.05
-				reasons = append(reasons, "stable_page")
-			}
-			if noveltyRatio > 0 {
-				score += noveltyRatio * 0.05
-				reasons = append(reasons, "novel_page")
-			}
-			candidate := Candidate{
-				URL:             rawURL,
-				Title:           title,
-				Host:            rowHost,
-				Score:           score,
-				Reasons:         reasons,
-				TraceRef:        traceRef,
-				Source:          firstNonEmpty(sourceKind, "discovery_memory_host"),
-				ObservedAt:      parseObservedAtOrZero(observedAtRaw),
-				StableRatio:     stableRatio,
-				NoveltyRatio:    noveltyRatio,
-				ChangedRecently: changedRecently == 1,
-			}
-			proofRefs := decodeStringSlice(rawProofRefs)
-			if len(proofRefs) > 0 {
-				candidate.ProofRef = proofRefs[0]
-				candidate.Score += 0.06
-				candidate.Reasons = append(candidate.Reasons, "proof_backed_page")
-			}
+			seen[row.URL] = struct{}{}
+			candidate := hostExpansionCandidate(row)
 			out = append(out, candidate)
 		}
 		platform.Close(rows)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score == out[j].Score {
-			return out[i].URL < out[j].URL
-		}
-		return out[i].Score > out[j].Score
-	})
-	if len(out) > limit {
-		out = out[:limit]
+	return rankMemoryCandidates(out, limit), nil
+}
+
+func hostExpansionCandidate(row memoryDocumentRow) Candidate {
+	score, reasons := applyDocumentEvidence(0.78, []string{"host_memory_recall"}, row, nil, 0.05, false)
+	candidate := Candidate{
+		URL:             row.URL,
+		Title:           row.Title,
+		Host:            row.Host,
+		Score:           score,
+		Reasons:         reasons,
+		TraceRef:        row.TraceRef,
+		Source:          firstNonEmpty(row.SourceKind, "discovery_memory_host"),
+		ObservedAt:      parseObservedAtOrZero(row.ObservedAtRaw),
+		StableRatio:     row.StableRatio,
+		NoveltyRatio:    row.NoveltyRatio,
+		ChangedRecently: row.ChangedRecently == 1,
 	}
-	return out, nil
+	return addProofEvidence(candidate, row.RawProofRefs, 0.06)
 }
 
 func (s SQLiteStore) GetStats(ctx context.Context) (Stats, error) {
@@ -923,73 +980,7 @@ func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
 }
 
 func (s SQLiteStore) ensureSchema(ctx context.Context, db *sql.DB) error {
-	for _, stmt := range []string{
-		`CREATE TABLE IF NOT EXISTS documents (
-		  url TEXT PRIMARY KEY,
-		  final_url TEXT NOT NULL,
-		  host TEXT NOT NULL,
-		  path TEXT NOT NULL,
-		  title TEXT NOT NULL,
-		  semantic_summary TEXT NOT NULL,
-		  language TEXT,
-		  locality_hints_json TEXT NOT NULL,
-		  entity_hints_json TEXT NOT NULL,
-		  category_hints_json TEXT NOT NULL,
-		  proof_refs_json TEXT NOT NULL,
-		  last_trace_id TEXT NOT NULL,
-		  source_kind TEXT NOT NULL,
-		  stable_ratio REAL NOT NULL,
-		  novelty_ratio REAL NOT NULL,
-		  changed_recently INTEGER NOT NULL,
-		  observed_at TEXT NOT NULL,
-		  updated_at TEXT NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_documents_host ON documents(host)`,
-		`CREATE INDEX IF NOT EXISTS idx_documents_observed_at ON documents(observed_at)`,
-		`CREATE TABLE IF NOT EXISTS edges (
-		  source_url TEXT NOT NULL,
-		  target_url TEXT NOT NULL,
-		  anchor_text TEXT NOT NULL,
-		  same_host INTEGER NOT NULL,
-		  trace_ref TEXT NOT NULL,
-		  observed_at TEXT NOT NULL,
-		  PRIMARY KEY (source_url, target_url, anchor_text)
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_edges_source_url ON edges(source_url)`,
-		`CREATE INDEX IF NOT EXISTS idx_edges_target_url ON edges(target_url)`,
-		`CREATE TABLE IF NOT EXISTS embeddings (
-		  embedding_ref TEXT PRIMARY KEY,
-		  document_url TEXT NOT NULL UNIQUE,
-		  model TEXT NOT NULL,
-		  backend TEXT NOT NULL,
-		  input_text TEXT NOT NULL,
-		  dimension INTEGER NOT NULL,
-		  vector BLOB NOT NULL,
-		  created_at TEXT NOT NULL,
-		  updated_at TEXT NOT NULL
-		)`,
-		`CREATE TABLE IF NOT EXISTS topic_nodes (
-		  topic_key TEXT PRIMARY KEY,
-		  host TEXT NOT NULL,
-		  root_path TEXT NOT NULL,
-		  representative_url TEXT NOT NULL,
-		  representative_title TEXT NOT NULL,
-		  semantic_summary TEXT NOT NULL,
-		  language TEXT,
-		  support_count INTEGER NOT NULL,
-		  child_count INTEGER NOT NULL,
-		  topic_depth INTEGER NOT NULL,
-		  observed_at TEXT NOT NULL,
-		  updated_at TEXT NOT NULL,
-		  vector BLOB NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_topic_nodes_host ON topic_nodes(host)`,
-		`CREATE TABLE IF NOT EXISTS memory_state (
-		  key TEXT PRIMARY KEY,
-		  value TEXT NOT NULL,
-		  updated_at TEXT NOT NULL
-		)`,
-	} {
+	for _, stmt := range sqliteSchemaStatements {
 		if _, err := db.ExecContext(ctx, stmt); err != nil {
 			return fmt.Errorf("ensure discovery schema: %w", err)
 		}

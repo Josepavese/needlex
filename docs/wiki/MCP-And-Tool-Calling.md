@@ -41,8 +41,9 @@ Current MCP tool set:
 16. `analytics_value_report`
 17. `analytics_hosts`
 18. `analytics_providers`
-19. `analytics_daily`
-20. `analytics_export`
+19. `analytics_failures`
+20. `analytics_daily`
+21. `analytics_export`
 
 Canonical query discovery literals:
 1. `same_site_links`
@@ -87,8 +88,9 @@ needlex tool-catalog --provider anthropic
 10. `analytics_value_report` -> `needlex analytics value-report`
 11. `analytics_hosts` -> `needlex analytics hosts`
 12. `analytics_providers` -> `needlex analytics providers`
-13. `analytics_daily` -> `needlex analytics daily`
-14. `analytics_export` -> `needlex analytics export`
+13. `analytics_failures` -> `needlex analytics failures`
+14. `analytics_daily` -> `needlex analytics daily`
+15. `analytics_export` -> `needlex analytics export`
 
 ## Next
 

@@ -46,6 +46,23 @@ type runResult struct {
 	Error           string   `json:"error,omitempty"`
 }
 
+type endpointQueryResponse struct {
+	Plan struct {
+		DiscoveryProvider string   `json:"discovery_provider"`
+		SelectedURL       string   `json:"selected_url"`
+		CandidateURLs     []string `json:"candidate_urls"`
+	} `json:"plan"`
+	CostReport struct {
+		LatencyMS int64 `json:"latency_ms"`
+	} `json:"cost_report"`
+	Trace struct {
+		Stages []struct {
+			Stage    string            `json:"stage"`
+			Metadata map[string]string `json:"metadata"`
+		} `json:"stages"`
+	} `json:"trace"`
+}
+
 type caseResult struct {
 	ID          string      `json:"id"`
 	Goal        string      `json:"goal"`
@@ -74,6 +91,14 @@ type report struct {
 	Results        []caseResult `json:"results"`
 }
 
+type benchmarkConfigs struct {
+	baseline      string
+	semantic      string
+	llm           string
+	llmConfigured bool
+	llmSkipReason string
+}
+
 func main() {
 	var outPath, casesPath string
 	flag.StringVar(&outPath, "out", "improvements/native-api-endpoint-benchmark-latest.json", "output report path")
@@ -97,28 +122,64 @@ func main() {
 		fmt.Fprintf(os.Stderr, "temp dir: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
+	cfgs, stopSemantic, err := prepareBenchmarkConfigs(tempDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "prepare configs: %v\n", err)
+		os.Exit(1)
+	}
+	defer stopSemantic()
+
+	results := runEndpointCases(binaryPath, c.Cases, cfgs)
+	rep := report{
+		GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339),
+		CorpusVersion:  c.Version,
+		BinaryPath:     binaryPath,
+		Summary:        summarize(results, cfgs.llmConfigured),
+		Results:        results,
+	}
+	if err := evalutil.WriteJSON(outPath, rep); err != nil {
+		fmt.Fprintf(os.Stderr, "write report: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Native API endpoint benchmark written to %s\n", outPath)
+}
+
+func prepareBenchmarkConfigs(tempDir string) (benchmarkConfigs, func(), error) {
 	providerChain := "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
-	baselineCfg, err := writeConfig(tempDir, "baseline.json", map[string]any{
+	baselineCfg, err := writeEndpointBaselineConfig(tempDir, providerChain)
+	if err != nil {
+		return benchmarkConfigs{}, nil, err
+	}
+	semanticBaseURL, stopSemantic, err := startSemanticServer(tempDir)
+	if err != nil {
+		return benchmarkConfigs{}, nil, err
+	}
+	semanticCfg, err := writeEndpointSemanticConfig(tempDir, providerChain, semanticBaseURL)
+	if err != nil {
+		stopSemantic()
+		return benchmarkConfigs{}, nil, err
+	}
+	llmCfg, llmConfigured, llmSkipReason, err := maybeWriteLLMConfig(tempDir, providerChain, semanticBaseURL)
+	if err != nil {
+		stopSemantic()
+		return benchmarkConfigs{}, nil, err
+	}
+	return benchmarkConfigs{baseline: baselineCfg, semantic: semanticCfg, llm: llmCfg, llmConfigured: llmConfigured, llmSkipReason: llmSkipReason}, stopSemantic, nil
+}
+
+func writeEndpointBaselineConfig(tempDir, providerChain string) (string, error) {
+	return writeConfig(tempDir, "baseline.json", map[string]any{
 		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
 		"discovery": map[string]any{"provider_chain": providerChain},
 		"models":    map[string]any{"backend": "noop"},
 		"semantic":  map[string]any{"enabled": false},
 	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "write baseline config: %v\n", err)
-		os.Exit(1)
-	}
+}
 
-	semanticBaseURL, stopSemantic, err := startSemanticServer(tempDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "start semantic server: %v\n", err)
-		os.Exit(1)
-	}
-	defer stopSemantic()
-
-	semanticCfg, err := writeConfig(tempDir, "semantic.json", map[string]any{
+func writeEndpointSemanticConfig(tempDir, providerChain, semanticBaseURL string) (string, error) {
+	return writeConfig(tempDir, "semantic.json", map[string]any{
 		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
 		"discovery": map[string]any{"provider_chain": providerChain},
 		"models":    map[string]any{"backend": "noop"},
@@ -129,53 +190,43 @@ func main() {
 			"model":    "intfloat/multilingual-e5-small",
 		},
 	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "write semantic config: %v\n", err)
-		os.Exit(1)
-	}
+}
 
-	llmCfg, llmConfigured, llmSkipReason, err := maybeWriteLLMConfig(tempDir, providerChain, semanticBaseURL)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "write llm config: %v\n", err)
-		os.Exit(1)
-	}
-
-	results := make([]caseResult, 0, len(c.Cases))
-	for i, item := range c.Cases {
-		fmt.Printf("[native-endpoint] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID)
-		row := caseResult{
-			ID:          item.ID,
-			Goal:        item.Goal,
-			ExpectedURL: item.ExpectedURL,
-			Runs: []runResult{
-				runCase(binaryPath, baselineCfg, "baseline", item.Goal, item.ExpectedURL),
-				runCase(binaryPath, semanticCfg, "semantic", item.Goal, item.ExpectedURL),
-			},
-		}
-		if llmConfigured {
-			row.Runs = append(row.Runs, runCase(binaryPath, llmCfg, "llm_enabled", item.Goal, item.ExpectedURL))
-		} else {
-			row.Runs = append(row.Runs, runResult{Profile: "llm_enabled", Skipped: true, SkipReason: llmSkipReason})
-		}
+func runEndpointCases(binaryPath string, cases []struct {
+	ID          string `json:"id"`
+	Goal        string `json:"goal"`
+	ExpectedURL string `json:"expected_url"`
+}, cfgs benchmarkConfigs,
+) []caseResult {
+	results := make([]caseResult, 0, len(cases))
+	for i, item := range cases {
+		fmt.Printf("[native-endpoint] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID)
+		row := runEndpointCase(binaryPath, item.ID, item.Goal, item.ExpectedURL, cfgs)
 		results = append(results, row)
 		fmt.Printf("[native-endpoint] %s case %d/%d done id=%s baseline=%t semantic=%t llm=%t\n",
-			time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID,
+			time.Now().Format("15:04:05"), i+1, len(cases), item.ID,
 			row.Runs[0].Pass, row.Runs[1].Pass, row.Runs[2].Pass)
 		time.Sleep(2 * time.Second)
 	}
+	return results
+}
 
-	rep := report{
-		GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339),
-		CorpusVersion:  c.Version,
-		BinaryPath:     binaryPath,
-		Summary:        summarize(results, llmConfigured),
-		Results:        results,
+func runEndpointCase(binaryPath, id, goal, expectedURL string, cfgs benchmarkConfigs) caseResult {
+	row := caseResult{
+		ID:          id,
+		Goal:        goal,
+		ExpectedURL: expectedURL,
+		Runs: []runResult{
+			runCase(binaryPath, cfgs.baseline, "baseline", goal, expectedURL),
+			runCase(binaryPath, cfgs.semantic, "semantic", goal, expectedURL),
+		},
 	}
-	if err := evalutil.WriteJSON(outPath, rep); err != nil {
-		fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-		os.Exit(1)
+	if cfgs.llmConfigured {
+		row.Runs = append(row.Runs, runCase(binaryPath, cfgs.llm, "llm_enabled", goal, expectedURL))
+	} else {
+		row.Runs = append(row.Runs, runResult{Profile: "llm_enabled", Skipped: true, SkipReason: cfgs.llmSkipReason})
 	}
-	fmt.Printf("Native API endpoint benchmark written to %s\n", outPath)
+	return row
 }
 
 func loadCorpus(path string) (corpus, error) {
@@ -261,27 +312,16 @@ func runCase(binaryPath, configPath, profile, goal, expectedURL string) runResul
 		result.ErrorKind = classifyRunError(result.Error)
 		return result
 	}
-	var resp struct {
-		Plan struct {
-			DiscoveryProvider string   `json:"discovery_provider"`
-			SelectedURL       string   `json:"selected_url"`
-			CandidateURLs     []string `json:"candidate_urls"`
-		} `json:"plan"`
-		CostReport struct {
-			LatencyMS int64 `json:"latency_ms"`
-		} `json:"cost_report"`
-		Trace struct {
-			Stages []struct {
-				Stage    string            `json:"stage"`
-				Metadata map[string]string `json:"metadata"`
-			} `json:"stages"`
-		} `json:"trace"`
-	}
+	var resp endpointQueryResponse
 	if err := json.Unmarshal(out, &resp); err != nil {
 		result.ErrorKind = "invalid_json"
 		result.Error = err.Error()
 		return result
 	}
+	return finalizeRunResult(result, resp, expectedURL)
+}
+
+func finalizeRunResult(result runResult, resp endpointQueryResponse, expectedURL string) runResult {
 	result.SelectedURL = strings.TrimSpace(resp.Plan.SelectedURL)
 	result.Provider = strings.TrimSpace(resp.Plan.DiscoveryProvider)
 	result.Candidates = append(result.Candidates, resp.Plan.CandidateURLs...)
@@ -293,31 +333,7 @@ func runCase(binaryPath, configPath, profile, goal, expectedURL string) runResul
 		if stage.Stage != "acquire" {
 			continue
 		}
-		if mode := strings.TrimSpace(stage.Metadata["fetch_mode"]); mode != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "fetch_mode="+mode)
-		}
-		if prof := strings.TrimSpace(stage.Metadata["fetch_profile"]); prof != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "fetch_profile="+prof)
-		}
-		if finalURL := strings.TrimSpace(stage.Metadata["final_url"]); finalURL != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "final_url="+finalURL)
-		}
-		result.RetryCount = parseInt(stage.Metadata["retry_count"])
-		result.RetrySleepMS = int64(parseInt(stage.Metadata["retry_sleep_ms"]))
-		result.HostPacingMS = int64(parseInt(stage.Metadata["host_pacing_ms"]))
-		result.RetryReason = strings.TrimSpace(stage.Metadata["retry_reason"])
-		if result.RetryCount > 0 {
-			result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_count=%d", result.RetryCount))
-		}
-		if result.RetrySleepMS > 0 {
-			result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_sleep_ms=%d", result.RetrySleepMS))
-		}
-		if result.HostPacingMS > 0 {
-			result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("host_pacing_ms=%d", result.HostPacingMS))
-		}
-		if result.RetryReason != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "retry_reason="+result.RetryReason)
-		}
+		applyAcquireStage(&result, stage.Metadata)
 	}
 	result.Pass = sameCanonicalURL(result.SelectedURL, expectedURL)
 	if !result.Pass {
@@ -328,6 +344,34 @@ func runCase(binaryPath, configPath, profile, goal, expectedURL string) runResul
 		}
 	}
 	return result
+}
+
+func applyAcquireStage(result *runResult, metadata map[string]string) {
+	for _, key := range []string{"fetch_mode", "fetch_profile", "final_url"} {
+		if value := strings.TrimSpace(metadata[key]); value != "" {
+			result.AcquireMetadata = append(result.AcquireMetadata, key+"="+value)
+		}
+	}
+	result.RetryCount = parseInt(metadata["retry_count"])
+	result.RetrySleepMS = int64(parseInt(metadata["retry_sleep_ms"]))
+	result.HostPacingMS = int64(parseInt(metadata["host_pacing_ms"]))
+	result.RetryReason = strings.TrimSpace(metadata["retry_reason"])
+	appendNumericAcquireMetadata(result)
+}
+
+func appendNumericAcquireMetadata(result *runResult) {
+	if result.RetryCount > 0 {
+		result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_count=%d", result.RetryCount))
+	}
+	if result.RetrySleepMS > 0 {
+		result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_sleep_ms=%d", result.RetrySleepMS))
+	}
+	if result.HostPacingMS > 0 {
+		result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("host_pacing_ms=%d", result.HostPacingMS))
+	}
+	if result.RetryReason != "" {
+		result.AcquireMetadata = append(result.AcquireMetadata, "retry_reason="+result.RetryReason)
+	}
 }
 
 func parseInt(raw string) int {

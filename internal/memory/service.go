@@ -107,59 +107,98 @@ func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([
 	if s.store == nil || s.embedder == nil {
 		return nil, nil
 	}
-	inputs := []string{strings.TrimSpace(goal)}
-	for _, variant := range opts.QueryVariants {
-		variant = strings.TrimSpace(variant)
-		if variant != "" && variant != strings.TrimSpace(goal) {
-			inputs = append(inputs, variant)
-		}
-	}
-	vectors, err := s.embedder.Embed(ctx, inputs)
+	vectors, err := s.embedder.Embed(ctx, semanticSearchInputs(goal, opts.QueryVariants))
 	if err != nil {
 		return nil, err
 	}
 	merged := map[string]Candidate{}
-	for _, vector := range vectors {
-		topicMatches, err := s.store.SearchTopicNodes(ctx, vector, opts.Limit, opts.DomainHints)
-		if err != nil {
-			return nil, err
-		}
-		for _, match := range topicMatches {
-			mergeCandidate(merged, match)
-		}
-		matches, err := s.store.SearchByVector(ctx, vector, opts.Limit, opts.DomainHints)
-		if err != nil {
-			return nil, err
-		}
-		for _, match := range matches {
-			mergeCandidate(merged, match)
-		}
-	}
-	neighborLimit := opts.ExpandLimit
-	if neighborLimit <= 0 {
-		neighborLimit = minInt(3, opts.Limit)
-	}
-	ancestorRoots, err := s.store.ExpandAncestorRoots(ctx, candidateURLs(merged), neighborLimit)
-	if err != nil {
+	if err := s.mergeVectorMatches(ctx, merged, vectors, opts); err != nil {
 		return nil, err
 	}
-	for _, candidate := range ancestorRoots {
-		mergeCandidate(merged, candidate)
+	if err := s.expandSearchCandidates(ctx, merged, opts); err != nil {
+		return nil, err
+	}
+	return rankedSearchCandidates(merged, opts), nil
+}
+
+func semanticSearchInputs(goal string, variants []string) []string {
+	primary := strings.TrimSpace(goal)
+	inputs := []string{primary}
+	for _, variant := range variants {
+		variant = strings.TrimSpace(variant)
+		if variant != "" && variant != primary {
+			inputs = append(inputs, variant)
+		}
+	}
+	return inputs
+}
+
+func (s Service) mergeVectorMatches(ctx context.Context, merged map[string]Candidate, vectors [][]float32, opts SearchOptions) error {
+	for _, vector := range vectors {
+		if err := s.mergeTopicMatches(ctx, merged, vector, opts); err != nil {
+			return err
+		}
+		if err := s.mergePageMatches(ctx, merged, vector, opts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s Service) mergeTopicMatches(ctx context.Context, merged map[string]Candidate, vector []float32, opts SearchOptions) error {
+	matches, err := s.store.SearchTopicNodes(ctx, vector, opts.Limit, opts.DomainHints)
+	if err != nil {
+		return err
+	}
+	for _, match := range matches {
+		mergeCandidate(merged, match)
+	}
+	return nil
+}
+
+func (s Service) mergePageMatches(ctx context.Context, merged map[string]Candidate, vector []float32, opts SearchOptions) error {
+	matches, err := s.store.SearchByVector(ctx, vector, opts.Limit, opts.DomainHints)
+	if err != nil {
+		return err
+	}
+	for _, match := range matches {
+		mergeCandidate(merged, match)
+	}
+	return nil
+}
+
+func (s Service) expandSearchCandidates(ctx context.Context, merged map[string]Candidate, opts SearchOptions) error {
+	neighborLimit := searchNeighborLimit(opts)
+	ancestorRoots, err := s.store.ExpandAncestorRoots(ctx, candidateURLs(merged), neighborLimit)
+	if err := mergeExpansion(merged, ancestorRoots, err); err != nil {
+		return err
 	}
 	neighbors, err := s.store.ExpandNeighbors(ctx, candidateURLs(merged), neighborLimit)
-	if err != nil {
-		return nil, err
-	}
-	for _, neighbor := range neighbors {
-		mergeCandidate(merged, neighbor)
+	if err := mergeExpansion(merged, neighbors, err); err != nil {
+		return err
 	}
 	hostCandidates, err := s.store.ExpandHosts(ctx, candidateHosts(merged), neighborLimit)
+	return mergeExpansion(merged, hostCandidates, err)
+}
+
+func mergeExpansion(merged map[string]Candidate, candidates []Candidate, err error) error {
 	if err != nil {
-		return nil, err
+		return err
 	}
-	for _, candidate := range hostCandidates {
+	for _, candidate := range candidates {
 		mergeCandidate(merged, candidate)
 	}
+	return nil
+}
+
+func searchNeighborLimit(opts SearchOptions) int {
+	if opts.ExpandLimit > 0 {
+		return opts.ExpandLimit
+	}
+	return minInt(3, opts.Limit)
+}
+
+func rankedSearchCandidates(merged map[string]Candidate, opts SearchOptions) []Candidate {
 	out := make([]Candidate, 0, len(merged))
 	for _, candidate := range merged {
 		if candidate.Score < opts.MinScore {
@@ -176,7 +215,7 @@ func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([
 	if opts.Limit > 0 && len(out) > opts.Limit {
 		out = out[:opts.Limit]
 	}
-	return out, nil
+	return out
 }
 
 func buildSemanticSummary(obs Observation) string {

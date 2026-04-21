@@ -121,23 +121,35 @@ type report struct {
 	Results        []caseResult `json:"results"`
 }
 
-func main() {
-	var outPath, casesPath string
-	var runs int
-	var timeoutMS int64
-	flag.StringVar(&outPath, "out", "improvements/seedless-ddg-benchmark-latest.json", "output report path")
-	flag.StringVar(&casesPath, "cases", "benchmarks/corpora/seedless-ddg-corpus-v1.json", "seedless ddg corpus path")
-	flag.IntVar(&runs, "runs", 3, "number of attempts per case/profile")
-	flag.Int64Var(&timeoutMS, "timeout-ms", 25000, "per-run timeout in milliseconds")
-	flag.Parse()
-	if runs <= 0 {
-		runs = 1
-	}
-	if timeoutMS <= 0 {
-		timeoutMS = 25000
-	}
+type seedlessOptions struct {
+	outPath   string
+	casesPath string
+	runs      int
+	timeoutMS int64
+}
 
-	c, err := loadCorpus(casesPath)
+type seedlessConfigs struct {
+	standard         string
+	standardSemantic string
+	browser          string
+	browserSemantic  string
+}
+
+type seedlessSummaryAgg struct {
+	stdPass, stdSemPass, browserPass, browserSemPass int
+	profileWins                                      map[string]int
+	retryRuns                                        map[string]int
+	totalRuns                                        map[string]int
+	retryCountSum                                    map[string]int
+	retrySleepSum                                    map[string]int64
+	hostPacingSum                                    map[string]int64
+	retryReasons                                     map[string]int
+	errorKinds                                       map[string]int
+}
+
+func main() {
+	opts := parseSeedlessOptions()
+	c, err := loadCorpus(opts.casesPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load corpus: %v\n", err)
 		os.Exit(1)
@@ -154,89 +166,116 @@ func main() {
 		fmt.Fprintf(os.Stderr, "temp dir: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
-	providerChain := "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
-	standardCfg, err := writeConfig(tempDir, "standard.json", map[string]any{
-		"fetch":     map[string]any{"profile": "standard", "retry_profile": "standard"},
-		"discovery": map[string]any{"provider_chain": providerChain},
-	})
+	cfgs, stopSemantic, err := prepareSeedlessConfigs(tempDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "write standard config: %v\n", err)
-		os.Exit(1)
-	}
-	browserCfg, err := writeConfig(tempDir, "browser.json", map[string]any{
-		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
-		"discovery": map[string]any{"provider_chain": providerChain},
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "write browser config: %v\n", err)
-		os.Exit(1)
-	}
-	semanticBaseURL, stopSemantic, err := startSemanticServer(tempDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "start semantic server: %v\n", err)
+		fmt.Fprintf(os.Stderr, "prepare configs: %v\n", err)
 		os.Exit(1)
 	}
 	defer stopSemantic()
-	standardSemanticCfg, err := writeConfig(tempDir, "standard-semantic.json", map[string]any{
-		"fetch":     map[string]any{"profile": "standard", "retry_profile": "standard"},
-		"discovery": map[string]any{"provider_chain": providerChain},
-		"semantic": map[string]any{
-			"enabled":  true,
-			"backend":  "openai-embeddings",
-			"base_url": semanticBaseURL,
-			"model":    "intfloat/multilingual-e5-small",
-		},
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "write standard semantic config: %v\n", err)
-		os.Exit(1)
-	}
-	browserSemanticCfg, err := writeConfig(tempDir, "browser-semantic.json", map[string]any{
-		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
-		"discovery": map[string]any{"provider_chain": providerChain},
-		"semantic": map[string]any{
-			"enabled":  true,
-			"backend":  "openai-embeddings",
-			"base_url": semanticBaseURL,
-			"model":    "intfloat/multilingual-e5-small",
-		},
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "write browser semantic config: %v\n", err)
-		os.Exit(1)
-	}
 
-	results := make([]caseResult, 0, len(c.Cases))
-	for i, item := range c.Cases {
-		fmt.Printf("[seedless-ddg] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID)
-		standard := runCase(binaryPath, standardCfg, "standard", item.Goal, item.ExpectedDomain, runs, timeoutMS)
-		standardSemantic := runCase(binaryPath, standardSemanticCfg, "standard_semantic", item.Goal, item.ExpectedDomain, runs, timeoutMS)
-		browser := runCase(binaryPath, browserCfg, "browser_like", item.Goal, item.ExpectedDomain, runs, timeoutMS)
-		browserSemantic := runCase(binaryPath, browserSemanticCfg, "browser_like_semantic", item.Goal, item.ExpectedDomain, runs, timeoutMS)
-		row := caseResult{
-			ID:    item.ID,
-			Goal:  item.Goal,
-			Runs:  []runResult{standard, standardSemantic, browser, browserSemantic},
-			Delta: compareAllRuns(standard, standardSemantic, browser, browserSemantic),
-		}
-		results = append(results, row)
-		fmt.Printf("[seedless-ddg] %s case %d/%d done id=%s std=%t std_sem=%t browser=%t browser_sem=%t delta=%s\n", time.Now().Format("15:04:05"), i+1, len(c.Cases), item.ID, standard.SelectedPass, standardSemantic.SelectedPass, browser.SelectedPass, browserSemantic.SelectedPass, row.Delta)
-	}
-
+	results := runSeedlessCases(binaryPath, c.Cases, cfgs, opts)
 	rep := report{
 		GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339),
 		CorpusVersion:  c.Version,
 		BinaryPath:     binaryPath,
-		Summary:        summarize(results, runs, timeoutMS),
+		Summary:        summarize(results, opts.runs, opts.timeoutMS),
 		Results:        results,
 	}
-	if err := evalutil.WriteJSON(outPath, rep); err != nil {
+	if err := evalutil.WriteJSON(opts.outPath, rep); err != nil {
 		fmt.Fprintf(os.Stderr, "write report: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Seedless DDG benchmark written to %s\n", outPath)
+	fmt.Printf("Seedless DDG benchmark written to %s\n", opts.outPath)
+}
+
+func parseSeedlessOptions() seedlessOptions {
+	var opts seedlessOptions
+	flag.StringVar(&opts.outPath, "out", "improvements/seedless-ddg-benchmark-latest.json", "output report path")
+	flag.StringVar(&opts.casesPath, "cases", "benchmarks/corpora/seedless-ddg-corpus-v1.json", "seedless ddg corpus path")
+	flag.IntVar(&opts.runs, "runs", 3, "number of attempts per case/profile")
+	flag.Int64Var(&opts.timeoutMS, "timeout-ms", 25000, "per-run timeout in milliseconds")
+	flag.Parse()
+	if opts.runs <= 0 {
+		opts.runs = 1
+	}
+	if opts.timeoutMS <= 0 {
+		opts.timeoutMS = 25000
+	}
+	return opts
+}
+
+func prepareSeedlessConfigs(tempDir string) (seedlessConfigs, func(), error) {
+	providerChain := "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
+	standardCfg, err := writeSeedlessConfig(tempDir, "standard.json", providerChain, "standard", "standard", "")
+	if err != nil {
+		return seedlessConfigs{}, nil, err
+	}
+	browserCfg, err := writeSeedlessConfig(tempDir, "browser.json", providerChain, "browser_like", "hardened", "")
+	if err != nil {
+		return seedlessConfigs{}, nil, err
+	}
+	semanticBaseURL, stopSemantic, err := startSemanticServer(tempDir)
+	if err != nil {
+		return seedlessConfigs{}, nil, err
+	}
+	standardSemanticCfg, err := writeSeedlessConfig(tempDir, "standard-semantic.json", providerChain, "standard", "standard", semanticBaseURL)
+	if err != nil {
+		stopSemantic()
+		return seedlessConfigs{}, nil, err
+	}
+	browserSemanticCfg, err := writeSeedlessConfig(tempDir, "browser-semantic.json", providerChain, "browser_like", "hardened", semanticBaseURL)
+	if err != nil {
+		stopSemantic()
+		return seedlessConfigs{}, nil, err
+	}
+	return seedlessConfigs{standard: standardCfg, standardSemantic: standardSemanticCfg, browser: browserCfg, browserSemantic: browserSemanticCfg}, stopSemantic, nil
+}
+
+func writeSeedlessConfig(tempDir, name, providerChain, fetchProfile, retryProfile, semanticBaseURL string) (string, error) {
+	payload := map[string]any{
+		"fetch":     map[string]any{"profile": fetchProfile, "retry_profile": retryProfile},
+		"discovery": map[string]any{"provider_chain": providerChain},
+	}
+	if semanticBaseURL != "" {
+		payload["semantic"] = map[string]any{
+			"enabled":  true,
+			"backend":  "openai-embeddings",
+			"base_url": semanticBaseURL,
+			"model":    "intfloat/multilingual-e5-small",
+		}
+	}
+	return writeConfig(tempDir, name, payload)
+}
+
+func runSeedlessCases(binaryPath string, cases []struct {
+	ID             string `json:"id"`
+	Goal           string `json:"goal"`
+	ExpectedDomain string `json:"expected_domain"`
+}, cfgs seedlessConfigs, opts seedlessOptions,
+) []caseResult {
+	results := make([]caseResult, 0, len(cases))
+	for i, item := range cases {
+		fmt.Printf("[seedless-ddg] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID)
+		row := runSeedlessCase(binaryPath, item.ID, item.Goal, item.ExpectedDomain, cfgs, opts)
+		results = append(results, row)
+		fmt.Printf("[seedless-ddg] %s case %d/%d done id=%s std=%t std_sem=%t browser=%t browser_sem=%t delta=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID, row.Runs[0].SelectedPass, row.Runs[1].SelectedPass, row.Runs[2].SelectedPass, row.Runs[3].SelectedPass, row.Delta)
+	}
+	return results
+}
+
+func runSeedlessCase(binaryPath, id, goal, expectedDomain string, cfgs seedlessConfigs, opts seedlessOptions) caseResult {
+	standard := runCase(binaryPath, cfgs.standard, "standard", goal, expectedDomain, opts.runs, opts.timeoutMS)
+	standardSemantic := runCase(binaryPath, cfgs.standardSemantic, "standard_semantic", goal, expectedDomain, opts.runs, opts.timeoutMS)
+	browser := runCase(binaryPath, cfgs.browser, "browser_like", goal, expectedDomain, opts.runs, opts.timeoutMS)
+	browserSemantic := runCase(binaryPath, cfgs.browserSemantic, "browser_like_semantic", goal, expectedDomain, opts.runs, opts.timeoutMS)
+	return caseResult{
+		ID:    id,
+		Goal:  goal,
+		Runs:  []runResult{standard, standardSemantic, browser, browserSemantic},
+		Delta: compareAllRuns(standard, standardSemantic, browser, browserSemantic),
+	}
 }
 
 func loadCorpus(path string) (corpus, error) {
@@ -365,6 +404,10 @@ func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string, t
 		result.ErrorKind = "invalid_json"
 		return result
 	}
+	return finalizeRunResult(result, resp, expectedDomain)
+}
+
+func finalizeRunResult(result runResult, resp queryResponse, expectedDomain string) runResult {
 	result.RuntimeOK = true
 	result.SelectedURL = strings.TrimSpace(resp.Plan.SelectedURL)
 	result.SelectedDomain = canonicalHost(result.SelectedURL)
@@ -376,31 +419,7 @@ func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string, t
 		if stage.Stage != "acquire" {
 			continue
 		}
-		if mode := strings.TrimSpace(stage.Metadata["fetch_mode"]); mode != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "fetch_mode="+mode)
-		}
-		if prof := strings.TrimSpace(stage.Metadata["fetch_profile"]); prof != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "fetch_profile="+prof)
-		}
-		if finalURL := strings.TrimSpace(stage.Metadata["final_url"]); finalURL != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "final_url="+finalURL)
-		}
-		result.RetryCount = parseInt(stage.Metadata["retry_count"])
-		result.RetrySleepMS = int64(parseInt(stage.Metadata["retry_sleep_ms"]))
-		result.HostPacingMS = int64(parseInt(stage.Metadata["host_pacing_ms"]))
-		result.RetryReason = strings.TrimSpace(stage.Metadata["retry_reason"])
-		if result.RetryCount > 0 {
-			result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_count=%d", result.RetryCount))
-		}
-		if result.RetrySleepMS > 0 {
-			result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_sleep_ms=%d", result.RetrySleepMS))
-		}
-		if result.HostPacingMS > 0 {
-			result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("host_pacing_ms=%d", result.HostPacingMS))
-		}
-		if result.RetryReason != "" {
-			result.AcquireMetadata = append(result.AcquireMetadata, "retry_reason="+result.RetryReason)
-		}
+		applyAcquireStage(&result, stage.Metadata)
 	}
 	if !result.SelectedPass {
 		if strings.TrimSpace(result.SelectedURL) == "" {
@@ -410,6 +429,34 @@ func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string, t
 		}
 	}
 	return result
+}
+
+func applyAcquireStage(result *runResult, metadata map[string]string) {
+	for _, key := range []string{"fetch_mode", "fetch_profile", "final_url"} {
+		if value := strings.TrimSpace(metadata[key]); value != "" {
+			result.AcquireMetadata = append(result.AcquireMetadata, key+"="+value)
+		}
+	}
+	result.RetryCount = parseInt(metadata["retry_count"])
+	result.RetrySleepMS = int64(parseInt(metadata["retry_sleep_ms"]))
+	result.HostPacingMS = int64(parseInt(metadata["host_pacing_ms"]))
+	result.RetryReason = strings.TrimSpace(metadata["retry_reason"])
+	appendNumericAcquireMetadata(result)
+}
+
+func appendNumericAcquireMetadata(result *runResult) {
+	if result.RetryCount > 0 {
+		result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_count=%d", result.RetryCount))
+	}
+	if result.RetrySleepMS > 0 {
+		result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("retry_sleep_ms=%d", result.RetrySleepMS))
+	}
+	if result.HostPacingMS > 0 {
+		result.AcquireMetadata = append(result.AcquireMetadata, fmt.Sprintf("host_pacing_ms=%d", result.HostPacingMS))
+	}
+	if result.RetryReason != "" {
+		result.AcquireMetadata = append(result.AcquireMetadata, "retry_reason="+result.RetryReason)
+	}
 }
 
 func boolToInt(value bool) int {
@@ -499,115 +546,148 @@ func boolScore(r runResult) int {
 }
 
 func summarize(results []caseResult, runs int, timeoutMS int64) summary {
-	var stdPass, stdSemPass, browserPass, browserSemPass int
-	profileWins := map[string]int{}
-	retryRuns := map[string]int{}
-	totalRuns := map[string]int{}
-	retryCountSum := map[string]int{}
-	retrySleepSum := map[string]int64{}
-	hostPacingSum := map[string]int64{}
-	retryReasons := map[string]int{}
-	errorKinds := map[string]int{}
+	agg := newSeedlessSummaryAgg()
 	for _, row := range results {
-		for _, run := range row.Runs {
-			attempts := run.Attempts
-			if len(attempts) == 0 {
-				attempts = []runAttempt{{
-					RuntimeOK:       run.RuntimeOK,
-					SelectedURL:     run.SelectedURL,
-					SelectedDomain:  run.SelectedDomain,
-					SelectedPass:    run.SelectedPass,
-					DiscoverySource: run.DiscoverySource,
-					CandidateCount:  run.CandidateCount,
-					DocumentFetch:   run.DocumentFetch,
-					RetryCount:      run.RetryCount,
-					RetrySleepMS:    run.RetrySleepMS,
-					HostPacingMS:    run.HostPacingMS,
-					RetryReason:     run.RetryReason,
-					ErrorKind:       run.ErrorKind,
-					LatencyMS:       run.LatencyMS,
-					Error:           run.Error,
-				}}
-			}
-			for _, attempt := range attempts {
-				totalRuns[run.Profile]++
-				if attempt.RetryCount > 0 {
-					retryRuns[run.Profile]++
-					retryCountSum[run.Profile] += attempt.RetryCount
-				}
-				retrySleepSum[run.Profile] += attempt.RetrySleepMS
-				hostPacingSum[run.Profile] += attempt.HostPacingMS
-				if attempt.RetryReason != "" {
-					retryReasons[attempt.RetryReason]++
-				}
-				if attempt.ErrorKind != "" {
-					errorKinds[attempt.ErrorKind]++
-				}
-			}
-			switch run.Profile {
-			case "standard":
-				if run.SelectedPass {
-					stdPass++
-				}
-			case "standard_semantic":
-				if run.SelectedPass {
-					stdSemPass++
-				}
-			case "browser_like":
-				if run.SelectedPass {
-					browserPass++
-				}
-			case "browser_like_semantic":
-				if run.SelectedPass {
-					browserSemPass++
-				}
-			}
-		}
-		profileWins[row.Delta]++
+		agg.recordRow(row)
 	}
 	count := len(results)
 	if count == 0 {
 		return summary{}
 	}
-	bestProfile := ""
+	retry := agg.retrySummaries()
+	return summary{
+		CaseCount:                   count,
+		StandardPassRate:            float64(agg.stdPass) / float64(count),
+		StandardSemanticPassRate:    float64(agg.stdSemPass) / float64(count),
+		BrowserLikePassRate:         float64(agg.browserPass) / float64(count),
+		BrowserLikeSemanticPassRate: float64(agg.browserSemPass) / float64(count),
+		ImprovementRate:             float64(agg.browserSemPass-agg.stdPass) / float64(count),
+		BrowserLikeBeatsStandard:    agg.browserSemPass - agg.stdPass,
+		BestProfile:                 bestProfile(agg.profileWins),
+		RetryRateByProfile:          retry.retryRateByProfile,
+		AvgRetryCountByProfile:      retry.avgRetryCountByProfile,
+		AvgRetrySleepMSByProfile:    retry.avgRetrySleepMSByProfile,
+		AvgHostPacingMSByProfile:    retry.avgHostPacingMSByProfile,
+		RetryReasons:                agg.retryReasons,
+		ErrorKinds:                  agg.errorKinds,
+		RunnerRuns:                  runs,
+		RunnerTimeoutMS:             timeoutMS,
+	}
+}
+
+func newSeedlessSummaryAgg() seedlessSummaryAgg {
+	return seedlessSummaryAgg{
+		profileWins:   map[string]int{},
+		retryRuns:     map[string]int{},
+		totalRuns:     map[string]int{},
+		retryCountSum: map[string]int{},
+		retrySleepSum: map[string]int64{},
+		hostPacingSum: map[string]int64{},
+		retryReasons:  map[string]int{},
+		errorKinds:    map[string]int{},
+	}
+}
+
+func (a *seedlessSummaryAgg) recordRow(row caseResult) {
+	for _, run := range row.Runs {
+		a.recordRun(run)
+	}
+	a.profileWins[row.Delta]++
+}
+
+func (a *seedlessSummaryAgg) recordRun(run runResult) {
+	for _, attempt := range runAttempts(run) {
+		a.totalRuns[run.Profile]++
+		if attempt.RetryCount > 0 {
+			a.retryRuns[run.Profile]++
+			a.retryCountSum[run.Profile] += attempt.RetryCount
+		}
+		a.retrySleepSum[run.Profile] += attempt.RetrySleepMS
+		a.hostPacingSum[run.Profile] += attempt.HostPacingMS
+		if attempt.RetryReason != "" {
+			a.retryReasons[attempt.RetryReason]++
+		}
+		if attempt.ErrorKind != "" {
+			a.errorKinds[attempt.ErrorKind]++
+		}
+	}
+	a.recordProfilePass(run)
+}
+
+func (a *seedlessSummaryAgg) recordProfilePass(run runResult) {
+	if !run.SelectedPass {
+		return
+	}
+	switch run.Profile {
+	case "standard":
+		a.stdPass++
+	case "standard_semantic":
+		a.stdSemPass++
+	case "browser_like":
+		a.browserPass++
+	case "browser_like_semantic":
+		a.browserSemPass++
+	}
+}
+
+func runAttempts(run runResult) []runAttempt {
+	if len(run.Attempts) > 0 {
+		return run.Attempts
+	}
+	return []runAttempt{{
+		RuntimeOK:       run.RuntimeOK,
+		SelectedURL:     run.SelectedURL,
+		SelectedDomain:  run.SelectedDomain,
+		SelectedPass:    run.SelectedPass,
+		DiscoverySource: run.DiscoverySource,
+		CandidateCount:  run.CandidateCount,
+		DocumentFetch:   run.DocumentFetch,
+		RetryCount:      run.RetryCount,
+		RetrySleepMS:    run.RetrySleepMS,
+		HostPacingMS:    run.HostPacingMS,
+		RetryReason:     run.RetryReason,
+		ErrorKind:       run.ErrorKind,
+		LatencyMS:       run.LatencyMS,
+		Error:           run.Error,
+	}}
+}
+
+type retrySummaryMaps struct {
+	retryRateByProfile       map[string]float64
+	avgRetryCountByProfile   map[string]float64
+	avgRetrySleepMSByProfile map[string]float64
+	avgHostPacingMSByProfile map[string]float64
+}
+
+func (a seedlessSummaryAgg) retrySummaries() retrySummaryMaps {
+	out := retrySummaryMaps{
+		retryRateByProfile:       map[string]float64{},
+		avgRetryCountByProfile:   map[string]float64{},
+		avgRetrySleepMSByProfile: map[string]float64{},
+		avgHostPacingMSByProfile: map[string]float64{},
+	}
+	for _, name := range []string{"standard", "standard_semantic", "browser_like", "browser_like_semantic"} {
+		if a.totalRuns[name] == 0 {
+			continue
+		}
+		out.retryRateByProfile[name] = float64(a.retryRuns[name]) / float64(a.totalRuns[name])
+		out.avgRetryCountByProfile[name] = float64(a.retryCountSum[name]) / float64(a.totalRuns[name])
+		out.avgRetrySleepMSByProfile[name] = float64(a.retrySleepSum[name]) / float64(a.totalRuns[name])
+		out.avgHostPacingMSByProfile[name] = float64(a.hostPacingSum[name]) / float64(a.totalRuns[name])
+	}
+	return out
+}
+
+func bestProfile(profileWins map[string]int) string {
+	best := ""
 	bestCount := -1
 	for _, name := range []string{"standard", "standard_semantic", "browser_like", "browser_like_semantic"} {
 		if profileWins[name] > bestCount {
 			bestCount = profileWins[name]
-			bestProfile = name
+			best = name
 		}
 	}
-	retryRateByProfile := map[string]float64{}
-	avgRetryCountByProfile := map[string]float64{}
-	avgRetrySleepMSByProfile := map[string]float64{}
-	avgHostPacingMSByProfile := map[string]float64{}
-	for _, name := range []string{"standard", "standard_semantic", "browser_like", "browser_like_semantic"} {
-		if totalRuns[name] == 0 {
-			continue
-		}
-		retryRateByProfile[name] = float64(retryRuns[name]) / float64(totalRuns[name])
-		avgRetryCountByProfile[name] = float64(retryCountSum[name]) / float64(totalRuns[name])
-		avgRetrySleepMSByProfile[name] = float64(retrySleepSum[name]) / float64(totalRuns[name])
-		avgHostPacingMSByProfile[name] = float64(hostPacingSum[name]) / float64(totalRuns[name])
-	}
-	return summary{
-		CaseCount:                   count,
-		StandardPassRate:            float64(stdPass) / float64(count),
-		StandardSemanticPassRate:    float64(stdSemPass) / float64(count),
-		BrowserLikePassRate:         float64(browserPass) / float64(count),
-		BrowserLikeSemanticPassRate: float64(browserSemPass) / float64(count),
-		ImprovementRate:             float64(browserSemPass-stdPass) / float64(count),
-		BrowserLikeBeatsStandard:    browserSemPass - stdPass,
-		BestProfile:                 bestProfile,
-		RetryRateByProfile:          retryRateByProfile,
-		AvgRetryCountByProfile:      avgRetryCountByProfile,
-		AvgRetrySleepMSByProfile:    avgRetrySleepMSByProfile,
-		AvgHostPacingMSByProfile:    avgHostPacingMSByProfile,
-		RetryReasons:                retryReasons,
-		ErrorKinds:                  errorKinds,
-		RunnerRuns:                  runs,
-		RunnerTimeoutMS:             timeoutMS,
-	}
+	return best
 }
 
 func startSemanticServer(tempDir string) (string, func(), error) {
