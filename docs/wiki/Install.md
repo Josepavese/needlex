@@ -28,6 +28,22 @@ Installed command:
 5. prepares the same runtime surface for CLI and MCP
 6. reconciles reruns without duplicating PATH hooks
 7. removes legacy `needle` wrapper artifacts
+8. prints the optional Codex skill path for agent-side usage guidance
+
+## Optional Agent Skill
+
+Install the Needle-X web retrieval skill when Codex or another AI agent should know when to use Needle-X and when to escalate to browser/raw-fetch tools.
+
+Skill path:
+1. [skills/needlex-web-retrieval](../../skills/needlex-web-retrieval)
+
+Codex install helper:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
+```
+
+Restart Codex after installing the skill.
 
 ## Reinstall Behavior
 

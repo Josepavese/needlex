@@ -161,6 +161,8 @@ fi
 
 printf '\nInstalled needlex to %s\n' "${WRAPPER_PATH}"
 printf 'State root: %s\n' "${STATE_ROOT}"
+printf 'Agent skill: https://github.com/%s/tree/main/skills/needlex-web-retrieval\n' "${REPO}"
+printf 'Codex skill install: python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo %s --path skills/needlex-web-retrieval\n' "${REPO}"
 if [[ -n "${PREVIOUS_STATE_ROOT}" && "${PREVIOUS_STATE_ROOT}" != "${STATE_ROOT}" ]]; then
   printf 'Previous state root preserved: %s\n' "${PREVIOUS_STATE_ROOT}"
 fi

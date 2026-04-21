@@ -105,6 +105,21 @@ Installed command:
 This installer downloads the right release binary. Full details:
 1. [Install](docs/wiki/Install.md)
 
+## Agent Skill
+
+Needle-X also ships an optional Codex skill that tells agents when to use Needle-X for web retrieval, when to escalate to browser/raw fetch tools, and how to avoid treating compact context as full DOM coverage.
+
+Skill path:
+1. [skills/needlex-web-retrieval](skills/needlex-web-retrieval)
+
+Codex install helper:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
+```
+
+After installing the skill, restart Codex so it can discover it.
+
 ## What It Is Not
 
 1. browser agent

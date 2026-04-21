@@ -1,0 +1,4 @@
+interface:
+  display_name: "Needle-X Web Retrieval"
+  short_description: "Use Needle-X for compact web retrieval"
+  default_prompt: "Use $needlex-web-retrieval to find compact, proof-backed web context with Needle-X."

@@ -107,6 +107,8 @@ if ($SkipPathUpdate -ne "1") {
 Write-Host ""
 Write-Host "Installed needlex to $NeedlexCmd"
 Write-Host "State root: $StateRoot"
+Write-Host "Agent skill: https://github.com/$Repo/tree/main/skills/needlex-web-retrieval"
+Write-Host "Codex skill install: python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo $Repo --path skills/needlex-web-retrieval"
 if ($PreviousStateRoot -and $PreviousStateRoot -ne $StateRoot) {
   Write-Host "Previous state root preserved: $PreviousStateRoot"
 }
