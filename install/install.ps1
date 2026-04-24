@@ -68,6 +68,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "traces") | Out-
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "proofs") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "fingerprints") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "genome") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "logs") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "discovery") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "candidates") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "domain_graph") | Out-Null
@@ -107,6 +108,7 @@ if ($SkipPathUpdate -ne "1") {
 Write-Host ""
 Write-Host "Installed needlex to $NeedlexCmd"
 Write-Host "State root: $StateRoot"
+Write-Host "Runtime log: $(Join-Path $StateRoot 'logs\\needlex.jsonl')"
 Write-Host "Agent skill: https://github.com/$Repo/tree/main/skills/needlex-web-retrieval"
 Write-Host "Codex skill install: python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo $Repo --path skills/needlex-web-retrieval"
 if ($PreviousStateRoot -and $PreviousStateRoot -ne $StateRoot) {

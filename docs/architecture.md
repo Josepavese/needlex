@@ -98,8 +98,16 @@ Canonical layout:
   fingerprint_graph/
   fingerprints/
   genome/
+  logs/
+    needlex.jsonl
   proofs/
   traces/
 ```
 
-This keeps the repository clean, makes CLI and MCP share one durable PAL home, and preserves replayability, analytics, provider health memory, and local-first discovery behavior across processes.
+This keeps the repository clean, makes CLI and MCP share one durable PAL home, and preserves replayability, analytics, runtime diagnostics, provider health memory, and local-first discovery behavior across processes.
+
+Diagnostics policy:
+1. CLI and MCP write detailed runtime diagnostics to the PAL log, not ad hoc stderr/stdout streams
+2. analytics stores aggregate value and failure facts
+3. `doctor` correlates the two planes for local inspection
+4. `support bundle` exports a portable maintainer snapshot without traces, proofs, fingerprints, or source files by default

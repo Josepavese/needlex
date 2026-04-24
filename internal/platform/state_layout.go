@@ -18,6 +18,8 @@ type StateLayout struct {
 	FingerprintGraphDir string `json:"fingerprint_graph_dir"`
 	FingerprintsDir     string `json:"fingerprints_dir"`
 	GenomeDir           string `json:"genome_dir"`
+	LogsDir             string `json:"logs_dir"`
+	RuntimeLog          string `json:"runtime_log"`
 	ProofsDir           string `json:"proofs_dir"`
 	TracesDir           string `json:"traces_dir"`
 }
@@ -38,6 +40,8 @@ func NewStateLayout(root string) StateLayout {
 		FingerprintGraphDir: filepath.Join(cleanRoot, "fingerprint_graph"),
 		FingerprintsDir:     filepath.Join(cleanRoot, "fingerprints"),
 		GenomeDir:           filepath.Join(cleanRoot, "genome"),
+		LogsDir:             filepath.Join(cleanRoot, "logs"),
+		RuntimeLog:          filepath.Join(cleanRoot, "logs", "needlex.jsonl"),
 		ProofsDir:           filepath.Join(cleanRoot, "proofs"),
 		TracesDir:           filepath.Join(cleanRoot, "traces"),
 	}
@@ -52,6 +56,7 @@ func (l StateLayout) Paths() map[string]string {
 		"fingerprint_graph": l.FingerprintGraphDir,
 		"fingerprints":      l.FingerprintsDir,
 		"genome":            l.GenomeDir,
+		"logs":              l.LogsDir,
 		"proofs":            l.ProofsDir,
 		"traces":            l.TracesDir,
 	}

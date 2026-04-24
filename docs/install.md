@@ -36,6 +36,13 @@ Default paths:
 3. state root:
    Linux: `~/.local/share/needlex`
    macOS: `~/Library/Application Support/NeedleX`
+4. runtime log: `<state-root>/logs/needlex.jsonl`
+
+Diagnostic export:
+
+```bash
+needlex support bundle --out /tmp/needlex-support
+```
 
 Linux note:
 1. the installer prefers `~/.local/share/needlex`

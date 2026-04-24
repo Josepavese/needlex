@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,11 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 	startedAt := time.Now().UTC()
 	resp, err := r.callCrawl(context.Background(), cfg, req)
 	if err != nil {
+		r.observeRuntimeFailure("crawl", "crawl.failed", surface, startedAt, err, map[string]any{
+			"seed_url":       req.SeedURL,
+			"profile":        req.Profile,
+			"discovery_mode": crawlDiscoveryMode(req),
+		})
 		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
 			Operation:     "crawl",
 			Surface:       surface,
@@ -57,6 +63,7 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 		})
 	}
 	r.observeAnalyticsCrawl(cfg, surface, req, resp, storedRuns)
+	r.observeRuntimeCrawlDiagnostics(surface, req, resp, storedRuns)
 	coreservice.ObserveCrawlResponseWithLocalState(r.storeRoot, req, resp)
 
 	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
@@ -72,6 +79,11 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 	startedAt := time.Now().UTC()
 	resp, err := r.callRead(context.Background(), cfg, req)
 	if err != nil {
+		r.observeRuntimeFailure("read", "fetch.failed", surface, startedAt, err, map[string]any{
+			"url":       req.URL,
+			"profile":   req.Profile,
+			"objective": req.Objective,
+		})
 		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
 			Operation: "read",
 			Surface:   surface,
@@ -108,6 +120,7 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
 	r.observeAnalyticsRead(cfg, surface, req, resp)
+	r.observeRuntimeReadDiagnostics(surface, req, resp)
 
 	return resp, artifactPaths{
 		TracePath:       tracePath,
@@ -126,6 +139,12 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 	startedAt := time.Now().UTC()
 	resp, err := r.callQuery(context.Background(), cfg, req)
 	if err != nil {
+		r.observeRuntimeFailure("query", "discovery_or_fetch.failed", surface, startedAt, err, map[string]any{
+			"seed_url":       req.SeedURL,
+			"profile":        req.Profile,
+			"goal":           req.Goal,
+			"discovery_mode": req.DiscoveryMode,
+		})
 		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
 			Operation:     "query",
 			Surface:       surface,
@@ -166,6 +185,7 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
 	})
 	r.observeAnalyticsQuery(cfg, surface, req, resp)
+	r.observeRuntimeQueryDiagnostics(surface, req, resp)
 
 	return resp, artifactPaths{
 		TracePath:       tracePath,
@@ -230,15 +250,84 @@ func (r Runner) observeAnalyticsQuery(cfg config.Config, surface string, req cor
 	_ = analytics.ObserveQuery(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
 }
 
+func (r Runner) observeRuntimeReadDiagnostics(surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
+	r.observeRuntimeFetchCompleted("read", surface, req.URL, resp.Document.FinalURL, resp.Trace)
+}
+
+func (r Runner) observeRuntimeQueryDiagnostics(surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse) {
+	r.logRuntimeInfo("query", "discovery.completed", "query discovery completed", map[string]any{
+		"surface":         surface,
+		"goal":            req.Goal,
+		"seed_url":        req.SeedURL,
+		"discovery_mode":  resp.Plan.DiscoveryMode,
+		"provider":        resp.Plan.DiscoveryProvider,
+		"candidate_count": len(resp.AgentContext.Candidates),
+		"selected_url":    resp.Plan.SelectedURL,
+		"trace_id":        resp.TraceID,
+	})
+	r.observeRuntimeFetchCompleted("query", surface, resp.Plan.SelectedURL, resp.Document.FinalURL, resp.Trace)
+	if strings.TrimSpace(req.SeedURL) != "" {
+		return
+	}
+	candidates := resp.AgentContext.Candidates
+	if len(candidates) < 3 {
+		return
+	}
+	topScore := candidates[0].Score
+	secondScore := candidates[1].Score
+	scoreDelta := topScore - secondScore
+	if len(candidates) < 5 && scoreDelta > 0.08 {
+		return
+	}
+	r.logRuntimeWarning("query", "seedless.ambiguous_candidates", "seedless discovery returned a dense or low-margin candidate set", map[string]any{
+		"surface":         surface,
+		"goal":            req.Goal,
+		"discovery_mode":  resp.Plan.DiscoveryMode,
+		"provider":        resp.Plan.DiscoveryProvider,
+		"candidate_count": len(candidates),
+		"selected_url":    resp.Plan.SelectedURL,
+		"top_score":       topScore,
+		"second_score":    secondScore,
+		"score_delta":     scoreDelta,
+		"candidate_urls":  firstCandidateURLs(candidates, 8),
+		"trace_id":        resp.TraceID,
+	})
+}
+
 func (r Runner) observeAnalyticsCrawl(cfg config.Config, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactCrawlResponse(resp, crawlArtifacts{StoredRuns: storedRuns}))
 	_ = analytics.ObserveCrawl(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
 }
 
+func (r Runner) observeRuntimeCrawlDiagnostics(surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
+	r.logRuntimeInfo("crawl", "crawl.completed", "crawl completed", map[string]any{
+		"surface":        surface,
+		"seed_url":       req.SeedURL,
+		"same_domain":    req.SameDomain,
+		"max_pages":      req.MaxPages,
+		"max_depth":      req.MaxDepth,
+		"page_count":     len(resp.Pages),
+		"stored_runs":    storedRuns,
+		"discovery_mode": crawlDiscoveryMode(req),
+	})
+	for _, page := range resp.Pages {
+		r.observeRuntimeFetchCompleted("crawl", surface, page.Document.URL, page.Document.FinalURL, page.Trace)
+	}
+}
+
 func (r Runner) observeAnalyticsFailure(cfg config.Config, failure analytics.FailureObservation) {
 	failure.MemoryStats = r.analyticsMemoryStats(cfg)
 	_ = analytics.ObserveFailure(context.Background(), analytics.NewSQLiteStore(r.storeRoot), failure)
+}
+
+func (r Runner) observeRuntimeFailure(operation, eventName, surface string, startedAt time.Time, err error, fields map[string]any) {
+	if fields == nil {
+		fields = map[string]any{}
+	}
+	fields["surface"] = surface
+	fields["latency_ms"] = time.Since(startedAt).Milliseconds()
+	r.logRuntimeError(operation, eventName, err, fields)
 }
 
 func crawlDiscoveryMode(req coreservice.CrawlRequest) string {
@@ -265,6 +354,69 @@ func compactJSONSize(value any) int {
 		return 0
 	}
 	return len(data)
+}
+
+func firstCandidateURLs(candidates []coreservice.AgentCandidate, limit int) []string {
+	if limit <= 0 || len(candidates) == 0 {
+		return nil
+	}
+	out := make([]string, 0, min(len(candidates), limit))
+	for i, candidate := range candidates {
+		if i >= limit {
+			break
+		}
+		out = append(out, candidate.URL)
+	}
+	return out
+}
+
+func (r Runner) observeRuntimeFetchCompleted(operation, surface, requestedURL, finalURL string, trace proof.RunTrace) {
+	stage, ok := traceStage(trace, "acquire")
+	if !ok {
+		return
+	}
+	metadata := stage.Metadata
+	r.logRuntimeInfo(operation, "fetch.completed", "fetch completed", map[string]any{
+		"surface":        surface,
+		"requested_url":  requestedURL,
+		"final_url":      firstNonEmptyRuntimeString(finalURL, metadata["final_url"]),
+		"trace_id":       trace.TraceID,
+		"run_id":         trace.RunID,
+		"latency_ms":     stageLatencyMS(stage),
+		"fetch_mode":     metadata["fetch_mode"],
+		"fetch_profile":  metadata["fetch_profile"],
+		"retry_profile":  metadata["retry_profile"],
+		"retry_count":    intMetadata(metadata, "retry_count"),
+		"retry_reason":   metadata["retry_reason"],
+		"host_pacing_ms": intMetadata(metadata, "host_pacing_ms"),
+		"raw_chars":      intMetadata(metadata, "raw_chars"),
+		"raw_bytes":      intMetadata(metadata, "raw_bytes"),
+		"content_type":   metadata["content_type"],
+	})
+}
+
+func traceStage(trace proof.RunTrace, name string) (proof.StageSnapshot, bool) {
+	for _, stage := range trace.Stages {
+		if stage.Stage == name {
+			return stage, true
+		}
+	}
+	return proof.StageSnapshot{}, false
+}
+
+func stageLatencyMS(stage proof.StageSnapshot) int64 {
+	if stage.StartedAt.IsZero() || stage.CompletedAt.IsZero() {
+		return 0
+	}
+	return stage.CompletedAt.Sub(stage.StartedAt).Milliseconds()
+}
+
+func intMetadata(metadata map[string]string, key string) int {
+	value, err := strconv.Atoi(strings.TrimSpace(metadata[key]))
+	if err != nil {
+		return 0
+	}
+	return value
 }
 
 func pageFingerprintStable(storeRoot, rawURL string) float64 {

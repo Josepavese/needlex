@@ -15,25 +15,45 @@ import (
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/memory"
+	"github.com/josepavese/needlex/internal/observability"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/platform/buildinfo"
 )
 
 type doctorReport struct {
-	Version         string             `json:"version"`
-	GOOS            string             `json:"goos"`
-	GOARCH          string             `json:"goarch"`
-	ExecutablePath  string             `json:"executable_path,omitempty"`
-	PathCommand     string             `json:"path_command,omitempty"`
-	NeedlexHomeEnv  string             `json:"needlex_home_env,omitempty"`
-	StateRoot       string             `json:"state_root"`
-	AnalyticsDBPath string             `json:"analytics_db_path"`
-	DiscoveryDBPath string             `json:"discovery_db_path"`
-	StorePaths      map[string]string  `json:"store_paths"`
-	AnalyticsStats  analytics.Stats    `json:"analytics_stats,omitempty"`
-	MemoryStats     memory.Stats       `json:"memory_stats,omitempty"`
-	MCPProcesses    []doctorMCPProcess `json:"mcp_processes,omitempty"`
-	Warnings        []string           `json:"warnings,omitempty"`
+	Version         string                 `json:"version"`
+	GOOS            string                 `json:"goos"`
+	GOARCH          string                 `json:"goarch"`
+	ExecutablePath  string                 `json:"executable_path,omitempty"`
+	PathCommand     string                 `json:"path_command,omitempty"`
+	NeedlexHomeEnv  string                 `json:"needlex_home_env,omitempty"`
+	StateRoot       string                 `json:"state_root"`
+	AnalyticsDBPath string                 `json:"analytics_db_path"`
+	DiscoveryDBPath string                 `json:"discovery_db_path"`
+	LogsDir         string                 `json:"logs_dir"`
+	RuntimeLogPath  string                 `json:"runtime_log_path"`
+	StorePaths      map[string]string      `json:"store_paths"`
+	AnalyticsStats  analytics.Stats        `json:"analytics_stats,omitempty"`
+	MemoryStats     memory.Stats           `json:"memory_stats,omitempty"`
+	LogStats        observability.LogStats `json:"log_stats,omitempty"`
+	Diagnostics     doctorDiagnostics      `json:"diagnostics,omitempty"`
+	MCPProcesses    []doctorMCPProcess     `json:"mcp_processes,omitempty"`
+	Warnings        []string               `json:"warnings,omitempty"`
+}
+
+type doctorDiagnostics struct {
+	RecentLogEvents     int                        `json:"recent_log_events"`
+	RecentErrors        int                        `json:"recent_errors"`
+	RecentWarnings      int                        `json:"recent_warnings"`
+	LastDiagnosticID    string                     `json:"last_diagnostic_id,omitempty"`
+	LastFailureClass    string                     `json:"last_failure_class,omitempty"`
+	LastRuntimeEvent    string                     `json:"last_runtime_event,omitempty"`
+	AnalyticsFailures   []analytics.FailureRollup  `json:"analytics_failures,omitempty"`
+	AnalyticsProviders  []analytics.ProviderRollup `json:"analytics_providers,omitempty"`
+	RuntimeEventCounts  map[string]int             `json:"runtime_event_counts,omitempty"`
+	RuntimeLevelCounts  map[string]int             `json:"runtime_level_counts,omitempty"`
+	FailureClassCounts  map[string]int             `json:"failure_class_counts,omitempty"`
+	LastRuntimeLogEvent observability.Event        `json:"last_runtime_log_event,omitempty"`
 }
 
 type doctorMCPProcess struct {
@@ -57,7 +77,7 @@ func (r Runner) runDoctor(args []string, stdout, stderr io.Writer) int {
 	}
 	report := r.buildDoctorReport(configPath)
 	if jsonOut {
-		return writeJSON(stdout, stderr, report)
+		return r.writeJSON(stdout, stderr, "doctor", report)
 	}
 	renderDoctorText(stdout, report)
 	return 0
@@ -79,7 +99,10 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 	layout := platform.NewStateLayout(stateRoot)
 	stats, statsErr := analyticsStore.Stats(context.Background())
 	memoryStats, memoryErr := memoryStore.GetStats(context.Background())
+	logger := observability.NewLogger(stateRoot)
+	logStats, logErr := logger.Stats()
 	processes := detectMCPProcesses()
+	diagnostics, diagnosticsWarnings := buildDoctorDiagnostics(context.Background(), analyticsStore, logger)
 	report := doctorReport{
 		Version:         buildinfo.Version,
 		GOOS:            runtime.GOOS,
@@ -90,9 +113,13 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 		StateRoot:       stateRoot,
 		AnalyticsDBPath: analyticsStore.DBPath(),
 		DiscoveryDBPath: memoryStore.DBPath(),
+		LogsDir:         layout.LogsDir,
+		RuntimeLogPath:  layout.RuntimeLog,
 		StorePaths:      layout.Paths(),
+		Diagnostics:     diagnostics,
 		MCPProcesses:    processes,
 	}
+	report.Warnings = append(report.Warnings, diagnosticsWarnings...)
 	if statsErr == nil {
 		report.AnalyticsStats = stats
 	} else {
@@ -102,6 +129,11 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 		report.MemoryStats = memoryStats
 	} else {
 		report.Warnings = append(report.Warnings, "memory stats unavailable: "+memoryErr.Error())
+	}
+	if logErr == nil {
+		report.LogStats = logStats
+	} else {
+		report.Warnings = append(report.Warnings, "runtime log stats unavailable: "+logErr.Error())
 	}
 	if cfgErr != nil {
 		report.Warnings = append(report.Warnings, "config load failed: "+cfgErr.Error())
@@ -125,8 +157,21 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 	fmt.Fprintf(w, "State Root: %s\n", report.StateRoot)
 	fmt.Fprintf(w, "Analytics DB: %s\n", report.AnalyticsDBPath)
 	fmt.Fprintf(w, "Discovery DB: %s\n", report.DiscoveryDBPath)
+	fmt.Fprintf(w, "Runtime Log: %s\n", report.RuntimeLogPath)
 	fmt.Fprintf(w, "Analytics Runs: %d (%d successful)\n", report.AnalyticsStats.RunCount, report.AnalyticsStats.SuccessfulRuns)
 	fmt.Fprintf(w, "Memory Docs: %d\n", report.MemoryStats.DocumentCount)
+	fmt.Fprintf(w, "Log Events: %d\n", report.LogStats.LineCount)
+	fmt.Fprintf(w, "Recent Runtime Errors: %d\n", report.Diagnostics.RecentErrors)
+	fmt.Fprintf(w, "Recent Runtime Warnings: %d\n", report.Diagnostics.RecentWarnings)
+	if report.Diagnostics.LastDiagnosticID != "" {
+		fmt.Fprintf(w, "Last Diagnostic ID: %s\n", report.Diagnostics.LastDiagnosticID)
+	}
+	if len(report.Diagnostics.AnalyticsFailures) > 0 {
+		fmt.Fprintln(w, "Analytics Failures:")
+		for _, item := range report.Diagnostics.AnalyticsFailures {
+			fmt.Fprintf(w, "  - %s: %d\n", item.FailureClass, item.RunCount)
+		}
+	}
 	fmt.Fprintf(w, "MCP Processes: %d\n", len(report.MCPProcesses))
 	for _, proc := range report.MCPProcesses {
 		fmt.Fprintf(w, "  %d %s\n", proc.PID, proc.Command)
@@ -137,6 +182,50 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 			fmt.Fprintf(w, "  - %s\n", warning)
 		}
 	}
+}
+
+func buildDoctorDiagnostics(ctx context.Context, analyticsStore analytics.SQLiteStore, logger observability.Logger) (doctorDiagnostics, []string) {
+	warnings := []string{}
+	events, err := logger.Tail(100)
+	if err != nil {
+		warnings = append(warnings, "runtime log tail unavailable: "+err.Error())
+	}
+	failures, err := analyticsStore.Failures(ctx, 5)
+	if err != nil {
+		warnings = append(warnings, "analytics failures unavailable: "+err.Error())
+	}
+	providers, err := analyticsStore.Providers(ctx, 5)
+	if err != nil {
+		warnings = append(warnings, "analytics providers unavailable: "+err.Error())
+	}
+	out := doctorDiagnostics{
+		RecentLogEvents:    len(events),
+		AnalyticsFailures:  failures,
+		AnalyticsProviders: providers,
+		RuntimeEventCounts: map[string]int{},
+		RuntimeLevelCounts: map[string]int{},
+		FailureClassCounts: map[string]int{},
+	}
+	for _, event := range events {
+		out.RuntimeEventCounts[event.Event]++
+		out.RuntimeLevelCounts[event.Level]++
+		if event.FailureClass != "" {
+			out.FailureClassCounts[event.FailureClass]++
+		}
+		switch event.Level {
+		case observability.LevelError:
+			out.RecentErrors++
+		case observability.LevelWarn:
+			out.RecentWarnings++
+		}
+		if event.ID != "" {
+			out.LastRuntimeLogEvent = event
+			out.LastDiagnosticID = event.ID
+			out.LastFailureClass = event.FailureClass
+			out.LastRuntimeEvent = event.Event
+		}
+	}
+	return out, warnings
 }
 
 func detectMCPProcesses() []doctorMCPProcess {

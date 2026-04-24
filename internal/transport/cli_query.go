@@ -17,8 +17,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	}
 	mode, err := normalizeJSONMode(jsonMode)
 	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
-		return 2
+		return r.reportCLIError(stderr, "query", err, map[string]any{"phase": "parse_json_mode"})
 	}
 
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)
@@ -34,15 +33,14 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 		DiscoveryMode: discovery,
 	})
 	if err != nil {
-		fmt.Fprintf(stderr, "query failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "query", err, map[string]any{"goal": goal, "seed_url": seedURL, "discovery_mode": discovery})
 	}
 
 	if jsonOut {
 		if mode == jsonModeFull {
-			return writeJSON(stdout, stderr, resp)
+			return r.writeJSON(stdout, stderr, "query", resp)
 		}
-		return writeJSON(stdout, stderr, compactQueryResponse(resp))
+		return r.writeJSON(stdout, stderr, "query", compactQueryResponse(resp))
 	}
 
 	renderQueryText(stdout, resp, artifacts)

@@ -94,6 +94,7 @@ func TestRunToolCatalogAnthropic(t *testing.T) {
 
 func TestRunToolCatalogRejectsUnknownProvider(t *testing.T) {
 	r := NewRunner()
+	r.storeRoot = t.TempDir()
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -101,7 +102,14 @@ func TestRunToolCatalogRejectsUnknownProvider(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("expected code 2, got %d", code)
 	}
-	if !strings.Contains(stderr.String(), `unsupported provider "unknown"`) {
+	if !strings.Contains(stderr.String(), "diagnostic_id=") || strings.Contains(stderr.String(), `unsupported provider "unknown"`) {
 		t.Fatalf("unexpected stderr: %s", stderr.String())
+	}
+	events, err := r.runtimeLogger().Tail(1)
+	if err != nil {
+		t.Fatalf("tail runtime log: %v", err)
+	}
+	if len(events) != 1 || !strings.Contains(events[0].Error, `unsupported provider "unknown"`) {
+		t.Fatalf("expected detailed error in runtime log, got %+v", events)
 	}
 }

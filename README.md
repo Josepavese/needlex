@@ -74,7 +74,9 @@ Guardrail:
 6. `diff`
 7. `memory stats/search/prune/export/import/rebuild-index`
 8. `analytics stats/recent/value-report/hosts/providers/failures/daily/export`
-9. `doctor`
+9. `logs path/stats/tail`
+10. `support bundle`
+11. `doctor`
 
 Default output is AI-first:
 1. compact packet first
@@ -92,10 +94,14 @@ needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
 needlex analytics stats
 needlex analytics value-report
+needlex logs stats
+needlex support bundle --out /tmp/needlex-support
 needlex doctor
 ```
 
 `analytics stats` gives quick operational counters plus saved chars/tokens. `analytics value-report` is the fuller value view with estimated cost scenarios.
+`logs stats` shows the PAL runtime log state used for clean CLI/MCP diagnostics.
+`support bundle` exports a maintainer-friendly diagnostic directory with doctor, analytics, and runtime logs.
 
 ## Install
 

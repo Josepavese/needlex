@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -107,7 +108,6 @@ func TestRunnerMCPCreateStableStateRootWhenUnset(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_DATA_HOME", "")
 	t.Setenv("NEEDLEX_HOME", "")
-	t.Setenv("NEEDLEX_MCP_LOG", filepath.Join(t.TempDir(), "needlex-mcp.log"))
 	input := rawMessages(t, map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"})
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -123,6 +123,61 @@ func TestRunnerMCPCreateStableStateRootWhenUnset(t *testing.T) {
 	wantRoot := filepath.Join(home, ".local", "share", "needlex")
 	if _, err := os.Stat(wantRoot); err != nil {
 		t.Fatalf("expected stable store root %q to exist: %v", wantRoot, err)
+	}
+}
+
+func TestRunnerMCPToolErrorsGoToRuntimeLog(t *testing.T) {
+	root := t.TempDir()
+	input := rawMessages(
+		t,
+		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+		map[string]any{
+			"jsonrpc": "2.0",
+			"id":      2,
+			"method":  "tools/call",
+			"params": map[string]any{
+				"name": "web_read",
+				"arguments": map[string]any{
+					"url": "https://example.com",
+				},
+			},
+		},
+	)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	runner := Runner{
+		loadConfig: config.Load,
+		read: func(context.Context, config.Config, coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			return coreservice.ReadResponse{}, errors.New("unexpected status code 403 TOKEN=super-secret")
+		},
+		stdin:     strings.NewReader(input),
+		storeRoot: root,
+	}
+
+	code := runner.runMCP(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr noise, got %q", stderr.String())
+	}
+	responses := decodeRawMCPResponses(t, stdout.Bytes())
+	if len(responses) != 2 {
+		t.Fatalf("expected 2 responses, got %d", len(responses))
+	}
+	if !strings.Contains(string(responses[1]), "diagnostic_id") || strings.Contains(string(responses[1]), "super-secret") {
+		t.Fatalf("expected redacted MCP diagnostic id, got %s", responses[1])
+	}
+	events, err := runner.runtimeLogger().Tail(1)
+	if err != nil {
+		t.Fatalf("tail runtime log: %v", err)
+	}
+	if len(events) != 1 || events[0].Surface != "mcp" || events[0].Operation != "web_read" {
+		t.Fatalf("unexpected runtime event: %+v", events)
+	}
+	if strings.Contains(events[0].Error, "super-secret") || !strings.Contains(events[0].Error, "[REDACTED]") {
+		t.Fatalf("expected redacted MCP error log, got %q", events[0].Error)
 	}
 }
 

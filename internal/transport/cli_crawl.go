@@ -24,8 +24,7 @@ func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
 	}
 	mode, err := normalizeJSONMode(jsonMode)
 	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
-		return 2
+		return r.reportCLIError(stderr, "crawl", err, map[string]any{"phase": "parse_json_mode"})
 	}
 
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)
@@ -42,15 +41,14 @@ func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
 		SameDomain: sameDomain,
 	})
 	if err != nil {
-		fmt.Fprintf(stderr, "crawl failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "crawl", err, map[string]any{"seed_url": seedURL, "same_domain": sameDomain})
 	}
 
 	if jsonOut {
 		if mode == jsonModeFull {
-			return writeJSON(stdout, stderr, map[string]any{"documents": resp.Documents, "summary": resp.Summary, "pages": resp.Pages, "stored_runs": artifacts.StoredRuns})
+			return r.writeJSON(stdout, stderr, "crawl", map[string]any{"documents": resp.Documents, "summary": resp.Summary, "pages": resp.Pages, "stored_runs": artifacts.StoredRuns})
 		}
-		return writeJSON(stdout, stderr, compactCrawlResponse(resp, artifacts))
+		return r.writeJSON(stdout, stderr, "crawl", compactCrawlResponse(resp, artifacts))
 	}
 
 	renderCrawlText(stdout, resp, artifacts)

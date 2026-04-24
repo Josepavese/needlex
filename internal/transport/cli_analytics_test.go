@@ -3,6 +3,9 @@ package transport
 import (
 	"bytes"
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -160,5 +163,35 @@ func TestRunnerDoctorReportsStateRootAndDatabases(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), `"state_root":`) || !strings.Contains(stdout.String(), `"analytics_db_path":`) {
 		t.Fatalf("unexpected doctor json: %q", stdout.String())
+	}
+}
+
+func TestRunnerSupportBundleExportsDiagnostics(t *testing.T) {
+	root := t.TempDir()
+	runner := NewRunner()
+	runner.storeRoot = root
+	_ = runner.logRuntimeError("read", "fetch.failed", errors.New("unexpected status code 403"), map[string]any{"url": "https://example.com"})
+
+	outDir := filepath.Join(t.TempDir(), "bundle")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"support", "bundle", "--out", outDir, "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("support bundle exit=%d stderr=%q", code, stderr.String())
+	}
+	for _, path := range []string{
+		filepath.Join(outDir, "manifest.json"),
+		filepath.Join(outDir, "doctor.json"),
+		filepath.Join(outDir, "runtime_log_stats.json"),
+		filepath.Join(outDir, "runtime_log_tail.json"),
+		filepath.Join(outDir, "analytics", "analytics_value_report.json"),
+		filepath.Join(outDir, "logs", "needlex.jsonl"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected support artifact %s: %v", path, err)
+		}
+	}
+	if !strings.Contains(stdout.String(), `"manifest_path"`) || !strings.Contains(stdout.String(), `"analytics_export"`) {
+		t.Fatalf("unexpected support bundle json: %q", stdout.String())
 	}
 }

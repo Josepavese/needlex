@@ -36,12 +36,11 @@ func (r Runner) runProof(args []string, stdout, stderr io.Writer) int {
 	lookup := strings.TrimSpace(fs.Arg(0))
 	result, err := r.loadProof(lookup)
 	if err != nil {
-		fmt.Fprintf(stderr, "load proof: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "proof", err, map[string]any{"lookup": lookup})
 	}
 
 	if jsonOut {
-		return writeJSON(stdout, stderr, result)
+		return r.writeJSON(stdout, stderr, "proof", result)
 	}
 
 	renderProofText(stdout, result)

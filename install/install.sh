@@ -116,6 +116,7 @@ create_state_tree() {
     "${STATE_ROOT}/proofs" \
     "${STATE_ROOT}/fingerprints" \
     "${STATE_ROOT}/genome" \
+    "${STATE_ROOT}/logs" \
     "${STATE_ROOT}/discovery" \
     "${STATE_ROOT}/candidates" \
     "${STATE_ROOT}/domain_graph" \
@@ -161,6 +162,7 @@ fi
 
 printf '\nInstalled needlex to %s\n' "${WRAPPER_PATH}"
 printf 'State root: %s\n' "${STATE_ROOT}"
+printf 'Runtime log: %s\n' "${STATE_ROOT}/logs/needlex.jsonl"
 printf 'Agent skill: https://github.com/%s/tree/main/skills/needlex-web-retrieval\n' "${REPO}"
 printf 'Codex skill install: python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo %s --path skills/needlex-web-retrieval\n' "${REPO}"
 if [[ -n "${PREVIOUS_STATE_ROOT}" && "${PREVIOUS_STATE_ROOT}" != "${STATE_ROOT}" ]]; then

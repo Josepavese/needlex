@@ -321,8 +321,9 @@ Content-Length: 58
 
 Operational note:
 1. if `NEEDLEX_HOME` is unset, MCP falls back to a stable PAL-aware absolute state root
-2. session logging goes to `${NEEDLEX_MCP_LOG:-/tmp/needlex-mcp.log}`
+2. diagnostics go to the shared PAL runtime log under `<state-root>/logs/needlex.jsonl`
 3. do not mix human-readable wrapper output into stdout while the MCP server is running
+4. inspect diagnostics with `needlex logs path` and `needlex logs tail`
 
 ### Mapping Rule
 

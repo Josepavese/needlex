@@ -39,12 +39,11 @@ func (r Runner) runPrune(args []string, stdout, stderr io.Writer) int {
 
 	report, err := store.Prune(r.storeRoot, time.Duration(olderThanHours)*time.Hour, pruneAll, time.Now().UTC())
 	if err != nil {
-		fmt.Fprintf(stderr, "prune failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "prune", err, map[string]any{"all": pruneAll, "older_than_hours": olderThanHours})
 	}
 
 	if jsonOut {
-		return writeJSON(stdout, stderr, report)
+		return r.writeJSON(stdout, stderr, "prune", report)
 	}
 
 	fmt.Fprintf(stdout, "Removed Files: %d\n", report.RemovedFiles)

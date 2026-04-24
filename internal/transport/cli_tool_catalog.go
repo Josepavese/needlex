@@ -2,7 +2,6 @@ package transport
 
 import (
 	"flag"
-	"fmt"
 	"io"
 )
 
@@ -33,8 +32,7 @@ func (r Runner) runToolCatalog(args []string, stdout, stderr io.Writer) int {
 
 	catalog, err := toolCatalog(provider, strict)
 	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
-		return 2
+		return r.reportCLIErrorCode(stderr, "tool_catalog", err, map[string]any{"provider": provider, "strict": strict}, 2)
 	}
-	return writeJSON(stdout, stderr, catalog)
+	return r.writeJSON(stdout, stderr, "tool_catalog", catalog)
 }

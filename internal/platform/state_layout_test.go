@@ -20,4 +20,10 @@ func TestNewStateLayoutBuildsCanonicalPaths(t *testing.T) {
 	if got := layout.Paths()["proofs"]; got != filepath.Join(root, "proofs") {
 		t.Fatalf("unexpected proofs path: %q", got)
 	}
+	if got := layout.Paths()["logs"]; got != filepath.Join(root, "logs") {
+		t.Fatalf("unexpected logs path: %q", got)
+	}
+	if layout.RuntimeLog != filepath.Join(root, "logs", "needlex.jsonl") {
+		t.Fatalf("unexpected runtime log: %q", layout.RuntimeLog)
+	}
 }

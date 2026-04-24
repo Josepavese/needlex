@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/config"
@@ -33,7 +34,9 @@ func NewRunner() Runner {
 	}
 }
 
-func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
+func (r Runner) Run(args []string, stdout, stderr io.Writer) (exitCode int) {
+	defer r.recoverCLI(args, stderr, &exitCode)
+
 	if len(args) == 0 {
 		writeRootUsage(stderr)
 		return 2
@@ -56,6 +59,10 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		return r.runMemory(args[1:], stdout, stderr)
 	case "analytics":
 		return r.runAnalytics(args[1:], stdout, stderr)
+	case "logs":
+		return r.runLogs(args[1:], stdout, stderr)
+	case "support":
+		return r.runSupport(args[1:], stdout, stderr)
 	case "prune":
 		return r.runPrune(args[1:], stdout, stderr)
 	case "mcp":
@@ -74,6 +81,23 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) int {
 		writeRootUsage(stderr)
 		return 2
 	}
+}
+
+func (r Runner) recoverCLI(args []string, stderr io.Writer, exitCode *int) {
+	recovered := recover()
+	if recovered == nil {
+		return
+	}
+	operation := "runtime"
+	if len(args) > 0 {
+		operation = args[0]
+	}
+	event := r.logRuntimeError(operation, "runtime.panic", fmt.Errorf("panic: %v", recovered), map[string]any{
+		"panic": fmt.Sprint(recovered),
+		"stack": string(debug.Stack()),
+	})
+	fmt.Fprintf(stderr, "%s failed. class=runtime_error diagnostic_id=%s log=%s\n", operation, event.ID, r.runtimeLogger().Path())
+	*exitCode = 1
 }
 
 func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
@@ -99,8 +123,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	}
 	mode, err := normalizeJSONMode(jsonMode)
 	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
-		return 2
+		return r.reportCLIError(stderr, "read", err, map[string]any{"phase": "parse_json_mode"})
 	}
 	if fs.NArg() != 1 {
 		writeReadUsage(stderr)
@@ -119,15 +142,14 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 		UserAgent: userAgent,
 	})
 	if err != nil {
-		fmt.Fprintf(stderr, "read failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "read", err, map[string]any{"url": fs.Arg(0), "objective": objective})
 	}
 
 	if jsonOut {
 		if mode == jsonModeFull {
-			return writeJSON(stdout, stderr, resp)
+			return r.writeJSON(stdout, stderr, "read", resp)
 		}
-		return writeJSON(stdout, stderr, compactReadResponse(resp))
+		return r.writeJSON(stdout, stderr, "read", compactReadResponse(resp))
 	}
 
 	renderReadText(stdout, resp, artifacts)
@@ -144,6 +166,8 @@ func writeRootUsage(w io.Writer) {
   needlex proof <trace-id|proof-id|chunk-id> [--json]
   needlex memory <stats|search|prune|export|import|rebuild-index> [args]
   needlex analytics <stats|recent|value-report|hosts|providers|failures|daily|export> [args]
+  needlex logs <path|stats|tail> [args]
+  needlex support bundle --out DIR [args]
   needlex prune (--all | --older-than-hours N) [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
@@ -196,12 +220,11 @@ func (r Runner) runReplay(args []string, stdout, stderr io.Writer) int {
 
 	report, err := r.loadReplay(fs.Arg(0))
 	if err != nil {
-		fmt.Fprintf(stderr, "replay failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "replay", err, map[string]any{"trace_id": fs.Arg(0)})
 	}
 
 	if jsonOut {
-		return writeJSON(stdout, stderr, report)
+		return r.writeJSON(stdout, stderr, "replay", report)
 	}
 
 	renderReplayText(stdout, report)
@@ -224,12 +247,11 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 
 	report, err := r.loadDiff(fs.Arg(0), fs.Arg(1))
 	if err != nil {
-		fmt.Fprintf(stderr, "diff failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "diff", err, map[string]any{"trace_a": fs.Arg(0), "trace_b": fs.Arg(1)})
 	}
 
 	if jsonOut {
-		return writeJSON(stdout, stderr, report)
+		return r.writeJSON(stdout, stderr, "diff", report)
 	}
 
 	renderDiffText(stdout, report)
@@ -309,10 +331,9 @@ func renderPackMetadata(w io.Writer, pack map[string]string, includePolicy bool)
 	}
 }
 
-func writeJSON(stdout, stderr io.Writer, value any) int {
+func (r Runner) writeJSON(stdout, stderr io.Writer, operation string, value any) int {
 	if err := writeIndentedJSON(stdout, value); err != nil {
-		fmt.Fprintf(stderr, "encode output: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, operation, fmt.Errorf("encode output: %w", err), nil)
 	}
 	return 0
 }
@@ -333,7 +354,7 @@ func writeUsage(w io.Writer, lines ...string) {
 func (r Runner) loadConfigOrExit(path string, stderr io.Writer) (config.Config, bool) {
 	cfg, err := r.loadConfig(path)
 	if err != nil {
-		fmt.Fprintf(stderr, "load config: %v\n", err)
+		r.reportCLIError(stderr, "load_config", err, map[string]any{"config_path": path})
 		return config.Config{}, false
 	}
 	return cfg, true

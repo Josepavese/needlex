@@ -163,6 +163,7 @@ needlex analytics failures --limit 20
 needlex analytics daily --limit 30
 needlex analytics export --out /tmp/needlex-analytics-export
 needlex doctor
+needlex support bundle --out /tmp/needlex-support
 ```
 
 Interpretation rule:
@@ -173,7 +174,8 @@ Interpretation rule:
 5. `failures` shows the failure-class mix: blocks, timeouts, missing pages, unsupported content, empty candidates
 6. `daily` tells you whether those numbers are improving or regressing over time
 7. `export` makes the substrate portable for dashboards, audit, and offline analysis
-8. `doctor` verifies the effective local home, DB paths, binary path, and active MCP processes
+8. `doctor` verifies the effective local home, DB paths, runtime log health, binary path, and active MCP processes
+9. `support bundle` exports doctor, analytics, runtime log stats/tail, and redacted runtime log files into one diagnostic directory
 
 Token and cost rule:
 1. Analytics stores canonical character counts in SQLite
@@ -275,8 +277,42 @@ Important paths:
 5. `<state-root>/analytics/analytics.db`
 6. `<state-root>/discovery/discovery.db`
 7. `<state-root>/discovery/providers/`
+8. `<state-root>/logs/needlex.jsonl`
 
 This is local-first product state, not disposable cache.
+
+## Runtime Logs
+
+Needle-X writes runtime diagnostics to one PAL-owned JSONL log:
+
+```bash
+needlex logs path
+needlex logs stats
+needlex logs tail --limit 20
+needlex logs tail --limit 20 --json
+```
+
+Behavior:
+1. stdout remains reserved for command output or MCP protocol payloads
+2. stderr gives a short failure class, `diagnostic_id`, and log path
+3. detailed errors, stack traces, unexpected provider responses, and noisy seedless warnings go to `<state-root>/logs/needlex.jsonl`
+4. logs rotate automatically instead of growing without bound
+5. secrets in common token/API-key/password forms are redacted before persistence
+
+Fetch/provider diagnostics:
+1. successful reads and query reads emit `fetch.completed`
+2. query discovery emits `discovery.completed`
+3. crawl emits `crawl.completed` plus per-page fetch events
+4. fetch/discovery failures emit failure-classed runtime errors before the compact stderr pointer is printed
+
+Support bundle:
+
+```bash
+needlex support bundle --out /tmp/needlex-support
+needlex support bundle --out /tmp/needlex-support --json
+```
+
+The bundle intentionally excludes traces, proofs, fingerprints, and source files by default.
 
 ## MCP Transport
 
@@ -303,9 +339,10 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{
 ```
 
 Logging:
-1. MCP session logging goes to `${NEEDLEX_MCP_LOG:-/tmp/needlex-mcp.log}`
-2. stdout is reserved for protocol output
-3. stderr should stay quiet except for fatal startup failures
+1. MCP diagnostics use the same PAL runtime log as the CLI
+2. inspect it with `needlex logs path` and `needlex logs tail`
+3. stdout is reserved for protocol output
+4. stderr should stay quiet except for fatal startup failures
 
 ## Discovery Memory
 

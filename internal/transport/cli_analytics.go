@@ -93,11 +93,10 @@ func (r Runner) runAnalyticsStats(args []string, stdout, stderr io.Writer) int {
 	}
 	stats, err := analytics.NewSQLiteStore(r.storeRoot).Stats(context.Background())
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics stats failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_stats", err, nil)
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsStatsResult{Stats: stats})
+		return r.writeJSON(stdout, stderr, "analytics_stats", analyticsStatsResult{Stats: stats})
 	}
 	fmt.Fprintf(stdout, "Runs: %d\n", stats.RunCount)
 	fmt.Fprintf(stdout, "Successful Runs: %d\n", stats.SuccessfulRuns)
@@ -133,11 +132,10 @@ func (r Runner) runAnalyticsRecent(args []string, stdout, stderr io.Writer) int 
 	}
 	runs, err := analytics.NewSQLiteStore(r.storeRoot).RecentRuns(context.Background(), limit)
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics recent failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_recent", err, map[string]any{"limit": limit})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsRecentResult{Runs: runs})
+		return r.writeJSON(stdout, stderr, "analytics_recent", analyticsRecentResult{Runs: runs})
 	}
 	fmt.Fprintf(stdout, "Recent Runs: %d\n", len(runs))
 	for i, run := range runs {
@@ -172,11 +170,10 @@ func (r Runner) runAnalyticsValueReport(args []string, stdout, stderr io.Writer)
 	}
 	report, err := analytics.NewSQLiteStore(r.storeRoot).ValueReport(context.Background())
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics value-report failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_value_report", err, nil)
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsValueReportResult{Report: report})
+		return r.writeJSON(stdout, stderr, "analytics_value_report", analyticsValueReportResult{Report: report})
 	}
 	fmt.Fprintln(stdout, "Value")
 	fmt.Fprintf(stdout, "  Chars Saved for the Agent: %d\n", report.TotalAgentCharsSaved)
@@ -216,11 +213,10 @@ func (r Runner) runAnalyticsHosts(args []string, stdout, stderr io.Writer) int {
 	}
 	hosts, err := analytics.NewSQLiteStore(r.storeRoot).Hosts(context.Background(), limit)
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics hosts failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_hosts", err, map[string]any{"limit": limit})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsHostsResult{Hosts: hosts})
+		return r.writeJSON(stdout, stderr, "analytics_hosts", analyticsHostsResult{Hosts: hosts})
 	}
 	fmt.Fprintf(stdout, "Hosts: %d\n", len(hosts))
 	for i, host := range hosts {
@@ -252,11 +248,10 @@ func (r Runner) runAnalyticsProviders(args []string, stdout, stderr io.Writer) i
 	}
 	providers, err := analytics.NewSQLiteStore(r.storeRoot).Providers(context.Background(), limit)
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics providers failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_providers", err, map[string]any{"limit": limit})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsProvidersResult{Providers: providers})
+		return r.writeJSON(stdout, stderr, "analytics_providers", analyticsProvidersResult{Providers: providers})
 	}
 	fmt.Fprintf(stdout, "Providers: %d\n", len(providers))
 	for i, provider := range providers {
@@ -288,11 +283,10 @@ func (r Runner) runAnalyticsFailures(args []string, stdout, stderr io.Writer) in
 	}
 	failures, err := analytics.NewSQLiteStore(r.storeRoot).Failures(context.Background(), limit)
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics failures failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_failures", err, map[string]any{"limit": limit})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsFailuresResult{Failures: failures})
+		return r.writeJSON(stdout, stderr, "analytics_failures", analyticsFailuresResult{Failures: failures})
 	}
 	fmt.Fprintf(stdout, "Failures: %d\n", len(failures))
 	for i, failure := range failures {
@@ -322,11 +316,10 @@ func (r Runner) runAnalyticsDaily(args []string, stdout, stderr io.Writer) int {
 	}
 	days, err := analytics.NewSQLiteStore(r.storeRoot).Daily(context.Background(), limit)
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics daily failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_daily", err, map[string]any{"limit": limit})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsDailyResult{Days: days})
+		return r.writeJSON(stdout, stderr, "analytics_daily", analyticsDailyResult{Days: days})
 	}
 	fmt.Fprintf(stdout, "Days: %d\n", len(days))
 	for i, day := range days {
@@ -358,11 +351,10 @@ func (r Runner) runAnalyticsExport(args []string, stdout, stderr io.Writer) int 
 	}
 	exported, err := analytics.NewSQLiteStore(r.storeRoot).ExportJSON(context.Background(), outDir)
 	if err != nil {
-		fmt.Fprintf(stderr, "analytics export failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "analytics_export", err, map[string]any{"out_dir": outDir})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, analyticsExportResult{Export: exported})
+		return r.writeJSON(stdout, stderr, "analytics_export", analyticsExportResult{Export: exported})
 	}
 	fmt.Fprintf(stdout, "Directory: %s\n", exported.Directory)
 	fmt.Fprintf(stdout, "Runs: %s (%d)\n", exported.RunsPath, exported.RunCount)

@@ -20,7 +20,8 @@ Transport compatibility:
 State and logging:
 1. MCP uses `NEEDLEX_HOME` when set
 2. otherwise it falls back to a stable absolute PAL-aware state root
-3. session logs go to `${NEEDLEX_MCP_LOG:-/tmp/needlex-mcp.log}`
+3. diagnostics go to the shared PAL runtime log
+4. inspect diagnostics with `needlex logs path` and `needlex logs tail`
 
 Current MCP tool set:
 1. `web_read`

@@ -16,7 +16,9 @@ needlex
 6. `needlex diff <trace-a> <trace-b> --json`
 7. `needlex memory stats|search|prune|export|import|rebuild-index`
 8. `needlex analytics stats|recent|value-report|hosts|providers|failures|daily|export`
-9. `needlex doctor [--json]`
+9. `needlex logs path|stats|tail`
+10. `needlex support bundle --out DIR`
+11. `needlex doctor [--json]`
 
 ## Minimal Examples
 
@@ -28,6 +30,8 @@ needlex analytics stats
 needlex analytics value-report
 needlex analytics failures
 needlex analytics daily --limit 30
+needlex logs stats
+needlex support bundle --out /tmp/needlex-support
 needlex doctor
 ```
 
@@ -39,6 +43,29 @@ Default JSON is compact and AI-first:
 3. diagnostics only when needed
 4. `read` and `query` include a compact `analytics` footer so the value delivered by Needle-X is visible inline
 5. `analytics stats` surfaces the fast headline view: runs, saved chars, estimated tokens, estimated cost
+
+## Runtime Logs
+
+Use `logs` when stderr gives a `diagnostic_id`:
+
+```bash
+needlex logs path
+needlex logs stats
+needlex logs tail --limit 20 --json
+```
+
+Runtime diagnostics live in the PAL state root at `<state-root>/logs/needlex.jsonl` and rotate automatically.
+
+## Support Bundle
+
+Use `support bundle` when a maintainer needs a portable diagnostic snapshot:
+
+```bash
+needlex support bundle --out /tmp/needlex-support
+needlex support bundle --out /tmp/needlex-support --json
+```
+
+It exports doctor output, analytics JSON, log stats, log tail, and copied runtime log files.
 
 ## Doctor
 
@@ -54,7 +81,8 @@ It reports:
 2. `NEEDLEX_HOME` and effective state root
 3. analytics and discovery database paths
 4. local state subdirectories
-5. active MCP processes when detectable
+5. runtime log path and event count
+6. active MCP processes when detectable
 
 ## Next
 

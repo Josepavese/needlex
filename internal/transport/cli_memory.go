@@ -116,11 +116,10 @@ func (r Runner) runMemoryStats(args []string, stdout, stderr io.Writer) int {
 	}
 	stats, err := r.loadMemoryStats(cfg)
 	if err != nil {
-		fmt.Fprintf(stderr, "memory stats failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "memory_stats", err, nil)
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, memoryStatsResult{Stats: compactStats(stats)})
+		return r.writeJSON(stdout, stderr, "memory_stats", memoryStatsResult{Stats: compactStats(stats)})
 	}
 	fmt.Fprintf(stdout, "Documents: %d\n", stats.DocumentCount)
 	fmt.Fprintf(stdout, "Edges: %d\n", stats.EdgeCount)
@@ -160,11 +159,10 @@ func (r Runner) runMemorySearch(args []string, stdout, stderr io.Writer) int {
 	query := strings.TrimSpace(fs.Arg(0))
 	candidates, err := r.searchMemory(cfg, query, limit, splitCSV(domainHints))
 	if err != nil {
-		fmt.Fprintf(stderr, "memory search failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "memory_search", err, map[string]any{"query": query, "limit": limit})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, memorySearchResult{Query: query, Candidates: compactMemoryCandidates(candidates)})
+		return r.writeJSON(stdout, stderr, "memory_search", memorySearchResult{Query: query, Candidates: compactMemoryCandidates(candidates)})
 	}
 	fmt.Fprintf(stdout, "Query: %s\n", query)
 	fmt.Fprintf(stdout, "Candidates: %d\n", len(candidates))
@@ -207,8 +205,7 @@ func (r Runner) runMemoryPrune(args []string, stdout, stderr io.Writer) int {
 	}
 	before, after, policy, err := r.pruneMemory(cfg)
 	if err != nil {
-		fmt.Fprintf(stderr, "memory prune failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "memory_prune", err, nil)
 	}
 	removed := map[string]int{
 		"documents":  before.DocumentCount - after.DocumentCount,
@@ -216,7 +213,7 @@ func (r Runner) runMemoryPrune(args []string, stdout, stderr io.Writer) int {
 		"embeddings": before.EmbeddingCount - after.EmbeddingCount,
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, memoryPruneResult{Before: compactStats(before), After: compactStats(after), Policy: policy, Removed: removed})
+		return r.writeJSON(stdout, stderr, "memory_prune", memoryPruneResult{Before: compactStats(before), After: compactStats(after), Policy: policy, Removed: removed})
 	}
 	fmt.Fprintf(stdout, "Documents: %d -> %d\n", before.DocumentCount, after.DocumentCount)
 	fmt.Fprintf(stdout, "Edges: %d -> %d\n", before.EdgeCount, after.EdgeCount)
@@ -246,11 +243,10 @@ func (r Runner) runMemoryExport(args []string, stdout, stderr io.Writer) int {
 	}
 	result, err := r.exportMemory(cfg, outDir)
 	if err != nil {
-		fmt.Fprintf(stderr, "memory export failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "memory_export", err, map[string]any{"out_dir": outDir})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, memoryExportResult{Export: result})
+		return r.writeJSON(stdout, stderr, "memory_export", memoryExportResult{Export: result})
 	}
 	fmt.Fprintf(stdout, "Documents: %s (%d)\n", result.DocumentsPath, result.DocumentCount)
 	fmt.Fprintf(stdout, "Edges: %s (%d)\n", result.EdgesPath, result.EdgeCount)
@@ -280,11 +276,10 @@ func (r Runner) runMemoryImport(args []string, stdout, stderr io.Writer) int {
 	}
 	result, err := r.importMemory(cfg, inDir)
 	if err != nil {
-		fmt.Fprintf(stderr, "memory import failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "memory_import", err, map[string]any{"in_dir": inDir})
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, memoryImportResult{Import: result})
+		return r.writeJSON(stdout, stderr, "memory_import", memoryImportResult{Import: result})
 	}
 	fmt.Fprintf(stdout, "Imported documents: %d\n", result.DocumentCount)
 	fmt.Fprintf(stdout, "Imported edges: %d\n", result.EdgeCount)
@@ -312,11 +307,10 @@ func (r Runner) runMemoryRebuildIndex(args []string, stdout, stderr io.Writer) i
 	}
 	stats, err := r.rebuildMemoryIndex(cfg)
 	if err != nil {
-		fmt.Fprintf(stderr, "memory rebuild-index failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "memory_rebuild_index", err, nil)
 	}
 	if jsonOut {
-		return writeJSON(stdout, stderr, memoryRebuildResult{Stats: compactStats(stats)})
+		return r.writeJSON(stdout, stderr, "memory_rebuild_index", memoryRebuildResult{Stats: compactStats(stats)})
 	}
 	fmt.Fprintf(stdout, "Rebuilt discovery memory acceleration state.\n")
 	if !stats.LastRebuildAt.IsZero() {

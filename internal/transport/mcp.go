@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/internal/observability"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/platform/buildinfo"
 )
@@ -116,20 +117,11 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if r.stdin == nil {
-		fmt.Fprintln(stderr, "mcp stdin is not configured")
-		return 1
+		return r.reportCLIError(stderr, "mcp", fmt.Errorf("mcp stdin is not configured"), nil)
 	}
-	logf, closeLog, err := openMCPLog()
-	if err != nil {
-		fmt.Fprintf(stderr, "mcp log setup failed: %v\n", err)
-		return 1
-	}
-	defer closeLog()
-
 	r.storeRoot = resolveMCPStoreRoot(r.storeRoot)
 	if err := os.MkdirAll(r.storeRoot, 0o755); err != nil {
-		fmt.Fprintf(stderr, "mcp state root setup failed: %v\n", err)
-		return 1
+		return r.reportCLIError(stderr, "mcp", err, map[string]any{"phase": "state_root_setup", "state_root": r.storeRoot})
 	}
 	conn := newMCPConn(r.stdin, stdout)
 	for {
@@ -138,14 +130,15 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 			if errors.Is(err, io.EOF) {
 				return 0
 			}
-			mcpLogf(logf, "read failed: %v", err)
+			r.logMCPError("mcp_read", "mcp.read_failed", err, nil)
 			return 1
 		}
 
 		var req mcpRequest
 		if err := json.Unmarshal(payload, &req); err != nil {
+			r.logMCPError("mcp_parse", "mcp.invalid_json", err, map[string]any{"payload_bytes": len(payload)})
 			if err := conn.WriteResponse(mcpResponse{JSONRPC: "2.0", Error: &mcpError{Code: -32700, Message: "invalid json"}}); err != nil {
-				mcpLogf(logf, "write parse error failed: %v", err)
+				r.logMCPError("mcp_write", "mcp.write_failed", err, map[string]any{"after": "invalid_json"})
 				return 1
 			}
 			continue
@@ -156,7 +149,7 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 		if err := conn.WriteResponse(resp); err != nil {
-			mcpLogf(logf, "write failed: %v", err)
+			r.logMCPError("mcp_write", "mcp.write_failed", err, map[string]any{"method": req.Method})
 			return 1
 		}
 	}
@@ -168,28 +161,6 @@ func resolveMCPStoreRoot(root string) string {
 		return root
 	}
 	return platform.StableStateRoot()
-}
-
-func openMCPLog() (io.Writer, func(), error) {
-	path := strings.TrimSpace(os.Getenv("NEEDLEX_MCP_LOG"))
-	if path == "" {
-		path = filepath.Join(os.TempDir(), "needlex-mcp.log")
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return nil, nil, err
-	}
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return nil, nil, err
-	}
-	return file, func() { _ = file.Close() }, nil
-}
-
-func mcpLogf(w io.Writer, format string, args ...any) {
-	if w == nil {
-		return
-	}
-	_, _ = fmt.Fprintf(w, "%s %s\n", time.Now().UTC().Format(time.RFC3339), fmt.Sprintf(format, args...))
 }
 
 func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
@@ -221,7 +192,11 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 		}
 		result, err := r.callMCPTool(call)
 		if err != nil {
+			event := r.logMCPError(call.Name, "mcp.tool_failed", err, map[string]any{"tool": call.Name})
 			resp.Error = &mcpError{Code: -32000, Message: mcpToolErrorMessage(err)}
+			if event.ID != "" {
+				resp.Error.Message += "; diagnostic_id: " + event.ID
+			}
 			return resp, true
 		}
 		resp.Result = result
@@ -236,7 +211,7 @@ func mcpToolErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	message := err.Error()
+	message := observability.RedactString(err.Error())
 	lower := strings.ToLower(message)
 	switch {
 	case strings.Contains(lower, "discovery_mode=off") || strings.Contains(lower, "unexpected status code 404"):
@@ -307,12 +282,12 @@ func writeMCPUsage(w io.Writer) {
 		"  replies using the same framing mode detected from the client",
 		"",
 		"Environment:",
-		"  NEEDLEX_HOME      override state root",
-		"  NEEDLEX_MCP_LOG   override MCP log path (default: $TMPDIR/needlex-mcp.log)",
+		"  NEEDLEX_HOME      override PAL state root",
 		"",
 		"Notes:",
 		"  run without extra positional arguments",
 		"  safe to probe with 'needlex mcp --help' before connecting a client",
+		"  diagnostics are written to the PAL runtime log; inspect with 'needlex logs path' and 'needlex logs tail'",
 	)
 }
 

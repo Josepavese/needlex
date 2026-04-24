@@ -29,6 +29,7 @@ Installed command:
 6. reconciles reruns without duplicating PATH hooks
 7. removes legacy `needle` wrapper artifacts
 8. prints the optional Codex skill path for agent-side usage guidance
+9. creates the PAL runtime log directory used by `needlex logs`
 
 ## Optional Agent Skill
 
