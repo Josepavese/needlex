@@ -63,6 +63,8 @@ jobs:
           go-version-file: go.mod
 
       - name: Test
+        env:
+          NEEDLEX_HOME: ${{ runner.temp }}/needlex-test-state-${{ matrix.goos }}-${{ matrix.goarch }}
         run: go test ./... -count=1
 
       - name: Build archive
