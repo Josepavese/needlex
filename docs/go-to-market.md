@@ -42,13 +42,15 @@ This is the right way to say it:
 2. later runs reuse local verified evidence
 3. repeated use improves local retrieval without hosted infra
 
-Current warm-state benchmark:
-1. `30/30` selected-url correctness
-2. `30/30` `discovery_memory` provider selection
+Current verified seeded benchmark:
+1. `100/100` selected-url correctness on `seeded-corpus-v2`
+2. `100/100` proof usability
+3. `100/100` runtime success
 
 Guardrail:
-1. warm-state claim only
+1. seeded-runtime claim only
 2. not a cold-state open-web seedless claim
+3. Discovery Memory warm-state stress is measured separately
 
 ## What Needle-X Is
 

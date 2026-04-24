@@ -71,6 +71,9 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	if stats.RunCount != 1 || stats.QueryRuns != 1 || stats.StageEventCount != 1 {
 		t.Fatalf("unexpected stats: %+v", stats)
 	}
+	if stats.TotalAgentCharsSaved != 2000 || stats.TotalAgentTokensSaved != 500 || stats.EstimatedCostSavedUSD.At5USDPerMillionTokens != 0.0025 {
+		t.Fatalf("unexpected value stats: %+v", stats)
+	}
 
 	report, err := store.ValueReport(context.Background())
 	if err != nil {
@@ -78,6 +81,18 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	}
 	if report.TotalRuns != 1 || report.TotalAgentCharsSaved <= 0 || report.TotalPublicBootstrapsAvoided != 1 || report.TotalTopicRootCorrections != 1 {
 		t.Fatalf("unexpected report: %+v", report)
+	}
+	if report.TokenEstimateMethod != TokenEstimateMethod || report.CharsPerTokenEstimate != CharsPerToken {
+		t.Fatalf("unexpected token estimate policy: %+v", report)
+	}
+	if report.TotalAgentTokensSaved != 500 || report.TotalAgentTokensDelivered != 100 || report.TotalRawTokensEstimated != 600 {
+		t.Fatalf("unexpected token estimates: %+v", report)
+	}
+	if report.EstimatedCostSavedUSD.At5USDPerMillionTokens != 0.0025 {
+		t.Fatalf("unexpected cost estimate: %+v", report.EstimatedCostSavedUSD)
+	}
+	if report.ContextCompressionFactor != 6 {
+		t.Fatalf("unexpected compression factor: %+v", report)
 	}
 
 	recent, err := store.RecentRuns(context.Background(), 5)
@@ -87,7 +102,7 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	if len(recent) != 1 {
 		t.Fatalf("expected one recent run, got %d", len(recent))
 	}
-	if recent[0].CharsSaved <= 0 || !recent[0].LocalMemoryUsed || recent[0].PublicBootstrapUsed {
+	if recent[0].CharsSaved <= 0 || recent[0].TokensSavedEstimated != 500 || !recent[0].LocalMemoryUsed || recent[0].PublicBootstrapUsed {
 		t.Fatalf("unexpected recent run: %+v", recent[0])
 	}
 
@@ -95,7 +110,7 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("hosts: %v", err)
 	}
-	if len(hosts) != 1 || hosts[0].Host != "example.com" {
+	if len(hosts) != 1 || hosts[0].Host != "example.com" || hosts[0].TotalAgentTokensSaved != 500 {
 		t.Fatalf("unexpected hosts: %+v", hosts)
 	}
 
@@ -103,7 +118,7 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("providers: %v", err)
 	}
-	if len(providers) != 1 || providers[0].Provider != "discovery_memory_same_site" {
+	if len(providers) != 1 || providers[0].Provider != "discovery_memory_same_site" || providers[0].TotalAgentTokensSaved != 500 {
 		t.Fatalf("unexpected providers: %+v", providers)
 	}
 
@@ -119,7 +134,7 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("daily: %v", err)
 	}
-	if len(daily) != 1 || daily[0].RunCount != 1 {
+	if len(daily) != 1 || daily[0].RunCount != 1 || daily[0].TotalAgentTokensSaved != 500 {
 		t.Fatalf("unexpected daily: %+v", daily)
 	}
 

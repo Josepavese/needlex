@@ -117,7 +117,7 @@ type report struct {
 func main() {
 	var outPath, casesPath string
 	flag.StringVar(&outPath, "out", "improvements/discovery-memory-benchmark-latest.json", "output report path")
-	flag.StringVar(&casesPath, "cases", "benchmarks/corpora/seeded-corpus-v1.json", "seeded corpus path")
+	flag.StringVar(&casesPath, "cases", "benchmarks/corpora/seeded-corpus-v2.json", "seeded corpus path")
 	flag.Parse()
 
 	c, err := loadCorpus(casesPath)

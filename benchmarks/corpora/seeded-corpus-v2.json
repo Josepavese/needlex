@@ -1,0 +1,1551 @@
+{
+  "version": "seeded-corpus-v2",
+  "cases": [
+    {
+      "id": "zai-coding-plan",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.z.ai/guides/overview/quick-start",
+      "task_type": "same_site_query_routing",
+      "goal": "coding plan",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "expected_domain": "docs.z.ai",
+      "must_contain_facts": [
+        "supports coding tools",
+        "lists supported models or plans"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from quick-start to the coding plan page."
+    },
+    {
+      "id": "sqlite-release-history",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "same_site_query_routing",
+      "goal": "release history",
+      "expected_url": "https://sqlite.org/chronology.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "lists historical releases",
+        "shows version chronology"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from the SQLite homepage to release history."
+    },
+    {
+      "id": "sqlite-download-page",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "same_site_query_routing",
+      "goal": "download",
+      "expected_url": "https://sqlite.org/download.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "download artifacts",
+        "release package references"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from SQLite homepage to download page."
+    },
+    {
+      "id": "python-virtual-environments",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/tutorial/index.html",
+      "task_type": "same_site_query_routing",
+      "goal": "virtual environments",
+      "expected_url": "https://docs.python.org/3/tutorial/venv.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "explains virtual environments",
+        "contains venv setup guidance"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from Python tutorial index to the virtual environments chapter."
+    },
+    {
+      "id": "python-installing-packages",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/index.html",
+      "task_type": "same_site_query_routing",
+      "goal": "installing packages",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "explains package installation",
+        "references pip or packaging workflow"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from Python docs home to the installing modules guide."
+    },
+    {
+      "id": "mdn-js-guide-en",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "task_type": "same_site_query_routing",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript guide page",
+        "guide-oriented content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from MDN JavaScript landing page to the guide."
+    },
+    {
+      "id": "mdn-js-guide-fr",
+      "family": "same_site_query",
+      "language": "fr",
+      "seed_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript",
+      "task_type": "same_site_query_routing",
+      "goal": "javascript guide",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript guide page",
+        "guide-oriented content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from localized MDN JavaScript landing page to the guide."
+    },
+    {
+      "id": "playwright-installation-from-home",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://playwright.dev",
+      "task_type": "same_site_query_routing",
+      "goal": "installation",
+      "expected_url": "https://playwright.dev/docs/intro",
+      "expected_domain": "playwright.dev",
+      "must_contain_facts": [
+        "installation guidance",
+        "getting started with Playwright"
+      ],
+      "must_expose_proof": true,
+      "notes": "Route from Playwright home to installation docs."
+    },
+    {
+      "id": "playwright-home-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://playwright.dev",
+      "task_type": "read_page_understanding",
+      "goal": "understand what Playwright offers",
+      "expected_url": "https://playwright.dev",
+      "expected_domain": "playwright.dev",
+      "must_contain_facts": [
+        "cross-browser testing",
+        "tooling or reliability claims"
+      ],
+      "must_expose_proof": true,
+      "notes": "Homepage understanding for a modern docs/product site."
+    },
+    {
+      "id": "sqlite-home-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "read_page_understanding",
+      "goal": "understand what SQLite is",
+      "expected_url": "https://sqlite.org",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "SQL database engine",
+        "small or self-contained"
+      ],
+      "must_expose_proof": true,
+      "notes": "Homepage understanding for a legacy technical site."
+    },
+    {
+      "id": "sqlite-chronology-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/chronology.html",
+      "task_type": "read_page_understanding",
+      "goal": "understand what this page contains",
+      "expected_url": "https://www.sqlite.org/chronology.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "release history",
+        "version chronology"
+      ],
+      "must_expose_proof": true,
+      "notes": "List-heavy technical page."
+    },
+    {
+      "id": "zai-devpack-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.z.ai/devpack/overview",
+      "task_type": "read_then_answer",
+      "goal": "understand the coding plan page",
+      "expected_url": "https://docs.z.ai/devpack/overview",
+      "expected_domain": "docs.z.ai",
+      "must_contain_facts": [
+        "coding tools support",
+        "plans or supported models"
+      ],
+      "must_expose_proof": true,
+      "notes": "Docs page with marketing plus plan details."
+    },
+    {
+      "id": "python-tutorial-index-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/tutorial/index.html",
+      "task_type": "read_page_understanding",
+      "goal": "understand the Python tutorial entry page",
+      "expected_url": "https://docs.python.org/3/tutorial/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "python tutorial",
+        "chapter or learning structure"
+      ],
+      "must_expose_proof": true,
+      "notes": "Docs index page understanding."
+    },
+    {
+      "id": "python-installing-index-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/installing/index.html",
+      "task_type": "read_then_answer",
+      "goal": "understand how Python package installation is documented",
+      "expected_url": "https://docs.python.org/3/installing/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "package installation",
+        "pip or installing modules"
+      ],
+      "must_expose_proof": true,
+      "notes": "Package installation docs overview."
+    },
+    {
+      "id": "mdn-en-javascript-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language",
+        "references guides or references"
+      ],
+      "must_expose_proof": true,
+      "notes": "Dense docs landing page."
+    },
+    {
+      "id": "go-doc-home-overview",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://go.dev/doc/",
+      "task_type": "read_page_understanding",
+      "goal": "understand the Go documentation home",
+      "expected_url": "https://go.dev/doc/",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "go documentation",
+        "references guides or manuals"
+      ],
+      "must_expose_proof": true,
+      "notes": "Technical documentation hub."
+    },
+    {
+      "id": "halfpocket-home",
+      "family": "corporate",
+      "language": "it",
+      "seed_url": "https://halfpocket.net",
+      "task_type": "read_then_answer",
+      "goal": "understand what Half Pocket does",
+      "expected_url": "https://halfpocket.net",
+      "expected_domain": "halfpocket.net",
+      "must_contain_facts": [
+        "digital services for businesses",
+        "web or software development"
+      ],
+      "must_expose_proof": true,
+      "notes": "Italian corporate homepage."
+    },
+    {
+      "id": "mozilla-home",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.mozilla.org/en-US/",
+      "task_type": "read_then_answer",
+      "goal": "understand what Mozilla presents on its homepage",
+      "expected_url": "https://www.mozilla.org/en-US/",
+      "expected_domain": "mozilla.org",
+      "must_contain_facts": [
+        "mozilla organization",
+        "products or mission"
+      ],
+      "must_expose_proof": true,
+      "notes": "Large corporate/mission homepage."
+    },
+    {
+      "id": "vercel-home",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://vercel.com",
+      "task_type": "read_then_answer",
+      "goal": "understand what Vercel offers",
+      "expected_url": "https://vercel.com",
+      "expected_domain": "vercel.com",
+      "must_contain_facts": [
+        "developer platform",
+        "deployment or application platform"
+      ],
+      "must_expose_proof": true,
+      "notes": "Modern product homepage."
+    },
+    {
+      "id": "netlify-home",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.netlify.com/",
+      "task_type": "read_then_answer",
+      "goal": "understand what Netlify offers",
+      "expected_url": "https://www.netlify.com/",
+      "expected_domain": "netlify.com",
+      "must_contain_facts": [
+        "web platform",
+        "deployment or site/app tooling"
+      ],
+      "must_expose_proof": true,
+      "notes": "Modern product homepage with strong marketing surface."
+    },
+    {
+      "id": "sqlite-home-legacy",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "read_page_understanding",
+      "goal": "understand this legacy homepage",
+      "expected_url": "https://sqlite.org",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "what SQLite is",
+        "legacy technical homepage"
+      ],
+      "must_expose_proof": true,
+      "notes": "Legacy homepage with menu/index noise."
+    },
+    {
+      "id": "sqlite-chronology-list-like",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/chronology.html",
+      "task_type": "read_page_understanding",
+      "goal": "understand a list-like release page",
+      "expected_url": "https://www.sqlite.org/chronology.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "release history",
+        "long chronology list"
+      ],
+      "must_expose_proof": true,
+      "notes": "List-like legacy page where the list is the content."
+    },
+    {
+      "id": "nginx-home",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://nginx.org/en/",
+      "task_type": "read_then_answer",
+      "goal": "understand what nginx offers from the homepage",
+      "expected_url": "https://nginx.org/en/",
+      "expected_domain": "nginx.org",
+      "must_contain_facts": [
+        "web server or application delivery",
+        "homepage overview"
+      ],
+      "must_expose_proof": true,
+      "notes": "Legacy product homepage."
+    },
+    {
+      "id": "lua-home",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://www.lua.org/",
+      "task_type": "read_page_understanding",
+      "goal": "understand what Lua is from the homepage",
+      "expected_url": "https://www.lua.org/",
+      "expected_domain": "lua.org",
+      "must_contain_facts": [
+        "programming language",
+        "homepage overview"
+      ],
+      "must_expose_proof": true,
+      "notes": "Older language homepage with simple structure."
+    },
+    {
+      "id": "mdn-zh-javascript",
+      "family": "multilingual",
+      "language": "zh-CN",
+      "seed_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Chinese MDN JavaScript page."
+    },
+    {
+      "id": "mdn-de-javascript",
+      "family": "multilingual",
+      "language": "de",
+      "seed_url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/de/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "German MDN JavaScript page."
+    },
+    {
+      "id": "mdn-ru-javascript",
+      "family": "multilingual",
+      "language": "ru",
+      "seed_url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/ru/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Russian MDN JavaScript page."
+    },
+    {
+      "id": "mdn-ja-javascript",
+      "family": "multilingual",
+      "language": "ja",
+      "seed_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Japanese MDN JavaScript page."
+    },
+    {
+      "id": "mdn-fr-javascript-guide",
+      "family": "multilingual",
+      "language": "fr",
+      "seed_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript guide page",
+      "expected_url": "https://developer.mozilla.org/fr/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript guide",
+        "localized guide content"
+      ],
+      "must_expose_proof": true,
+      "notes": "French MDN JavaScript guide page."
+    },
+    {
+      "id": "mdn-es-javascript",
+      "family": "multilingual",
+      "language": "es",
+      "seed_url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "goal": "understand the JavaScript landing page",
+      "expected_url": "https://developer.mozilla.org/es/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "javascript language docs",
+        "localized MDN content"
+      ],
+      "must_expose_proof": true,
+      "notes": "Spanish MDN JavaScript page."
+    },
+    {
+      "id": "python-logging-howto-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/howto/index.html",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://docs.python.org/3/howto/logging.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "logging tutorial or howto",
+        "Python logging guidance"
+      ],
+      "must_expose_proof": true,
+      "goal": "logging howto",
+      "notes": "Route from Python HOWTO index to logging HOWTO."
+    },
+    {
+      "id": "python-asyncio-library-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/library/index.html",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://docs.python.org/3/library/asyncio.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "asyncio library documentation",
+        "asynchronous IO"
+      ],
+      "must_expose_proof": true,
+      "goal": "asyncio library",
+      "notes": "Route from Python library index to asyncio."
+    },
+    {
+      "id": "python-json-library-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/library/index.html",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://docs.python.org/3/library/json.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "json module documentation",
+        "JSON encoder or decoder"
+      ],
+      "must_expose_proof": true,
+      "goal": "json library",
+      "notes": "Route from Python library index to json module."
+    },
+    {
+      "id": "sqlite-select-language-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org/lang.html",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://sqlite.org/lang_select.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "SELECT syntax",
+        "query language documentation"
+      ],
+      "must_expose_proof": true,
+      "goal": "select statement",
+      "notes": "Route from SQLite language index to SELECT documentation."
+    },
+    {
+      "id": "sqlite-pragma-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://sqlite.org/pragma.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "PRAGMA statements",
+        "SQLite configuration or introspection"
+      ],
+      "must_expose_proof": true,
+      "goal": "pragma statements",
+      "notes": "Route from SQLite home to PRAGMA documentation."
+    },
+    {
+      "id": "sqlite-json-functions-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://sqlite.org",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://sqlite.org/json1.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "JSON SQL functions",
+        "SQLite JSON extension"
+      ],
+      "must_expose_proof": true,
+      "goal": "json functions",
+      "notes": "Route from SQLite home to JSON functions."
+    },
+    {
+      "id": "go-effective-go-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://go.dev/doc/",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://go.dev/doc/effective_go",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "Effective Go",
+        "Go programming guidance"
+      ],
+      "must_expose_proof": true,
+      "goal": "effective go",
+      "notes": "Route from Go docs index to Effective Go."
+    },
+    {
+      "id": "go-language-spec-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://go.dev/doc/",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://go.dev/ref/spec",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "Go language specification",
+        "language reference"
+      ],
+      "must_expose_proof": true,
+      "goal": "language specification",
+      "notes": "Route from Go docs index to language spec."
+    },
+    {
+      "id": "mdn-fetch-api-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/API",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "Fetch API",
+        "web requests"
+      ],
+      "must_expose_proof": true,
+      "goal": "fetch api",
+      "notes": "Route from MDN Web APIs to Fetch API."
+    },
+    {
+      "id": "mdn-http-status-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/HTTP",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "HTTP status codes",
+        "response status reference"
+      ],
+      "must_expose_proof": true,
+      "goal": "http status codes",
+      "notes": "Route from MDN HTTP docs to the current canonical status-code reference."
+    },
+    {
+      "id": "playwright-locators-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://playwright.dev/docs/intro",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://playwright.dev/docs/locators",
+      "expected_domain": "playwright.dev",
+      "must_contain_facts": [
+        "locator documentation",
+        "element selection guidance"
+      ],
+      "must_expose_proof": true,
+      "goal": "locators",
+      "notes": "Route from Playwright intro to locators."
+    },
+    {
+      "id": "playwright-test-configuration-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://playwright.dev/docs/intro",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://playwright.dev/docs/test-configuration",
+      "expected_domain": "playwright.dev",
+      "must_contain_facts": [
+        "test configuration",
+        "Playwright config guidance"
+      ],
+      "must_expose_proof": true,
+      "goal": "test configuration",
+      "notes": "Route from Playwright intro to test configuration."
+    },
+    {
+      "id": "node-fs-api-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://nodejs.org/api/",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://nodejs.org/api/fs.html",
+      "expected_domain": "nodejs.org",
+      "must_contain_facts": [
+        "file system module",
+        "Node.js fs API"
+      ],
+      "must_expose_proof": true,
+      "goal": "file system api",
+      "notes": "Route from Node API index to fs."
+    },
+    {
+      "id": "node-http-api-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://nodejs.org/api/",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://nodejs.org/api/http.html",
+      "expected_domain": "nodejs.org",
+      "must_contain_facts": [
+        "HTTP module",
+        "Node.js HTTP API"
+      ],
+      "must_expose_proof": true,
+      "goal": "http api",
+      "notes": "Route from Node API index to http."
+    },
+    {
+      "id": "git-merge-doc-route",
+      "family": "same_site_query",
+      "language": "en",
+      "seed_url": "https://git-scm.com/docs",
+      "task_type": "same_site_query_routing",
+      "expected_url": "https://git-scm.com/docs/git-merge",
+      "expected_domain": "git-scm.com",
+      "must_contain_facts": [
+        "git-merge manual",
+        "branch integration"
+      ],
+      "must_expose_proof": true,
+      "goal": "git merge",
+      "notes": "Route from Git docs index to git-merge."
+    },
+    {
+      "id": "go-effective-go-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://go.dev/doc/effective_go",
+      "task_type": "read_then_answer",
+      "expected_url": "https://go.dev/doc/effective_go",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "Effective Go",
+        "Go style guidance"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Effective Go"
+    },
+    {
+      "id": "go-spec-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://go.dev/ref/spec",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://go.dev/ref/spec",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "language specification",
+        "Go programming language"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Go language specification"
+    },
+    {
+      "id": "go-modules-reference-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://go.dev/ref/mod",
+      "task_type": "read_then_answer",
+      "expected_url": "https://go.dev/ref/mod",
+      "expected_domain": "go.dev",
+      "must_contain_facts": [
+        "modules reference",
+        "module files or versions"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Go modules reference"
+    },
+    {
+      "id": "python-asyncio-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/library/asyncio.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://docs.python.org/3/library/asyncio.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "asyncio",
+        "asynchronous IO"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand asyncio library"
+    },
+    {
+      "id": "python-json-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/library/json.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://docs.python.org/3/library/json.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "JSON",
+        "encoder or decoder"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Python json module"
+    },
+    {
+      "id": "python-sqlite3-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/library/sqlite3.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://docs.python.org/3/library/sqlite3.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "SQLite",
+        "DB-API"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand sqlite3 module"
+    },
+    {
+      "id": "python-logging-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.python.org/3/howto/logging.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://docs.python.org/3/howto/logging.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "logging",
+        "HOWTO"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Python logging HOWTO"
+    },
+    {
+      "id": "sqlite-select-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/lang_select.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.sqlite.org/lang_select.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "SELECT",
+        "result set"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand SQLite SELECT syntax"
+    },
+    {
+      "id": "sqlite-c-api-intro-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/c3ref/intro.html",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.sqlite.org/c3ref/intro.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "C-language interface",
+        "SQLite API"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand SQLite C API intro"
+    },
+    {
+      "id": "sqlite-pragma-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/pragma.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.sqlite.org/pragma.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "PRAGMA",
+        "SQLite"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand SQLite PRAGMA statements"
+    },
+    {
+      "id": "sqlite-json1-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.sqlite.org/json1.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.sqlite.org/json1.html",
+      "expected_domain": "sqlite.org",
+      "must_contain_facts": [
+        "JSON",
+        "SQLite functions"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand SQLite JSON functions"
+    },
+    {
+      "id": "mdn-fetch-api-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "Fetch API",
+        "requests or responses"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Fetch API"
+    },
+    {
+      "id": "mdn-css-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/CSS",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/CSS",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "CSS",
+        "style sheets"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand CSS docs landing page"
+    },
+    {
+      "id": "mdn-html-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/HTML",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/HTML",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "HTML",
+        "markup"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand HTML docs landing page"
+    },
+    {
+      "id": "mdn-dom-document-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/API/Document",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/API/Document",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "Document",
+        "DOM"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Document API"
+    },
+    {
+      "id": "mdn-http-status-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "HTTP response status codes",
+        "status"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand HTTP status reference"
+    },
+    {
+      "id": "rust-learn-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.rust-lang.org/learn",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.rust-lang.org/learn",
+      "expected_domain": "rust-lang.org",
+      "must_contain_facts": [
+        "Rust",
+        "learning resources"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Rust learning resources"
+    },
+    {
+      "id": "rust-book-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://doc.rust-lang.org/book/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://doc.rust-lang.org/book/",
+      "expected_domain": "doc.rust-lang.org",
+      "must_contain_facts": [
+        "Rust Programming Language",
+        "book"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand The Rust Programming Language book"
+    },
+    {
+      "id": "rust-cargo-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://doc.rust-lang.org/cargo/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://doc.rust-lang.org/cargo/",
+      "expected_domain": "doc.rust-lang.org",
+      "must_contain_facts": [
+        "Cargo",
+        "Rust package manager"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Cargo book"
+    },
+    {
+      "id": "rust-std-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://doc.rust-lang.org/std/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://doc.rust-lang.org/std/",
+      "expected_domain": "doc.rust-lang.org",
+      "must_contain_facts": [
+        "standard library",
+        "Rust"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Rust standard library"
+    },
+    {
+      "id": "node-intro-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://nodejs.org/en/learn/getting-started/introduction-to-nodejs",
+      "task_type": "read_then_answer",
+      "expected_url": "https://nodejs.org/en/learn/getting-started/introduction-to-nodejs",
+      "expected_domain": "nodejs.org",
+      "must_contain_facts": [
+        "Node.js",
+        "JavaScript runtime"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Node.js introduction"
+    },
+    {
+      "id": "node-fs-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://nodejs.org/api/fs.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://nodejs.org/api/fs.html",
+      "expected_domain": "nodejs.org",
+      "must_contain_facts": [
+        "file system",
+        "Node.js"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Node.js fs API"
+    },
+    {
+      "id": "node-http-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://nodejs.org/api/http.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://nodejs.org/api/http.html",
+      "expected_domain": "nodejs.org",
+      "must_contain_facts": [
+        "HTTP",
+        "Node.js"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Node.js HTTP API"
+    },
+    {
+      "id": "node-stream-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://nodejs.org/api/stream.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://nodejs.org/api/stream.html",
+      "expected_domain": "nodejs.org",
+      "must_contain_facts": [
+        "streams",
+        "Node.js"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Node.js streams"
+    },
+    {
+      "id": "typescript-docs-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.typescriptlang.org/docs/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.typescriptlang.org/docs/",
+      "expected_domain": "typescriptlang.org",
+      "must_contain_facts": [
+        "TypeScript",
+        "documentation"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand TypeScript docs"
+    },
+    {
+      "id": "typescript-handbook-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.typescriptlang.org/docs/handbook/intro.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.typescriptlang.org/docs/handbook/intro.html",
+      "expected_domain": "typescriptlang.org",
+      "must_contain_facts": [
+        "handbook",
+        "TypeScript"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand TypeScript handbook intro"
+    },
+    {
+      "id": "react-learn-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://react.dev/learn",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://react.dev/learn",
+      "expected_domain": "react.dev",
+      "must_contain_facts": [
+        "React",
+        "learn"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand React learning docs"
+    },
+    {
+      "id": "react-reference-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://react.dev/reference/react",
+      "task_type": "read_then_answer",
+      "expected_url": "https://react.dev/reference/react",
+      "expected_domain": "react.dev",
+      "must_contain_facts": [
+        "React",
+        "API reference"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand React API reference"
+    },
+    {
+      "id": "vue-intro-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://vuejs.org/guide/introduction.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://vuejs.org/guide/introduction.html",
+      "expected_domain": "vuejs.org",
+      "must_contain_facts": [
+        "Vue",
+        "progressive framework"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Vue introduction"
+    },
+    {
+      "id": "svelte-overview-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://svelte.dev/docs/svelte/overview",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://svelte.dev/docs/svelte/overview",
+      "expected_domain": "svelte.dev",
+      "must_contain_facts": [
+        "Svelte",
+        "compiler or framework"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Svelte overview"
+    },
+    {
+      "id": "django-overview-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://docs.djangoproject.com/en/5.2/intro/overview/",
+      "task_type": "read_then_answer",
+      "expected_url": "https://docs.djangoproject.com/en/5.2/intro/overview/",
+      "expected_domain": "docs.djangoproject.com",
+      "must_contain_facts": [
+        "Django",
+        "web framework"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Django overview"
+    },
+    {
+      "id": "flask-stable-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://flask.palletsprojects.com/en/stable/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://flask.palletsprojects.com/en/stable/",
+      "expected_domain": "flask.palletsprojects.com",
+      "must_contain_facts": [
+        "Flask",
+        "web application"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Flask docs"
+    },
+    {
+      "id": "fastapi-home-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://fastapi.tiangolo.com/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://fastapi.tiangolo.com/",
+      "expected_domain": "fastapi.tiangolo.com",
+      "must_contain_facts": [
+        "FastAPI",
+        "APIs"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand FastAPI home"
+    },
+    {
+      "id": "fastapi-tutorial-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://fastapi.tiangolo.com/tutorial/",
+      "task_type": "read_then_answer",
+      "expected_url": "https://fastapi.tiangolo.com/tutorial/",
+      "expected_domain": "fastapi.tiangolo.com",
+      "must_contain_facts": [
+        "tutorial",
+        "FastAPI"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand FastAPI tutorial"
+    },
+    {
+      "id": "postgresql-tutorial-read",
+      "family": "docs",
+      "language": "en",
+      "seed_url": "https://www.postgresql.org/docs/current/tutorial.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.postgresql.org/docs/current/tutorial.html",
+      "expected_domain": "postgresql.org",
+      "must_contain_facts": [
+        "PostgreSQL",
+        "tutorial"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand PostgreSQL tutorial"
+    },
+    {
+      "id": "github-about-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://github.com/about",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://github.com/about",
+      "expected_domain": "github.com",
+      "must_contain_facts": [
+        "GitHub",
+        "developer platform"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand GitHub company/product positioning"
+    },
+    {
+      "id": "gitlab-about-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://about.gitlab.com/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://about.gitlab.com/",
+      "expected_domain": "about.gitlab.com",
+      "must_contain_facts": [
+        "GitLab",
+        "DevSecOps or platform"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand GitLab positioning"
+    },
+    {
+      "id": "docker-home-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.docker.com/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.docker.com/",
+      "expected_domain": "docker.com",
+      "must_contain_facts": [
+        "Docker",
+        "containers"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Docker positioning"
+    },
+    {
+      "id": "kubernetes-home-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://kubernetes.io/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://kubernetes.io/",
+      "expected_domain": "kubernetes.io",
+      "must_contain_facts": [
+        "Kubernetes",
+        "container orchestration"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Kubernetes positioning"
+    },
+    {
+      "id": "grafana-home-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://grafana.com/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://grafana.com/",
+      "expected_domain": "grafana.com",
+      "must_contain_facts": [
+        "Grafana",
+        "observability or dashboards"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Grafana positioning"
+    },
+    {
+      "id": "elastic-home-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.elastic.co/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.elastic.co/",
+      "expected_domain": "elastic.co",
+      "must_contain_facts": [
+        "Elastic",
+        "search or observability"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Elastic positioning"
+    },
+    {
+      "id": "linux-foundation-home-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.linuxfoundation.org/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.linuxfoundation.org/",
+      "expected_domain": "linuxfoundation.org",
+      "must_contain_facts": [
+        "Linux Foundation",
+        "open source"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Linux Foundation positioning"
+    },
+    {
+      "id": "apache-foundation-home-read",
+      "family": "corporate",
+      "language": "en",
+      "seed_url": "https://www.apache.org/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://www.apache.org/",
+      "expected_domain": "apache.org",
+      "must_contain_facts": [
+        "Apache Software Foundation",
+        "open source projects"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Apache Software Foundation positioning",
+      "notes": "Foundation homepage with stable static content; replaces W3C homepage, which returned 403 in live fetch."
+    },
+    {
+      "id": "curl-docs-read",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://curl.se/docs/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://curl.se/docs/",
+      "expected_domain": "curl.se",
+      "must_contain_facts": [
+        "curl",
+        "documentation"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand curl documentation index"
+    },
+    {
+      "id": "lua-manual-read",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://www.lua.org/manual/5.4/",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.lua.org/manual/5.4/",
+      "expected_domain": "lua.org",
+      "must_contain_facts": [
+        "Lua 5.4",
+        "reference manual"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Lua 5.4 manual"
+    },
+    {
+      "id": "gnu-make-manual-read",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://www.gnu.org/software/make/manual/make.html",
+      "task_type": "read_then_answer",
+      "expected_url": "https://www.gnu.org/software/make/manual/make.html",
+      "expected_domain": "gnu.org",
+      "must_contain_facts": [
+        "GNU make",
+        "manual"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand GNU Make manual"
+    },
+    {
+      "id": "nginx-docs-read",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://nginx.org/en/docs/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://nginx.org/en/docs/",
+      "expected_domain": "nginx.org",
+      "must_contain_facts": [
+        "nginx",
+        "documentation"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand nginx docs index"
+    },
+    {
+      "id": "cmake-help-read",
+      "family": "legacy_homepage",
+      "language": "en",
+      "seed_url": "https://cmake.org/cmake/help/latest/",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://cmake.org/cmake/help/latest/",
+      "expected_domain": "cmake.org",
+      "must_contain_facts": [
+        "CMake",
+        "documentation"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand CMake help index"
+    },
+    {
+      "id": "mdn-pt-javascript",
+      "family": "multilingual",
+      "language": "pt-BR",
+      "seed_url": "https://developer.mozilla.org/pt-BR/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/pt-BR/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "JavaScript",
+        "Portuguese localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand JavaScript docs in Portuguese"
+    },
+    {
+      "id": "mdn-ko-javascript",
+      "family": "multilingual",
+      "language": "ko",
+      "seed_url": "https://developer.mozilla.org/ko/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/ko/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "JavaScript",
+        "Korean localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand JavaScript docs in Korean"
+    },
+    {
+      "id": "mdn-it-javascript",
+      "family": "multilingual",
+      "language": "it",
+      "seed_url": "https://developer.mozilla.org/it/docs/Web/JavaScript",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/it/docs/Web/JavaScript",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "JavaScript",
+        "Italian localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand JavaScript docs in Italian"
+    },
+    {
+      "id": "mdn-ja-javascript-guide",
+      "family": "multilingual",
+      "language": "ja",
+      "seed_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript/Guide",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/ja/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "JavaScript guide",
+        "Japanese localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand JavaScript guide in Japanese"
+    },
+    {
+      "id": "mdn-zh-javascript-guide",
+      "family": "multilingual",
+      "language": "zh-CN",
+      "seed_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide",
+      "task_type": "read_then_answer",
+      "expected_url": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide",
+      "expected_domain": "developer.mozilla.org",
+      "must_contain_facts": [
+        "JavaScript guide",
+        "Chinese localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand JavaScript guide in Chinese"
+    },
+    {
+      "id": "python-ja-tutorial-read",
+      "family": "multilingual",
+      "language": "ja",
+      "seed_url": "https://docs.python.org/ja/3/tutorial/index.html",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://docs.python.org/ja/3/tutorial/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "Python tutorial",
+        "Japanese localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Python tutorial in Japanese"
+    },
+    {
+      "id": "python-es-tutorial-read",
+      "family": "multilingual",
+      "language": "es",
+      "seed_url": "https://docs.python.org/es/3/tutorial/index.html",
+      "task_type": "read_page_understanding",
+      "expected_url": "https://docs.python.org/es/3/tutorial/index.html",
+      "expected_domain": "docs.python.org",
+      "must_contain_facts": [
+        "Python tutorial",
+        "Spanish localization"
+      ],
+      "must_expose_proof": true,
+      "goal": "understand Python tutorial in Spanish"
+    }
+  ]
+}

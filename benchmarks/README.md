@@ -24,7 +24,7 @@ Seeded benchmark:
 
 ```bash
 go run ./benchmarks/seeded/runner \
-  --cases benchmarks/corpora/seeded-corpus-v1.json \
+  --cases benchmarks/corpora/seeded-corpus-v2.json \
   --out improvements/seeded-benchmark-latest.json
 ```
 
@@ -40,7 +40,7 @@ Discovery Memory benchmark:
 
 ```bash
 go run ./benchmarks/discovery_memory/runner \
-  --cases benchmarks/corpora/seeded-corpus-v1.json \
+  --cases benchmarks/corpora/seeded-corpus-v2.json \
   --out improvements/discovery-memory-benchmark-latest.json
 ```
 

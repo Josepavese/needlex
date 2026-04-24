@@ -52,13 +52,15 @@ The story is simple:
 
 Discovery Memory is enabled by default and stored in the PAL state root. If an external embeddings service is unavailable, Needle-X falls back to a native local semantic vectorizer so memory still accumulates and remains searchable.
 
-Current warm-state result:
-1. **30/30** selected-url correctness
-2. **30/30** `discovery_memory` provider selection
+Current verified seeded result on `seeded-corpus-v2`:
+1. **100/100** selected-url correctness
+2. **100/100** proof usability
+3. **100/100** runtime success
 
 Guardrail:
-1. warm-state local retrieval claim
-2. not a cold-state open-web seedless claim
+1. seeded-runtime claim
+2. not a blanket cold-state open-web seedless claim
+3. Discovery Memory warm-state stress is tracked separately from the seeded runtime score
 
 ![Needle-X Discovery Memory](docs/assets/readme-memory.png)
 
@@ -88,9 +90,12 @@ Default output is AI-first:
 needlex read https://example.com --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
+needlex analytics stats
 needlex analytics value-report
 needlex doctor
 ```
+
+`analytics stats` gives quick operational counters plus saved chars/tokens. `analytics value-report` is the fuller value view with estimated cost scenarios.
 
 ## Install
 

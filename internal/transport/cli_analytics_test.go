@@ -56,7 +56,7 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("analytics stats exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Runs: 1") || !strings.Contains(stdout.String(), "DB Path:") {
+	if !strings.Contains(stdout.String(), "Runs: 1") || !strings.Contains(stdout.String(), "Estimated Tokens Saved: 225") || !strings.Contains(stdout.String(), "DB Path:") {
 		t.Fatalf("unexpected analytics stats output: %q", stdout.String())
 	}
 
@@ -66,7 +66,7 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("analytics value-report exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Chars Saved for the Agent:") || !strings.Contains(stdout.String(), "Topic Roots Recovered: 1") {
+	if !strings.Contains(stdout.String(), "Chars Saved for the Agent:") || !strings.Contains(stdout.String(), "Estimated Tokens Saved:") || !strings.Contains(stdout.String(), "Topic Roots Recovered: 1") {
 		t.Fatalf("unexpected analytics value-report output: %q", stdout.String())
 	}
 
@@ -76,7 +76,7 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("analytics hosts exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "example.com") {
+	if !strings.Contains(stdout.String(), "example.com") || !strings.Contains(stdout.String(), "Estimated Tokens Saved: 225") {
 		t.Fatalf("unexpected analytics hosts output: %q", stdout.String())
 	}
 
@@ -86,7 +86,7 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("analytics providers exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "discovery_memory_same_site") {
+	if !strings.Contains(stdout.String(), "discovery_memory_same_site") || !strings.Contains(stdout.String(), "Estimated Tokens Saved: 225") {
 		t.Fatalf("unexpected analytics providers output: %q", stdout.String())
 	}
 
@@ -106,7 +106,7 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("analytics daily exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Runs: 1") {
+	if !strings.Contains(stdout.String(), "Runs: 1") || !strings.Contains(stdout.String(), "Estimated Tokens Saved: 225") {
 		t.Fatalf("unexpected analytics daily output: %q", stdout.String())
 	}
 

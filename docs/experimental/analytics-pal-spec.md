@@ -121,12 +121,14 @@ The system should explicitly support metrics that feel big and impressive, for e
 
 1. `total_raw_chars_processed`
 2. `total_agent_chars_saved`
-3. `total_proof_backed_packets`
-4. `total_public_bootstraps_avoided`
-5. `total_topic_root_corrections`
-6. `total_hosts_understood`
-7. `total_links_explored`
-8. `total_memory_reuse_events`
+3. `total_agent_tokens_saved_estimated`
+4. `estimated_cost_saved_usd`
+5. `total_proof_backed_packets`
+6. `total_public_bootstraps_avoided`
+7. `total_topic_root_corrections`
+8. `total_hosts_understood`
+9. `total_links_explored`
+10. `total_memory_reuse_events`
 
 But each one must have:
 1. a canonical event basis
@@ -750,6 +752,7 @@ Optionally expose a compact analytics footer in responses such as:
   "analytics": {
     "raw_chars": 84231,
     "final_chars": 3120,
+    "tokens_saved_estimated": 20278,
     "reduction_ratio": 0.9629,
     "sources_visited": 3,
     "links_explored": 17,

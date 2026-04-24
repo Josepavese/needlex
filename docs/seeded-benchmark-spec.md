@@ -436,21 +436,21 @@ Per il Regime B:
 ## Implementation Plan
 
 Ordine corretto:
-1. creare corpus `50` casi seeded
+1. creare corpus `100` casi seeded
 2. definire runner e schema report
 3. fare audit umano su subset
 4. chiudere gap prodotto
-5. estendere a `100-200`
+5. estendere a `100-200` senza duplicati facili
 6. solo dopo aggiungere competitor
 
 ## Initial Corpus
 
 Current seeded corpus path:
-1. [seeded-corpus-v1.json](../benchmarks/corpora/seeded-corpus-v1.json)
+1. [seeded-corpus-v2.json](../benchmarks/corpora/seeded-corpus-v2.json)
 
 Current shape:
-1. `30` casi
-2. famiglie bilanciate
+1. `100` casi
+2. famiglie bilanciate tra same-site routing, docs/read, corporate, legacy e multilingual
 3. same-site query coverage presente
 4. multilingual coverage presente
 

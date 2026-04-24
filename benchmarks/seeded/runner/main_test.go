@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"net/url"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestSummarize(t *testing.T) {
 	rows := []caseResult{
@@ -44,5 +49,59 @@ func TestClassifyExecutionError(t *testing.T) {
 		if got := classifyExecutionError(tt.errText); got != tt.want {
 			t.Fatalf("classifyExecutionError(%q)=%q want %q", tt.errText, got, tt.want)
 		}
+	}
+}
+
+func TestDefaultCorpusV2HasHundredUniqueCases(t *testing.T) {
+	corpusPath := filepath.Join("..", "..", "corpora", "seeded-corpus-v2.json")
+	c, err := loadCorpus(corpusPath)
+	if err != nil {
+		t.Fatalf("load corpus: %v", err)
+	}
+	if c.Version != "seeded-corpus-v2" {
+		t.Fatalf("expected seeded-corpus-v2, got %q", c.Version)
+	}
+	if len(c.Cases) != 100 {
+		t.Fatalf("expected 100 cases, got %d", len(c.Cases))
+	}
+
+	ids := map[string]struct{}{}
+	families := map[string]int{}
+	for _, item := range c.Cases {
+		if strings.TrimSpace(item.ID) == "" {
+			t.Fatalf("empty case id: %#v", item)
+		}
+		if _, exists := ids[item.ID]; exists {
+			t.Fatalf("duplicate case id %q", item.ID)
+		}
+		ids[item.ID] = struct{}{}
+		families[item.Family]++
+		assertBenchmarkURL(t, "seed_url", item.ID, item.SeedURL)
+		assertBenchmarkURL(t, "expected_url", item.ID, item.ExpectedURL)
+		if strings.TrimSpace(item.ExpectedDomain) == "" {
+			t.Fatalf("case %s has empty expected_domain", item.ID)
+		}
+		if item.TaskType == "same_site_query_routing" && strings.TrimSpace(item.Goal) == "" {
+			t.Fatalf("case %s is same-site routing without goal", item.ID)
+		}
+		if item.MustExposeProof != true {
+			t.Fatalf("case %s must require proof", item.ID)
+		}
+	}
+	for _, family := range []string{"same_site_query", "docs", "multilingual", "corporate", "legacy_homepage"} {
+		if families[family] == 0 {
+			t.Fatalf("expected at least one %s case, got %#v", family, families)
+		}
+	}
+}
+
+func assertBenchmarkURL(t *testing.T, field, id, raw string) {
+	t.Helper()
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		t.Fatalf("case %s invalid %s %q: %v", id, field, raw, err)
+	}
+	if parsed.Scheme != "https" || strings.TrimSpace(parsed.Host) == "" {
+		t.Fatalf("case %s invalid %s %q", id, field, raw)
 	}
 }

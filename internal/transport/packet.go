@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/proof"
@@ -42,12 +43,13 @@ type compactUncertainty struct {
 }
 
 type compactAnalyticsFooter struct {
-	CharsSaved          int     `json:"chars_saved"`
-	CompressionRatio    float64 `json:"compression_ratio"`
-	ProofBacked         bool    `json:"proof_backed"`
-	PublicBootstrapUsed bool    `json:"public_bootstrap_used"`
-	LocalMemoryUsed     bool    `json:"local_memory_used"`
-	TopicNodeUsed       bool    `json:"topic_node_used"`
+	CharsSaved           int     `json:"chars_saved"`
+	TokensSavedEstimated int64   `json:"tokens_saved_estimated"`
+	CompressionRatio     float64 `json:"compression_ratio"`
+	ProofBacked          bool    `json:"proof_backed"`
+	PublicBootstrapUsed  bool    `json:"public_bootstrap_used"`
+	LocalMemoryUsed      bool    `json:"local_memory_used"`
+	TopicNodeUsed        bool    `json:"topic_node_used"`
 }
 
 type compactReadOutput struct {
@@ -228,12 +230,13 @@ func compactAnalyticsFromTrace(trace proof.RunTrace, proofRefCount int, provider
 		compressionRatio = float64(charsSaved) / float64(rawChars)
 	}
 	return compactAnalyticsFooter{
-		CharsSaved:          charsSaved,
-		CompressionRatio:    compressionRatio,
-		ProofBacked:         proofRefCount > 0,
-		PublicBootstrapUsed: compactUsesPublicBootstrap(provider),
-		LocalMemoryUsed:     compactUsesLocalMemory(provider),
-		TopicNodeUsed:       topicNodeUsed,
+		CharsSaved:           charsSaved,
+		TokensSavedEstimated: analytics.TokenEstimateFromChars(int64(charsSaved)),
+		CompressionRatio:     compressionRatio,
+		ProofBacked:          proofRefCount > 0,
+		PublicBootstrapUsed:  compactUsesPublicBootstrap(provider),
+		LocalMemoryUsed:      compactUsesLocalMemory(provider),
+		TopicNodeUsed:        topicNodeUsed,
 	}
 }
 

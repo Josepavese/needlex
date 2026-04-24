@@ -166,13 +166,20 @@ needlex doctor
 ```
 
 Interpretation rule:
-1. `value-report` is front-of-house and demo-friendly
-2. `hosts` tells you where Needle-X wins or struggles on real target families
-3. `providers` tells you whether the value came from local-first recovery, same-site expansion, or public bootstrap
-4. `failures` shows the failure-class mix: blocks, timeouts, missing pages, unsupported content, empty candidates
-5. `daily` tells you whether those numbers are improving or regressing over time
-6. `export` makes the substrate portable for dashboards, audit, and offline analysis
-7. `doctor` verifies the effective local home, DB paths, binary path, and active MCP processes
+1. `stats` is the quick health/value snapshot: run counts, saved chars/tokens, DB path
+2. `value-report` is front-of-house and demo-friendly
+3. `hosts` tells you where Needle-X wins or struggles on real target families
+4. `providers` tells you whether the value came from local-first recovery, same-site expansion, or public bootstrap
+5. `failures` shows the failure-class mix: blocks, timeouts, missing pages, unsupported content, empty candidates
+6. `daily` tells you whether those numbers are improving or regressing over time
+7. `export` makes the substrate portable for dashboards, audit, and offline analysis
+8. `doctor` verifies the effective local home, DB paths, binary path, and active MCP processes
+
+Token and cost rule:
+1. Analytics stores canonical character counts in SQLite
+2. token counts are derived retroactively with the explicit `chars_per_token_estimate` policy
+3. cost savings are scenario values at fixed `$ / million tokens`, not provider-price claims
+4. use tokenizer-exact pricing only when a future provider-specific tokenizer layer is wired
 
 ### 1b. Agent Context
 

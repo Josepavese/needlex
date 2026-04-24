@@ -24,6 +24,7 @@ needlex
 needlex read https://example.com --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
+needlex analytics stats
 needlex analytics value-report
 needlex analytics failures
 needlex analytics daily --limit 30
@@ -37,6 +38,7 @@ Default JSON is compact and AI-first:
 2. proof-aware
 3. diagnostics only when needed
 4. `read` and `query` include a compact `analytics` footer so the value delivered by Needle-X is visible inline
+5. `analytics stats` surfaces the fast headline view: runs, saved chars, estimated tokens, estimated cost
 
 ## Doctor
 

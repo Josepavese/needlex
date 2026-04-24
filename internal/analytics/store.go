@@ -66,48 +66,63 @@ type StageEvent struct {
 }
 
 type Stats struct {
-	RunCount        int       `json:"run_count"`
-	SuccessfulRuns  int       `json:"successful_runs"`
-	QueryRuns       int       `json:"query_runs"`
-	ReadRuns        int       `json:"read_runs"`
-	CrawlRuns       int       `json:"crawl_runs"`
-	StageEventCount int       `json:"stage_event_count"`
-	LastRunAt       time.Time `json:"last_run_at,omitempty"`
-	DBPath          string    `json:"db_path"`
-	DBSizeBytes     int64     `json:"db_size_bytes"`
+	RunCount               int            `json:"run_count"`
+	SuccessfulRuns         int            `json:"successful_runs"`
+	QueryRuns              int            `json:"query_runs"`
+	ReadRuns               int            `json:"read_runs"`
+	CrawlRuns              int            `json:"crawl_runs"`
+	StageEventCount        int            `json:"stage_event_count"`
+	TotalRawCharsProcessed int64          `json:"total_raw_chars_processed"`
+	TotalAgentCharsSaved   int64          `json:"total_agent_chars_saved"`
+	TokenEstimateMethod    string         `json:"token_estimate_method"`
+	CharsPerTokenEstimate  float64        `json:"chars_per_token_estimate"`
+	TotalAgentTokensSaved  int64          `json:"total_agent_tokens_saved_estimated"`
+	EstimatedCostSavedUSD  CostSavingsUSD `json:"estimated_cost_saved_usd"`
+	LastRunAt              time.Time      `json:"last_run_at,omitempty"`
+	DBPath                 string         `json:"db_path"`
+	DBSizeBytes            int64          `json:"db_size_bytes"`
 }
 
 type ValueReport struct {
-	TotalRuns                    int     `json:"total_runs"`
-	SuccessfulRuns               int     `json:"successful_runs"`
-	TotalRawCharsProcessed       int64   `json:"total_raw_chars_processed"`
-	TotalAgentCharsSaved         int64   `json:"total_agent_chars_saved"`
-	TotalProofBackedPackets      int     `json:"total_proof_backed_packets"`
-	TotalPublicBootstrapsAvoided int     `json:"total_public_bootstraps_avoided"`
-	TotalMemoryReuseEvents       int     `json:"total_memory_reuse_events"`
-	TotalTopicRootCorrections    int     `json:"total_topic_root_corrections"`
-	TotalLinksExplored           int64   `json:"total_links_explored"`
-	TotalSourcesVisited          int64   `json:"total_sources_visited"`
-	AvgLatencyMS                 int64   `json:"avg_latency_ms"`
-	ContextCompressionRatio      float64 `json:"context_compression_ratio"`
-	ProofBackedRate              float64 `json:"proof_backed_rate"`
-	WarmLikeReuseRate            float64 `json:"warm_like_reuse_rate"`
+	TotalRuns                    int            `json:"total_runs"`
+	SuccessfulRuns               int            `json:"successful_runs"`
+	TotalRawCharsProcessed       int64          `json:"total_raw_chars_processed"`
+	TotalAgentCharsSaved         int64          `json:"total_agent_chars_saved"`
+	TotalAgentCharsDelivered     int64          `json:"total_agent_chars_delivered"`
+	TokenEstimateMethod          string         `json:"token_estimate_method"`
+	CharsPerTokenEstimate        float64        `json:"chars_per_token_estimate"`
+	TotalRawTokensEstimated      int64          `json:"total_raw_tokens_estimated"`
+	TotalAgentTokensSaved        int64          `json:"total_agent_tokens_saved_estimated"`
+	TotalAgentTokensDelivered    int64          `json:"total_agent_tokens_delivered_estimated"`
+	EstimatedCostSavedUSD        CostSavingsUSD `json:"estimated_cost_saved_usd"`
+	TotalProofBackedPackets      int            `json:"total_proof_backed_packets"`
+	TotalPublicBootstrapsAvoided int            `json:"total_public_bootstraps_avoided"`
+	TotalMemoryReuseEvents       int            `json:"total_memory_reuse_events"`
+	TotalTopicRootCorrections    int            `json:"total_topic_root_corrections"`
+	TotalLinksExplored           int64          `json:"total_links_explored"`
+	TotalSourcesVisited          int64          `json:"total_sources_visited"`
+	AvgLatencyMS                 int64          `json:"avg_latency_ms"`
+	ContextCompressionRatio      float64        `json:"context_compression_ratio"`
+	ContextCompressionFactor     float64        `json:"context_compression_factor"`
+	ProofBackedRate              float64        `json:"proof_backed_rate"`
+	WarmLikeReuseRate            float64        `json:"warm_like_reuse_rate"`
 }
 
 type RecentRun struct {
-	RunID               string    `json:"run_id"`
-	CompletedAt         time.Time `json:"completed_at"`
-	Operation           string    `json:"operation"`
-	Surface             string    `json:"surface"`
-	SelectedURL         string    `json:"selected_url,omitempty"`
-	Provider            string    `json:"provider,omitempty"`
-	FailureClass        string    `json:"failure_class,omitempty"`
-	Success             bool      `json:"success"`
-	LatencyMS           int64     `json:"latency_ms"`
-	CharsSaved          int       `json:"chars_saved"`
-	ProofUsable         bool      `json:"proof_usable"`
-	LocalMemoryUsed     bool      `json:"local_memory_used"`
-	PublicBootstrapUsed bool      `json:"public_bootstrap_used"`
+	RunID                string    `json:"run_id"`
+	CompletedAt          time.Time `json:"completed_at"`
+	Operation            string    `json:"operation"`
+	Surface              string    `json:"surface"`
+	SelectedURL          string    `json:"selected_url,omitempty"`
+	Provider             string    `json:"provider,omitempty"`
+	FailureClass         string    `json:"failure_class,omitempty"`
+	Success              bool      `json:"success"`
+	LatencyMS            int64     `json:"latency_ms"`
+	CharsSaved           int       `json:"chars_saved"`
+	TokensSavedEstimated int64     `json:"tokens_saved_estimated"`
+	ProofUsable          bool      `json:"proof_usable"`
+	LocalMemoryUsed      bool      `json:"local_memory_used"`
+	PublicBootstrapUsed  bool      `json:"public_bootstrap_used"`
 }
 
 type HostRollup struct {
@@ -116,6 +131,7 @@ type HostRollup struct {
 	SuccessfulRuns          int     `json:"successful_runs"`
 	AvgLatencyMS            int64   `json:"avg_latency_ms"`
 	TotalAgentCharsSaved    int64   `json:"total_agent_chars_saved"`
+	TotalAgentTokensSaved   int64   `json:"total_agent_tokens_saved_estimated"`
 	ProofBackedRate         float64 `json:"proof_backed_rate"`
 	PublicBootstrapUsedRate float64 `json:"public_bootstrap_used_rate"`
 	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
@@ -127,6 +143,7 @@ type ProviderRollup struct {
 	SuccessfulRuns          int     `json:"successful_runs"`
 	AvgLatencyMS            int64   `json:"avg_latency_ms"`
 	TotalAgentCharsSaved    int64   `json:"total_agent_chars_saved"`
+	TotalAgentTokensSaved   int64   `json:"total_agent_tokens_saved_estimated"`
 	ProofBackedRate         float64 `json:"proof_backed_rate"`
 	PublicBootstrapUsedRate float64 `json:"public_bootstrap_used_rate"`
 	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
@@ -145,6 +162,7 @@ type DailyRollup struct {
 	SuccessfulRuns          int     `json:"successful_runs"`
 	AvgLatencyMS            int64   `json:"avg_latency_ms"`
 	TotalAgentCharsSaved    int64   `json:"total_agent_chars_saved"`
+	TotalAgentTokensSaved   int64   `json:"total_agent_tokens_saved_estimated"`
 	ProofBackedRate         float64 `json:"proof_backed_rate"`
 	PublicBootstrapUsedRate float64 `json:"public_bootstrap_used_rate"`
 	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
@@ -348,6 +366,18 @@ func (s SQLiteStore) Stats(ctx context.Context) (Stats, error) {
 	if raw.Valid {
 		out.LastRunAt, _ = time.Parse(time.RFC3339Nano, raw.String)
 	}
+	if err := conn.QueryRowContext(ctx, `
+SELECT
+  COALESCE(SUM(raw_fetch_chars), 0),
+  COALESCE(SUM(MAX(raw_fetch_chars - final_context_chars, 0)), 0)
+FROM analytics_runs
+`).Scan(&out.TotalRawCharsProcessed, &out.TotalAgentCharsSaved); err != nil {
+		return Stats{}, fmt.Errorf("query analytics value stats: %w", err)
+	}
+	out.TokenEstimateMethod = TokenEstimateMethod
+	out.CharsPerTokenEstimate = CharsPerToken
+	out.TotalAgentTokensSaved = TokenEstimateFromChars(out.TotalAgentCharsSaved)
+	out.EstimatedCostSavedUSD = CostSavingsFromTokens(out.TotalAgentTokensSaved)
 	if stat, err := os.Stat(s.dbPath); err == nil {
 		out.DBSizeBytes = stat.Size()
 	}
@@ -399,6 +429,16 @@ FROM analytics_runs
 	if totalRawChars > 0 {
 		out.ContextCompressionRatio = float64(totalRawChars-totalFinalContext) / float64(totalRawChars)
 	}
+	out.TotalAgentCharsDelivered = totalFinalContext
+	out.TokenEstimateMethod = TokenEstimateMethod
+	out.CharsPerTokenEstimate = CharsPerToken
+	out.TotalRawTokensEstimated = TokenEstimateFromChars(totalRawChars)
+	out.TotalAgentTokensSaved = TokenEstimateFromChars(out.TotalAgentCharsSaved)
+	out.TotalAgentTokensDelivered = TokenEstimateFromChars(totalFinalContext)
+	out.EstimatedCostSavedUSD = CostSavingsFromTokens(out.TotalAgentTokensSaved)
+	if totalFinalContext > 0 {
+		out.ContextCompressionFactor = float64(totalRawChars) / float64(totalFinalContext)
+	}
 	if out.TotalRuns > 0 {
 		out.ProofBackedRate = float64(out.TotalProofBackedPackets) / float64(out.TotalRuns)
 		out.WarmLikeReuseRate = float64(out.TotalMemoryReuseEvents) / float64(out.TotalRuns)
@@ -436,6 +476,7 @@ LIMIT ?
 		}
 		item.CompletedAt, _ = time.Parse(time.RFC3339Nano, completedAt)
 		item.Success = success == 1
+		item.TokensSavedEstimated = TokenEstimateFromChars(int64(item.CharsSaved))
 		item.ProofUsable = proofUsable == 1
 		item.LocalMemoryUsed = localMemoryUsed == 1
 		item.PublicBootstrapUsed = publicBootstrapUsed == 1
@@ -482,6 +523,7 @@ LIMIT ?
 		if err := rows.Scan(&item.Host, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
 			return nil, fmt.Errorf("scan analytics host rollup: %w", err)
 		}
+		item.TotalAgentTokensSaved = TokenEstimateFromChars(item.TotalAgentCharsSaved)
 		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -525,6 +567,7 @@ LIMIT ?
 		if err := rows.Scan(&item.Provider, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
 			return nil, fmt.Errorf("scan analytics provider rollup: %w", err)
 		}
+		item.TotalAgentTokensSaved = TokenEstimateFromChars(item.TotalAgentCharsSaved)
 		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -606,6 +649,7 @@ LIMIT ?
 		if err := rows.Scan(&item.Day, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
 			return nil, fmt.Errorf("scan analytics daily rollup: %w", err)
 		}
+		item.TotalAgentTokensSaved = TokenEstimateFromChars(item.TotalAgentCharsSaved)
 		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {

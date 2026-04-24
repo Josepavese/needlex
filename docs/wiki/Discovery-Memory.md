@@ -45,14 +45,16 @@ Seedless `web_query` consults this local substrate before public bootstrap. Publ
 
 ## Current Claim
 
-Warm-state benchmark result:
-1. `30/30` selected-url correctness
-2. `30/30` `discovery_memory` provider selection
+Verified seeded benchmark result:
+1. `100/100` selected-url correctness on `seeded-corpus-v2`
+2. `100/100` proof usability
+3. `100/100` runtime success
 
 Guardrail:
-1. this is a warm-state local retrieval claim
+1. this is a seeded-runtime claim
 2. it is not a blanket cold-state open-web superiority claim
-3. seedless discovery is a first-class product surface, but it is still noisier than warm-state retrieval
+3. Discovery Memory warm-state stress is tracked separately from the seeded runtime score
+4. seedless discovery is a first-class product surface, but it is still noisier than seeded retrieval
 
 ## Operator Surface
 
