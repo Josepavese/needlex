@@ -241,124 +241,70 @@
     {
       "type": "function",
       "function": {
-        "name": "memory_stats",
-        "description": "Inspect Discovery Memory counts, freshness, and database path.",
-        "parameters": {
-          "examples": [
-            {}
-          ],
-          "properties": {
-            "config_path": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "memory_search",
-        "description": "Search Discovery Memory semantically before public bootstrap. Use this to inspect what local memory already knows.",
+        "name": "memory",
+        "description": "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state.",
         "parameters": {
           "examples": [
             {
+              "action": "stats"
+            },
+            {
+              "action": "search",
               "limit": 5,
               "query": "playwright installation"
+            },
+            {
+              "action": "export",
+              "out_dir": "needlex-discovery-export"
             }
           ],
           "properties": {
+            "action": {
+              "description": "Required operation. Prefer stats or search for debugging; prune/export/import/rebuild_index are maintenance actions.",
+              "enum": [
+                "stats",
+                "search",
+                "prune",
+                "export",
+                "import",
+                "rebuild_index"
+              ],
+              "type": "string"
+            },
             "config_path": {
+              "description": "Optional Needle-X JSON config path.",
               "type": "string"
             },
             "domain_hints": {
+              "description": "Optional host/domain hints for action=search.",
               "items": {
                 "type": "string"
               },
               "type": "array"
             },
             "goal": {
-              "description": "Alias for query.",
-              "type": "string"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "query": {
-              "description": "Semantic retrieval query.",
-              "type": "string"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "memory_prune",
-        "description": "Prune Discovery Memory to configured bounds.",
-        "parameters": {
-          "examples": [
-            {}
-          ],
-          "properties": {
-            "config_path": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "memory_export",
-        "description": "Export Discovery Memory canonical rows to JSONL files for inspection, backup, or migration.",
-        "parameters": {
-          "examples": [
-            {
-              "out_dir": "needlex-discovery-export"
-            }
-          ],
-          "properties": {
-            "config_path": {
-              "type": "string"
-            },
-            "out_dir": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "out_dir"
-          ],
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "memory_import",
-        "description": "Import Discovery Memory canonical rows from JSONL files.",
-        "parameters": {
-          "examples": [
-            {
-              "in_dir": "needlex-discovery-export"
-            }
-          ],
-          "properties": {
-            "config_path": {
+              "description": "Alias for query when action=search.",
               "type": "string"
             },
             "in_dir": {
+              "description": "Source directory for action=import.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum rows for action=search.",
+              "type": "integer"
+            },
+            "out_dir": {
+              "description": "Destination directory for action=export.",
+              "type": "string"
+            },
+            "query": {
+              "description": "Semantic query for action=search.",
               "type": "string"
             }
           },
           "required": [
-            "in_dir"
+            "action"
           ],
           "type": "object"
         }
@@ -367,167 +313,52 @@
     {
       "type": "function",
       "function": {
-        "name": "memory_rebuild_index",
-        "description": "Rebuild or refresh Discovery Memory acceleration state from canonical local rows.",
-        "parameters": {
-          "examples": [
-            {}
-          ],
-          "properties": {
-            "config_path": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_stats",
-        "description": "Inspect Analytics PAL run counts, stage counts, freshness, and database path.",
-        "parameters": {
-          "examples": [
-            {}
-          ],
-          "properties": {},
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_recent_runs",
-        "description": "List recent Analytics PAL runs with compact WOW-facing savings and reuse fields first.",
+        "name": "analytics",
+        "description": "Advanced non-core Analytics PAL control. Use only for diagnostics, value reporting, or maintenance; normal web_read/web_query/web_crawl record analytics automatically. Actions: value_report is the user-facing WOW report; stats/recent_runs are quick diagnostics; hosts/providers/failures/daily are maintainer rollups; export writes full analytics artifacts.",
         "parameters": {
           "examples": [
             {
+              "action": "value_report"
+            },
+            {
+              "action": "recent_runs",
               "limit": 10
-            }
-          ],
-          "properties": {
-            "limit": {
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_value_report",
-        "description": "Return the front-of-house Analytics PAL value report: chars saved, compression, bootstrap avoided, proof-backed delivery, and warm-state lift.",
-        "parameters": {
-          "examples": [
-            {}
-          ],
-          "properties": {},
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_hosts",
-        "description": "Return host-level Analytics PAL rollups showing where Needle-X creates value and where retrieval quality or latency concentrate.",
-        "parameters": {
-          "examples": [
+            },
             {
+              "action": "failures",
               "limit": 20
-            }
-          ],
-          "properties": {
-            "limit": {
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_providers",
-        "description": "Return provider-level Analytics PAL rollups to separate local-first wins, public bootstrap dependence, and provider-specific cost patterns.",
-        "parameters": {
-          "examples": [
+            },
             {
-              "limit": 20
-            }
-          ],
-          "properties": {
-            "limit": {
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_failures",
-        "description": "Return failure-class rollups from Analytics PAL so maintainers can distinguish blocks, timeouts, missing pages, unsupported content, and empty candidates.",
-        "parameters": {
-          "examples": [
-            {
-              "limit": 20
-            }
-          ],
-          "properties": {
-            "limit": {
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_daily",
-        "description": "Return day-level Analytics PAL rollups for trend tracking, regression detection, and release-to-release comparison.",
-        "parameters": {
-          "examples": [
-            {
-              "limit": 30
-            }
-          ],
-          "properties": {
-            "limit": {
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "analytics_export",
-        "description": "Export Analytics PAL canonical rows and rollups to JSON and JSONL files for offline analysis, dashboards, or audit.",
-        "parameters": {
-          "examples": [
-            {
+              "action": "export",
               "out_dir": "needlex-analytics-export"
             }
           ],
           "properties": {
+            "action": {
+              "description": "Required operation. Prefer value_report for product value, stats/recent_runs for quick debug, failures/providers for reliability analysis.",
+              "enum": [
+                "stats",
+                "recent_runs",
+                "value_report",
+                "hosts",
+                "providers",
+                "failures",
+                "daily",
+                "export"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum rows for recent_runs, hosts, providers, failures, or daily.",
+              "type": "integer"
+            },
             "out_dir": {
+              "description": "Destination directory for action=export.",
               "type": "string"
             }
           },
           "required": [
-            "out_dir"
+            "action"
           ],
           "type": "object"
         }

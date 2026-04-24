@@ -55,9 +55,14 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
 	}
-	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers", "analytics_failures", "analytics_daily", "analytics_export"} {
+	for _, tool := range []string{"memory", "analytics"} {
 		if !strings.Contains(string(responses[1]), tool) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
+		}
+	}
+	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers", "analytics_failures", "analytics_daily", "analytics_export"} {
+		if strings.Contains(string(responses[1]), `"`+tool+`"`) {
+			t.Fatalf("expected legacy tool %q not to be advertised, got %s", tool, responses[1])
 		}
 	}
 }
@@ -100,6 +105,17 @@ func TestMCPToolErrorMessageSuggestsNextCall(t *testing.T) {
 	message := mcpToolErrorMessage(fmt.Errorf("seed_url returned 404; discovery_mode=off requires an exact canonical page"))
 	if !strings.Contains(message, "next_recommended_call") || !strings.Contains(message, "same_site_links") {
 		t.Fatalf("expected actionable MCP error, got %q", message)
+	}
+}
+
+func TestRunnerMCPHiddenLegacyToolsRemainCallable(t *testing.T) {
+	runner := Runner{storeRoot: t.TempDir()}
+	result, err := runner.callMCPTool(mcpToolCall{Name: "analytics_stats", Arguments: map[string]any{}})
+	if err != nil {
+		t.Fatalf("expected hidden legacy analytics_stats alias to work: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("expected legacy analytics_stats result")
 	}
 }
 
@@ -435,9 +451,9 @@ func TestRunnerMCPMemoryTools(t *testing.T) {
 	input := framedMessages(
 		t,
 		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
-		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "memory_stats", "arguments": map[string]any{"config_path": configPath}}},
-		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "memory_search", "arguments": map[string]any{"query": "playwright installation", "config_path": configPath}}},
-		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "memory_export", "arguments": map[string]any{"out_dir": exportDir, "config_path": configPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "memory", "arguments": map[string]any{"action": "stats", "config_path": configPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "memory", "arguments": map[string]any{"action": "search", "query": "playwright installation", "config_path": configPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "memory", "arguments": map[string]any{"action": "export", "out_dir": exportDir, "config_path": configPath}}},
 	)
 
 	var stdout bytes.Buffer
@@ -462,8 +478,8 @@ func TestRunnerMCPMemoryTools(t *testing.T) {
 	input = framedMessages(
 		t,
 		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
-		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "memory_import", "arguments": map[string]any{"in_dir": exportDir, "config_path": importCfgPath}}},
-		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "memory_rebuild_index", "arguments": map[string]any{"config_path": importCfgPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "memory", "arguments": map[string]any{"action": "import", "in_dir": exportDir, "config_path": importCfgPath}}},
+		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "memory", "arguments": map[string]any{"action": "rebuild_index", "config_path": importCfgPath}}},
 	)
 	stdout.Reset()
 	stderr.Reset()
@@ -518,13 +534,13 @@ func TestRunnerMCPAnalyticsTools(t *testing.T) {
 	input := framedMessages(
 		t,
 		map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"},
-		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "analytics_stats", "arguments": map[string]any{}}},
-		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "analytics_recent_runs", "arguments": map[string]any{"limit": 5}}},
-		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "analytics_value_report", "arguments": map[string]any{}}},
-		map[string]any{"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": map[string]any{"name": "analytics_hosts", "arguments": map[string]any{"limit": 5}}},
-		map[string]any{"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": map[string]any{"name": "analytics_providers", "arguments": map[string]any{"limit": 5}}},
-		map[string]any{"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": map[string]any{"name": "analytics_daily", "arguments": map[string]any{"limit": 5}}},
-		map[string]any{"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": map[string]any{"name": "analytics_export", "arguments": map[string]any{"out_dir": filepath.Join(root, "analytics-export")}}},
+		map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "stats"}}},
+		map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "recent_runs", "limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "value_report"}}},
+		map[string]any{"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "hosts", "limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "providers", "limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "daily", "limit": 5}}},
+		map[string]any{"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": map[string]any{"name": "analytics", "arguments": map[string]any{"action": "export", "out_dir": filepath.Join(root, "analytics-export")}}},
 	)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

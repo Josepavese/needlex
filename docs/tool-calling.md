@@ -60,6 +60,29 @@ If you wire Needle-X into an AI tool-calling stack:
 3. use `web_proof` to convert claims into source-backed evidence
 4. keep `web_replay` and `web_diff` for audit/debug flows, not default agent loops
 5. keep `web_prune` as an operator tool, not a model-default tool
+6. use `memory` only for advanced local semantic memory inspection or maintenance
+7. use `analytics` only for diagnostics, value reporting, or maintainer rollups
+
+`memory` and `analytics` are dispatch tools with an `action` parameter.
+They intentionally replace many narrower MCP tools to reduce provider-side tool-list context.
+
+Memory actions:
+1. `stats`
+2. `search`
+3. `prune`
+4. `export`
+5. `import`
+6. `rebuild_index`
+
+Analytics actions:
+1. `stats`
+2. `recent_runs`
+3. `value_report`
+4. `hosts`
+5. `providers`
+6. `failures`
+7. `daily`
+8. `export`
 
 
 

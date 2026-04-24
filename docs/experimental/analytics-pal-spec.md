@@ -735,13 +735,12 @@ Potential commands:
 
 ### MCP
 
-Potential tools:
+Current direction:
 
-1. `analytics_stats`
-2. `analytics_recent_runs`
-3. `analytics_hosts`
-4. `analytics_value_report`
-5. `analytics_export`
+1. expose one `analytics` MCP tool
+2. select the operation through `action`
+3. keep `stats`, `recent_runs`, `hosts`, `value_report`, and `export` as actions instead of separate tools
+4. avoid inflating provider tool catalogs with non-core observability operations
 
 ### Packet-level transparency
 

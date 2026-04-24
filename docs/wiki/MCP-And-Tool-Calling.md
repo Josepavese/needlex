@@ -31,20 +31,29 @@ Current MCP tool set:
 5. `web_replay`
 6. `web_diff`
 7. `web_prune`
-8. `memory_stats`
-9. `memory_search`
-10. `memory_prune`
-11. `memory_export`
-12. `memory_import`
-13. `memory_rebuild_index`
-14. `analytics_stats`
-15. `analytics_recent_runs`
-16. `analytics_value_report`
-17. `analytics_hosts`
-18. `analytics_providers`
-19. `analytics_failures`
-20. `analytics_daily`
-21. `analytics_export`
+8. `memory`
+9. `analytics`
+
+`memory` and `analytics` are non-core advanced dispatchers.
+Use their `action` parameter instead of exposing many separate MCP tools.
+
+Memory actions:
+1. `stats`
+2. `search`
+3. `prune`
+4. `export`
+5. `import`
+6. `rebuild_index`
+
+Analytics actions:
+1. `stats`
+2. `recent_runs`
+3. `value_report`
+4. `hosts`
+5. `providers`
+6. `failures`
+7. `daily`
+8. `export`
 
 Canonical query discovery literals:
 1. `same_site_links`
@@ -59,7 +68,7 @@ Compact-first output rule:
 1. MCP `content.text` exposes the compact packet first
 2. MCP `structuredContent` keeps the richer diagnostic payload
 3. agents should default to the compact packet before opening diagnostics
-4. analytics tools follow the same rule: headline numbers first, richer rollups in structured payloads
+4. the `analytics` dispatcher follows the same rule: headline numbers first, richer rollups in structured payloads
 
 Tool scope rule:
 1. `web_extract` is intentionally not added yet
@@ -69,7 +78,7 @@ Agent routing rule:
 1. use `web_read` when the exact URL is known and page layout fidelity is not the goal
 2. use `web_query` when the agent has a goal and may need same-site routing, local memory, or public bootstrap
 3. omit `seed_url` for seedless discovery; Needle-X will consult Discovery Memory first and use public bootstrap only when needed
-4. use `memory_search` to inspect local recall explicitly before spending public-provider budget
+4. use `memory` with `action="search"` to inspect local recall explicitly before spending public-provider budget
 5. use `discovery_mode=off` only after the exact canonical page has already been verified
 
 ## Provider Catalogs
@@ -91,14 +100,16 @@ needlex tool-catalog --provider anthropic
 5. `web_replay` -> `needlex replay`
 6. `web_diff` -> `needlex diff`
 7. `web_prune` -> `needlex prune`
-8. `analytics_stats` -> `needlex analytics stats`
-9. `analytics_recent_runs` -> `needlex analytics recent`
-10. `analytics_value_report` -> `needlex analytics value-report`
-11. `analytics_hosts` -> `needlex analytics hosts`
-12. `analytics_providers` -> `needlex analytics providers`
-13. `analytics_failures` -> `needlex analytics failures`
-14. `analytics_daily` -> `needlex analytics daily`
-15. `analytics_export` -> `needlex analytics export`
+8. `memory` with `action="stats"` -> `needlex memory stats`
+9. `memory` with `action="search"` -> `needlex memory search`
+10. `analytics` with `action="stats"` -> `needlex analytics stats`
+11. `analytics` with `action="recent_runs"` -> `needlex analytics recent`
+12. `analytics` with `action="value_report"` -> `needlex analytics value-report`
+13. `analytics` with `action="hosts"` -> `needlex analytics hosts`
+14. `analytics` with `action="providers"` -> `needlex analytics providers`
+15. `analytics` with `action="failures"` -> `needlex analytics failures`
+16. `analytics` with `action="daily"` -> `needlex analytics daily`
+17. `analytics` with `action="export"` -> `needlex analytics export`
 
 ## Next
 

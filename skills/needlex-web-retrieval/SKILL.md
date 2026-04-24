@@ -40,7 +40,8 @@ Prefer MCP tools when available:
 2. `web_query`: find and read the best page for a goal.
 3. `web_crawl`: traverse bounded same-domain links from a seed URL.
 4. `web_proof`: inspect saved proof or trace records when evidence must be audited.
-5. `analytics_recent_runs` / `analytics_stats`: inspect recent reliability and value signals when debugging retrieval behavior.
+5. `analytics`: advanced diagnostics only. Use `action="recent_runs"`, `action="stats"`, or `action="value_report"` when debugging retrieval behavior or showing value.
+6. `memory`: advanced local semantic memory inspection only. Use `action="search"` or `action="stats"` when checking whether Needle-X already knows a source.
 
 Use CLI fallback when MCP is unavailable:
 

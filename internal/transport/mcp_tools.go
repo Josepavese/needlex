@@ -19,7 +19,11 @@ type mcpToolSpec struct {
 func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
 	handler, ok := r.mcpToolHandlers()[call.Name]
 	if !ok {
-		return nil, fmt.Errorf("unsupported tool %q", call.Name)
+		legacyHandler, legacyOK := r.legacyMCPToolHandlers()[call.Name]
+		if !legacyOK {
+			return nil, fmt.Errorf("unsupported tool %q", call.Name)
+		}
+		return legacyHandler(call.Arguments)
 	}
 	return handler(call.Arguments)
 }
@@ -33,6 +37,25 @@ func (r Runner) mcpToolHandlers() map[string]func(map[string]any) (map[string]an
 		}
 	}
 	return out
+}
+
+func (r Runner) legacyMCPToolHandlers() map[string]func(map[string]any) (map[string]any, error) {
+	return map[string]func(map[string]any) (map[string]any, error){
+		"memory_stats":           r.callMCPMemoryStatsTool,
+		"memory_search":          r.callMCPMemorySearchTool,
+		"memory_prune":           r.callMCPMemoryPruneTool,
+		"memory_export":          r.callMCPMemoryExportTool,
+		"memory_import":          r.callMCPMemoryImportTool,
+		"memory_rebuild_index":   r.callMCPMemoryRebuildIndexTool,
+		"analytics_stats":        r.callMCPAnalyticsStatsTool,
+		"analytics_recent_runs":  r.callMCPAnalyticsRecentRunsTool,
+		"analytics_value_report": r.callMCPAnalyticsValueReportTool,
+		"analytics_hosts":        r.callMCPAnalyticsHostsTool,
+		"analytics_providers":    r.callMCPAnalyticsProvidersTool,
+		"analytics_failures":     r.callMCPAnalyticsFailuresTool,
+		"analytics_daily":        r.callMCPAnalyticsDailyTool,
+		"analytics_export":       r.callMCPAnalyticsExportTool,
+	}
 }
 
 func (r Runner) callMCPReplayTool(args map[string]any) (map[string]any, error) {
@@ -229,20 +252,8 @@ func mcpToolSpecs() []mcpToolSpec {
 		{Definition: mcpDiffTool(), Handler: Runner.callMCPDiffTool},
 		{Definition: mcpProofTool(), Handler: Runner.callMCPProofTool},
 		{Definition: mcpPruneTool(), Handler: Runner.callMCPPruneTool},
-		{Definition: mcpMemoryStatsTool(), Handler: Runner.callMCPMemoryStatsTool},
-		{Definition: mcpMemorySearchTool(), Handler: Runner.callMCPMemorySearchTool},
-		{Definition: mcpMemoryPruneTool(), Handler: Runner.callMCPMemoryPruneTool},
-		{Definition: mcpMemoryExportTool(), Handler: Runner.callMCPMemoryExportTool},
-		{Definition: mcpMemoryImportTool(), Handler: Runner.callMCPMemoryImportTool},
-		{Definition: mcpMemoryRebuildIndexTool(), Handler: Runner.callMCPMemoryRebuildIndexTool},
-		{Definition: mcpAnalyticsStatsTool(), Handler: Runner.callMCPAnalyticsStatsTool},
-		{Definition: mcpAnalyticsRecentRunsTool(), Handler: Runner.callMCPAnalyticsRecentRunsTool},
-		{Definition: mcpAnalyticsValueReportTool(), Handler: Runner.callMCPAnalyticsValueReportTool},
-		{Definition: mcpAnalyticsHostsTool(), Handler: Runner.callMCPAnalyticsHostsTool},
-		{Definition: mcpAnalyticsProvidersTool(), Handler: Runner.callMCPAnalyticsProvidersTool},
-		{Definition: mcpAnalyticsFailuresTool(), Handler: Runner.callMCPAnalyticsFailuresTool},
-		{Definition: mcpAnalyticsDailyTool(), Handler: Runner.callMCPAnalyticsDailyTool},
-		{Definition: mcpAnalyticsExportTool(), Handler: Runner.callMCPAnalyticsExportTool},
+		{Definition: mcpMemoryTool(), Handler: Runner.callMCPMemoryTool},
+		{Definition: mcpAnalyticsTool(), Handler: Runner.callMCPAnalyticsTool},
 	}
 }
 
@@ -343,6 +354,50 @@ func mcpPruneTool() mcpTool {
 			"all":              map[string]any{"type": "boolean"},
 			"older_than_hours": map[string]any{"type": "integer"},
 		}), map[string]any{"older_than_hours": 24}),
+	}
+}
+
+func (r Runner) callMCPMemoryTool(args map[string]any) (map[string]any, error) {
+	switch strings.TrimSpace(stringArg(args, "action")) {
+	case "stats":
+		return r.callMCPMemoryStatsTool(args)
+	case "search":
+		return r.callMCPMemorySearchTool(args)
+	case "prune":
+		return r.callMCPMemoryPruneTool(args)
+	case "export":
+		return r.callMCPMemoryExportTool(args)
+	case "import":
+		return r.callMCPMemoryImportTool(args)
+	case "rebuild_index":
+		return r.callMCPMemoryRebuildIndexTool(args)
+	default:
+		return nil, fmt.Errorf("memory requires action: stats, search, prune, export, import, or rebuild_index")
+	}
+}
+
+func mcpMemoryTool() mcpTool {
+	return mcpTool{
+		Name:        "memory",
+		Description: "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state.",
+		InputSchema: schemaExamples(toolSchema(map[string]any{
+			"action": map[string]any{
+				"type":        "string",
+				"enum":        []string{"stats", "search", "prune", "export", "import", "rebuild_index"},
+				"description": "Required operation. Prefer stats or search for debugging; prune/export/import/rebuild_index are maintenance actions.",
+			},
+			"query":        map[string]any{"type": "string", "description": "Semantic query for action=search."},
+			"goal":         map[string]any{"type": "string", "description": "Alias for query when action=search."},
+			"limit":        map[string]any{"type": "integer", "description": "Maximum rows for action=search."},
+			"domain_hints": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional host/domain hints for action=search."},
+			"out_dir":      map[string]any{"type": "string", "description": "Destination directory for action=export."},
+			"in_dir":       map[string]any{"type": "string", "description": "Source directory for action=import."},
+			"config_path":  map[string]any{"type": "string", "description": "Optional Needle-X JSON config path."},
+		}, "action"),
+			map[string]any{"action": "stats"},
+			map[string]any{"action": "search", "query": "playwright installation", "limit": 5},
+			map[string]any{"action": "export", "out_dir": "needlex-discovery-export"},
+		),
 	}
 }
 
@@ -494,69 +549,47 @@ func (r Runner) callMCPMemoryRebuildIndexTool(args map[string]any) (map[string]a
 	return mcpToolResult(payload, compact), nil
 }
 
-func mcpMemoryStatsTool() mcpTool {
-	return mcpTool{
-		Name:        "memory_stats",
-		Description: "Inspect Discovery Memory counts, freshness, and database path.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"config_path": map[string]any{"type": "string"},
-		}), map[string]any{}),
+func (r Runner) callMCPAnalyticsTool(args map[string]any) (map[string]any, error) {
+	switch strings.TrimSpace(stringArg(args, "action")) {
+	case "stats":
+		return r.callMCPAnalyticsStatsTool(args)
+	case "recent_runs":
+		return r.callMCPAnalyticsRecentRunsTool(args)
+	case "value_report":
+		return r.callMCPAnalyticsValueReportTool(args)
+	case "hosts":
+		return r.callMCPAnalyticsHostsTool(args)
+	case "providers":
+		return r.callMCPAnalyticsProvidersTool(args)
+	case "failures":
+		return r.callMCPAnalyticsFailuresTool(args)
+	case "daily":
+		return r.callMCPAnalyticsDailyTool(args)
+	case "export":
+		return r.callMCPAnalyticsExportTool(args)
+	default:
+		return nil, fmt.Errorf("analytics requires action: stats, recent_runs, value_report, hosts, providers, failures, daily, or export")
 	}
 }
 
-func mcpMemorySearchTool() mcpTool {
+func mcpAnalyticsTool() mcpTool {
 	return mcpTool{
-		Name:        "memory_search",
-		Description: "Search Discovery Memory semantically before public bootstrap. Use this to inspect what local memory already knows.",
+		Name:        "analytics",
+		Description: "Advanced non-core Analytics PAL control. Use only for diagnostics, value reporting, or maintenance; normal web_read/web_query/web_crawl record analytics automatically. Actions: value_report is the user-facing WOW report; stats/recent_runs are quick diagnostics; hosts/providers/failures/daily are maintainer rollups; export writes full analytics artifacts.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"query":        map[string]any{"type": "string", "description": "Semantic retrieval query."},
-			"goal":         map[string]any{"type": "string", "description": "Alias for query."},
-			"limit":        map[string]any{"type": "integer"},
-			"domain_hints": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
-			"config_path":  map[string]any{"type": "string"},
-		}), map[string]any{"query": "playwright installation", "limit": 5}),
-	}
-}
-
-func mcpMemoryPruneTool() mcpTool {
-	return mcpTool{
-		Name:        "memory_prune",
-		Description: "Prune Discovery Memory to configured bounds.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"config_path": map[string]any{"type": "string"},
-		}), map[string]any{}),
-	}
-}
-
-func mcpMemoryExportTool() mcpTool {
-	return mcpTool{
-		Name:        "memory_export",
-		Description: "Export Discovery Memory canonical rows to JSONL files for inspection, backup, or migration.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"out_dir":     map[string]any{"type": "string"},
-			"config_path": map[string]any{"type": "string"},
-		}, "out_dir"), map[string]any{"out_dir": "needlex-discovery-export"}),
-	}
-}
-
-func mcpMemoryImportTool() mcpTool {
-	return mcpTool{
-		Name:        "memory_import",
-		Description: "Import Discovery Memory canonical rows from JSONL files.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"in_dir":      map[string]any{"type": "string"},
-			"config_path": map[string]any{"type": "string"},
-		}, "in_dir"), map[string]any{"in_dir": "needlex-discovery-export"}),
-	}
-}
-
-func mcpMemoryRebuildIndexTool() mcpTool {
-	return mcpTool{
-		Name:        "memory_rebuild_index",
-		Description: "Rebuild or refresh Discovery Memory acceleration state from canonical local rows.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"config_path": map[string]any{"type": "string"},
-		}), map[string]any{}),
+			"action": map[string]any{
+				"type":        "string",
+				"enum":        []string{"stats", "recent_runs", "value_report", "hosts", "providers", "failures", "daily", "export"},
+				"description": "Required operation. Prefer value_report for product value, stats/recent_runs for quick debug, failures/providers for reliability analysis.",
+			},
+			"limit":   map[string]any{"type": "integer", "description": "Maximum rows for recent_runs, hosts, providers, failures, or daily."},
+			"out_dir": map[string]any{"type": "string", "description": "Destination directory for action=export."},
+		}, "action"),
+			map[string]any{"action": "value_report"},
+			map[string]any{"action": "recent_runs", "limit": 10},
+			map[string]any{"action": "failures", "limit": 20},
+			map[string]any{"action": "export", "out_dir": "needlex-analytics-export"},
+		),
 	}
 }
 
@@ -698,82 +731,6 @@ func (r Runner) callMCPAnalyticsExportTool(args map[string]any) (map[string]any,
 		"compact": compact,
 	}
 	return mcpToolResult(payload, compact), nil
-}
-
-func mcpAnalyticsStatsTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_stats",
-		Description: "Inspect Analytics PAL run counts, stage counts, freshness, and database path.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{}), map[string]any{}),
-	}
-}
-
-func mcpAnalyticsRecentRunsTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_recent_runs",
-		Description: "List recent Analytics PAL runs with compact WOW-facing savings and reuse fields first.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"limit": map[string]any{"type": "integer"},
-		}), map[string]any{"limit": 10}),
-	}
-}
-
-func mcpAnalyticsValueReportTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_value_report",
-		Description: "Return the front-of-house Analytics PAL value report: chars saved, compression, bootstrap avoided, proof-backed delivery, and warm-state lift.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{}), map[string]any{}),
-	}
-}
-
-func mcpAnalyticsHostsTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_hosts",
-		Description: "Return host-level Analytics PAL rollups showing where Needle-X creates value and where retrieval quality or latency concentrate.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"limit": map[string]any{"type": "integer"},
-		}), map[string]any{"limit": 20}),
-	}
-}
-
-func mcpAnalyticsProvidersTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_providers",
-		Description: "Return provider-level Analytics PAL rollups to separate local-first wins, public bootstrap dependence, and provider-specific cost patterns.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"limit": map[string]any{"type": "integer"},
-		}), map[string]any{"limit": 20}),
-	}
-}
-
-func mcpAnalyticsFailuresTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_failures",
-		Description: "Return failure-class rollups from Analytics PAL so maintainers can distinguish blocks, timeouts, missing pages, unsupported content, and empty candidates.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"limit": map[string]any{"type": "integer"},
-		}), map[string]any{"limit": 20}),
-	}
-}
-
-func mcpAnalyticsDailyTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_daily",
-		Description: "Return day-level Analytics PAL rollups for trend tracking, regression detection, and release-to-release comparison.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"limit": map[string]any{"type": "integer"},
-		}), map[string]any{"limit": 30}),
-	}
-}
-
-func mcpAnalyticsExportTool() mcpTool {
-	return mcpTool{
-		Name:        "analytics_export",
-		Description: "Export Analytics PAL canonical rows and rollups to JSON and JSONL files for offline analysis, dashboards, or audit.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"out_dir": map[string]any{"type": "string"},
-		}, "out_dir"), map[string]any{"out_dir": "needlex-analytics-export"}),
-	}
 }
 
 func csvOrListArg(args map[string]any, key string) []string {
