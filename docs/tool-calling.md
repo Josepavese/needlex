@@ -26,6 +26,12 @@ Needle-X currently exposes these MCP tools:
 5. `web_replay`
 6. `web_diff`
 7. `web_prune`
+8. `memory`
+9. `analytics`
+
+The core retrieval surface is the `web_*` group.
+`memory` and `analytics` are advanced dispatch tools with an explicit `action` parameter.
+They keep non-core observability and maintenance operations out of the primary retrieval tool list.
 
 Runtime reference:
 - [mcp_tools.go](../internal/transport/mcp_tools.go)
@@ -106,8 +112,9 @@ The provider-facing contracts should stay:
 4. backward-conscious
 5. proof-aware
 
-Needle-X should not expose oversized “do everything” tools.
-It is better to keep tools narrow and composable.
+Needle-X should not collapse core retrieval into one oversized “do everything” tool.
+Keep the retrieval tools narrow and composable.
+Use dispatchers only for non-core maintenance and observability surfaces such as `memory` and `analytics`.
 
 ## Recommended Mapping
 
@@ -187,6 +194,62 @@ tools = json.loads(
     )
 )["tools"]
 
+def add(cmd, flag, value):
+    if value not in (None, "", False):
+        cmd.extend([flag, str(value)])
+
+def run_needlex_tool(name, args):
+    if name == "web_read":
+        cmd = ["needlex", "read", args["url"], "--json"]
+        add(cmd, "--objective", args.get("objective"))
+        add(cmd, "--profile", args.get("profile"))
+        add(cmd, "--user-agent", args.get("user_agent"))
+    elif name == "web_query":
+        cmd = ["needlex", "query"]
+        add(cmd, "", args.get("seed_url"))
+        add(cmd, "--goal", args.get("goal"))
+        add(cmd, "--discovery", args.get("discovery_mode"))
+        add(cmd, "--profile", args.get("profile"))
+        add(cmd, "--user-agent", args.get("user_agent"))
+        cmd.append("--json")
+    elif name == "web_crawl":
+        cmd = ["needlex", "crawl", args["seed_url"], "--json"]
+        add(cmd, "--max-pages", args.get("max_pages"))
+        add(cmd, "--max-depth", args.get("max_depth"))
+        add(cmd, "--profile", args.get("profile"))
+        if args.get("same_domain"):
+            cmd.append("--same-domain")
+    elif name == "web_replay":
+        cmd = ["needlex", "replay", args["trace_id"], "--json"]
+    elif name == "web_diff":
+        cmd = ["needlex", "diff", args["trace_a"], args["trace_b"], "--json"]
+    elif name == "web_proof":
+        proof_key = args.get("proof_id") or args.get("chunk_id") or args.get("trace_id")
+        cmd = ["needlex", "proof", proof_key, "--json"]
+    elif name == "web_prune":
+        cmd = ["needlex", "prune", "--json"]
+        if args.get("all"):
+            cmd.append("--all")
+        add(cmd, "--older-than-hours", args.get("older_than_hours"))
+    elif name == "memory":
+        action = {"rebuild_index": "rebuild-index"}.get(args["action"], args["action"])
+        cmd = ["needlex", "memory", action, "--json"]
+        add(cmd, "--config", args.get("config_path"))
+        add(cmd, "--limit", args.get("limit"))
+        add(cmd, "--domain-hints", args.get("domain_hints"))
+        add(cmd, "--out", args.get("out_dir"))
+        add(cmd, "--in", args.get("in_dir"))
+        if action == "search":
+            add(cmd, "", args.get("query"))
+    elif name == "analytics":
+        action = {"recent_runs": "recent", "value_report": "value-report"}.get(args["action"], args["action"])
+        cmd = ["needlex", "analytics", action, "--json"]
+        add(cmd, "--limit", args.get("limit"))
+        add(cmd, "--out", args.get("out_dir"))
+    else:
+        raise ValueError(f"unknown Needle-X tool: {name}")
+    return subprocess.check_output([part for part in cmd if part], text=True)
+
 response = client.responses.create(
     model="gpt-5",
     input="Read https://example.com and give me compact context.",
@@ -200,10 +263,7 @@ for item in response.output:
     tool_name = item.name
     tool_args = json.loads(item.arguments)
 
-    tool_result = subprocess.check_output(
-        ["needlex", tool_name.replace("web_", ""), "--json", *sum(([f"--{k}", str(v)] for k, v in tool_args.items()), [])],
-        text=True,
-    )
+    tool_result = run_needlex_tool(tool_name, tool_args)
 
     followup = client.responses.create(
         model="gpt-5",
@@ -222,6 +282,7 @@ Operational note:
 1. in production, do not shell out by naive key/value flattening for every tool
 2. route tool names to explicit handlers
 3. validate arguments before execution
+4. route `memory` and `analytics` through their `action` field instead of using `web_` name stripping
 
 ### Anthropic Tool Use
 
@@ -247,6 +308,62 @@ tools = json.loads(
     )
 )["tools"]
 
+def add(cmd, flag, value):
+    if value not in (None, "", False):
+        cmd.extend([flag, str(value)])
+
+def run_needlex_tool(name, args):
+    if name == "web_read":
+        cmd = ["needlex", "read", args["url"], "--json"]
+        add(cmd, "--objective", args.get("objective"))
+        add(cmd, "--profile", args.get("profile"))
+        add(cmd, "--user-agent", args.get("user_agent"))
+    elif name == "web_query":
+        cmd = ["needlex", "query"]
+        add(cmd, "", args.get("seed_url"))
+        add(cmd, "--goal", args.get("goal"))
+        add(cmd, "--discovery", args.get("discovery_mode"))
+        add(cmd, "--profile", args.get("profile"))
+        add(cmd, "--user-agent", args.get("user_agent"))
+        cmd.append("--json")
+    elif name == "web_crawl":
+        cmd = ["needlex", "crawl", args["seed_url"], "--json"]
+        add(cmd, "--max-pages", args.get("max_pages"))
+        add(cmd, "--max-depth", args.get("max_depth"))
+        add(cmd, "--profile", args.get("profile"))
+        if args.get("same_domain"):
+            cmd.append("--same-domain")
+    elif name == "web_replay":
+        cmd = ["needlex", "replay", args["trace_id"], "--json"]
+    elif name == "web_diff":
+        cmd = ["needlex", "diff", args["trace_a"], args["trace_b"], "--json"]
+    elif name == "web_proof":
+        proof_key = args.get("proof_id") or args.get("chunk_id") or args.get("trace_id")
+        cmd = ["needlex", "proof", proof_key, "--json"]
+    elif name == "web_prune":
+        cmd = ["needlex", "prune", "--json"]
+        if args.get("all"):
+            cmd.append("--all")
+        add(cmd, "--older-than-hours", args.get("older_than_hours"))
+    elif name == "memory":
+        action = {"rebuild_index": "rebuild-index"}.get(args["action"], args["action"])
+        cmd = ["needlex", "memory", action, "--json"]
+        add(cmd, "--config", args.get("config_path"))
+        add(cmd, "--limit", args.get("limit"))
+        add(cmd, "--domain-hints", args.get("domain_hints"))
+        add(cmd, "--out", args.get("out_dir"))
+        add(cmd, "--in", args.get("in_dir"))
+        if action == "search":
+            add(cmd, "", args.get("query"))
+    elif name == "analytics":
+        action = {"recent_runs": "recent", "value_report": "value-report"}.get(args["action"], args["action"])
+        cmd = ["needlex", "analytics", action, "--json"]
+        add(cmd, "--limit", args.get("limit"))
+        add(cmd, "--out", args.get("out_dir"))
+    else:
+        raise ValueError(f"unknown Needle-X tool: {name}")
+    return subprocess.check_output([part for part in cmd if part], text=True)
+
 response = client.messages.create(
     model="claude-sonnet-4-5",
     max_tokens=1200,
@@ -263,10 +380,7 @@ for block in response.content:
     tool_name = block.name
     tool_input = block.input
 
-    tool_result = subprocess.check_output(
-        ["needlex", tool_name.replace("web_", ""), "--json", *sum(([f"--{k}", str(v)] for k, v in tool_input.items()), [])],
-        text=True,
-    )
+    tool_result = run_needlex_tool(tool_name, tool_input)
 
     followup = client.messages.create(
         model="claude-sonnet-4-5",
@@ -293,6 +407,7 @@ Operational note:
 1. keep the original assistant `tool_use` block in the follow-up turn
 2. send the `tool_result` as a user content block
 3. keep tool execution deterministic and side-effect-light
+4. route `memory` and `analytics` through their `action` field instead of using `web_` name stripping
 
 ### Minimal MCP Client
 
@@ -342,6 +457,36 @@ Content-Length: 58
 }
 ```
 
+```json
+{
+  "jsonrpc":"2.0",
+  "id":4,
+  "method":"tools/call",
+  "params":{
+    "name":"analytics",
+    "arguments":{
+      "action":"value_report"
+    }
+  }
+}
+```
+
+```json
+{
+  "jsonrpc":"2.0",
+  "id":5,
+  "method":"tools/call",
+  "params":{
+    "name":"memory",
+    "arguments":{
+      "action":"search",
+      "query":"playwright installation",
+      "limit":5
+    }
+  }
+}
+```
+
 Operational note:
 1. if `NEEDLEX_HOME` is unset, MCP falls back to a stable PAL-aware absolute state root
 2. diagnostics go to the shared PAL runtime log under `<state-root>/logs/needlex.jsonl`
@@ -358,3 +503,17 @@ Needle-X CLI names and tool names map like this:
 5. `web_replay` -> `needlex replay`
 6. `web_diff` -> `needlex diff`
 7. `web_prune` -> `needlex prune`
+8. `memory` with `action="stats"` -> `needlex memory stats`
+9. `memory` with `action="search"` -> `needlex memory search`
+10. `memory` with `action="prune"` -> `needlex memory prune`
+11. `memory` with `action="export"` -> `needlex memory export`
+12. `memory` with `action="import"` -> `needlex memory import`
+13. `memory` with `action="rebuild_index"` -> `needlex memory rebuild-index`
+14. `analytics` with `action="stats"` -> `needlex analytics stats`
+15. `analytics` with `action="recent_runs"` -> `needlex analytics recent`
+16. `analytics` with `action="value_report"` -> `needlex analytics value-report`
+17. `analytics` with `action="hosts"` -> `needlex analytics hosts`
+18. `analytics` with `action="providers"` -> `needlex analytics providers`
+19. `analytics` with `action="failures"` -> `needlex analytics failures`
+20. `analytics` with `action="daily"` -> `needlex analytics daily`
+21. `analytics` with `action="export"` -> `needlex analytics export`

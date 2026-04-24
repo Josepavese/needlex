@@ -86,6 +86,9 @@ Default output is AI-first:
 5. local memory is populated automatically by successful `read`, `query`, and `crawl` runs
 6. MCP server accepts both standard `Content-Length` framing and raw newline-delimited JSON
 
+MCP advertises 9 tools: 7 core `web_*` tools plus `memory` and `analytics`.
+The non-core `memory` and `analytics` surfaces use an explicit `action` parameter to avoid bloating agent tool lists with maintenance and observability operations.
+
 ## Tiny Demo
 
 ```bash

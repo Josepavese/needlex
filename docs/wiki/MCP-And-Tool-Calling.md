@@ -102,14 +102,18 @@ needlex tool-catalog --provider anthropic
 7. `web_prune` -> `needlex prune`
 8. `memory` with `action="stats"` -> `needlex memory stats`
 9. `memory` with `action="search"` -> `needlex memory search`
-10. `analytics` with `action="stats"` -> `needlex analytics stats`
-11. `analytics` with `action="recent_runs"` -> `needlex analytics recent`
-12. `analytics` with `action="value_report"` -> `needlex analytics value-report`
-13. `analytics` with `action="hosts"` -> `needlex analytics hosts`
-14. `analytics` with `action="providers"` -> `needlex analytics providers`
-15. `analytics` with `action="failures"` -> `needlex analytics failures`
-16. `analytics` with `action="daily"` -> `needlex analytics daily`
-17. `analytics` with `action="export"` -> `needlex analytics export`
+10. `memory` with `action="prune"` -> `needlex memory prune`
+11. `memory` with `action="export"` -> `needlex memory export`
+12. `memory` with `action="import"` -> `needlex memory import`
+13. `memory` with `action="rebuild_index"` -> `needlex memory rebuild-index`
+14. `analytics` with `action="stats"` -> `needlex analytics stats`
+15. `analytics` with `action="recent_runs"` -> `needlex analytics recent`
+16. `analytics` with `action="value_report"` -> `needlex analytics value-report`
+17. `analytics` with `action="hosts"` -> `needlex analytics hosts`
+18. `analytics` with `action="providers"` -> `needlex analytics providers`
+19. `analytics` with `action="failures"` -> `needlex analytics failures`
+20. `analytics` with `action="daily"` -> `needlex analytics daily`
+21. `analytics` with `action="export"` -> `needlex analytics export`
 
 ## Next
 

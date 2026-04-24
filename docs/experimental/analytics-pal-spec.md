@@ -324,7 +324,7 @@ Examples:
 2. reduce
 3. discover
 4. semantic_rerank
-5. memory_search
+5. memory_semantic_lookup
 6. proof_assembly
 7. packet_finalize
 
@@ -739,7 +739,7 @@ Current direction:
 
 1. expose one `analytics` MCP tool
 2. select the operation through `action`
-3. keep `stats`, `recent_runs`, `hosts`, `value_report`, and `export` as actions instead of separate tools
+3. keep `stats`, `recent_runs`, `value_report`, `hosts`, `providers`, `failures`, `daily`, and `export` as actions instead of separate tools
 4. avoid inflating provider tool catalogs with non-core observability operations
 
 ### Packet-level transparency
@@ -877,7 +877,7 @@ Mitigation:
 ### Phase 3: Product-facing transparency
 
 1. compact analytics footer in CLI/MCP responses
-2. MCP analytics tools
+2. MCP `analytics` dispatcher
 3. host usefulness inspection
 4. discovery-memory value dashboard
 

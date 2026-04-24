@@ -646,15 +646,23 @@ Suggested retention policy:
 
 ## 18. Operator Controls
 
-Future CLI should expose:
+Current CLI exposes:
 1. `needlex memory stats`
-2. `needlex memory search --goal "..."`
+2. `needlex memory search "..."`
 3. `needlex memory prune`
 4. `needlex memory export`
 5. `needlex memory import`
 6. `needlex memory rebuild-index`
 
-Future MCP should expose equivalent tools.
+Current MCP exposes a single `memory` dispatcher with `action` values:
+1. `stats`
+2. `search`
+3. `prune`
+4. `export`
+5. `import`
+6. `rebuild_index`
+
+Do not re-expand these into separate MCP tools unless agent behavior proves that the dispatcher shape is hurting successful usage.
 
 ## 19. Benchmark Plan
 
