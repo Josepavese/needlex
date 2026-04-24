@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/failure"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
-	"github.com/josepavese/needlex/internal/failure"
 	"github.com/josepavese/needlex/internal/memory"
 	"github.com/josepavese/needlex/internal/proof"
 )

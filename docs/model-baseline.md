@@ -25,7 +25,8 @@ Current SSOT semantic gate baseline:
 1. backend: `openai-embeddings`
 2. model: `intfloat/multilingual-e5-small`
 3. base URL: `http://127.0.0.1:18180`
-4. enabled by default: `false`
+4. semantic gate enabled by default: `true`
+5. native local semantic fallback available for discovery and memory
 
 Reason:
 1. the product needs multilingual objective-to-chunk alignment
@@ -36,14 +37,28 @@ Reason:
 ## Discovery Baseline
 
 Current SSOT discovery baseline:
-1. provider chain: `https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/`
-2. primary bootstrap provider: `lite.duckduckgo.com`
-3. fallback provider: `html.duckduckgo.com`
+1. provider chain: `brave://search,https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/`
+2. primary bootstrap provider: provider-health ordered chain
+3. fallback provider: next healthy provider in the chain
 
 Reason:
 1. public DuckDuckGo HTML can return anti-bot challenge pages
-2. `lite` has been empirically more stable for bootstrap result extraction
+2. provider health memory should route around blocked, timed out, or unavailable providers
 3. provider order is product behavior and must not live as an implicit code default
+
+## Discovery Memory Baseline
+
+Current SSOT memory baseline:
+1. backend: `sqlite`
+2. path: `discovery/discovery.db`
+3. enabled by default: `true`
+4. external embedding backend: `openai-embeddings`
+5. fallback embedding backend: native local char/context vectorizer
+
+Reason:
+1. seedless discovery must improve as the tool is used
+2. local proof-backed memory should be tried before public bootstrap
+3. memory must still work when no embedding daemon is running
 
 ## Override Policy
 

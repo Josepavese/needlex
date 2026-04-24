@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
 	"github.com/josepavese/needlex/internal/config"
-	"github.com/josepavese/needlex/internal/evalutil"
 )
 
 type corpus struct {
@@ -205,6 +205,7 @@ func runCase(binaryPath, embeddingURL string, item seededCase) caseResult {
 func runWarmup(binaryPath, workDir, configPath, pageURL string) error {
 	cmd := exec.Command(binaryPath, "read", pageURL, "--json", "--config", configPath)
 	cmd.Dir = workDir
+	cmd.Env = append(os.Environ(), "NEEDLEX_HOME="+workDir)
 	_, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -315,6 +316,7 @@ func mustWriteConfig(workDir, embeddingURL string) string {
 func runNeedle(binaryPath, workDir string, args ...string) ([]byte, error) {
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = workDir
+	cmd.Env = append(os.Environ(), "NEEDLEX_HOME="+workDir)
 	raw, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError

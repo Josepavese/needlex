@@ -58,6 +58,26 @@ func TestReduceRemovesNoiseAndKeepsMainContent(t *testing.T) {
 	}
 }
 
+func TestReduceAnnotatesRecoverableStructuralContext(t *testing.T) {
+	dom, err := Reducer{}.Reduce(RawPage{
+		URL:      "https://example.com/spec",
+		FinalURL: "https://example.com/spec",
+		HTML: `<html><body>
+		  <article><h1>Main</h1><p>Primary content remains the main substrate.</p></article>
+		  <footer>Legal policy address and support escalation context for the organization.</footer>
+		</body></html>`,
+	})
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
+	}
+	for _, node := range dom.Nodes {
+		if node.Kind == "context" && strings.Contains(node.Text, "Legal policy") {
+			return
+		}
+	}
+	t.Fatalf("expected recoverable footer context annotation, got %#v", dom.Nodes)
+}
+
 func TestSegmentBuildsHeadingAwareSegments(t *testing.T) {
 	dom, err := Reducer{}.Reduce(RawPage{
 		URL:       "https://example.com/spec",

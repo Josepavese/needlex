@@ -58,6 +58,23 @@ func TestAcquireRejectsOversizedBody(t *testing.T) {
 	}
 }
 
+func TestAcquireWithReqRejectsOversizedBodyBeforeMaterializingResult(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = fmt.Fprint(w, strings.Repeat("a", 64))
+	}))
+	defer server.Close()
+
+	_, err := (Acquirer{}).acquireWithReq(context.Background(), AcquireInput{
+		URL:      server.URL,
+		Timeout:  2 * time.Second,
+		MaxBytes: 8,
+	}, "browser_like")
+	if err == nil {
+		t.Fatal("expected oversized browser-like body to fail")
+	}
+}
+
 func TestAcquireRetriesOnceOnTimeout(t *testing.T) {
 	var calls int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -227,5 +244,37 @@ func TestAcquireAllowsPlainText(t *testing.T) {
 	}
 	if !strings.Contains(page.HTML, "println!") {
 		t.Fatalf("expected plain text body to be captured, got %q", page.HTML)
+	}
+}
+
+func TestAcquireAllowsTextAssets(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		path        string
+		contentType string
+		body        string
+	}{
+		{name: "css", path: "/app.css", contentType: "text/css", body: "body { color: black; }"},
+		{name: "svg", path: "/icon.svg", contentType: "image/svg+xml", body: `<svg><title>Needle-X</title></svg>`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", tc.contentType)
+				_, _ = fmt.Fprint(w, tc.body)
+			}))
+			defer server.Close()
+
+			page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+				URL:      server.URL + tc.path,
+				Timeout:  2 * time.Second,
+				MaxBytes: 4096,
+			})
+			if err != nil {
+				t.Fatalf("expected %s response to be allowed, got %v", tc.contentType, err)
+			}
+			if !strings.Contains(page.HTML, tc.body) {
+				t.Fatalf("expected body to be captured, got %q", page.HTML)
+			}
+		})
 	}
 }

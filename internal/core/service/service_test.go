@@ -15,6 +15,7 @@ import (
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
+	"github.com/josepavese/needlex/internal/store"
 )
 
 const testHTML = `
@@ -33,6 +34,26 @@ const testHTML = `
   </body>
 </html>
 `
+
+func TestNewWithStateRootUsesProvidedPALRoot(t *testing.T) {
+	root := t.TempDir()
+	svc, err := NewWithStateRoot(config.Defaults(), nil, root)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	if svc.storeRoot != root {
+		t.Fatalf("expected service store root %q, got %q", root, svc.storeRoot)
+	}
+	if _, _, err := svc.discoveryProviders.Observe(store.DiscoveryProviderObservation{
+		Name:    "example",
+		Outcome: store.DiscoveryProviderOutcomeSuccess,
+	}); err != nil {
+		t.Fatalf("observe provider state: %v", err)
+	}
+	if _, err := svc.discoveryProviders.Load("example"); err != nil {
+		t.Fatalf("expected provider state under service root: %v", err)
+	}
+}
 
 func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

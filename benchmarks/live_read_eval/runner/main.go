@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
-	"github.com/josepavese/needlex/internal/evalutil"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/proof"
 )

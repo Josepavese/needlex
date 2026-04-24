@@ -4,10 +4,13 @@ import "github.com/josepavese/needlex/internal/pipeline"
 
 func segmentScore(segment pipeline.Segment, contextAlignment float64, index, total int, irEvidence segmentIREvidence) float64 {
 	kindWeight := map[string]float64{
-		"paragraph":  0.80,
-		"list_item":  0.74,
-		"table_cell": 0.70,
-		"code":       0.68,
+		"paragraph":       0.80,
+		"list_item":       0.74,
+		"table_cell":      0.70,
+		"code":            0.68,
+		"context":         0.52,
+		"navigation":      0.48,
+		"asset_reference": 0.46,
 	}
 	base := kindWeight[segment.Kind]
 	if base == 0 {

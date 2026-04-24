@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/josepavese/needlex/internal/buildinfo"
 	"github.com/josepavese/needlex/internal/platform"
+	"github.com/josepavese/needlex/internal/platform/buildinfo"
 )
 
 type mcpRequest struct {
@@ -221,7 +221,7 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 		}
 		result, err := r.callMCPTool(call)
 		if err != nil {
-			resp.Error = &mcpError{Code: -32000, Message: err.Error()}
+			resp.Error = &mcpError{Code: -32000, Message: mcpToolErrorMessage(err)}
 			return resp, true
 		}
 		resp.Result = result
@@ -229,6 +229,26 @@ func (r Runner) handleMCP(req mcpRequest) (mcpResponse, bool) {
 	default:
 		resp.Error = &mcpError{Code: -32601, Message: "method not found"}
 		return resp, true
+	}
+}
+
+func mcpToolErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	message := err.Error()
+	lower := strings.ToLower(message)
+	switch {
+	case strings.Contains(lower, "discovery_mode=off") || strings.Contains(lower, "unexpected status code 404"):
+		return message + `; next_recommended_call: web_query with discovery_mode="same_site_links" and the same seed_url, or discovery_mode="web_search" if the seed URL is uncertain`
+	case strings.Contains(lower, "unsupported discovery_mode"):
+		return message + `; valid discovery_mode values: same_site_links, web_search, off`
+	case strings.Contains(lower, "unsupported content type"):
+		return message + `; next_recommended_call: use web_query to find an HTML/text equivalent, or use a browser/full-fetch tool when exact binary layout is required`
+	case strings.Contains(lower, "provider blocked") || strings.Contains(lower, "anti-bot") || strings.Contains(lower, "status code 429") || strings.Contains(lower, "status code 403"):
+		return message + `; next_recommended_call: retry later, use a verified seed_url with same_site_links, or configure a healthier discovery provider`
+	default:
+		return message
 	}
 }
 

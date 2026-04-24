@@ -76,6 +76,91 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 	}
 }
 
+func TestDiscoverSameSiteSpecificityPriorRoutesWithoutSemanticBackend(t *testing.T) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Portal</title></head><body><article><h1>Portal</h1><a href="%s/blog">Blog</a><a href="%s/docs/replay">Replay Guide</a></article></body></html>`, serverURL, serverURL)
+		case "/docs/replay":
+			_, _ = fmt.Fprint(w, `<html><head><title>Replay Guide</title></head><body><article><h1>Replay</h1></article></body></html>`)
+		case "/blog":
+			_, _ = fmt.Fprint(w, `<html><head><title>Blog</title></head><body><article><h1>Blog</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = false
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+
+	resp, err := svc.Discover(context.Background(), DiscoverRequest{
+		Goal:                   "proof replay deterministic",
+		SeedURL:                server.URL,
+		SameDomain:             true,
+		PreferSpecificSameSite: true,
+	})
+	if err != nil {
+		t.Fatalf("discover failed: %v", err)
+	}
+	if resp.SelectedURL != server.URL+"/docs/replay" {
+		t.Fatalf("expected same-site route to beat seed without semantic backend, got %q", resp.SelectedURL)
+	}
+	if !containsReason(resp.Candidates[0].Reason, "same_site_specific_route") {
+		t.Fatalf("expected same-site specificity reason, got %#v", resp.Candidates[0].Reason)
+	}
+}
+
+func TestDiscoverSameSiteUsesNativeContextFallbackForSiblingChoice(t *testing.T) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>SQLite</title></head><body><a href="%s/fiddle/index.html">Fiddle</a><a href="%s/download.html">Download</a></body></html>`, serverURL, serverURL)
+		case "/download.html":
+			_, _ = fmt.Fprint(w, `<html><head><title>Download</title></head><body><article><h1>Download</h1></article></body></html>`)
+		case "/fiddle/index.html":
+			_, _ = fmt.Fprint(w, `<html><head><title>Fiddle</title></head><body><article><h1>Fiddle</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	cfg := config.Defaults()
+	cfg.Semantic.Enabled = true
+	cfg.Semantic.Backend = "unsupported-native-test"
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+
+	resp, err := svc.Discover(context.Background(), DiscoverRequest{
+		Goal:                   "download",
+		SeedURL:                server.URL,
+		SameDomain:             true,
+		PreferSpecificSameSite: true,
+	})
+	if err != nil {
+		t.Fatalf("discover failed: %v", err)
+	}
+	if resp.SelectedURL != server.URL+"/download.html" {
+		t.Fatalf("expected native context fallback to select download route, got %q with candidates %#v", resp.SelectedURL, resp.Candidates)
+	}
+	if !containsReason(resp.Candidates[0].Reason, "native_context_goal_alignment") {
+		t.Fatalf("expected native context alignment reason, got %#v", resp.Candidates[0].Reason)
+	}
+}
+
 func TestScoreDiscoveryCandidatesBoostsDomainHint(t *testing.T) {
 	candidates := discoverycore.ScoreCandidates(
 		"official studio profile",

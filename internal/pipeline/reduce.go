@@ -25,6 +25,17 @@ var noiseTags = map[string]struct{}{
 	"svg":      {},
 }
 
+var preservedContextTags = map[string]string{
+	"aside":  "context",
+	"footer": "context",
+	"form":   "context",
+	"header": "context",
+	"nav":    "navigation",
+	"svg":    "asset_reference",
+}
+
+const maxPreservedContextNodes = 8
+
 var textTags = map[string]string{
 	"h1":         "heading",
 	"h2":         "heading",
@@ -65,8 +76,11 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 		title: extractTitle(root),
 	}
 	walker.walk(body, pathState{}, profile)
+	embeddedNodes := extractEmbeddedPayloadNodes(root)
 	if len(walker.nodes) < 2 {
-		walker.nodes = append(walker.nodes, extractEmbeddedPayloadNodes(root)...)
+		walker.nodes = append(walker.nodes, embeddedNodes...)
+	} else if len(embeddedNodes) > 0 {
+		walker.nodes = append(walker.nodes, embeddedNodes...)
 	}
 
 	return SimplifiedDOM{
@@ -131,7 +145,7 @@ func looksLikeCodeContent(page RawPage) bool {
 		return false
 	}
 	switch strings.ToLower(path.Ext(parsed.Path)) {
-	case ".rs", ".go", ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".h", ".hpp", ".rb", ".php", ".swift", ".kt", ".sh", ".bash", ".zsh", ".toml", ".yaml", ".yml", ".json", ".xml":
+	case ".rs", ".go", ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".h", ".hpp", ".rb", ".php", ".swift", ".kt", ".sh", ".bash", ".zsh", ".toml", ".yaml", ".yml", ".json", ".xml", ".css", ".svg":
 		return true
 	}
 	return false
@@ -184,8 +198,9 @@ func splitTextBlocks(text string, preserveLines bool) []string {
 }
 
 type domWalker struct {
-	title string
-	nodes []SimplifiedNode
+	title     string
+	nodes     []SimplifiedNode
+	preserved int
 }
 
 func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
@@ -196,12 +211,13 @@ func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
 		}
 
 		tag := strings.ToLower(child.Data)
-		if shouldSkipNode(child, tag, profile) {
-			continue
-		}
-
 		siblingCounts[tag]++
 		path := append(clonePath(state), fmt.Sprintf("%s[%d]", tag, siblingCounts[tag]))
+
+		if shouldSkipNode(child, tag, profile) {
+			w.appendPreservedContextNode(child, path, tag)
+			continue
+		}
 
 		if kind, ok := textTags[tag]; ok {
 			w.appendTextNode(child, path, tag, kind)
@@ -228,6 +244,28 @@ func (w *domWalker) appendTextNode(node *html.Node, path []string, tag, kind str
 	}
 }
 
+func (w *domWalker) appendPreservedContextNode(node *html.Node, path []string, tag string) {
+	kind, ok := preservedContextTags[tag]
+	if !ok || w.preserved >= maxPreservedContextNodes {
+		return
+	}
+	text := normalizeWhitespace(extractPreservedContextText(node, tag))
+	if len(text) < 25 {
+		return
+	}
+	if len(text) > 600 {
+		text = strings.TrimSpace(text[:600])
+	}
+	w.nodes = append(w.nodes, SimplifiedNode{
+		Path:  "/" + strings.Join(path, "/"),
+		Tag:   tag,
+		Kind:  kind,
+		Text:  text,
+		Depth: len(path),
+	})
+	w.preserved++
+}
+
 func shouldSkipNode(node *html.Node, tag, profile string) bool {
 	if _, blocked := noiseTags[tag]; blocked {
 		return true
@@ -238,6 +276,35 @@ func shouldSkipNode(node *html.Node, tag, profile string) bool {
 		}
 	}
 	return false
+}
+
+func extractPreservedContextText(node *html.Node, rootTag string) string {
+	parts := []string{}
+	var walk func(*html.Node)
+	walk = func(current *html.Node) {
+		if current.Type == html.TextNode {
+			if text := normalizeWhitespace(current.Data); text != "" {
+				parts = append(parts, text)
+			}
+			return
+		}
+		if current.Type == html.ElementNode {
+			tag := strings.ToLower(current.Data)
+			switch tag {
+			case "script", "style", "iframe", "input", "noscript":
+				return
+			case "svg":
+				if rootTag != "svg" {
+					return
+				}
+			}
+		}
+		for child := current.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(node)
+	return strings.Join(parts, " ")
 }
 
 func attrHidden(attr html.Attribute) bool {

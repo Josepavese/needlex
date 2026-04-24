@@ -155,7 +155,7 @@ func packStageMetadata(req ReadRequest, webIR core.WebIR, chunks []core.Chunk, s
 
 func (s *Service) rankSegments(docID, objective string, webIR core.WebIR, segments []pipeline.Segment) []rankedSegment {
 	irEvidence := buildIRSegmentEvidence(webIR)
-	alignments := s.segmentSemanticAlignment(objective, segments)
+	alignments := s.segmentSemanticAlignment(docID, objective, segments)
 	ranked := make([]rankedSegment, 0, len(segments))
 	for index, segment := range segments {
 		fingerprint := prefixedHash("fp", docID, strings.Join(segment.HeadingPath, "/"), segment.Text)
@@ -184,7 +184,7 @@ func (s *Service) rankSegments(docID, objective string, webIR core.WebIR, segmen
 	return ranked
 }
 
-func (s *Service) segmentSemanticAlignment(objective string, segments []pipeline.Segment) map[string]float64 {
+func (s *Service) segmentSemanticAlignment(docID, objective string, segments []pipeline.Segment) map[string]float64 {
 	out := make(map[string]float64, len(segments))
 	objective = strings.TrimSpace(objective)
 	if objective == "" || len(segments) == 0 {
@@ -192,7 +192,7 @@ func (s *Service) segmentSemanticAlignment(objective string, segments []pipeline
 	}
 	candidates := make([]intel.SemanticCandidate, 0, len(segments))
 	for _, segment := range segments {
-		fingerprint := prefixedHash("fp", "", strings.Join(segment.HeadingPath, "/"), segment.Text)
+		fingerprint := prefixedHash("fp", docID, strings.Join(segment.HeadingPath, "/"), segment.Text)
 		candidates = append(candidates, intel.SemanticCandidate{
 			ID:      fingerprint,
 			Heading: append([]string{}, segment.HeadingPath...),
@@ -221,7 +221,32 @@ func selectProfile(ranked []rankedSegment, profile string) []rankedSegment {
 	case core.ProfileDeep:
 		limit = len(ranked)
 	}
-	return append([]rankedSegment{}, ranked[:limit]...)
+	selected := make([]rankedSegment, 0, limit)
+	for _, item := range ranked {
+		if !profileSelectionEligible(profile, item) {
+			continue
+		}
+		selected = append(selected, item)
+		if len(selected) == limit {
+			return selected
+		}
+	}
+	if len(selected) == 0 && len(ranked) > 0 {
+		return append([]rankedSegment{}, ranked[:min(limit, len(ranked))]...)
+	}
+	return selected
+}
+
+func profileSelectionEligible(profile string, item rankedSegment) bool {
+	switch item.segment.Kind {
+	case "context", "navigation", "asset_reference":
+		if item.chunk.ContextAlignment >= 0.35 {
+			return true
+		}
+		return profile == core.ProfileDeep && item.chunk.ContextAlignment > 0
+	default:
+		return true
+	}
 }
 
 func collectChunks(selected []rankedSegment) []core.Chunk {

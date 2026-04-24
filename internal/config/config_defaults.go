@@ -101,7 +101,7 @@ func defaultSemanticConfig(baseline modelbaseline.Manifest) SemanticConfig {
 
 func defaultMemoryConfig(baseline modelbaseline.Manifest) MemoryConfig {
 	return MemoryConfig{
-		Enabled:          false,
+		Enabled:          true,
 		Backend:          "sqlite",
 		Path:             "discovery/discovery.db",
 		MaxDocuments:     4000,

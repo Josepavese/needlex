@@ -78,7 +78,6 @@ needlex/
     run_semantic_gate_smoke.sh
   testdata/
     golden/
-  .needlex/
 ```
 
 ## Responsibilities

@@ -17,6 +17,14 @@ func applyBoilerplatePenalty(ranked []rankedSegment) []rankedSegment {
 
 func boilerplateWeight(item rankedSegment) float64 {
 	text := strings.TrimSpace(item.segment.Text)
+	switch item.segment.Kind {
+	case "context", "navigation":
+		if text != "" {
+			return 1
+		}
+	case "asset_reference":
+		return 0.7
+	}
 	if text == "" || len(text) > 220 {
 		return 0
 	}

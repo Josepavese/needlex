@@ -161,7 +161,7 @@ needlex analytics hosts --limit 20
 needlex analytics providers --limit 20
 needlex analytics failures --limit 20
 needlex analytics daily --limit 30
-needlex analytics export --out .needlex/analytics/export
+needlex analytics export --out /tmp/needlex-analytics-export
 needlex doctor
 ```
 
@@ -245,21 +245,29 @@ Use trace when you need to answer:
 
 ## Storage Layout
 
-Needle-X persists local state under `.needlex/` by default.
+Needle-X persists local state under the PAL state root by default.
 
 Installed setups can override the state root with `NEEDLEX_HOME`.
 
-For `needlex mcp`, the runtime uses a stable absolute state root:
+Resolution order:
 1. `NEEDLEX_HOME` when set
-2. otherwise the PAL-aware installed state root
-3. never a relative cwd-dependent root during MCP session handling
+2. otherwise the platform application data directory
+
+Default roots:
+1. Linux: `$XDG_DATA_HOME/needlex` or `~/.local/share/needlex`
+2. macOS: `~/Library/Application Support/NeedleX`
+3. Windows: `%LOCALAPPDATA%\NeedleX`
+
+For `needlex mcp`, the runtime uses this same stable absolute state root and never a relative cwd-dependent root during session handling.
 
 Important paths:
-1. `.needlex/traces/`
-2. `.needlex/proofs/`
-3. `.needlex/fingerprints/`
-4. `.needlex/genome/`
-5. `.needlex/discovery/discovery.db`
+1. `<state-root>/traces/`
+2. `<state-root>/proofs/`
+3. `<state-root>/fingerprints/`
+4. `<state-root>/genome/`
+5. `<state-root>/analytics/analytics.db`
+6. `<state-root>/discovery/discovery.db`
+7. `<state-root>/discovery/providers/`
 
 This is local-first product state, not disposable cache.
 
@@ -295,6 +303,8 @@ Logging:
 ## Discovery Memory
 
 Use `memory` when you want to inspect or control the local discovery store.
+
+Discovery Memory is enabled by default. Successful `read`, `query`, and `crawl` runs feed it automatically under the PAL state root. If the configured embedding backend is unavailable, Needle-X uses a native local semantic fallback so the store still grows and remains useful for seedless discovery.
 
 Stats:
 
@@ -337,7 +347,8 @@ Operator rule:
 2. `memory prune` keeps the store bounded using configured document, edge, and embedding limits
 3. `memory export` and `memory import` are operator tools for portability, backup, and warm-state seeding
 4. `memory rebuild-index` is the maintenance path after bulk import or index drift
-5. the canonical store is SQLite under `.needlex/discovery/`
+5. the canonical store is SQLite under `<state-root>/discovery/`
+6. for seedless `query`, proof-backed memory can short-circuit public bootstrap
 
 Evaluation artifacts live under `improvements/`.
 

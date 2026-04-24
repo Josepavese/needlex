@@ -197,12 +197,13 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		return RawPage{}, fmt.Errorf("unsupported content type %q", contentType)
 	}
 
-	body, err := resp.ToBytes()
+	if resp.Response == nil || resp.Body == nil {
+		return RawPage{}, fmt.Errorf("empty response body")
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	body, err := readBoundedBytes(resp.Body, input.MaxBytes)
 	if err != nil {
 		return RawPage{}, fmt.Errorf("read body: %w", err)
-	}
-	if int64(len(body)) > input.MaxBytes {
-		return RawPage{}, fmt.Errorf("response exceeds max bytes budget")
 	}
 
 	finalURL := input.URL
@@ -388,22 +389,32 @@ func isAllowedContentType(contentType string) bool {
 	return strings.Contains(contentType, "text/html") ||
 		strings.Contains(contentType, "application/xhtml+xml") ||
 		strings.Contains(contentType, "text/plain") ||
+		strings.Contains(contentType, "text/css") ||
 		strings.Contains(contentType, "text/markdown") ||
 		strings.Contains(contentType, "application/json") ||
 		strings.Contains(contentType, "application/xml") ||
-		strings.Contains(contentType, "text/xml")
+		strings.Contains(contentType, "text/xml") ||
+		strings.Contains(contentType, "image/svg+xml")
 }
 
 func readBounded(body io.Reader, maxBytes int64) (string, error) {
+	data, err := readBoundedBytes(body, maxBytes)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func readBoundedBytes(body io.Reader, maxBytes int64) ([]byte, error) {
 	limited := io.LimitReader(body, maxBytes+1)
 	data, err := io.ReadAll(limited)
 	if err != nil {
-		return "", fmt.Errorf("read body: %w", err)
+		return nil, fmt.Errorf("read body: %w", err)
 	}
 	if int64(len(data)) > maxBytes {
-		return "", fmt.Errorf("response exceeds max bytes budget")
+		return nil, fmt.Errorf("response exceeds max bytes budget")
 	}
-	return string(data), nil
+	return data, nil
 }
 
 type httpStatusError struct {

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -53,7 +54,7 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
 	}
-	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers", "analytics_daily", "analytics_export"} {
+	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers", "analytics_failures", "analytics_daily", "analytics_export"} {
 		if !strings.Contains(string(responses[1]), tool) {
 			t.Fatalf("expected tools list to include %q, got %s", tool, responses[1])
 		}
@@ -91,6 +92,13 @@ func TestRunnerMCPInitializeAndToolsListRawJSON(t *testing.T) {
 	}
 	if !strings.Contains(string(responses[1]), `"web_query"`) {
 		t.Fatalf("expected tools list to include web_query, got %s", responses[1])
+	}
+}
+
+func TestMCPToolErrorMessageSuggestsNextCall(t *testing.T) {
+	message := mcpToolErrorMessage(fmt.Errorf("seed_url returned 404; discovery_mode=off requires an exact canonical page"))
+	if !strings.Contains(message, "next_recommended_call") || !strings.Contains(message, "same_site_links") {
+		t.Fatalf("expected actionable MCP error, got %q", message)
 	}
 }
 

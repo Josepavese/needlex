@@ -50,6 +50,8 @@ The story is simple:
 2. later runs reuse local verified evidence
 3. repeated use improves local retrieval without hosted infra
 
+Discovery Memory is enabled by default and stored in the PAL state root. If an external embeddings service is unavailable, Needle-X falls back to a native local semantic vectorizer so memory still accumulates and remains searchable.
+
 Current warm-state result:
 1. **30/30** selected-url correctness
 2. **30/30** `discovery_memory` provider selection
@@ -68,8 +70,8 @@ Guardrail:
 4. `proof`
 5. `replay`
 6. `diff`
-7. `memory stats/search/prune`
-8. `analytics stats/recent/value-report`
+7. `memory stats/search/prune/export/import/rebuild-index`
+8. `analytics stats/recent/value-report/hosts/providers/failures/daily/export`
 9. `doctor`
 
 Default output is AI-first:
@@ -77,7 +79,8 @@ Default output is AI-first:
 2. proof inline when useful
 3. full diagnostics only on demand
 4. browser-like fetch by default for real-world targets
-5. MCP server accepts both standard `Content-Length` framing and raw newline-delimited JSON
+5. local memory is populated automatically by successful `read`, `query`, and `crawl` runs
+6. MCP server accepts both standard `Content-Length` framing and raw newline-delimited JSON
 
 ## Tiny Demo
 

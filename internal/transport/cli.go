@@ -9,10 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/josepavese/needlex/internal/buildinfo"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/platform"
+	"github.com/josepavese/needlex/internal/platform/buildinfo"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
@@ -26,34 +26,10 @@ type Runner struct {
 }
 
 func NewRunner() Runner {
-	newService := func(cfg config.Config) (*coreservice.Service, error) {
-		return coreservice.New(cfg, nil)
-	}
 	return Runner{
 		loadConfig: config.Load,
-		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
-			svc, err := newService(cfg)
-			if err != nil {
-				return coreservice.ReadResponse{}, err
-			}
-			return svc.Read(ctx, req)
-		},
-		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
-			svc, err := newService(cfg)
-			if err != nil {
-				return coreservice.QueryResponse{}, err
-			}
-			return svc.Query(ctx, req)
-		},
-		crawl: func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error) {
-			svc, err := newService(cfg)
-			if err != nil {
-				return coreservice.CrawlResponse{}, err
-			}
-			return svc.Crawl(ctx, req)
-		},
-		stdin:     os.Stdin,
-		storeRoot: platform.DefaultStateRoot(),
+		stdin:      os.Stdin,
+		storeRoot:  platform.DefaultStateRoot(),
 	}
 }
 
@@ -167,7 +143,7 @@ func writeRootUsage(w io.Writer) {
   needlex diff <trace-a> <trace-b> [--json]
   needlex proof <trace-id|proof-id|chunk-id> [--json]
   needlex memory <stats|search|prune|export|import|rebuild-index> [args]
-  needlex analytics <stats|recent|value-report> [args]
+  needlex analytics <stats|recent|value-report|hosts|providers|failures|daily|export> [args]
   needlex prune (--all | --older-than-hours N) [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]

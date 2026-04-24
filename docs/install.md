@@ -90,13 +90,10 @@ Needle-X local state is controlled by:
 NEEDLEX_HOME
 ```
 
-If unset, the current repo-local default remains:
-
-```text
-.needlex/
-```
-
-That preserves the current operator workflow while giving installed setups a clean platform-specific home.
+If unset, Needle-X uses the platform application data directory:
+1. Linux: `$XDG_DATA_HOME/needlex` or `~/.local/share/needlex`
+2. macOS: `~/Library/Application Support/NeedleX`
+3. Windows: `%LOCALAPPDATA%\NeedleX`
 
 ## Fetch profiles
 

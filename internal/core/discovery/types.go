@@ -29,6 +29,7 @@ const (
 	ResourceClassHTMLLike     = "html_like"
 	ResourceClassDocumentFile = "document_file"
 	ResourceClassStructured   = "structured_data"
+	ResourceClassTextAsset    = "text_asset"
 	ResourceClassMediaAsset   = "media_asset"
 	ResourceClassArchiveFile  = "archive_file"
 	ResourceClassUnknown      = "unknown"
@@ -72,6 +73,38 @@ func ScoreCandidates(goal, seedURL, seedLabel string, links []LinkCandidate, dom
 
 func ScoreURL(goal, rawURL, label string, isSeed bool, domainHints []string) (float64, []string) {
 	return score(goal, "", label, rawURL, isSeed, NormalizeDomainHints(domainHints))
+}
+
+func ApplySameSiteContextPrior(seedURL string, candidates []Candidate) []Candidate {
+	if strings.TrimSpace(seedURL) == "" || len(candidates) < 2 {
+		return candidates
+	}
+	seed, err := url.Parse(strings.TrimSpace(seedURL))
+	if err != nil {
+		return candidates
+	}
+	seedHost := strings.TrimSpace(strings.ToLower(seed.Hostname()))
+	if seedHost == "" || !hasSameSiteAlternative(seedHost, seedURL, candidates) {
+		return candidates
+	}
+
+	seedDepth := URLPathDepth(seedURL)
+	seedScope := sameSiteContextScope(seed)
+	stats := buildSameSiteContextStats(seedHost, seedURL, candidates)
+	out := append([]Candidate{}, candidates...)
+	for i := range out {
+		boost, reasons := sameSiteContextBoost(seedHost, seedURL, seedDepth, seedScope, stats, out[i])
+		if boost == 0 {
+			continue
+		}
+		out[i].Score += boost
+		out[i].Reason = AppendUniqueReason(out[i].Reason, reasons...)
+		out[i].Metadata = MergeMetadata(out[i].Metadata, map[string]string{
+			"same_site_context_prior": strconv.FormatFloat(boost, 'f', 2, 64),
+		})
+	}
+	SortCandidates(out)
+	return out
 }
 
 func SortCandidates(candidates []Candidate) {
@@ -191,6 +224,176 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 	return score, reasons
 }
 
+func hasSameSiteAlternative(seedHost, seedURL string, candidates []Candidate) bool {
+	for _, candidate := range candidates {
+		if sameNormalizedDiscoveryURL(seedURL, candidate.URL) {
+			continue
+		}
+		host, ok := Hostname(candidate.URL)
+		if !ok || host != seedHost {
+			continue
+		}
+		if ResourceClass(candidate.URL) == ResourceClassArchiveFile {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+type sameSiteContextStats struct {
+	DominantFirstSegment string
+	DominantCount        int
+}
+
+func buildSameSiteContextStats(seedHost, seedURL string, candidates []Candidate) sameSiteContextStats {
+	counts := map[string]int{}
+	for _, candidate := range candidates {
+		if sameNormalizedDiscoveryURL(seedURL, candidate.URL) {
+			continue
+		}
+		host, ok := Hostname(candidate.URL)
+		if !ok || host != seedHost {
+			continue
+		}
+		segment := firstDiscoverySegment(candidate.URL)
+		if segment == "" || numericDenseRouteSegment(segment) {
+			continue
+		}
+		counts[segment]++
+	}
+	stats := sameSiteContextStats{}
+	for segment, count := range counts {
+		if count > stats.DominantCount {
+			stats.DominantFirstSegment = segment
+			stats.DominantCount = count
+		}
+	}
+	if stats.DominantCount < 3 {
+		return sameSiteContextStats{}
+	}
+	return stats
+}
+
+func sameSiteContextBoost(seedHost, seedURL string, seedDepth int, seedScope string, stats sameSiteContextStats, candidate Candidate) (float64, []string) {
+	if sameNormalizedDiscoveryURL(seedURL, candidate.URL) {
+		return -0.12, []string{"same_site_seed_context_fallback"}
+	}
+	host, ok := Hostname(candidate.URL)
+	if !ok || host != seedHost {
+		return 0, nil
+	}
+	parsed, err := url.Parse(strings.TrimSpace(candidate.URL))
+	if err != nil {
+		return 0, nil
+	}
+
+	candidatePath := normalizeDiscoveryPath(parsed)
+	candidateDepth := URLPathDepth(candidate.URL)
+	boost := 0.14
+	reasons := []string{"same_site_context_prior"}
+
+	appendContextBoost(&boost, &reasons, anchorContextBoost(candidate.Label))
+	appendContextBoost(&boost, &reasons, resourceClassContextBoost(candidate.URL))
+	appendContextBoost(&boost, &reasons, sameSiteRouteRelationBoost(seedDepth, candidateDepth, candidatePath, seedScope))
+	appendContextBoost(&boost, &reasons, sameSiteScopeContinuityBoost(seedScope, candidatePath))
+	appendContextBoost(&boost, &reasons, dominantPathFamilyBoost(seedDepth, stats, candidate.URL, candidatePath))
+	appendContextBoost(&boost, &reasons, fragmentRouteBoost(parsed, candidatePath, seedScope))
+	return boost, reasons
+}
+
+type contextBoost struct {
+	Value   float64
+	Reasons []string
+}
+
+func appendContextBoost(boost *float64, reasons *[]string, item contextBoost) {
+	if item.Value == 0 && len(item.Reasons) == 0 {
+		return
+	}
+	*boost += item.Value
+	*reasons = append(*reasons, item.Reasons...)
+}
+
+func anchorContextBoost(label string) contextBoost {
+	if strings.TrimSpace(label) == "" {
+		return contextBoost{}
+	}
+	return contextBoost{Value: 0.06, Reasons: []string{"anchor_context_present"}}
+}
+
+func resourceClassContextBoost(rawURL string) contextBoost {
+	switch ResourceClass(rawURL) {
+	case ResourceClassHTMLLike:
+		return contextBoost{Value: 0.04}
+	case ResourceClassDocumentFile, ResourceClassStructured, ResourceClassTextAsset:
+		return contextBoost{Value: 0.01}
+	case ResourceClassMediaAsset:
+		return contextBoost{Value: -0.06}
+	case ResourceClassArchiveFile:
+		return contextBoost{Value: -0.12}
+	default:
+		return contextBoost{}
+	}
+}
+
+func sameSiteRouteRelationBoost(seedDepth, candidateDepth int, candidatePath, seedScope string) contextBoost {
+	switch {
+	case seedDepth == 0 && candidateDepth > 0:
+		return contextBoost{Value: minFloat(0.54, 0.18+float64(candidateDepth)*0.12), Reasons: []string{"same_site_specific_route"}}
+	case candidateDepth > seedDepth:
+		return contextBoost{Value: minFloat(0.50, 0.22+float64(candidateDepth-seedDepth)*0.12), Reasons: []string{"same_site_deeper_route"}}
+	case candidateDepth == seedDepth && sameDiscoveryParent(candidatePath, seedScope):
+		return contextBoost{Value: 0.30, Reasons: []string{"same_site_sibling_route"}}
+	case candidateDepth > 0 && !isDiscoveryAncestor(candidatePath, seedScope):
+		return contextBoost{Value: 0.22, Reasons: []string{"same_site_peer_section"}}
+	case candidateDepth == 0 && seedDepth > 0:
+		return contextBoost{Value: -0.42, Reasons: []string{"same_site_scope_regression"}}
+	case candidateDepth < seedDepth && isDiscoveryAncestor(candidatePath, seedScope):
+		return contextBoost{Value: -0.28, Reasons: []string{"same_site_scope_regression"}}
+	default:
+		return contextBoost{}
+	}
+}
+
+func sameSiteScopeContinuityBoost(seedScope, candidatePath string) contextBoost {
+	if seedScope == "/" || !isDiscoveryDescendant(seedScope, candidatePath) {
+		return contextBoost{}
+	}
+	return contextBoost{Value: 0.18, Reasons: []string{"same_site_scope_continuity"}}
+}
+
+func dominantPathFamilyBoost(seedDepth int, stats sameSiteContextStats, rawURL, candidatePath string) contextBoost {
+	if seedDepth != 0 || stats.DominantFirstSegment == "" || firstDiscoverySegment(rawURL) != stats.DominantFirstSegment {
+		return contextBoost{}
+	}
+	boost := contextBoost{Value: 0.16, Reasons: []string{"same_site_dominant_path_family"}}
+	if simpleRouteRepresentative(candidatePath) {
+		boost.Value += 0.34
+		boost.Reasons = append(boost.Reasons, "same_site_family_representative")
+	}
+	return boost
+}
+
+func fragmentRouteBoost(parsed *url.URL, candidatePath, seedScope string) contextBoost {
+	if strings.TrimSpace(parsed.Fragment) == "" || !sameDiscoveryParent(candidatePath, seedScope) {
+		return contextBoost{}
+	}
+	return contextBoost{Value: -0.10, Reasons: []string{"fragment_route_penalty"}}
+}
+
+func sameSiteContextScope(parsed *url.URL) string {
+	normalized := normalizeDiscoveryPath(parsed)
+	if normalized == "/" {
+		return "/"
+	}
+	base := strings.ToLower(path.Base(normalized))
+	if path.Ext(base) != "" || strings.HasPrefix(base, "index.") {
+		return parentDiscoveryPath(normalized)
+	}
+	return normalized
+}
+
 func ResourceClass(rawURL string) string {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {
@@ -204,6 +407,8 @@ func ResourceClass(rawURL string) string {
 		return ResourceClassDocumentFile
 	case ".json", ".xml", ".rss", ".atom":
 		return ResourceClassStructured
+	case ".css", ".js", ".mjs", ".map":
+		return ResourceClassTextAsset
 	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".mp4", ".mp3":
 		return ResourceClassMediaAsset
 	case ".zip", ".gz", ".tgz":
@@ -220,7 +425,7 @@ func ProbableNonHTMLURL(rawURL string) bool {
 	}
 	ext := strings.ToLower(strings.TrimSpace(path.Ext(parsed.Path)))
 	switch ext {
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".pdf", ".xml", ".rss", ".atom", ".zip", ".gz", ".tgz", ".mp4", ".mp3":
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".pdf", ".xml", ".rss", ".atom", ".css", ".js", ".mjs", ".map", ".zip", ".gz", ".tgz", ".mp4", ".mp3":
 		return true
 	default:
 		return false
@@ -301,6 +506,112 @@ func URLPathDepth(rawURL string) int {
 	return len(strings.FieldsFunc(trimmedPath, func(r rune) bool { return r == '/' }))
 }
 
+func normalizeDiscoveryPath(parsed *url.URL) string {
+	trimmed := strings.TrimSpace(parsed.EscapedPath())
+	if trimmed == "" || trimmed == "/" {
+		return "/"
+	}
+	normalized := path.Clean("/" + strings.Trim(trimmed, "/"))
+	if normalized == "." || normalized == "" {
+		return "/"
+	}
+	return normalized
+}
+
+func parentDiscoveryPath(rawPath string) string {
+	parent := path.Dir(rawPath)
+	if parent == "." || parent == "" {
+		return "/"
+	}
+	return parent
+}
+
+func sameDiscoveryParent(candidatePath, scopePath string) bool {
+	return parentDiscoveryPath(candidatePath) == scopePath
+}
+
+func isDiscoveryDescendant(scopePath, candidatePath string) bool {
+	if scopePath == "/" {
+		return candidatePath != "/"
+	}
+	return strings.HasPrefix(candidatePath, strings.TrimRight(scopePath, "/")+"/")
+}
+
+func isDiscoveryAncestor(candidatePath, scopePath string) bool {
+	if candidatePath == "/" {
+		return scopePath != "/"
+	}
+	return strings.HasPrefix(scopePath, strings.TrimRight(candidatePath, "/")+"/")
+}
+
+func sameNormalizedDiscoveryURL(leftURL, rightURL string) bool {
+	left, errLeft := url.Parse(strings.TrimSpace(leftURL))
+	right, errRight := url.Parse(strings.TrimSpace(rightURL))
+	if errLeft != nil || errRight != nil {
+		return false
+	}
+	return strings.EqualFold(left.Hostname(), right.Hostname()) &&
+		normalizeDiscoveryPath(left) == normalizeDiscoveryPath(right)
+}
+
+func firstDiscoverySegment(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+	trimmed := strings.Trim(normalizeDiscoveryPath(parsed), "/")
+	if trimmed == "" {
+		return ""
+	}
+	return strings.ToLower(strings.Split(trimmed, "/")[0])
+}
+
+func simpleRouteRepresentative(candidatePath string) bool {
+	trimmed := strings.Trim(candidatePath, "/")
+	if trimmed == "" {
+		return false
+	}
+	segments := strings.Split(trimmed, "/")
+	if len(segments) != 2 {
+		return false
+	}
+	stem := routeSegmentStem(segments[len(segments)-1])
+	if stem == "" || len([]rune(stem)) > 12 {
+		return false
+	}
+	if strings.ContainsAny(stem, "-_") || numericDenseRouteSegment(stem) {
+		return false
+	}
+	return true
+}
+
+func routeSegmentStem(segment string) string {
+	segment = strings.ToLower(strings.TrimSpace(segment))
+	ext := path.Ext(segment)
+	if ext != "" {
+		segment = strings.TrimSuffix(segment, ext)
+	}
+	return strings.Trim(segment, ".")
+}
+
+func numericDenseRouteSegment(segment string) bool {
+	stem := routeSegmentStem(segment)
+	if stem == "" {
+		return false
+	}
+	digits := 0
+	letters := 0
+	for _, r := range stem {
+		switch {
+		case unicode.IsDigit(r):
+			digits++
+		case unicode.IsLetter(r):
+			letters++
+		}
+	}
+	return digits >= 2 && digits >= letters
+}
+
 func urlStructureBoost(rawURL string) float64 {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {
@@ -315,46 +626,64 @@ func urlStructureBoost(rawURL string) float64 {
 		return 0.22 + fragmentPenalty
 	}
 	segments := strings.FieldsFunc(trimmedPath, func(r rune) bool { return r == '/' })
-	depth := len(segments)
-	score := 0.0
-	switch {
-	case depth == 1:
-		score += 0.16
-	case depth == 2:
-		score += 0.08
-	case depth == 3:
-		score -= 0.04
-	case depth >= 4:
-		score -= 0.20
-	}
+	score := pathDepthStructureBoost(len(segments))
 	if parsed.RawQuery == "" {
 		score += 0.03
 	}
 	score += fragmentPenalty
-	last := strings.ToLower(strings.TrimSpace(segments[len(segments)-1]))
+	score += terminalRoutePenalty(segments[len(segments)-1])
+	for _, segment := range segments {
+		score += routeSegmentStructurePenalty(segment)
+	}
+	return score
+}
+
+func pathDepthStructureBoost(depth int) float64 {
+	switch {
+	case depth == 1:
+		return 0.16
+	case depth == 2:
+		return 0.08
+	case depth == 3:
+		return -0.04
+	case depth >= 4:
+		return -0.20
+	default:
+		return 0
+	}
+}
+
+func terminalRoutePenalty(segment string) float64 {
+	last := strings.ToLower(strings.TrimSpace(segment))
 	switch {
 	case strings.HasPrefix(last, "class-"):
-		score -= 0.10
+		return -0.10
 	case strings.HasPrefix(last, "tag-"):
-		score -= 0.10
+		return -0.10
 	case strings.HasPrefix(last, "category-"):
-		score -= 0.10
+		return -0.10
+	default:
+		return 0
 	}
-	for _, segment := range segments {
-		segment = strings.ToLower(strings.TrimSpace(segment))
-		if _, err := strconv.Atoi(segment); err == nil {
-			score -= 0.08
-			continue
-		}
-		if len(segment) >= 18 && strings.Count(segment, "-") >= 2 {
-			score -= 0.08
-		}
-		if len(segment) >= 24 && opaqueAlnumSegment(segment) {
-			score -= 0.12
-		}
-		if strings.Contains(segment, ".html") || strings.Contains(segment, ".htm") {
-			score -= 0.04
-		}
+}
+
+func routeSegmentStructurePenalty(segment string) float64 {
+	segment = strings.ToLower(strings.TrimSpace(segment))
+	if _, err := strconv.Atoi(segment); err == nil {
+		return -0.08
+	}
+	score := 0.0
+	if len(segment) >= 18 && strings.Count(segment, "-") >= 2 {
+		score -= 0.08
+	}
+	if len(segment) >= 24 && opaqueAlnumSegment(segment) {
+		score -= 0.12
+	}
+	if strings.Contains(segment, ".html") || strings.Contains(segment, ".htm") {
+		score -= 0.04
+	}
+	if numericDenseRouteSegment(segment) {
+		score -= 0.12
 	}
 	return score
 }
@@ -367,6 +696,8 @@ func resourceClassBoost(rawURL string) float64 {
 		return 0.02
 	case ResourceClassStructured:
 		return -0.28
+	case ResourceClassTextAsset:
+		return -0.04
 	case ResourceClassMediaAsset:
 		return -0.18
 	case ResourceClassArchiveFile:
@@ -392,4 +723,11 @@ func opaqueAlnumSegment(segment string) bool {
 		}
 	}
 	return hasLetter && hasDigit
+}
+
+func minFloat(left, right float64) float64 {
+	if left < right {
+		return left
+	}
+	return right
 }

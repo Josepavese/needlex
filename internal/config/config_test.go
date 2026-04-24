@@ -138,8 +138,8 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Memory.Backend != "sqlite" || cfg.Memory.Path != "discovery/discovery.db" || cfg.Memory.EmbeddingBackend != "openai-embeddings" || cfg.Memory.EmbeddingModel != "intfloat/multilingual-e5-small" || cfg.Memory.VectorEngine != "sqlite-vec" {
 		t.Fatalf("unexpected memory SSOT defaults: %+v", cfg.Memory)
 	}
-	if cfg.Memory.Enabled {
-		t.Fatal("expected discovery memory disabled by default")
+	if !cfg.Memory.Enabled {
+		t.Fatal("expected discovery memory enabled by default")
 	}
 }
 

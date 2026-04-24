@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"math"
 	"net/http"
 	"strings"
 
@@ -21,6 +23,10 @@ func (NoopTextEmbedder) Embed(context.Context, []string) ([][]float32, error) {
 	return nil, nil
 }
 
+type NativeTextEmbedder struct {
+	Dimensions int
+}
+
 type OllamaTextEmbedder struct {
 	BaseURL string
 	Model   string
@@ -33,20 +39,57 @@ type OpenAITextEmbedder struct {
 	Client  *http.Client
 }
 
+type fallbackTextEmbedder struct {
+	primary  TextEmbedder
+	fallback TextEmbedder
+}
+
 func NewTextEmbedder(cfg config.Config, client *http.Client) TextEmbedder {
 	backend := strings.TrimSpace(cfg.Memory.EmbeddingBackend)
 	model := strings.TrimSpace(cfg.Memory.EmbeddingModel)
+	fallback := NativeTextEmbedder{Dimensions: 384}
 	if backend == "" || model == "" {
-		return NoopTextEmbedder{}
+		return fallback
 	}
+	var primary TextEmbedder
 	switch backend {
 	case "ollama-embed":
-		return OllamaTextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client}
+		primary = OllamaTextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client}
 	case "openai-embeddings":
-		return OpenAITextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client}
+		primary = OpenAITextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client}
 	default:
-		return NoopTextEmbedder{}
+		return fallback
 	}
+	return fallbackTextEmbedder{primary: primary, fallback: fallback}
+}
+
+func (e fallbackTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
+	vectors, err := e.primary.Embed(ctx, inputs)
+	if err == nil && len(vectors) > 0 {
+		return vectors, nil
+	}
+	return e.fallback.Embed(ctx, inputs)
+}
+
+func (e NativeTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
+	clean := compactEmbedInputs(inputs)
+	if len(clean) == 0 {
+		return nil, nil
+	}
+	dimensions := e.Dimensions
+	if dimensions <= 0 {
+		dimensions = 384
+	}
+	out := make([][]float32, 0, len(clean))
+	for _, input := range clean {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		out = append(out, nativeTextEmbedding(input, dimensions))
+	}
+	return out, nil
 }
 
 func (e OllamaTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
@@ -151,4 +194,35 @@ func convertEmbeddings(vectors [][]float64) [][]float32 {
 		out = append(out, converted)
 	}
 	return out
+}
+
+func nativeTextEmbedding(input string, dimensions int) []float32 {
+	vector := make([]float32, dimensions)
+	features := nativeSemanticVector(input)
+	for key, weight := range features {
+		idx := nativeFeatureIndex(key, dimensions)
+		vector[idx] += float32(weight)
+	}
+	normalizeFloat32(vector)
+	return vector
+}
+
+func nativeFeatureIndex(key string, dimensions int) int {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(key))
+	return int(h.Sum32() % uint32(dimensions))
+}
+
+func normalizeFloat32(vector []float32) {
+	norm := 0.0
+	for _, value := range vector {
+		norm += float64(value * value)
+	}
+	if norm == 0 {
+		return
+	}
+	scale := float32(1 / math.Sqrt(norm))
+	for i := range vector {
+		vector[i] *= scale
+	}
 }

@@ -266,7 +266,7 @@ func mcpCrawlTool() mcpTool {
 func mcpQueryTool() mcpTool {
 	return mcpTool{
 		Name:        "web_query",
-		Description: "Plan and execute a goal-oriented query with optional seed URL. Use discovery_mode=same_site_links to expand from the seed site, web_search for external bootstrap, or off only when seed_url is already the exact canonical page you want to read.",
+		Description: "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"goal":       map[string]any{"type": "string", "description": "Retrieval objective or question to answer."},
 			"seed_url":   map[string]any{"type": "string", "description": "Optional starting URL. If present, same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist."},
@@ -289,7 +289,7 @@ func mcpQueryTool() mcpTool {
 func mcpReadTool() mcpTool {
 	return mcpTool{
 		Name:        "web_read",
-		Description: "Read one URL and return compact proof-carrying context first, plus diagnostic fields for deeper inspection.",
+		Description: "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory and Analytics PAL for future seedless reuse.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"url":        map[string]any{"type": "string"},
 			"profile":    map[string]any{"type": "string"},
@@ -535,7 +535,7 @@ func mcpMemoryExportTool() mcpTool {
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"out_dir":     map[string]any{"type": "string"},
 			"config_path": map[string]any{"type": "string"},
-		}, "out_dir"), map[string]any{"out_dir": ".needlex/discovery/export"}),
+		}, "out_dir"), map[string]any{"out_dir": "needlex-discovery-export"}),
 	}
 }
 
@@ -546,7 +546,7 @@ func mcpMemoryImportTool() mcpTool {
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"in_dir":      map[string]any{"type": "string"},
 			"config_path": map[string]any{"type": "string"},
-		}, "in_dir"), map[string]any{"in_dir": ".needlex/discovery/export"}),
+		}, "in_dir"), map[string]any{"in_dir": "needlex-discovery-export"}),
 	}
 }
 
@@ -772,7 +772,7 @@ func mcpAnalyticsExportTool() mcpTool {
 		Description: "Export Analytics PAL canonical rows and rollups to JSON and JSONL files for offline analysis, dashboards, or audit.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"out_dir": map[string]any{"type": "string"},
-		}, "out_dir"), map[string]any{"out_dir": ".needlex/analytics/export"}),
+		}, "out_dir"), map[string]any{"out_dir": "needlex-analytics-export"}),
 	}
 }
 

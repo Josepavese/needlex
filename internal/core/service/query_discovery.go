@@ -25,6 +25,9 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 				result.candidates = recovered.Candidates
 				return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
 			}
+			if trustMemoryDiscoveryCandidates(result.candidates) {
+				return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
+			}
 			if !queryflow.ShouldEscalateRewrite(result.selected, result.candidates) {
 				return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
 			}
@@ -38,12 +41,13 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 	switch discoveryMode {
 	case QueryDiscoverySameSite:
 		discovery, err := s.Discover(ctx, DiscoverRequest{
-			Goal:          req.Goal,
-			SeedURL:       req.SeedURL,
-			UserAgent:     req.UserAgent,
-			SameDomain:    true,
-			MaxCandidates: maxCandidates,
-			DomainHints:   req.DomainHints,
+			Goal:                   req.Goal,
+			SeedURL:                req.SeedURL,
+			UserAgent:              req.UserAgent,
+			SameDomain:             true,
+			PreferSpecificSameSite: true,
+			MaxCandidates:          maxCandidates,
+			DomainHints:            req.DomainHints,
 		})
 		if err != nil {
 			return queryDiscoveryResult{}, err
@@ -331,4 +335,32 @@ func (s *Service) applyQueryDiscoveryRewrite(ctx context.Context, req QueryReque
 func finalizeQueryDiscoveryResult(result queryDiscoveryResult, seedURL string, seedEvidence QueryFingerprintEvidence, loader func(string) (QueryFingerprintEvidence, bool)) queryDiscoveryResult {
 	result.candidates, result.selected = queryflow.FinalizeDiscoveryResult(result.candidates, result.selected, seedURL, seedEvidence, loader)
 	return result
+}
+
+func trustMemoryDiscoveryCandidates(candidates []DiscoverCandidate) bool {
+	if len(candidates) == 0 {
+		return false
+	}
+	top := candidates[0]
+	if !candidateHasAnyReason(top, "local_memory_hit", "topic_node_retrieval", "proof_backed_page") {
+		return false
+	}
+	if top.Score >= 1.8 && candidateHasAnyReason(top, "proof_backed_page", "topic_node_retrieval") {
+		return true
+	}
+	if len(candidates) == 1 {
+		return top.Score >= 1.2
+	}
+	return top.Score-candidates[1].Score >= 0.12 && top.Score >= 1.2
+}
+
+func candidateHasAnyReason(candidate DiscoverCandidate, reasons ...string) bool {
+	for _, existing := range candidate.Reason {
+		for _, wanted := range reasons {
+			if strings.TrimSpace(existing) == wanted {
+				return true
+			}
+		}
+	}
+	return false
 }

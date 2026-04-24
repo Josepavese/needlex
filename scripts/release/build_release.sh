@@ -18,7 +18,7 @@ build_one() {
     bin_name="needlex.exe"
   fi
 
-  GOOS="${goos}" GOARCH="${goarch}" go build -ldflags "-X github.com/josepavese/needlex/internal/buildinfo.Version=${VERSION}" -o "${work_dir}/${bin_name}" ./cmd/needle
+  GOOS="${goos}" GOARCH="${goarch}" go build -ldflags "-X github.com/josepavese/needlex/internal/platform/buildinfo.Version=${VERSION}" -o "${work_dir}/${bin_name}" ./cmd/needle
 
   if [[ "${goos}" == "windows" ]]; then
     (

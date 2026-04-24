@@ -7,7 +7,8 @@ It is:
 2. local-first
 3. proof-aware
 4. warm-state oriented
-5. already partially absorbed by the runtime
+5. enabled by default
+6. already absorbed by the runtime
 
 ## What It Means
 
@@ -24,11 +25,23 @@ Needle-X already ships:
 2. provider health memory
 3. warm-state reuse through `discovery.db`
 4. semantic reranking and family recovery in the discovery path
+5. native local semantic fallback when external embeddings are unavailable
 
 What remains experimental is the broader strategic shape:
-1. wider memory leverage across seedless retrieval
-2. stronger long-horizon local accumulation
-3. more autonomous decisioning over when and how memory should dominate bootstrap search
+1. stronger long-horizon local accumulation
+2. more autonomous decisioning over when and how memory should dominate bootstrap search
+3. richer cross-host family recovery from accumulated evidence
+
+## Runtime Behavior
+
+Successful `read`, `query`, and `crawl` runs automatically observe:
+1. canonical page URL and title
+2. compact semantic summary
+3. proof references
+4. discovered links and same-host edges
+5. topic nodes and host/family expansions
+
+Seedless `web_query` consults this local substrate before public bootstrap. Public providers are fallback, not the first preferred source when local proof-backed memory is strong enough.
 
 ## Current Claim
 

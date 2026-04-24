@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/josepavese/needlex/internal/config"
@@ -9,6 +11,26 @@ import (
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 )
+
+type textMatchSemanticAligner struct {
+	needle string
+}
+
+func (a textMatchSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (a textMatchSemanticAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.05
+		if strings.Contains(strings.ToLower(candidate.Text), strings.ToLower(a.needle)) {
+			score = 0.92
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
 
 func TestResolveProfileDefaultsToStandard(t *testing.T) {
 	profile, err := resolveProfile("")
@@ -25,6 +47,7 @@ func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	svc.semantic = textMatchSemanticAligner{needle: "authentication tokens"}
 	ranked := svc.rankSegments("doc_1", "authentication tokens api keys", core.WebIR{
 		Version:   core.WebIRVersion,
 		SourceURL: "https://example.com",
@@ -53,6 +76,9 @@ func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
 	}
 	if ranked[0].chunk.HeadingPath[0] != "API Auth" {
 		t.Fatalf("expected objective-matching segment first, got %#v", ranked[0].chunk.HeadingPath)
+	}
+	if ranked[0].chunk.ContextAlignment <= 0 {
+		t.Fatal("expected semantic alignment to be applied to ranked chunk")
 	}
 }
 
@@ -114,6 +140,31 @@ func TestSelectProfileLimitsChunkCount(t *testing.T) {
 	}
 	if got := len(selectProfile(ranked, core.ProfileDeep)); got != 7 {
 		t.Fatalf("expected deep profile to keep all chunks, got %d", got)
+	}
+}
+
+func TestSelectProfileSkipsUngroundedStructuralContext(t *testing.T) {
+	ranked := []rankedSegment{
+		{
+			index: 0,
+			segment: pipeline.Segment{
+				Kind: "context",
+				Text: "Cookie banner and newsletter noise.",
+			},
+			chunk: core.Chunk{ID: "context", Text: "Cookie banner and newsletter noise.", Score: 0.9, Confidence: 0.9},
+		},
+		{
+			index: 1,
+			segment: pipeline.Segment{
+				Kind: "paragraph",
+				Text: "Primary article content.",
+			},
+			chunk: core.Chunk{ID: "main", Text: "Primary article content.", Score: 0.8, Confidence: 0.9},
+		},
+	}
+	selected := selectProfile(ranked, core.ProfileStandard)
+	if len(selected) != 1 || selected[0].chunk.ID != "main" {
+		t.Fatalf("expected only primary content, got %#v", selected)
 	}
 }
 

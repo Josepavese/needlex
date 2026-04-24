@@ -40,7 +40,7 @@ func StableStateRoot() string {
 			return filepath.Join(home, ".needlex")
 		}
 	}
-	return DefaultStateRoot()
+	return filepath.Join(os.TempDir(), "needlex")
 }
 
 func installedStateRootFor(goos, home, xdgDataHome, localAppData string) string {

@@ -340,6 +340,35 @@ func TestRunQueryDiscoveryUsesMemoryFamilyRecoveryBeforeWebBootstrap(t *testing.
 	}
 }
 
+func TestRunQueryDiscoveryTrustsProofBackedMemoryBeforePublicBootstrap(t *testing.T) {
+	searchHits := 0
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><body><a class="result__a" href="https://external.example/noisy">Noisy</a></body></html>`)
+	}))
+	defer searchServer.Close()
+
+	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
+		Goal: "playwright installation",
+		MemoryCandidates: []DiscoverCandidate{
+			{URL: "https://playwright.dev/docs/intro", Label: "Installation | Playwright", Score: 1.85, Reason: []string{"semantic_goal_alignment", "local_memory_hit", "proof_backed_page"}},
+			{URL: "https://mirror.example/playwright", Label: "Mirror", Score: 1.82, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+		},
+	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
+	if err != nil {
+		t.Fatalf("run query discovery: %v", err)
+	}
+	if !strings.HasPrefix(result.provider, "discovery_memory") || result.selected != "https://playwright.dev/docs/intro" {
+		t.Fatalf("expected trusted memory-backed result, got %#v", result)
+	}
+	if searchHits != 0 {
+		t.Fatalf("expected public bootstrap to be skipped, got hits=%d", searchHits)
+	}
+}
+
 func TestRunQueryDiscoveryKeepsOverviewSeedWhenRecoveredFamilyContainsOnlyDescendants(t *testing.T) {
 	seedURL := ""
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

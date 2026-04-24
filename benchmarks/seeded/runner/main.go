@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/josepavese/needlex/internal/evalutil"
+	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
 )
 
 type corpus struct {
@@ -211,6 +211,12 @@ func buildNeedleBinary() (string, func(), error) {
 }
 
 func runCase(binaryPath string, item seededCase) caseResult {
+	stateRoot, err := os.MkdirTemp("", "needlex-seeded-state-*")
+	if err != nil {
+		return caseResult{ID: item.ID, Error: err.Error(), FailureClasses: []string{"state_setup_failed"}}
+	}
+	defer func() { _ = os.RemoveAll(stateRoot) }()
+
 	row := caseResult{
 		ID:          item.ID,
 		Family:      item.Family,
@@ -224,9 +230,9 @@ func runCase(binaryPath string, item seededCase) caseResult {
 
 	switch item.TaskType {
 	case "same_site_query_routing":
-		row = runSeededQuery(binaryPath, item, row)
+		row = runSeededQuery(binaryPath, stateRoot, item, row)
 	case "read_page_understanding", "read_then_answer":
-		row = runSeededRead(binaryPath, item, row)
+		row = runSeededRead(binaryPath, stateRoot, item, row)
 	default:
 		row.Error = "unsupported task type"
 		row.FailureClasses = append(row.FailureClasses, "unsupported_task_type")
@@ -239,8 +245,8 @@ func runCase(binaryPath string, item seededCase) caseResult {
 	return row
 }
 
-func runSeededQuery(binaryPath string, item seededCase, row caseResult) caseResult {
-	payload, raw, err := runNeedleJSON(binaryPath, "query", item.SeedURL, "--goal", item.Goal, "--json")
+func runSeededQuery(binaryPath, stateRoot string, item seededCase, row caseResult) caseResult {
+	payload, raw, err := runNeedleJSON(binaryPath, stateRoot, "query", item.SeedURL, "--goal", item.Goal, "--json")
 	if err != nil {
 		row.Error = err.Error()
 		row.FailureClasses = append(row.FailureClasses, classifyExecutionError(err.Error()))
@@ -261,12 +267,12 @@ func runSeededQuery(binaryPath string, item seededCase, row caseResult) caseResu
 	row.LatencyMS = out.CostReport.LatencyMS
 	row.UncertaintyLevel = uncertaintyLevelFromMap(out.Uncertainty)
 	row.SelectionWhy = append([]string{}, out.SelectionWhy...)
-	row.ProofRef, row.ProofUsable = verifyProof(binaryPath, out.Chunks, item.MustExposeProof)
+	row.ProofRef, row.ProofUsable = verifyProof(binaryPath, stateRoot, out.Chunks, item.MustExposeProof)
 	return row
 }
 
-func runSeededRead(binaryPath string, item seededCase, row caseResult) caseResult {
-	payload, raw, err := runNeedleJSON(binaryPath, "read", item.SeedURL, "--json")
+func runSeededRead(binaryPath, stateRoot string, item seededCase, row caseResult) caseResult {
+	payload, raw, err := runNeedleJSON(binaryPath, stateRoot, "read", item.SeedURL, "--json")
 	if err != nil {
 		row.Error = err.Error()
 		row.FailureClasses = append(row.FailureClasses, classifyExecutionError(err.Error()))
@@ -286,12 +292,13 @@ func runSeededRead(binaryPath string, item seededCase, row caseResult) caseResul
 	row.PacketBytes = len(raw)
 	row.LatencyMS = out.CostReport.LatencyMS
 	row.UncertaintyLevel = uncertaintyLevelFromMap(out.Uncertainty)
-	row.ProofRef, row.ProofUsable = verifyProof(binaryPath, out.Chunks, item.MustExposeProof)
+	row.ProofRef, row.ProofUsable = verifyProof(binaryPath, stateRoot, out.Chunks, item.MustExposeProof)
 	return row
 }
 
-func runNeedleJSON(binaryPath string, args ...string) ([]byte, []byte, error) {
+func runNeedleJSON(binaryPath, stateRoot string, args ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(binaryPath, args...)
+	cmd.Env = append(os.Environ(), "NEEDLEX_HOME="+stateRoot)
 	raw, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -303,7 +310,7 @@ func runNeedleJSON(binaryPath string, args ...string) ([]byte, []byte, error) {
 	return raw, raw, nil
 }
 
-func verifyProof(binaryPath string, chunks []compactChunk, required bool) (string, bool) {
+func verifyProof(binaryPath, stateRoot string, chunks []compactChunk, required bool) (string, bool) {
 	if !required {
 		return "", true
 	}
@@ -314,7 +321,7 @@ func verifyProof(binaryPath string, chunks []compactChunk, required bool) (strin
 	if proofRef == "" {
 		return "", false
 	}
-	payload, _, err := runNeedleJSON(binaryPath, "proof", proofRef, "--json")
+	payload, _, err := runNeedleJSON(binaryPath, stateRoot, "proof", proofRef, "--json")
 	if err != nil {
 		return proofRef, false
 	}

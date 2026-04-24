@@ -43,13 +43,22 @@ type Service struct {
 	runtime            intel.ModelRuntime
 	semantic           intel.SemanticAligner
 	now                func() time.Time
+	storeRoot          string
 	webDiscoverBaseURL string
 	discoveryProviders store.DiscoveryProviderStateStore
 }
 
 func New(cfg config.Config, client *http.Client) (*Service, error) {
+	return NewWithStateRoot(cfg, client, platform.DefaultStateRoot())
+}
+
+func NewWithStateRoot(cfg config.Config, client *http.Client, storeRoot string) (*Service, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
+	}
+	cleanRoot := strings.TrimSpace(storeRoot)
+	if cleanRoot == "" {
+		cleanRoot = platform.DefaultStateRoot()
 	}
 	return &Service{
 		cfg:        cfg,
@@ -62,8 +71,9 @@ func New(cfg config.Config, client *http.Client) (*Service, error) {
 		runtime:            intel.NewRuntime(cfg, client),
 		semantic:           intel.NewSemanticAligner(cfg, client),
 		now:                time.Now,
+		storeRoot:          cleanRoot,
 		webDiscoverBaseURL: strings.TrimSpace(cfg.Discovery.ProviderChain),
-		discoveryProviders: store.NewDiscoveryProviderStateStore(platform.DefaultStateRoot()),
+		discoveryProviders: store.NewDiscoveryProviderStateStore(cleanRoot),
 	}, nil
 }
 

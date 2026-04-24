@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/josepavese/needlex/internal/evalutil"
+	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
 )
 
 type corpus struct {

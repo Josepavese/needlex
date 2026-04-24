@@ -23,7 +23,7 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 	req = coreservice.PrepareCrawlRequestWithLocalState(r.storeRoot, req)
 
 	startedAt := time.Now().UTC()
-	resp, err := r.crawl(context.Background(), cfg, req)
+	resp, err := r.callCrawl(context.Background(), cfg, req)
 	if err != nil {
 		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
 			Operation:     "crawl",
@@ -70,7 +70,7 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 	req = coreservice.PrepareReadRequestWithLocalState(r.storeRoot, req)
 
 	startedAt := time.Now().UTC()
-	resp, err := r.read(context.Background(), cfg, req)
+	resp, err := r.callRead(context.Background(), cfg, req)
 	if err != nil {
 		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
 			Operation: "read",
@@ -124,7 +124,7 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req, cfg, intel.NewSemanticAligner(cfg, nil))
 	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(r.storeRoot)
 	startedAt := time.Now().UTC()
-	resp, err := r.query(context.Background(), cfg, req)
+	resp, err := r.callQuery(context.Background(), cfg, req)
 	if err != nil {
 		r.observeAnalyticsFailure(cfg, analytics.FailureObservation{
 			Operation:     "query",
@@ -174,13 +174,48 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 	}, nil
 }
 
+func (r Runner) callRead(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+	if r.read != nil {
+		return r.read(ctx, cfg, req)
+	}
+	svc, err := coreservice.NewWithStateRoot(cfg, nil, r.storeRoot)
+	if err != nil {
+		return coreservice.ReadResponse{}, err
+	}
+	return svc.Read(ctx, req)
+}
+
+func (r Runner) callQuery(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+	if r.query != nil {
+		return r.query(ctx, cfg, req)
+	}
+	svc, err := coreservice.NewWithStateRoot(cfg, nil, r.storeRoot)
+	if err != nil {
+		return coreservice.QueryResponse{}, err
+	}
+	return svc.Query(ctx, req)
+}
+
+func (r Runner) callCrawl(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error) {
+	if r.crawl != nil {
+		return r.crawl(ctx, cfg, req)
+	}
+	svc, err := coreservice.NewWithStateRoot(cfg, nil, r.storeRoot)
+	if err != nil {
+		return coreservice.CrawlResponse{}, err
+	}
+	return svc.Crawl(ctx, req)
+}
+
 func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Observation) {
 	if !cfg.Memory.Enabled {
 		return
 	}
 	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
 	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
-	_ = service.Observe(context.Background(), observation)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Semantic.TimeoutMS)*time.Millisecond)
+	defer cancel()
+	_ = service.Observe(ctx, observation)
 }
 
 func (r Runner) observeAnalyticsRead(cfg config.Config, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse) {

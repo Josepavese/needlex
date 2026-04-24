@@ -13,10 +13,10 @@ import (
 	"strings"
 
 	"github.com/josepavese/needlex/internal/analytics"
-	"github.com/josepavese/needlex/internal/buildinfo"
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/memory"
 	"github.com/josepavese/needlex/internal/platform"
+	"github.com/josepavese/needlex/internal/platform/buildinfo"
 )
 
 type doctorReport struct {

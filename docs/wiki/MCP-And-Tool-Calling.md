@@ -64,6 +64,13 @@ Tool scope rule:
 1. `web_extract` is intentionally not added yet
 2. Needle-X should first get better through clearer schema, examples, aliases, and compact-first packets
 
+Agent routing rule:
+1. use `web_read` when the exact URL is known and page layout fidelity is not the goal
+2. use `web_query` when the agent has a goal and may need same-site routing, local memory, or public bootstrap
+3. omit `seed_url` for seedless discovery; Needle-X will consult Discovery Memory first and use public bootstrap only when needed
+4. use `memory_search` to inspect local recall explicitly before spending public-provider budget
+5. use `discovery_mode=off` only after the exact canonical page has already been verified
+
 ## Provider Catalogs
 
 Export tool definitions directly from the binary:
