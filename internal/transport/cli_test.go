@@ -247,11 +247,16 @@ func TestRunnerQueryAutoSeedsFromCandidateMemory(t *testing.T) {
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			cfg := config.Defaults()
+			cfg.Memory.Enabled = false
 			cfg.Semantic.Enabled = true
 			cfg.Semantic.Backend = "openai-embeddings"
 			cfg.Semantic.BaseURL = semantic.URL
 			cfg.Semantic.Model = "cli-semantic"
+			cfg.Semantic.TimeoutMS = 5000
 			return cfg, nil
+		},
+		newSemanticAligner: func(cfg config.Config) intel.SemanticAligner {
+			return stubSemanticAligner{scores: map[string]float64{"https://halfpocket.net/about": 0.95}}
 		},
 		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
 			captured = req
@@ -297,11 +302,16 @@ func TestRunnerQueryDoesNotAutoSeedWhenDiscoveryOff(t *testing.T) {
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			cfg := config.Defaults()
+			cfg.Memory.Enabled = false
 			cfg.Semantic.Enabled = true
 			cfg.Semantic.Backend = "openai-embeddings"
 			cfg.Semantic.BaseURL = semantic.URL
 			cfg.Semantic.Model = "cli-semantic"
+			cfg.Semantic.TimeoutMS = 5000
 			return cfg, nil
+		},
+		newSemanticAligner: func(cfg config.Config) intel.SemanticAligner {
+			return stubSemanticAligner{scores: map[string]float64{"https://halfpocket.net/about": 0.95}}
 		},
 		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
 			captured = req

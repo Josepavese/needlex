@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -140,6 +141,8 @@ func runDiscoveryCase(item discoveryCase) (discoveryRow, error) {
 	cfg.Semantic.Backend = "openai-embeddings"
 	cfg.Semantic.BaseURL = semantic.URL
 	cfg.Semantic.Model = "discovery-eval-embed"
+	cfg.Semantic.TimeoutMS = 5000
+	cfg.Memory.Enabled = false
 	svc, err := coreservice.New(cfg, seed.Client())
 	if err != nil {
 		return discoveryRow{}, err
@@ -161,7 +164,7 @@ func runDiscoveryCase(item discoveryCase) (discoveryRow, error) {
 		}
 		defer func() { _ = os.RemoveAll(root) }()
 		_, _, _ = store.NewCandidateStore(root).Observe(store.CandidateObservation{URL: seedURL, Title: "Proof Replay Deterministic Guide", Source: "seedless_eval"})
-		req := coreservice.PrepareQueryRequestWithLocalState(root, coreservice.QueryRequest{Goal: item.Goal, DiscoveryMode: coreservice.QueryDiscoverySameSite}, cfg, intel.NewSemanticAligner(cfg, seed.Client()))
+		req := coreservice.PrepareQueryRequestWithLocalState(root, coreservice.QueryRequest{Goal: item.Goal, DiscoveryMode: coreservice.QueryDiscoverySameSite}, cfg, discoveryEvalSemanticAligner{})
 		resp, err := svc.Query(context.Background(), req)
 		if err != nil {
 			return row, err
@@ -336,6 +339,24 @@ func newDiscoveryEvalSemanticServer() *httptest.Server {
 	}))
 }
 
+type discoveryEvalSemanticAligner struct{}
+
+func (discoveryEvalSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (discoveryEvalSemanticAligner) Score(_ context.Context, objective string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	objectiveVec := discoveryEvalVector(objective)
+	scores := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		scores = append(scores, intel.SemanticScore{
+			ID:         candidate.ID,
+			Similarity: discoveryEvalCosine(objectiveVec, discoveryEvalVector(candidate.Text)),
+		})
+	}
+	return scores, nil
+}
+
 func discoveryEvalVector(text string) []float64 {
 	const dims = 64
 	vector := make([]float64, dims)
@@ -350,6 +371,19 @@ func discoveryEvalVector(text string) []float64 {
 		vector[int(h.Sum32()%dims)] += 1
 	}
 	return vector
+}
+
+func discoveryEvalCosine(left, right []float64) float64 {
+	var dot, leftNorm, rightNorm float64
+	for i := range left {
+		dot += left[i] * right[i]
+		leftNorm += left[i] * left[i]
+		rightNorm += right[i] * right[i]
+	}
+	if leftNorm == 0 || rightNorm == 0 {
+		return 0
+	}
+	return dot / (math.Sqrt(leftNorm) * math.Sqrt(rightNorm))
 }
 
 func evaluateDiscoveryCase(item discoveryCase, row discoveryRow) (bool, string) {

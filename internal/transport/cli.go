@@ -12,18 +12,20 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/platform/buildinfo"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
 type Runner struct {
-	loadConfig func(path string) (config.Config, error)
-	read       func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error)
-	query      func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error)
-	crawl      func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error)
-	stdin      io.Reader
-	storeRoot  string
+	loadConfig         func(path string) (config.Config, error)
+	newSemanticAligner func(cfg config.Config) intel.SemanticAligner
+	read               func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error)
+	query              func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error)
+	crawl              func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error)
+	stdin              io.Reader
+	storeRoot          string
 }
 
 func NewRunner() Runner {

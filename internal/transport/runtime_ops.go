@@ -134,7 +134,7 @@ func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (c
 }
 
 func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.QueryRequest, surface string) (coreservice.QueryResponse, artifactPaths, error) {
-	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req, cfg, intel.NewSemanticAligner(cfg, nil))
+	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req, cfg, r.semanticAligner(cfg))
 	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(r.storeRoot)
 	startedAt := time.Now().UTC()
 	resp, err := r.callQuery(context.Background(), cfg, req)
@@ -192,6 +192,13 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 		ProofPath:       proofPath,
 		FingerprintPath: fingerprintPath,
 	}, nil
+}
+
+func (r Runner) semanticAligner(cfg config.Config) intel.SemanticAligner {
+	if r.newSemanticAligner != nil {
+		return r.newSemanticAligner(cfg)
+	}
+	return intel.NewSemanticAligner(cfg, nil)
 }
 
 func (r Runner) callRead(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
