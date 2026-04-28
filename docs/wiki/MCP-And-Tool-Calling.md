@@ -64,6 +64,13 @@ Agent note:
 1. aliases like `same-site` are accepted for compatibility
 2. use the canonical literals above in generated tool calls
 
+Lane budget:
+1. `lane_max` is optional on `web_read` and `web_query`
+2. valid range is `0..4`
+3. default is `3`
+4. agents should omit it unless explicit escalation-budget control is needed
+5. MCP clamps out-of-range values and returns a warning instead of failing retrieval
+
 Compact-first output rule:
 1. MCP `content.text` exposes the compact packet first
 2. MCP `structuredContent` keeps the richer diagnostic payload

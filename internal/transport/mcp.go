@@ -214,6 +214,8 @@ func mcpToolErrorMessage(err error) string {
 	message := observability.RedactString(err.Error())
 	lower := strings.ToLower(message)
 	switch {
+	case strings.Contains(lower, "lane_max") && strings.Contains(lower, "must be between"):
+		return message + "; " + mcpLaneMaxGuidance
 	case strings.Contains(lower, "discovery_mode=off") || strings.Contains(lower, "unexpected status code 404"):
 		return message + `; next_recommended_call: web_query with discovery_mode="same_site_links" and the same seed_url, or discovery_mode="web_search" if the seed URL is uncertain`
 	case strings.Contains(lower, "unsupported discovery_mode"):
@@ -269,6 +271,18 @@ func mcpToolResult(payload map[string]any, display any) map[string]any {
 		"structuredContent": payload,
 		"isError":           false,
 	}
+}
+
+func mcpToolResultWithWarnings(payload map[string]any, display any, warnings []string) map[string]any {
+	if len(warnings) == 0 {
+		return mcpToolResult(payload, display)
+	}
+	payload["warnings"] = warnings
+	return mcpToolResult(payload, map[string]any{
+		"warning":  warnings[0],
+		"warnings": warnings,
+		"result":   display,
+	})
 }
 
 func writeMCPUsage(w io.Writer) {

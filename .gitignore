@@ -6,6 +6,7 @@ bin/
 .venv/
 improvements/live-read-latest*.json
 improvements/*-latest.json
+improvements/*-latest.md
 improvements/*-benchmark-latest.json
 improvements/*-benchmark-*.json
 .DS_Store

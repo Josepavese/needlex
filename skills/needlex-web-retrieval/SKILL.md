@@ -9,6 +9,12 @@ description: Use Needle-X for AI-agent web retrieval, compact proof-backed page 
 
 Use Needle-X to turn web pages and discovery tasks into compact, proof-backed context an AI agent can act on. Prefer it when the goal is to find the right source, summarize evidence, or retrieve semantic context with provenance.
 
+Use Needle-X first when the value is source discovery, compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Escalate when the task depends on rendering, exact bytes, full-document completeness, or authenticated state.
+
+## Policy Compatibility
+
+Needle-X does not override higher-priority browsing, citation, copyright, official-source, legal, medical, financial, or freshness requirements. If policy or task risk requires current verification, official sources, or explicit citations, Needle-X is sufficient only when its output provides adequate source evidence for that requirement.
+
 ## Decision Matrix
 
 Use Needle-X when the task needs:
@@ -53,6 +59,13 @@ needlex crawl https://example.com --max-pages 10 --json
 needlex analytics stats
 ```
 
+## Examples
+
+1. Known docs URL: use `web_read` on the official page, answer from cited chunks, and keep proof/trace IDs when the answer is implementation-sensitive.
+2. Latest release/changelog: use `web_query` to find the likely official release page, verify the selected source is authoritative and current, then answer with the source URL.
+3. Same-site docs routing: use `web_query` with `seed_url` and `discovery_mode="same_site_links"` to find a specific concept inside a documentation family.
+4. Layout/table/assets needed: use Needle-X to locate the page, then switch to browser/raw/PDF/image tooling for exact rendered or binary content.
+
 ## Query Strategy
 
 Use `web_read` when the exact page URL is already known.
@@ -85,6 +98,14 @@ Treat the compact result as the front door, not the whole truth. Check:
 7. `trace_id` when debugging or auditing
 
 If the answer depends on absent text, page structure, a table, a code block, or a binary asset that is not present in the compact context, assume possible extraction loss and escalate instead of guessing.
+
+Anti-overclaim checklist:
+
+1. selected URL is authoritative enough for the task
+2. chunks or proof coverage contain the claim being made
+3. uncertainty does not undermine the answer
+4. missing tables, code, assets, or layout are not silently inferred
+5. fallback or escalation is used when compact context is insufficient
 
 ## Escalation Rules
 

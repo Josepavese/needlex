@@ -103,6 +103,18 @@ Compatibility note:
 1. Needle-X now accepts aliases such as `same-site` and `web-search`
 2. but agents should prefer the canonical literals above to reduce drift
 
+### Lane Budget
+
+`lane_max` is optional on `web_read` and `web_query`.
+Agents should omit it unless they need explicit escalation-budget control.
+
+Valid range:
+1. minimum `0`
+2. maximum `4`
+3. default `3`
+
+MCP clamps out-of-range `lane_max` values to the nearest valid value and returns a warning instead of failing the whole retrieval.
+
 ## Design Constraints
 
 The provider-facing contracts should stay:

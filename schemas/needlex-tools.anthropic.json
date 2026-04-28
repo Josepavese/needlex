@@ -74,6 +74,10 @@
             "type": "string"
           },
           "lane_max": {
+            "default": 3,
+            "description": "Optional reasoning/escalation lane budget. Valid range is 0..4. Omit lane_max unless explicit budget control is needed; MCP clamps out-of-range values to the nearest valid value with a warning.",
+            "maximum": 4,
+            "minimum": 0,
             "type": "integer"
           },
           "profile": {
@@ -105,6 +109,10 @@
         ],
         "properties": {
           "lane_max": {
+            "default": 3,
+            "description": "Optional reasoning/escalation lane budget. Valid range is 0..4. Omit lane_max unless explicit budget control is needed; MCP clamps out-of-range values to the nearest valid value with a warning.",
+            "maximum": 4,
+            "minimum": 0,
             "type": "integer"
           },
           "objective": {
