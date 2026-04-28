@@ -146,7 +146,9 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	warnings := applyMCPLaneMax(args, &cfg)
+	if err := applyMCPRetrievalEffort(args, &cfg); err != nil {
+		return nil, err
+	}
 	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
 		Goal:          stringArg(args, "goal"),
 		SeedURL:       stringArg(args, "seed_url"),
@@ -185,7 +187,7 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 		"proof_path":       artifacts.ProofPath,
 		"fingerprint_path": artifacts.FingerprintPath,
 	}
-	return mcpToolResultWithWarnings(payload, compact, warnings), nil
+	return mcpToolResult(payload, compact), nil
 }
 
 func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
@@ -193,7 +195,9 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	warnings := applyMCPLaneMax(args, &cfg)
+	if err := applyMCPRetrievalEffort(args, &cfg); err != nil {
+		return nil, err
+	}
 	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
 		URL:       stringArg(args, "url"),
 		Objective: stringArg(args, "objective"),
@@ -227,7 +231,7 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 		"proof_path":       artifacts.ProofPath,
 		"fingerprint_path": artifacts.FingerprintPath,
 	}
-	return mcpToolResultWithWarnings(payload, compact, warnings), nil
+	return mcpToolResult(payload, compact), nil
 }
 
 func mcpTools() []mcpTool {
@@ -284,10 +288,10 @@ func mcpQueryTool() mcpTool {
 				"enum":        []string{"same_site_links", "web_search", "off"},
 				"description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL and should be used only after the exact page has already been verified.",
 			},
-			"lane_max": laneMaxSchema(),
+			"retrieval_effort": retrievalEffortSchema(),
 		}, "goal"),
 			map[string]any{"goal": "Find authentication flow details", "seed_url": "https://agentclientprotocol.com/protocol/overview", "discovery_mode": "same_site_links"},
-			map[string]any{"goal": "OpenAI API pricing", "discovery_mode": "web_search"},
+			map[string]any{"goal": "OpenAI API pricing", "discovery_mode": "web_search", "retrieval_effort": "standard"},
 			map[string]any{"goal": "Read the verified initialize method page", "seed_url": "https://agentclientprotocol.com/protocol/initialization", "discovery_mode": "off"},
 		),
 	}
@@ -298,13 +302,13 @@ func mcpReadTool() mcpTool {
 		Name:        "web_read",
 		Description: "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory and Analytics PAL for future seedless reuse.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"url":        map[string]any{"type": "string"},
-			"profile":    map[string]any{"type": "string"},
-			"objective":  map[string]any{"type": "string"},
-			"user_agent": map[string]any{"type": "string"},
-			"lane_max":   laneMaxSchema(),
+			"url":              map[string]any{"type": "string"},
+			"profile":          map[string]any{"type": "string"},
+			"objective":        map[string]any{"type": "string"},
+			"user_agent":       map[string]any{"type": "string"},
+			"retrieval_effort": retrievalEffortSchema(),
 		}, "url"),
-			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details"},
+			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details", "retrieval_effort": "standard"},
 		),
 	}
 }

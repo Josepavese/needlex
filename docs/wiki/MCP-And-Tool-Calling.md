@@ -64,12 +64,13 @@ Agent note:
 1. aliases like `same-site` are accepted for compatibility
 2. use the canonical literals above in generated tool calls
 
-Lane budget:
-1. `lane_max` is optional on `web_read` and `web_query`
-2. valid range is `0..4`
-3. default is `3`
-4. agents should omit it unless explicit escalation-budget control is needed
-5. MCP clamps out-of-range values and returns a warning instead of failing retrieval
+Retrieval effort:
+1. `retrieval_effort` is optional on `web_read` and `web_query`
+2. valid values are `minimal`, `light`, `balanced`, `standard`, and `exhaustive`
+3. default is `standard`
+4. agents should omit it unless explicit semantic extraction or internal retrieval escalation control is needed
+5. `retrieval_effort` is not a result count, page count, crawl depth, candidate limit, token budget, or timeout
+6. `lane_max` is not part of the public agent-facing schema
 
 Compact-first output rule:
 1. MCP `content.text` exposes the compact packet first

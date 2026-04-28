@@ -103,17 +103,21 @@ Compatibility note:
 1. Needle-X now accepts aliases such as `same-site` and `web-search`
 2. but agents should prefer the canonical literals above to reduce drift
 
-### Lane Budget
+### Retrieval Effort
 
-`lane_max` is optional on `web_read` and `web_query`.
-Agents should omit it unless they need explicit escalation-budget control.
+`retrieval_effort` is optional on `web_read` and `web_query`.
+Agents should omit it unless they need explicit control over semantic extraction and internal retrieval escalation.
 
-Valid range:
-1. minimum `0`
-2. maximum `4`
-3. default `3`
+Valid values:
+1. `minimal`: fastest, least internal escalation
+2. `light`: low-latency retrieval effort
+3. `balanced`: moderate retrieval effort
+4. `standard`: default production behavior
+5. `exhaustive`: highest retrieval effort
 
-MCP clamps out-of-range `lane_max` values to the nearest valid value and returns a warning instead of failing the whole retrieval.
+`retrieval_effort` is not a result count, page count, crawl depth, candidate limit, token budget, or timeout.
+Use `web_crawl.max_pages` and `web_crawl.max_depth` when page traversal limits matter.
+`lane_max` is not part of the public agent-facing schema.
 
 ## Design Constraints
 
@@ -121,7 +125,7 @@ The provider-facing contracts should stay:
 1. small
 2. strict
 3. JSON-Schema-based
-4. backward-conscious
+4. version-conscious
 5. proof-aware
 
 Needle-X should not collapse core retrieval into one oversized “do everything” tool.

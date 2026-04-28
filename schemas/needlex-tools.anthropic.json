@@ -51,7 +51,8 @@
           },
           {
             "discovery_mode": "web_search",
-            "goal": "OpenAI API pricing"
+            "goal": "OpenAI API pricing",
+            "retrieval_effort": "standard"
           },
           {
             "discovery_mode": "off",
@@ -73,14 +74,19 @@
             "description": "Retrieval objective or question to answer.",
             "type": "string"
           },
-          "lane_max": {
-            "default": 3,
-            "description": "Optional reasoning/escalation lane budget. Valid range is 0..4. Omit lane_max unless explicit budget control is needed; MCP clamps out-of-range values to the nearest valid value with a warning.",
-            "maximum": 4,
-            "minimum": 0,
-            "type": "integer"
-          },
           "profile": {
+            "type": "string"
+          },
+          "retrieval_effort": {
+            "default": "standard",
+            "description": "Optional retrieval effort for semantic extraction and internal escalation. This is not a result count, page count, crawl depth, or candidate limit. Omit it for standard behavior.",
+            "enum": [
+              "minimal",
+              "light",
+              "balanced",
+              "standard",
+              "exhaustive"
+            ],
             "type": "string"
           },
           "seed_url": {
@@ -104,21 +110,27 @@
         "examples": [
           {
             "objective": "Extract pricing and policy details",
+            "retrieval_effort": "standard",
             "url": "https://example.com"
           }
         ],
         "properties": {
-          "lane_max": {
-            "default": 3,
-            "description": "Optional reasoning/escalation lane budget. Valid range is 0..4. Omit lane_max unless explicit budget control is needed; MCP clamps out-of-range values to the nearest valid value with a warning.",
-            "maximum": 4,
-            "minimum": 0,
-            "type": "integer"
-          },
           "objective": {
             "type": "string"
           },
           "profile": {
+            "type": "string"
+          },
+          "retrieval_effort": {
+            "default": "standard",
+            "description": "Optional retrieval effort for semantic extraction and internal escalation. This is not a result count, page count, crawl depth, or candidate limit. Omit it for standard behavior.",
+            "enum": [
+              "minimal",
+              "light",
+              "balanced",
+              "standard",
+              "exhaustive"
+            ],
             "type": "string"
           },
           "url": {

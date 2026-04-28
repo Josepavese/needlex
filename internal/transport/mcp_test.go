@@ -17,7 +17,6 @@ import (
 
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
-	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 )
 
@@ -109,32 +108,35 @@ func TestMCPToolErrorMessageSuggestsNextCall(t *testing.T) {
 	}
 }
 
-func TestMCPToolErrorMessageGuidesLaneMax(t *testing.T) {
-	message := mcpToolErrorMessage(fmt.Errorf("runtime.lane_max must be between 0 and 4"))
-	if !strings.Contains(message, "omit lane_max") || !strings.Contains(message, "valid lane_max range is 0..4") {
-		t.Fatalf("expected guided lane_max error, got %q", message)
+func TestMCPToolErrorMessageGuidesRenamedRetrievalEffort(t *testing.T) {
+	message := mcpToolErrorMessage(fmt.Errorf("lane_max is no longer supported"))
+	if !strings.Contains(message, "retrieval_effort") || !strings.Contains(message, "exhaustive") {
+		t.Fatalf("expected guided retrieval_effort error, got %q", message)
 	}
 }
 
-func TestMCPLaneMaxSchemaGuidesAgents(t *testing.T) {
+func TestMCPRetrievalEffortSchemaGuidesAgents(t *testing.T) {
 	for _, tool := range []mcpTool{mcpQueryTool(), mcpReadTool()} {
 		props, ok := tool.InputSchema["properties"].(map[string]any)
 		if !ok {
 			t.Fatalf("%s: expected properties map", tool.Name)
 		}
-		laneMax, ok := props["lane_max"].(map[string]any)
+		if _, ok := props["lane_max"]; ok {
+			t.Fatalf("%s: lane_max should not be exposed in agent-facing schema", tool.Name)
+		}
+		retrievalEffort, ok := props["retrieval_effort"].(map[string]any)
 		if !ok {
-			t.Fatalf("%s: expected lane_max schema", tool.Name)
+			t.Fatalf("%s: expected retrieval_effort schema", tool.Name)
 		}
-		if laneMax["minimum"] != 0 || laneMax["maximum"] != core.MaxLane {
-			t.Fatalf("%s: expected lane_max range 0..%d, got %#v", tool.Name, core.MaxLane, laneMax)
+		if retrievalEffort["type"] != "string" {
+			t.Fatalf("%s: expected string retrieval_effort, got %#v", tool.Name, retrievalEffort)
 		}
-		if laneMax["default"] != config.Defaults().Runtime.LaneMax {
-			t.Fatalf("%s: expected default lane_max %d, got %#v", tool.Name, config.Defaults().Runtime.LaneMax, laneMax["default"])
+		if retrievalEffort["default"] != retrievalEffortStandard {
+			t.Fatalf("%s: expected default retrieval_effort %q, got %#v", tool.Name, retrievalEffortStandard, retrievalEffort["default"])
 		}
-		desc, _ := laneMax["description"].(string)
-		if !strings.Contains(desc, "Omit lane_max") || !strings.Contains(desc, "clamps") {
-			t.Fatalf("%s: expected agent-guiding lane_max description, got %q", tool.Name, desc)
+		desc, _ := retrievalEffort["description"].(string)
+		if !strings.Contains(desc, "not a result count") || !strings.Contains(desc, "page count") {
+			t.Fatalf("%s: expected agent-guiding retrieval_effort description, got %q", tool.Name, desc)
 		}
 	}
 }
@@ -406,7 +408,7 @@ func TestRunnerMCPQuery(t *testing.T) {
 	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "agent_context", "proof_refs", "trace_id", "compact", "summary", "selected_url")
 }
 
-func TestRunnerMCPQueryClampsOutOfRangeLaneMax(t *testing.T) {
+func TestRunnerMCPQueryAppliesRetrievalEffort(t *testing.T) {
 	root := t.TempDir()
 	input := framedMessages(
 		t,
@@ -418,11 +420,11 @@ func TestRunnerMCPQueryClampsOutOfRangeLaneMax(t *testing.T) {
 			"params": map[string]any{
 				"name": "web_query",
 				"arguments": map[string]any{
-					"goal":           "proof replay deterministic",
-					"seed_url":       "https://example.com",
-					"profile":        "tiny",
-					"lane_max":       5,
-					"discovery_mode": "same_site_links",
+					"goal":             "proof replay deterministic",
+					"seed_url":         "https://example.com",
+					"profile":          "tiny",
+					"retrieval_effort": "exhaustive",
+					"discovery_mode":   "same_site_links",
 				},
 			},
 		},
@@ -445,15 +447,38 @@ func TestRunnerMCPQueryClampsOutOfRangeLaneMax(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d stderr=%q", code, stderr.String())
 	}
-	if observedLaneMax != core.MaxLane {
-		t.Fatalf("expected lane_max to be clamped to %d, got %d", core.MaxLane, observedLaneMax)
+	if observedLaneMax != retrievalEffortLanes[retrievalEffortExhaustive] {
+		t.Fatalf("expected retrieval_effort exhaustive to set lane %d, got %d", retrievalEffortLanes[retrievalEffortExhaustive], observedLaneMax)
 	}
 	responses := decodeMCPResponses(t, stdout.Bytes())
 	if len(responses) != 2 {
 		t.Fatalf("expected 2 responses, got %d", len(responses))
 	}
-	if !strings.Contains(string(responses[1]), `"warnings"`) || !strings.Contains(string(responses[1]), "clamped") {
-		t.Fatalf("expected clamp warning in MCP result, got %s", responses[1])
+	if strings.Contains(string(responses[1]), `"warnings"`) {
+		t.Fatalf("expected no warning for valid retrieval_effort, got %s", responses[1])
+	}
+}
+
+func TestRunnerMCPRejectsLegacyLaneMax(t *testing.T) {
+	runner := Runner{storeRoot: t.TempDir()}
+	_, err := runner.callMCPTool(mcpToolCall{Name: "web_query", Arguments: map[string]any{
+		"goal":     "proof replay deterministic",
+		"seed_url": "https://example.com",
+		"lane_max": 5,
+	}})
+	if err == nil || !strings.Contains(err.Error(), "lane_max is no longer supported") || !strings.Contains(err.Error(), "retrieval_effort") {
+		t.Fatalf("expected legacy lane_max rejection, got %v", err)
+	}
+}
+
+func TestRunnerMCPRejectsAmbiguousQualityBudget(t *testing.T) {
+	runner := Runner{storeRoot: t.TempDir()}
+	_, err := runner.callMCPTool(mcpToolCall{Name: "web_read", Arguments: map[string]any{
+		"url":            "https://example.com",
+		"quality_budget": "maximum",
+	}})
+	if err == nil || !strings.Contains(err.Error(), "quality_budget is not supported") || !strings.Contains(err.Error(), "retrieval_effort") {
+		t.Fatalf("expected ambiguous quality_budget rejection, got %v", err)
 	}
 }
 
