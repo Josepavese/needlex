@@ -11,8 +11,8 @@ import (
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
-func RefineCandidate(goal string, candidate discoverycore.Candidate, finalURL, pageTitle string, webIR core.WebIR, domainHints []string) discoverycore.Candidate {
-	score, reasons := discoverycore.ScoreURL(goal, finalURL, discoverycore.JoinNonEmpty(pageTitle, candidate.Label), false, domainHints)
+func RefineCandidate(_ string, candidate discoverycore.Candidate, finalURL, pageTitle string, webIR core.WebIR, domainHints []string) discoverycore.Candidate {
+	score, reasons := discoverycore.ScoreStructuralURL(finalURL, false, domainHints)
 	resourceClass := discoverycore.ResourceClass(finalURL)
 	if strings.TrimSpace(pageTitle) != "" {
 		score += 0.35
@@ -49,23 +49,23 @@ func RefineCandidate(goal string, candidate discoverycore.Candidate, finalURL, p
 	}
 }
 
-var literalURLPattern = regexp.MustCompile(`https?://[^\s"'<>` + "`" + `)]+`)
+var embeddedURLPattern = regexp.MustCompile(`https?://[^\s"'<>` + "`" + `)]+`)
 
-func ExtractLiteralURLCandidates(goal string, candidate discoverycore.Candidate, finalURL, rawHTML string, dom pipeline.SimplifiedDOM, domainHints []string) []discoverycore.Candidate {
+func ExtractEmbeddedURLCandidates(_ string, candidate discoverycore.Candidate, finalURL, rawHTML string, dom pipeline.SimplifiedDOM, domainHints []string) []discoverycore.Candidate {
 	finalFamily, ok := CandidateFamily(finalURL)
 	if !ok {
 		return nil
 	}
 	sourceClass := discoverycore.ResourceClass(finalURL)
-	literalLinks := sameFamilyLiteralLinks(finalFamily, candidate, rawHTML, dom, sourceClass)
-	if len(literalLinks) == 0 {
+	embeddedLinks := sameFamilyEmbeddedLinks(finalFamily, candidate, rawHTML, dom, sourceClass)
+	if len(embeddedLinks) == 0 {
 		return nil
 	}
-	scored := discoverycore.ScoreCandidates(goal, "", discoverycore.JoinNonEmpty(dom.Title, candidate.Label), literalLinks, domainHints)
-	return literalDiscoverCandidates(scored, candidate, dom, sourceClass)
+	scored := discoverycore.ScoreStructuralCandidates("", "", embeddedLinks, domainHints)
+	return embeddedURLDiscoverCandidates(scored, candidate, dom, sourceClass)
 }
 
-func literalSearchTexts(rawHTML string, dom pipeline.SimplifiedDOM, sourceClass string) []string {
+func embeddedURLSearchTexts(rawHTML string, dom pipeline.SimplifiedDOM, sourceClass string) []string {
 	texts := make([]string, 0, len(dom.Nodes)+2)
 	if sourceClass != discoverycore.ResourceClassHTMLLike {
 		if trimmed := strings.TrimSpace(rawHTML); trimmed != "" {
@@ -83,39 +83,39 @@ func literalSearchTexts(rawHTML string, dom pipeline.SimplifiedDOM, sourceClass 
 	return texts
 }
 
-func sameFamilyLiteralLinks(finalFamily string, candidate discoverycore.Candidate, rawHTML string, dom pipeline.SimplifiedDOM, sourceClass string) []discoverycore.LinkCandidate {
-	literalLinks := make([]discoverycore.LinkCandidate, 0, 4)
+func sameFamilyEmbeddedLinks(finalFamily string, candidate discoverycore.Candidate, rawHTML string, dom pipeline.SimplifiedDOM, sourceClass string) []discoverycore.LinkCandidate {
+	embeddedLinks := make([]discoverycore.LinkCandidate, 0, 4)
 	seen := map[string]struct{}{}
-	for _, text := range literalSearchTexts(rawHTML, dom, sourceClass) {
-		for _, raw := range literalURLPattern.FindAllString(text, -1) {
-			literalURL := trimLiteralURL(raw)
-			if literalURL == "" {
+	for _, text := range embeddedURLSearchTexts(rawHTML, dom, sourceClass) {
+		for _, raw := range embeddedURLPattern.FindAllString(text, -1) {
+			embeddedURL := trimEmbeddedURL(raw)
+			if embeddedURL == "" {
 				continue
 			}
-			if _, ok := seen[literalURL]; ok {
+			if _, ok := seen[embeddedURL]; ok {
 				continue
 			}
-			literalFamily, ok := CandidateFamily(literalURL)
-			if !ok || literalFamily != finalFamily {
+			embeddedFamily, ok := CandidateFamily(embeddedURL)
+			if !ok || embeddedFamily != finalFamily {
 				continue
 			}
-			seen[literalURL] = struct{}{}
-			literalLinks = append(literalLinks, discoverycore.LinkCandidate{
-				URL:   literalURL,
+			seen[embeddedURL] = struct{}{}
+			embeddedLinks = append(embeddedLinks, discoverycore.LinkCandidate{
+				URL:   embeddedURL,
 				Label: discoverycore.JoinNonEmpty(dom.Title, candidate.Label),
 			})
-			if len(literalLinks) >= 4 {
+			if len(embeddedLinks) >= 4 {
 				break
 			}
 		}
-		if len(literalLinks) >= 4 {
+		if len(embeddedLinks) >= 4 {
 			break
 		}
 	}
-	return literalLinks
+	return embeddedLinks
 }
 
-func literalDiscoverCandidates(scored []discoverycore.Candidate, candidate discoverycore.Candidate, dom pipeline.SimplifiedDOM, sourceClass string) []discoverycore.Candidate {
+func embeddedURLDiscoverCandidates(scored []discoverycore.Candidate, candidate discoverycore.Candidate, dom pipeline.SimplifiedDOM, sourceClass string) []discoverycore.Candidate {
 	out := make([]discoverycore.Candidate, 0, min(len(scored), 2))
 	for _, item := range scored {
 		resourceClass := discoverycore.ResourceClass(item.URL)
@@ -132,13 +132,13 @@ func literalDiscoverCandidates(scored []discoverycore.Candidate, candidate disco
 			Score: item.Score + boost,
 			Reason: discoverycore.AppendUniqueReason(
 				append([]string{}, item.Reason...),
-				"literal_url_probe",
-				"literal_url_same_family",
+				"embedded_url_provenance",
+				"embedded_url_same_family",
 			),
 			Metadata: discoverycore.MergeMetadata(candidate.Metadata, map[string]string{
-				"literal_url_source": candidate.URL,
-				"page_title":         strings.TrimSpace(dom.Title),
-				"resource_class":     resourceClass,
+				"embedded_url_source": candidate.URL,
+				"page_title":          strings.TrimSpace(dom.Title),
+				"resource_class":      resourceClass,
 			}),
 		})
 		if len(out) >= 2 {
@@ -148,7 +148,7 @@ func literalDiscoverCandidates(scored []discoverycore.Candidate, candidate disco
 	return out
 }
 
-func trimLiteralURL(raw string) string {
+func trimEmbeddedURL(raw string) string {
 	value := strings.TrimSpace(raw)
 	value = strings.TrimRight(value, ".,;:)]}\"'")
 	parsed, err := url.Parse(value)

@@ -378,7 +378,7 @@ Embeddings are required for `Discovery Memory` to be strategically strong.
 Without embeddings:
 1. memory is inspectable
 2. memory is reusable
-3. recall is limited by lexical and metadata overlap
+3. recall is limited by surface-form and metadata overlap
 
 With embeddings:
 1. local semantic recall becomes viable
@@ -442,7 +442,7 @@ Primary signals:
 7. graph proximity to previously trusted pages
 
 Auxiliary only:
-1. lexical overlap in titles
+1. surface-form overlap in titles
 2. path token coincidence
 
 Meaning must stay semantic-first.

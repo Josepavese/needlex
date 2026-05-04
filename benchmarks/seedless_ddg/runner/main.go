@@ -266,10 +266,10 @@ func runSeedlessCases(binaryPath string, cases []struct {
 }
 
 func runSeedlessCase(binaryPath, id, goal, expectedDomain string, cfgs seedlessConfigs, opts seedlessOptions) caseResult {
-	standard := runCase(binaryPath, cfgs.standard, "standard", goal, expectedDomain, opts.runs, opts.timeoutMS)
-	standardSemantic := runCase(binaryPath, cfgs.standardSemantic, "standard_semantic", goal, expectedDomain, opts.runs, opts.timeoutMS)
-	browser := runCase(binaryPath, cfgs.browser, "browser_like", goal, expectedDomain, opts.runs, opts.timeoutMS)
-	browserSemantic := runCase(binaryPath, cfgs.browserSemantic, "browser_like_semantic", goal, expectedDomain, opts.runs, opts.timeoutMS)
+	standard := runCase(binaryPath, cfgs.standard, "standard", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
+	standardSemantic := runCase(binaryPath, cfgs.standardSemantic, "standard_semantic", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
+	browser := runCase(binaryPath, cfgs.browser, "browser_like", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
+	browserSemantic := runCase(binaryPath, cfgs.browserSemantic, "browser_like_semantic", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
 	return caseResult{
 		ID:    id,
 		Goal:  goal,
@@ -313,9 +313,9 @@ func writeConfig(dir, name string, payload map[string]any) (string, error) {
 	return path, os.WriteFile(path, raw, 0o644)
 }
 
-func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs int, timeoutMS int64) runResult {
+func runCase(binaryPath, configPath, profile, caseID, goal, expectedDomain string, runs int, timeoutMS int64) runResult {
 	if runs <= 1 {
-		result := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain, timeoutMS)
+		result := runCaseOnce(binaryPath, configPath, profile, caseID, "single", goal, expectedDomain, timeoutMS)
 		result.AttemptCount = 1
 		result.PassCount = boolToInt(result.SelectedPass)
 		result.RuntimePassCount = boolToInt(result.RuntimeOK)
@@ -329,7 +329,7 @@ func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs 
 	errorKinds := map[string]int{}
 	selectedURLCounts := map[string]int{}
 	for i := 0; i < runs; i++ {
-		attempt := runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain, timeoutMS)
+		attempt := runCaseOnce(binaryPath, configPath, profile, caseID, fmt.Sprintf("attempt-%d", i+1), goal, expectedDomain, timeoutMS)
 		attempts = append(attempts, runAttempt{
 			Attempt:         i + 1,
 			RuntimeOK:       attempt.RuntimeOK,
@@ -380,12 +380,13 @@ func runCase(binaryPath, configPath, profile, goal, expectedDomain string, runs 
 	return best
 }
 
-func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string, timeoutMS int64) runResult {
+func runCaseOnce(binaryPath, configPath, profile, caseID, attemptID, goal, expectedDomain string, timeoutMS int64) runResult {
 	result := runResult{Profile: profile, ExpectedDomain: expectedDomain}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMS)*time.Millisecond)
 	defer cancel()
 	started := time.Now()
 	cmd := exec.CommandContext(ctx, binaryPath, "query", "--goal", goal, "--json", "--json-mode", "full", "--config", configPath)
+	cmd.Env = append(os.Environ(), "NEEDLEX_HOME="+seedlessStateRoot(configPath, caseID, profile, attemptID))
 	out, err := cmd.CombinedOutput()
 	result.LatencyMS = time.Since(started).Milliseconds()
 	if err != nil {
@@ -405,6 +406,33 @@ func runCaseOnce(binaryPath, configPath, profile, goal, expectedDomain string, t
 		return result
 	}
 	return finalizeRunResult(result, resp, expectedDomain)
+}
+
+func seedlessStateRoot(configPath, caseID, profile, attemptID string) string {
+	return filepath.Join(filepath.Dir(configPath), "state", safeStateComponent(caseID), safeStateComponent(profile), safeStateComponent(attemptID))
+}
+
+func safeStateComponent(value string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return "unknown"
+	}
+	var b strings.Builder
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('-')
+		}
+	}
+	cleaned := strings.Trim(b.String(), "-")
+	if cleaned == "" {
+		return "unknown"
+	}
+	return cleaned
 }
 
 func finalizeRunResult(result runResult, resp queryResponse, expectedDomain string) runResult {

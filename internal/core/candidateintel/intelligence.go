@@ -227,7 +227,7 @@ func candidateSemanticText(candidate discoverycore.Candidate) string {
 		candidate.Metadata["host_root_title"],
 		candidate.Metadata["page_title"],
 		strings.TrimSpace(candidate.Label),
-		discoverycore.URLTokenText(candidate.URL),
+		discoverycore.URLIdentityText(candidate.URL),
 		candidate.Metadata["resource_class"],
 	)
 }

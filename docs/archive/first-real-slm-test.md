@@ -19,7 +19,7 @@ What the first-real-test phase established:
 1. the active CPU runtime works end to end
 2. the compare path is real and measurable
 3. Gemma is the correct current CPU baseline
-4. semantic context is a stronger meaning signal than lexical overlap on a multilingual web
+4. semantic context is a stronger meaning signal than surface-form overlap on a multilingual web
 
 This document should not be used as the active rollout doctrine.
 Use instead:

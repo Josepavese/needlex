@@ -19,7 +19,7 @@ Rule:
 
 1. broad market-superiority claims
 2. cold-state seedless open-web strength
-3. lexical metrics as proxies for meaning
+3. surface-form metrics as proxies for meaning
 4. reopening specialist model tasks in the active core
 
 ## Live Advantage Metrics
@@ -59,6 +59,30 @@ Read it correctly:
 1. local warm-state retrieval is strong
 2. repeated use materially improves retrieval
 3. this does not prove cold-state open-web seedless performance
+
+## Semantic-First Validation
+
+Latest local validation run: `2026-05-04`.
+
+Deterministic suites:
+1. `discovery_eval`: `8/8` pass
+2. `hard_case_matrix`: `6/6` pass
+3. `hard_case_matrix.avg_lossiness = 0.098`
+
+Isolated live seedless DDG smoke:
+1. `case_count = 8`
+2. `runner_runs = 1`
+3. `standard_pass_rate = 0.125`
+4. `standard_semantic_pass_rate = 0.25`
+5. `browser_like_pass_rate = 0.375`
+6. `browser_like_semantic_pass_rate = 0.375`
+7. `error_kinds = {"ranking_miss": 23}`
+
+Interpretation:
+1. semantic-first changes did not regress deterministic discovery quality
+2. semantic profiles improved at least one live seedless case in this smoke
+3. open-web seedless failures are mostly candidate/source quality failures, not runtime/provider blocks in this run
+4. the seedless DDG benchmark now isolates `NEEDLEX_HOME` per case/profile/attempt to avoid contamination from a developer's local Discovery Memory
 
 ## Quality Interpretation Rule
 

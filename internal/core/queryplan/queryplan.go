@@ -166,7 +166,7 @@ func AnnotateQueryCompilerWithSelectionContext(plan QueryCompiler, seedURL, disc
 	} else if selectionDelta := selectionScoreDelta(candidates); selectionDelta <= 0.25 {
 		plan.Decisions = append(plan.Decisions, QueryPlanDecision{Stage: "gate.selection_risk", Choice: "ambiguous_top_candidates", ReasonCode: QueryPlanReasonAmbiguousSelectionRisk, Metadata: map[string]string{"top_delta": strconv.FormatFloat(selectionDelta, 'f', 3, 64)}})
 	}
-	if len(selected.Reason) > 0 && slices.Contains(selected.Reason, "domain_hint_match") {
+	if len(selected.Reason) > 0 && slices.Contains(selected.Reason, "domain_identity_match") {
 		reasonCode, seedHost, selectedHost := QueryPlanReasonDomainHintEvidence, hostFromURLString(seedURL), hostFromURLString(selected.URL)
 		if selectedHost != "" && seedHost != "" && selectedHost != seedHost {
 			reasonCode = QueryPlanReasonGraphEvidence

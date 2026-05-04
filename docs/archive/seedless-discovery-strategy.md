@@ -59,7 +59,7 @@ The correct long-range flow is:
 
 Implications:
 1. public web search is fallback, not product identity
-2. `query_rewrite` is valuable because it improves bootstrap quality without hardcoded lexical rules
+2. `query_rewrite` is valuable because it improves bootstrap quality without hardcoded surface-form rules
 3. `Discovery Memory` is the only path that can improve over time without mandatory infrastructure
 
 ## 4. What Needle-X Should Not Do

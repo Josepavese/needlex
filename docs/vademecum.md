@@ -44,7 +44,7 @@ Needle-X is:
 2. Local-first state is part of the product, not an implementation detail.
 3. Compact compiled output is the default surface.
 4. Proof, trace, replay, and diff stay first-class, but not default.
-5. Semantic signals arbitrate meaning; lexical overlap does not.
+5. Semantic signals arbitrate meaning; surface-form overlap does not.
 6. No linguistic heuristics as primary decision logic.
 7. Models are bounded solvers, not the substrate.
 8. No new active model capability without direct evidence.
@@ -363,7 +363,7 @@ Stop and correct course if we start doing any of these:
 3. optimizing internals with no product effect
 4. shipping docs that describe optional diagnostics as the primary product
 5. spending multiple bursts on infra-shaped ideas for a repo-only product
-6. reintroducing lexical heuristics as context arbiters
+6. reintroducing surface-form heuristics as context arbiters
 
 ## Primary References
 

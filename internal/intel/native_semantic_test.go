@@ -39,8 +39,8 @@ func TestNativeTextEmbedderProducesSearchableVectors(t *testing.T) {
 	if len(vectors[0]) != 64 {
 		t.Fatalf("expected 64 dimensions, got %d", len(vectors[0]))
 	}
-	if sparseCosine(nativeSemanticVector("playwright installation"), nativeSemanticVector("Install Playwright and browser binaries")) <= 0 {
-		t.Fatal("expected native semantic overlap")
+	if cosineSimilarityFloat32(nativeTextEmbedding("playwright installation", 64), nativeTextEmbedding("Install Playwright and browser binaries", 64)) <= 0 {
+		t.Fatal("expected native embedding overlap")
 	}
 }
 

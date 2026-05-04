@@ -55,13 +55,13 @@ Analytics actions:
 7. `daily`
 8. `export`
 
-Canonical query discovery literals:
+Canonical query discovery values:
 1. `same_site_links`
 2. `web_search`
 3. `off`
 
 Agent note:
-1. only the canonical literals above are accepted
+1. only the canonical values above are accepted
 2. do not generate alias spellings such as `same-site` or `web-search`
 
 Retrieval effort:

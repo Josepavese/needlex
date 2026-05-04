@@ -419,7 +419,7 @@ The active runtime today is intentionally narrow:
 This matters operationally:
 1. most runs stay deterministic
 2. model activation is bounded and visible in proof/trace
-3. lexical overlap is not the primary meaning judge
+3. surface-form overlap is not the primary meaning judge
 4. seedless web discovery provider order is part of config, not a hidden default
 
 ## Baseline Commands

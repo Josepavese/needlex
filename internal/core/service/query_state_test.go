@@ -406,7 +406,7 @@ func TestRunQueryDiscoveryKeepsOverviewSeedWhenRecoveredFamilyContainsOnlyDescen
 	}
 }
 
-func TestResolveDiscoveryModeAcceptsOnlyCanonicalLiterals(t *testing.T) {
+func TestResolveDiscoveryModeAcceptsOnlyCanonicalValues(t *testing.T) {
 	cases := map[string]string{
 		"":                QueryDiscoverySameSite,
 		"same_site_links": QueryDiscoverySameSite,

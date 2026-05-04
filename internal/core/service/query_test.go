@@ -361,7 +361,7 @@ func TestRerankQueryCandidatesWithFingerprintEvidence(t *testing.T) {
 			name: "penalizes stable seed",
 			candidates: []discoverycore.Candidate{
 				{URL: "https://seed.example", Score: 1.00, Reason: []string{"seed_fallback"}},
-				{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"path_hint"}},
+				{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"structure_hint"}},
 			},
 			seedURL:   "https://seed.example",
 			evidence:  QueryFingerprintEvidence{TraceID: "trace_seed", Stable: 1.0},
@@ -373,7 +373,7 @@ func TestRerankQueryCandidatesWithFingerprintEvidence(t *testing.T) {
 			name: "boosts novel seed",
 			candidates: []discoverycore.Candidate{
 				{URL: "https://seed.example", Score: 0.95, Reason: []string{"seed_fallback"}},
-				{URL: "https://seed.example/docs", Score: 1.00, Reason: []string{"path_hint"}},
+				{URL: "https://seed.example/docs", Score: 1.00, Reason: []string{"structure_hint"}},
 			},
 			seedURL:   "https://seed.example",
 			evidence:  QueryFingerprintEvidence{TraceID: "trace_seed", Stable: 0.25, Novelty: 0.75, Changed: true},
@@ -385,7 +385,7 @@ func TestRerankQueryCandidatesWithFingerprintEvidence(t *testing.T) {
 			name: "boosts known novel candidate",
 			candidates: []discoverycore.Candidate{
 				{URL: "https://seed.example", Score: 1.00, Reason: []string{"seed_fallback"}},
-				{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"path_hint"}},
+				{URL: "https://seed.example/docs", Score: 0.95, Reason: []string{"structure_hint"}},
 			},
 			seedURL: "https://seed.example",
 			loader: func(url string) (QueryFingerprintEvidence, bool) {

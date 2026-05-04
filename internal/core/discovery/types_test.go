@@ -2,9 +2,8 @@ package discovery
 
 import "testing"
 
-func TestScoreCandidatesRemainStructureFirstWithoutLexicalPromotion(t *testing.T) {
-	candidates := ScoreCandidates(
-		"OpenAI API pricing",
+func TestScoreStructuralCandidatesRemainStructureFirstWithoutSurfaceFormPromotion(t *testing.T) {
+	candidates := ScoreStructuralCandidates(
 		"",
 		"",
 		[]LinkCandidate{
@@ -16,8 +15,8 @@ func TestScoreCandidatesRemainStructureFirstWithoutLexicalPromotion(t *testing.T
 	if len(candidates) != 2 {
 		t.Fatalf("expected 2 candidates, got %d", len(candidates))
 	}
-	if contains(candidates[0].Reason, "goal_label_alignment") {
-		t.Fatalf("expected lexical goal-label reason to be absent, got %#v", candidates[0].Reason)
+	if contains(candidates[0].Reason, "semantic_goal_alignment") {
+		t.Fatalf("expected surface-form promotion reason to be absent, got %#v", candidates[0].Reason)
 	}
 }
 
@@ -52,9 +51,8 @@ func TestResourceClassClassification(t *testing.T) {
 	}
 }
 
-func TestScoreCandidatesPrefersHTMLDocsOverStructuredFeedWhenGoalMatches(t *testing.T) {
-	candidates := ScoreCandidates(
-		"MDN JavaScript guide",
+func TestScoreStructuralCandidatesPrefersHTMLDocsOverStructuredFeedWithoutGoalTextMatch(t *testing.T) {
+	candidates := ScoreStructuralCandidates(
 		"",
 		"",
 		[]LinkCandidate{
@@ -68,9 +66,8 @@ func TestScoreCandidatesPrefersHTMLDocsOverStructuredFeedWhenGoalMatches(t *test
 	}
 }
 
-func TestSameSiteContextPriorPromotesSpecificRouteWithoutLexicalAlignment(t *testing.T) {
-	candidates := ScoreCandidates(
-		"opaque multilingual retrieval intent",
+func TestSameSiteContextPriorPromotesSpecificRouteWithoutSurfaceFormAlignment(t *testing.T) {
+	candidates := ScoreStructuralCandidates(
 		"https://sqlite.org",
 		"SQLite",
 		[]LinkCandidate{
@@ -81,10 +78,10 @@ func TestSameSiteContextPriorPromotesSpecificRouteWithoutLexicalAlignment(t *tes
 	)
 	reranked := ApplySameSiteContextPrior("https://sqlite.org", candidates)
 	if reranked[0].URL != "https://sqlite.org/chronology.html" {
-		t.Fatalf("expected first same-site route to beat seed without lexical alignment, got %q", reranked[0].URL)
+		t.Fatalf("expected first same-site route to beat seed without surface-form alignment, got %q", reranked[0].URL)
 	}
-	if contains(reranked[0].Reason, "goal_label_alignment") {
-		t.Fatalf("expected lexical goal-label reason to remain absent, got %#v", reranked[0].Reason)
+	if contains(reranked[0].Reason, "semantic_goal_alignment") {
+		t.Fatalf("expected surface-form promotion reason to remain absent, got %#v", reranked[0].Reason)
 	}
 	if !contains(reranked[0].Reason, "same_site_specific_route") {
 		t.Fatalf("expected same-site structural route reason, got %#v", reranked[0].Reason)
@@ -92,8 +89,7 @@ func TestSameSiteContextPriorPromotesSpecificRouteWithoutLexicalAlignment(t *tes
 }
 
 func TestSameSiteContextPriorKeepsDeepSeedScope(t *testing.T) {
-	candidates := ScoreCandidates(
-		"cross-language contextual route",
+	candidates := ScoreStructuralCandidates(
 		"https://docs.python.org/3/tutorial/index.html",
 		"Python Tutorial",
 		[]LinkCandidate{
@@ -112,8 +108,7 @@ func TestSameSiteContextPriorKeepsDeepSeedScope(t *testing.T) {
 }
 
 func TestSameSiteContextPriorPromotesDominantFamilyRepresentative(t *testing.T) {
-	candidates := ScoreCandidates(
-		"broad routing intent",
+	candidates := ScoreStructuralCandidates(
 		"https://playwright.dev",
 		"Playwright",
 		[]LinkCandidate{

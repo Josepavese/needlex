@@ -94,13 +94,13 @@ Analytics actions:
 
 ### Query Discovery Mode
 
-For `web_query`, use the canonical `discovery_mode` literals:
+For `web_query`, use the canonical `discovery_mode` values:
 1. `same_site_links` to expand from the seed site
 2. `web_search` to bootstrap with search
 3. `off` for strict seeded mode
 
 Strict mode note:
-1. Needle-X accepts only the canonical literals above
+1. Needle-X accepts only the canonical values above
 2. non-canonical spellings such as `same-site` or `web-search` are rejected
 
 ### Retrieval Effort

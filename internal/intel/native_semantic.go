@@ -20,39 +20,34 @@ func (a NativeSemanticAligner) Score(ctx context.Context, objective string, cand
 	default:
 	}
 
-	objectiveVec := nativeSemanticVector(objective)
-	if len(objectiveVec) == 0 {
+	dimensions := 384
+	objectiveVec := nativeTextEmbedding(objective, dimensions)
+	if zeroFloat32Vector(objectiveVec) {
 		return nil, nil
 	}
 	scores := make([]SemanticScore, 0, len(candidates))
 	for _, candidate := range candidates {
-		candidateVec := nativeSemanticVector(semanticCandidateText(candidate))
+		candidateVec := nativeTextEmbedding(semanticCandidateText(candidate), dimensions)
 		scores = append(scores, SemanticScore{
 			ID:         candidate.ID,
-			Similarity: sparseCosine(objectiveVec, candidateVec),
+			Similarity: cosineSimilarityFloat32(objectiveVec, candidateVec),
 		})
 	}
 	return scores, nil
 }
 
-func nativeSemanticVector(text string) map[string]float64 {
-	normalized := normalizeNativeSemanticText(text)
+func nativeEmbeddingFeatures(text string) map[string]float64 {
+	normalized := normalizeNativeEmbeddingText(text)
 	if normalized == "" {
 		return nil
 	}
 	vec := map[string]float64{}
 	addNativeCharNGrams(vec, normalized, 3, 1.0)
 	addNativeCharNGrams(vec, normalized, 4, 1.15)
-	for _, token := range strings.Fields(normalized) {
-		if len([]rune(token)) < 2 {
-			continue
-		}
-		vec["tok:"+token] += 0.70
-	}
 	return vec
 }
 
-func normalizeNativeSemanticText(text string) string {
+func normalizeNativeEmbeddingText(text string) string {
 	fields := make([]string, 0)
 	var current []rune
 	flush := func() {
@@ -89,18 +84,27 @@ func addNativeCharNGrams(vec map[string]float64, text string, size int, weight f
 	}
 }
 
-func sparseCosine(left, right map[string]float64) float64 {
-	if len(left) == 0 || len(right) == 0 {
+func zeroFloat32Vector(vector []float32) bool {
+	for _, value := range vector {
+		if value != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func cosineSimilarityFloat32(left, right []float32) float64 {
+	if len(left) == 0 || len(left) != len(right) {
 		return 0
 	}
 	dot := 0.0
 	normLeft := 0.0
 	normRight := 0.0
-	for key, leftValue := range left {
-		dot += leftValue * right[key]
+	for i := range left {
+		leftValue := float64(left[i])
+		rightValue := float64(right[i])
+		dot += leftValue * rightValue
 		normLeft += leftValue * leftValue
-	}
-	for _, rightValue := range right {
 		normRight += rightValue * rightValue
 	}
 	if normLeft == 0 || normRight == 0 {

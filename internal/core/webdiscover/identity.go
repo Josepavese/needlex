@@ -88,7 +88,7 @@ func IdentitySemanticCandidates(source discoverycore.Candidate, scored []discove
 				source.Metadata["page_title"],
 				source.Label,
 				candidate.Label,
-				discoverycore.URLTokenText(candidate.URL),
+				discoverycore.URLIdentityText(candidate.URL),
 			),
 		})
 	}

@@ -231,7 +231,7 @@ func applyDocumentEvidence(score float64, reasons []string, row memoryDocumentRo
 func applyDomainAndRecencyEvidence(score float64, reasons []string, host, observedAtRaw string, hints []string) (float64, []string) {
 	if hasDomainHint(host, hints) {
 		score += 0.2
-		reasons = append(reasons, "domain_hint_match")
+		reasons = append(reasons, "domain_identity_match")
 	}
 	if observedAt, ok := parseObservedAt(observedAtRaw); ok {
 		if boost := recentObservationBoost(observedAt); boost > 0 {

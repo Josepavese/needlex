@@ -40,7 +40,7 @@ Dense page retrieval tends to reward:
 
 1. semantic density
 2. specificity
-3. local lexical/semantic concentration
+3. local embedding/semantic concentration
 
 This favors leaves over roots.
 
@@ -99,7 +99,7 @@ The runtime should explicitly decide whether the query asks for:
 2. guide/intermediate topic
 3. leaf/reference page
 
-This decision should be semantic and contextual, not keyword-driven.
+This decision should be semantic and contextual, not search-term-driven.
 
 ### 4. Topic-Conditioned Page Selection
 
@@ -169,7 +169,7 @@ Relevance:
 2. hierarchy is useful for retrieval, not only parsing
 3. variable-depth logical hierarchy is compatible with topic-root nodes
 
-### E. Realistic retrieval benchmarks already show that flat keyword/semantic retrieval is insufficient
+### E. Realistic retrieval benchmarks already show that flat embedding/semantic retrieval is insufficient
 
 `BRIGHT: A Realistic and Challenging Benchmark for Reasoning-Intensive Retrieval` shows that strong dense retrievers perform poorly when retrieval requires more than shallow semantic overlap:
 
@@ -363,7 +363,7 @@ Use semantic/contextual signals to infer:
 2. guide
 3. reference
 
-without monolingual keyword heuristics as the primary driver.
+without monolingual search-term heuristics as the primary driver.
 
 ### Phase 5: Topic-to-Page Realization
 
@@ -396,7 +396,7 @@ Success criteria:
 
 1. improve MDN overview warm-state pass rate without regressing guide cases
 2. keep local-first provider rate high
-3. avoid new reliance on monolingual lexical heuristics
+3. avoid new reliance on monolingual surface-form heuristics
 
 ## Decision Rule
 

@@ -78,7 +78,7 @@ Use `discovery_mode="off"` only for an exact canonical page that should be read 
 
 Use `web_crawl` when the task is to map a small site area, not when the user needs one answer quickly.
 
-Prefer specific semantic goals over keyword bags:
+Prefer specific semantic goals over search-term bags:
 
 ```text
 Good: Find how clients pass credentials to agents during ACP session creation.

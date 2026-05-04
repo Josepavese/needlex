@@ -96,9 +96,9 @@ Campi query-specific:
     "level": "low"
   },
   "selection_why": [
-    "path_hint",
-    "domain_hint_match",
-    "goal_label_alignment"
+    "structure_hint",
+    "domain_identity_match",
+    "semantic_goal_alignment"
   ],
   "chunks": [
     {
@@ -113,7 +113,7 @@ Campi query-specific:
     {
       "url": "https://docs.z.ai/devpack/overview",
       "label": "Coding Plan",
-      "reason": ["path_hint", "goal_label_alignment"]
+      "reason": ["structure_hint", "semantic_goal_alignment"]
     }
   ],
   "signals": {

@@ -30,7 +30,7 @@ func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
 		t.Fatalf("expected probe-driven reasons, got %#v", candidate.Reason)
 	}
 	if containsReason(candidate.Reason, "host_page_coherence") {
-		t.Fatalf("expected lexical host-page coherence to be absent, got %#v", candidate.Reason)
+		t.Fatalf("expected surface-form host-page coherence to be absent, got %#v", candidate.Reason)
 	}
 }
 
@@ -94,7 +94,7 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 	}
 }
 
-func TestDiscoverWebPromotesSameFamilyLiteralEndpoint(t *testing.T) {
+func TestDiscoverWebPromotesSameFamilyEmbeddedEndpoint(t *testing.T) {
 	var docsServer *httptest.Server
 	docsServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -136,23 +136,23 @@ func TestDiscoverWebPromotesSameFamilyLiteralEndpoint(t *testing.T) {
 		t.Fatalf("discover web failed: %v", err)
 	}
 	if resp.SelectedURL != docsServer.URL+"/api/coding/paas/v4" {
-		t.Fatalf("expected literal endpoint candidate to win, got %q", resp.SelectedURL)
+		t.Fatalf("expected embedded endpoint candidate to win, got %q", resp.SelectedURL)
 	}
 }
 
-func TestExtractLiteralURLCandidatesSkipsMediaAssetsFromHTMLPage(t *testing.T) {
+func TestExtractEmbeddedURLCandidatesSkipsMediaAssetsFromHTMLPage(t *testing.T) {
 	base := DiscoverCandidate{URL: "https://mdn.org.cn/en-US/docs/Web/JavaScript/Guide", Label: "JavaScript Guide"}
 	dom := pipeline.SimplifiedDOM{Title: "JavaScript 指南 - JavaScript | MDN - MDN 文档"}
 	rawHTML := `<html><head><title>JavaScript Guide</title></head><body><img src="https://mdn.org.cn/favicon.ico"><a href="https://mdn.org.cn/en-US/docs/Web/JavaScript/Guide">guide</a></body></html>`
-	got := webdiscover.ExtractLiteralURLCandidates("MDN JavaScript guide", base, base.URL, rawHTML, dom, nil)
+	got := webdiscover.ExtractEmbeddedURLCandidates("MDN JavaScript guide", base, base.URL, rawHTML, dom, nil)
 	for _, candidate := range got {
 		if candidate.URL == "https://mdn.org.cn/favicon.ico" {
-			t.Fatalf("expected media asset literal URL to be skipped, got %#v", got)
+			t.Fatalf("expected media asset embedded URL to be skipped, got %#v", got)
 		}
 	}
 }
 
-func TestExtractLiteralURLCandidatesIgnoreRawHTMLNoiseForHTMLPages(t *testing.T) {
+func TestExtractEmbeddedURLCandidatesIgnoreRawHTMLNoiseForHTMLPages(t *testing.T) {
 	base := DiscoverCandidate{URL: "https://www.w3schools.com/Js/", Label: "JavaScript Tutorial"}
 	dom := pipeline.SimplifiedDOM{
 		Title: "JavaScript Tutorial",
@@ -161,7 +161,7 @@ func TestExtractLiteralURLCandidatesIgnoreRawHTMLNoiseForHTMLPages(t *testing.T)
 		},
 	}
 	rawHTML := `<html><head><title>JavaScript Tutorial</title><script>var x="https://www.w3schools.com/about/about_privacy.asp"</script></head><body><p>Learn JavaScript fundamentals.</p></body></html>`
-	got := webdiscover.ExtractLiteralURLCandidates("MDN JavaScript guide", base, base.URL, rawHTML, dom, nil)
+	got := webdiscover.ExtractEmbeddedURLCandidates("MDN JavaScript guide", base, base.URL, rawHTML, dom, nil)
 	for _, item := range got {
 		if item.URL == "https://www.w3schools.com/about/about_privacy.asp" {
 			t.Fatalf("expected raw html noise url to be ignored for html pages, got %#v", got)
@@ -169,7 +169,7 @@ func TestExtractLiteralURLCandidatesIgnoreRawHTMLNoiseForHTMLPages(t *testing.T)
 	}
 }
 
-func TestDiscoverWebEndpointExtractorPromotesLiteralURLFromShortlist(t *testing.T) {
+func TestDiscoverWebEndpointExtractorPromotesEmbeddedURLFromShortlist(t *testing.T) {
 	var docsServer *httptest.Server
 	docsServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -16,9 +16,9 @@ type EndpointExtractorResult struct {
 }
 
 type EndpointPageInput struct {
-	PageURL     string   `json:"page_url"`
-	PageTitle   string   `json:"page_title"`
-	LiteralURLs []string `json:"literal_urls"`
+	PageURL      string   `json:"page_url"`
+	PageTitle    string   `json:"page_title"`
+	EmbeddedURLs []string `json:"embedded_urls"`
 }
 
 func PromoteEndpointCandidate(candidates []discoverycore.Candidate, selectedPage EndpointPageInput, out EndpointExtractorResult) []discoverycore.Candidate {
@@ -29,7 +29,7 @@ func PromoteEndpointCandidate(candidates []discoverycore.Candidate, selectedPage
 		Score: 4.50 + out.Confidence,
 		Reason: discoverycore.AppendUniqueReason(nil,
 			"endpoint_extract_llm",
-			"literal_url_probe",
+			"embedded_url_provenance",
 		),
 		Metadata: map[string]string{
 			"endpoint_extract_kind":          strings.TrimSpace(out.Kind),
@@ -39,7 +39,7 @@ func PromoteEndpointCandidate(candidates []discoverycore.Candidate, selectedPage
 	return discoverycore.NewSet(boosted).Sorted()
 }
 
-func LiteralURLsForPage(finalURL, rawHTML string, dom pipeline.SimplifiedDOM) []string {
+func EmbeddedURLsForPage(finalURL, rawHTML string, dom pipeline.SimplifiedDOM) []string {
 	family, ok := CandidateFamily(finalURL)
 	if !ok {
 		return nil
@@ -62,20 +62,20 @@ func LiteralURLsForPage(finalURL, rawHTML string, dom pipeline.SimplifiedDOM) []
 	out := make([]string, 0, 8)
 	seen := map[string]struct{}{}
 	for _, text := range texts {
-		for _, raw := range literalURLPattern.FindAllString(text, -1) {
-			literalURL := trimLiteralURL(raw)
-			if literalURL == "" {
+		for _, raw := range embeddedURLPattern.FindAllString(text, -1) {
+			embeddedURL := trimEmbeddedURL(raw)
+			if embeddedURL == "" {
 				continue
 			}
-			if _, ok := seen[literalURL]; ok {
+			if _, ok := seen[embeddedURL]; ok {
 				continue
 			}
-			literalFamily, ok := CandidateFamily(literalURL)
-			if !ok || literalFamily != family {
+			embeddedFamily, ok := CandidateFamily(embeddedURL)
+			if !ok || embeddedFamily != family {
 				continue
 			}
-			seen[literalURL] = struct{}{}
-			out = append(out, literalURL)
+			seen[embeddedURL] = struct{}{}
+			out = append(out, embeddedURL)
 			if len(out) >= 8 {
 				return out
 			}

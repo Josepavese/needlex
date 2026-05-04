@@ -39,7 +39,7 @@ func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverRe
 	if err != nil {
 		return DiscoverResponse{}, err
 	}
-	scored := discoverycore.ScoreCandidates(req.Goal, rawPage.FinalURL, dom.Title, extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, req.SameDomain), req.DomainHints)
+	scored := discoverycore.ScoreStructuralCandidates(rawPage.FinalURL, dom.Title, extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, req.SameDomain), req.DomainHints)
 	if req.SameDomain && req.PreferSpecificSameSite {
 		scored = discoverycore.ApplySameSiteContextPrior(rawPage.FinalURL, scored)
 	}
@@ -79,7 +79,7 @@ func (s *Service) acquireDiscoverPage(ctx context.Context, rawURL, userAgent str
 	return rawPage, dom, nil
 }
 
-func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal string, candidates []DiscoverCandidate, useNativeFallback bool) []DiscoverCandidate {
+func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal string, candidates []DiscoverCandidate, allowLocalEmbeddingFallback bool) []DiscoverCandidate {
 	if strings.TrimSpace(goal) == "" || len(candidates) == 0 {
 		return candidates
 	}
@@ -88,7 +88,7 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 		text := discoverycore.JoinNonEmpty(
 			candidate.Metadata["page_title"],
 			strings.TrimSpace(candidate.Label),
-			discoverycore.URLTokenText(candidate.URL),
+			discoverycore.URLIdentityText(candidate.URL),
 		)
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
 			ID:   candidate.URL,
@@ -98,7 +98,7 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 	scored, err := s.semantic.Score(ctx, goal, semanticCandidates)
 	reason := "semantic_goal_alignment"
 	backend := "configured"
-	if (err != nil || len(scored) == 0) && useNativeFallback && s.cfg.Semantic.Enabled {
+	if (err != nil || len(scored) == 0) && allowLocalEmbeddingFallback && s.cfg.Semantic.Enabled {
 		native := intel.NativeSemanticAligner{}
 		scored, err = native.Score(ctx, goal, semanticCandidates)
 		reason = "native_context_goal_alignment"

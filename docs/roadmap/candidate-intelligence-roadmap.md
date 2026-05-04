@@ -1,7 +1,7 @@
 # Candidate Intelligence Roadmap
 
 ## Goal
-Strengthen seedless and technical discovery using semantic classification and clustering without turning the core into a keyword rule engine.
+Strengthen seedless and technical discovery using semantic classification and clustering without turning the core into a search-term rule engine.
 
 ## Current Constraints
 - The shared discovery path is still dominated by provider noise and ranking misses.
@@ -54,7 +54,7 @@ For small candidate sets, the practical options are:
   - semantic similarity
   - same registrable domain
   - same host root identity
-  - same-page literal URL provenance
+  - same-page embedded URL provenance
 
 This is especially useful for collapsing families like:
 - first-party docs subtree
@@ -69,7 +69,7 @@ This is especially useful for collapsing families like:
 5. use no-thinking micro models only for final disambiguation or endpoint extraction
 
 ## What Not To Do
-- no global keyword lists for intent routing
+- no global search-term lists for intent routing
 - no full LLM ranking over all candidates
 - no brittle provider-specific hacks in the core scoring path
 

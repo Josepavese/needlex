@@ -35,13 +35,13 @@ const (
 	ResourceClassUnknown      = "unknown"
 )
 
-func ScoreCandidates(goal, seedURL, seedLabel string, links []LinkCandidate, domainHints []string) []Candidate {
+func ScoreStructuralCandidates(seedURL, seedLabel string, links []LinkCandidate, domainHints []string) []Candidate {
 	domainHints = NormalizeDomainHints(domainHints)
 	out := make([]Candidate, 0, len(links)+1)
 	seen := map[string]struct{}{}
 
 	if strings.TrimSpace(seedURL) != "" {
-		seedScore, seedReason := score(goal, seedURL, seedLabel, seedURL, true, domainHints)
+		seedScore, seedReason := structuralPriorScore(seedURL, true, domainHints)
 		out = append(out, Candidate{
 			URL:    seedURL,
 			Label:  strings.TrimSpace(seedLabel),
@@ -56,7 +56,7 @@ func ScoreCandidates(goal, seedURL, seedLabel string, links []LinkCandidate, dom
 			continue
 		}
 		seen[link.URL] = struct{}{}
-		score, reason := score(goal, seedURL, link.Label, link.URL, false, domainHints)
+		score, reason := structuralPriorScore(link.URL, false, domainHints)
 		metadata := map[string]string{"resource_class": ResourceClass(link.URL)}
 		out = append(out, Candidate{
 			URL:      link.URL,
@@ -71,8 +71,8 @@ func ScoreCandidates(goal, seedURL, seedLabel string, links []LinkCandidate, dom
 	return out
 }
 
-func ScoreURL(goal, rawURL, label string, isSeed bool, domainHints []string) (float64, []string) {
-	return score(goal, "", label, rawURL, isSeed, NormalizeDomainHints(domainHints))
+func ScoreStructuralURL(rawURL string, isSeed bool, domainHints []string) (float64, []string) {
+	return structuralPriorScore(rawURL, isSeed, NormalizeDomainHints(domainHints))
 }
 
 func ApplySameSiteContextPrior(seedURL string, candidates []Candidate) []Candidate {
@@ -185,7 +185,7 @@ func Hostname(rawURL string) (string, bool) {
 	return host, true
 }
 
-func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []string) (float64, []string) {
+func structuralPriorScore(rawURL string, isSeed bool, domainHints []string) (float64, []string) {
 	reasons := []string{}
 	score := 0.0
 
@@ -212,7 +212,7 @@ func score(goal, seedURL, label, rawURL string, isSeed bool, domainHints []strin
 	}
 	if host, ok := Hostname(rawURL); ok && slices.Contains(domainHints, host) {
 		score += 1.10
-		reasons = append(reasons, "domain_hint_match")
+		reasons = append(reasons, "domain_identity_match")
 	}
 	if compactness := HostCompactnessBoost(rawURL); compactness != 0 {
 		score += compactness
@@ -428,7 +428,7 @@ func JoinNonEmpty(values ...string) string {
 	return strings.Join(parts, " ")
 }
 
-func URLTokenText(rawURL string) string {
+func URLIdentityText(rawURL string) string {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
 		return rawURL
@@ -436,18 +436,18 @@ func URLTokenText(rawURL string) string {
 	return strings.Join([]string{parsed.Hostname(), parsed.Path, path.Base(parsed.Path)}, " ")
 }
 
-func HostTokenText(rawURL string) string {
+func HostIdentityText(rawURL string) string {
 	host, ok := Hostname(rawURL)
 	if !ok {
 		return rawURL
 	}
-	tokens := strings.FieldsFunc(host, func(r rune) bool {
+	hostParts := strings.FieldsFunc(host, func(r rune) bool {
 		return !(unicode.IsLetter(r) || unicode.IsNumber(r))
 	})
-	if len(tokens) == 0 {
+	if len(hostParts) == 0 {
 		return host
 	}
-	return strings.Join(tokens, " ")
+	return strings.Join(hostParts, " ")
 }
 
 func HostCompactnessBoost(rawURL string) float64 {

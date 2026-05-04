@@ -25,3 +25,6 @@ bash scripts/check_budget.sh .
 
 echo '-- bash scripts/check_skills.sh .'
 bash scripts/check_skills.sh .
+
+echo '-- bash scripts/check_semantic_guard.sh .'
+bash scripts/check_semantic_guard.sh .

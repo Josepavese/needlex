@@ -18,9 +18,10 @@ Two product surfaces are first-class:
 
 ## Core Philosophy
 
-### Semantic-first, not lexical-first
+### Embeddings-first, semantic-first
 
 The system must prefer:
+- multilingual embedding similarity
 - context
 - meaning
 - semantic relatedness
@@ -28,19 +29,19 @@ The system must prefer:
 - structural evidence
 
 The system must avoid depending on:
-- monolingual keyword heuristics
-- brittle literal token overlap
+- monolingual search-term heuristics
+- surface-form overlap as a retrieval strategy
 - exact surface-form preservation as a primary retrieval strategy
 - ad hoc provider-specific hacks
 
-Literal and lexical signals may exist as weak legacy hints, but they must not be the main decision surface.
+Surface-form matching must not be used as a ranking surface. If text affects ranking, it must pass through semantic/embedding alignment. URL and protocol strings may be parsed only as identity, provenance, or transport constraints.
 
 ### Multilingual by design
 
 Needle-X is not an English-only system.
 
 Discovery and ranking should work across languages and naming variations.
-When a design choice trades semantic generality for monolingual literal convenience, prefer semantic generality.
+When a design choice trades semantic generality for monolingual surface-form convenience, prefer semantic generality.
 
 ### Context over string matching
 
@@ -71,9 +72,9 @@ Changes to discovery should be evaluated for:
 
 When bootstrap candidates are noisy, use semantic reranking and candidate intelligence early enough to affect probe ordering.
 
-Do not rely on lexical overlap to decide what deserves probing first.
+Do not rely on surface-form overlap to decide what deserves probing first.
 
-### Entity/family recovery beats keyword expansion
+### Entity/family recovery beats search-term expansion
 
 For hard cases, recover the right entity or official family through:
 - semantic clustering
@@ -155,7 +156,7 @@ that requirement must be stated in:
 Query rewriting should preserve intent and entity identity semantically.
 It should not require verbatim repetition of a canonical entity string in every rewrite.
 
-If rewrite escalation happens, it should be because the current leader is not semantically grounded, not because a lexical overlap threshold failed.
+If rewrite escalation happens, it should be because the current leader is not semantically grounded, not because a surface-form overlap threshold failed.
 
 ### Semantic signals must be durable and inspectable
 
@@ -211,7 +212,7 @@ The installed public channel only changes once a proper release is published.
 ## Code Change Heuristics
 
 When making changes, prefer:
-1. semantic/contextual models over lexical rules
+1. semantic/contextual models over surface-form rules
 2. structural/contextual annotations over hard exclusions
 3. narrow, testable improvements over sprawling heuristics
 4. explicit diagnostics over hidden magic
@@ -219,13 +220,13 @@ When making changes, prefer:
 Avoid:
 1. provider-name hacks
 2. single-case patches disguised as general logic
-3. monolingual keyword filters as primary ranking logic
+3. monolingual search-term filters as primary ranking logic
 4. benchmark conclusions drawn from unstable runs without taxonomy
 
 ## Practical Checklist For Future Contributors
 
 Before landing a discovery change, ask:
-1. Did this move the system toward semantics and context, or back toward lexical hacks?
+1. Did this move the system toward semantics and context, or back toward surface-form hacks?
 2. Does this remain multilingual in principle?
 3. Is the effect measurable through tests or benchmarks?
 4. Does it degrade another product surface such as seedless, MCP, or install/runtime behavior?

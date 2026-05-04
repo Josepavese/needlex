@@ -162,8 +162,7 @@ func TestDiscoverSameSiteUsesNativeContextFallbackForSiblingChoice(t *testing.T)
 }
 
 func TestScoreDiscoveryCandidatesBoostsDomainHint(t *testing.T) {
-	candidates := discoverycore.ScoreCandidates(
-		"official studio profile",
+	candidates := discoverycore.ScoreStructuralCandidates(
 		"",
 		"",
 		[]discoverycore.LinkCandidate{
@@ -178,8 +177,8 @@ func TestScoreDiscoveryCandidatesBoostsDomainHint(t *testing.T) {
 	if candidates[0].URL != "https://preferred.example.com/company" {
 		t.Fatalf("expected preferred domain to be boosted, got %q", candidates[0].URL)
 	}
-	if !containsReason(candidates[0].Reason, "domain_hint_match") {
-		t.Fatalf("expected domain_hint_match reason, got %#v", candidates[0].Reason)
+	if !containsReason(candidates[0].Reason, "domain_identity_match") {
+		t.Fatalf("expected domain_identity_match reason, got %#v", candidates[0].Reason)
 	}
 }
 

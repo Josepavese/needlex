@@ -193,7 +193,7 @@ func convertEmbeddings(vectors [][]float64) [][]float32 {
 
 func nativeTextEmbedding(input string, dimensions int) []float32 {
 	vector := make([]float32, dimensions)
-	features := nativeSemanticVector(input)
+	features := nativeEmbeddingFeatures(input)
 	for key, weight := range features {
 		idx := nativeFeatureIndex(key, dimensions)
 		vector[idx] += float32(weight)

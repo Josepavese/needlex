@@ -191,7 +191,7 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 				group[i].Metadata["host_root_title"],
 				group[i].Metadata["page_title"],
 				group[i].Label,
-				discoverycore.HostTokenText(group[i].URL),
+				discoverycore.HostIdentityText(group[i].URL),
 				family,
 			))
 		}
@@ -258,7 +258,7 @@ func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req 
 	}
 
 	results := discoverycore.ExtractSearchResults(rawPage.HTML, rawPage.FinalURL)
-	return discoverycore.ScoreCandidates(req.Goal, req.SeedURL, "", results, req.DomainHints), rawPage.FinalURL, nil
+	return discoverycore.ScoreStructuralCandidates(req.SeedURL, "", results, req.DomainHints), rawPage.FinalURL, nil
 }
 
 func (s *Service) discoverWebBootstrapBrave(ctx context.Context, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {
@@ -288,7 +288,7 @@ func (s *Service) discoverWebBootstrapBrave(ctx context.Context, req DiscoverWeb
 		}
 		links = append(links, discoverycore.LinkCandidate{URL: strings.TrimSpace(item.URL), Label: strings.TrimSpace(item.Title)})
 	}
-	return discoverycore.ScoreCandidates(req.Goal, req.SeedURL, "", links, req.DomainHints), finalURL, nil
+	return discoverycore.ScoreStructuralCandidates(req.SeedURL, "", links, req.DomainHints), finalURL, nil
 }
 
 func (s *Service) doBootstrapJSON(ctx context.Context, method, endpoint string, headers map[string]string, body []byte) ([]byte, string, error) {
@@ -382,11 +382,11 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 		out = append(out, s.selectIdentityReferenceCandidates(ctx, goal, candidate, identityRefs)...)
 	}
 	expanded := extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, false)
-	expandedScored := discoverycore.ScoreCandidates(goal, "", "", expanded, domainHints)
+	expandedScored := discoverycore.ScoreStructuralCandidates("", "", expanded, domainHints)
 	if len(expandedScored) > 0 {
 		out = append(out, s.selectExpandedRecoveryCandidates(ctx, goal, candidate, expandedScored)...)
 	}
-	out = append(out, webdiscover.ExtractLiteralURLCandidates(goal, candidate, rawPage.FinalURL, rawPage.HTML, dom, domainHints)...)
+	out = append(out, webdiscover.ExtractEmbeddedURLCandidates(goal, candidate, rawPage.FinalURL, rawPage.HTML, dom, domainHints)...)
 	return out, nil
 }
 
@@ -398,7 +398,7 @@ type hostRootIdentityProbe struct {
 	Metadata map[string]string
 }
 
-func (s *Service) probeHostRootIdentity(ctx context.Context, goal, userAgent, rawURL string) (hostRootIdentityProbe, error) {
+func (s *Service) probeHostRootIdentity(ctx context.Context, _ string, userAgent, rawURL string) (hostRootIdentityProbe, error) {
 	rootURL, ok := webdiscover.HostRootURL(rawURL)
 	if !ok || strings.TrimSpace(rootURL) == strings.TrimSpace(rawURL) {
 		return hostRootIdentityProbe{}, nil
@@ -418,7 +418,7 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, goal, userAgent, ra
 		}, nil
 	}
 
-	identityScore, reasons := discoverycore.ScoreURL(goal, rawPage.FinalURL, dom.Title, false, nil)
+	identityScore, reasons := discoverycore.ScoreStructuralURL(rawPage.FinalURL, false, nil)
 	if identityScore <= 0 {
 		return hostRootIdentityProbe{
 			URL:   strings.TrimSpace(rawPage.FinalURL),
@@ -450,7 +450,7 @@ func (s *Service) selectIdentityReferenceCandidates(ctx context.Context, goal st
 		return nil
 	}
 	baseLinks, relationByURL := webdiscover.IdentityBaseLinks(source.URL, refs)
-	scored := discoverycore.ScoreCandidates(goal, "", source.Label, baseLinks, nil)
+	scored := discoverycore.ScoreStructuralCandidates("", "", baseLinks, nil)
 	if len(scored) == 0 {
 		return nil
 	}
@@ -472,7 +472,7 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 				source.Metadata["page_title"],
 				source.Label,
 				candidate.Label,
-				discoverycore.URLTokenText(candidate.URL),
+				discoverycore.URLIdentityText(candidate.URL),
 			),
 		})
 	}
@@ -556,18 +556,18 @@ func (s *Service) collectEndpointPageInputs(ctx context.Context, goal, userAgent
 		if err != nil {
 			continue
 		}
-		literals := webdiscover.LiteralURLsForPage(rawPage.FinalURL, rawPage.HTML, dom)
-		if len(literals) == 0 {
+		embeddedURLs := webdiscover.EmbeddedURLsForPage(rawPage.FinalURL, rawPage.HTML, dom)
+		if len(embeddedURLs) == 0 {
 			continue
 		}
 		input := webdiscover.EndpointPageInput{
-			PageURL:     strings.TrimSpace(rawPage.FinalURL),
-			PageTitle:   strings.TrimSpace(dom.Title),
-			LiteralURLs: literals,
+			PageURL:      strings.TrimSpace(rawPage.FinalURL),
+			PageTitle:    strings.TrimSpace(dom.Title),
+			EmbeddedURLs: embeddedURLs,
 		}
 		pageInputs = append(pageInputs, input)
-		for _, literal := range literals {
-			allowed[literal] = input
+		for _, embeddedURL := range embeddedURLs {
+			allowed[embeddedURL] = input
 		}
 	}
 	return pageInputs, allowed
@@ -611,7 +611,7 @@ func (s *Service) orderEndpointCandidates(ctx context.Context, goal string, cand
 			ID: candidate.URL,
 			Text: discoverycore.JoinNonEmpty(
 				candidate.Label,
-				discoverycore.URLTokenText(candidate.URL),
+				discoverycore.URLIdentityText(candidate.URL),
 			),
 		})
 	}

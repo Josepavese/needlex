@@ -70,7 +70,7 @@ Guardrail:
 1. agent builders who need traceable web context
 2. local-first operators who want auditable outputs
 3. teams that care about replay, diff, proof, and debugging
-4. multilingual workflows where lexical matching is weak
+4. multilingual workflows where surface-form matching is weak
 
 ## Surface We Can Defend
 
