@@ -219,7 +219,7 @@ func parseSeedlessOptions() seedlessOptions {
 	flag.StringVar(&opts.outPath, "out", "improvements/seedless-ddg-benchmark-latest.json", "output report path")
 	flag.StringVar(&opts.casesPath, "cases", "benchmarks/corpora/seedless-ddg-corpus-v1.json", "seedless ddg corpus path")
 	flag.StringVar(&opts.profiles, "profiles", "standard,standard_semantic,browser_like,browser_like_semantic", "comma-separated profiles: standard, standard_semantic, browser_like, browser_like_semantic")
-	flag.StringVar(&opts.providerChains, "provider-chains", "ddg_lite_html=https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/", "semicolon-separated provider chains, optionally name=url1,url2")
+	flag.StringVar(&opts.providerChains, "provider-chains", "ddg_bing=https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search", "semicolon-separated provider chains, optionally name=url1,url2")
 	flag.IntVar(&opts.runs, "runs", 3, "number of attempts per case/profile")
 	flag.Int64Var(&opts.timeoutMS, "timeout-ms", 25000, "per-run timeout in milliseconds")
 	flag.Parse()

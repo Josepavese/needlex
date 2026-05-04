@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strings"
@@ -118,6 +119,15 @@ func hasClass(node *html.Node, className string) bool {
 	return false
 }
 
+func hasAncestorClass(node *html.Node, className string) bool {
+	for current := node; current != nil; current = current.Parent {
+		if hasClass(current, className) {
+			return true
+		}
+	}
+	return false
+}
+
 func looksLikeSearchResultAnchor(node *html.Node) bool {
 	href := strings.TrimSpace(attrValue(node, "href"))
 	if href == "" {
@@ -127,7 +137,9 @@ func looksLikeSearchResultAnchor(node *html.Node) bool {
 		return true
 	}
 	lower := strings.ToLower(href)
-	return strings.Contains(lower, "/l/?") || strings.Contains(lower, "uddg=")
+	return strings.Contains(lower, "/l/?") ||
+		strings.Contains(lower, "uddg=") ||
+		hasAncestorClass(node, "b_algo")
 }
 
 func resolveSearchResultURL(base *url.URL, href string) (string, bool) {
@@ -139,14 +151,8 @@ func resolveSearchResultURL(base *url.URL, href string) (string, bool) {
 		return "", false
 	}
 	resolved := base.ResolveReference(ref)
-	if uddg := resolved.Query().Get("uddg"); uddg != "" {
-		decoded, err := url.QueryUnescape(uddg)
-		if err == nil {
-			resolved, err = url.Parse(decoded)
-			if err != nil {
-				return "", false
-			}
-		}
+	if redirected, ok := searchRedirectTarget(resolved); ok {
+		resolved = redirected
 	}
 	if resolved.Scheme != "http" && resolved.Scheme != "https" {
 		return "", false
@@ -155,6 +161,66 @@ func resolveSearchResultURL(base *url.URL, href string) (string, bool) {
 		return "", false
 	}
 	return resolved.String(), true
+}
+
+func searchRedirectTarget(resolved *url.URL) (*url.URL, bool) {
+	query := resolved.Query()
+	for _, key := range []string{"uddg", "u", "url", "q"} {
+		target, ok := decodeSearchRedirectValue(query.Get(key))
+		if ok {
+			return target, true
+		}
+	}
+	return nil, false
+}
+
+func decodeSearchRedirectValue(raw string) (*url.URL, bool) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return nil, false
+	}
+	if unescaped, err := url.QueryUnescape(value); err == nil {
+		value = strings.TrimSpace(unescaped)
+	}
+	if target, ok := parseHTTPURL(value); ok {
+		return target, true
+	}
+	candidates := []string{value}
+	if len(value) > 2 {
+		candidates = append(candidates, value[2:])
+	}
+	for _, candidate := range candidates {
+		if target, ok := decodeBase64HTTPURL(candidate); ok {
+			return target, true
+		}
+	}
+	return nil, false
+}
+
+func decodeBase64HTTPURL(raw string) (*url.URL, bool) {
+	for _, enc := range []*base64.Encoding{
+		base64.RawURLEncoding,
+		base64.URLEncoding,
+		base64.RawStdEncoding,
+		base64.StdEncoding,
+	} {
+		decoded, err := enc.DecodeString(raw)
+		if err != nil {
+			continue
+		}
+		if target, ok := parseHTTPURL(string(decoded)); ok {
+			return target, true
+		}
+	}
+	return nil, false
+}
+
+func parseHTTPURL(raw string) (*url.URL, bool) {
+	target, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (target.Scheme != "http" && target.Scheme != "https") || target.Host == "" {
+		return nil, false
+	}
+	return target, true
 }
 
 func attrValue(node *html.Node, key string) string {

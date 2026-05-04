@@ -25,3 +25,43 @@ func TestProviderNameRecognizesAPIProviders(t *testing.T) {
 		t.Fatalf("unexpected brave provider name")
 	}
 }
+
+func TestExtractSearchResultsDuckDuckGoRedirect(t *testing.T) {
+	results := ExtractSearchResults(`
+<html><body>
+<a class="result__a" href="/l/?uddg=https%3A%2F%2Fdeveloper.mozilla.org%2Fdocs">MDN</a>
+</body></html>`, "https://lite.duckduckgo.com/lite/")
+	if len(results) != 1 {
+		t.Fatalf("expected one result, got %d", len(results))
+	}
+	if results[0].URL != "https://developer.mozilla.org/docs" {
+		t.Fatalf("unexpected result URL %q", results[0].URL)
+	}
+}
+
+func TestExtractSearchResultsBingDirectAnchor(t *testing.T) {
+	results := ExtractSearchResults(`
+<html><body>
+<nav><a href="https://www.bing.com/images">Images</a></nav>
+<ol><li class="b_algo"><h2><a href="https://sqlite.org/index.html">SQLite Home Page</a></h2></li></ol>
+</body></html>`, "https://www.bing.com/search")
+	if len(results) != 1 {
+		t.Fatalf("expected one result, got %d", len(results))
+	}
+	if results[0].URL != "https://sqlite.org/index.html" {
+		t.Fatalf("unexpected result URL %q", results[0].URL)
+	}
+}
+
+func TestExtractSearchResultsBingRedirectAnchor(t *testing.T) {
+	results := ExtractSearchResults(`
+<html><body>
+<ol><li class="b_algo"><h2><a href="/ck/a?u=a1aHR0cHM6Ly9zcWxpdGUub3JnLw">SQLite</a></h2></li></ol>
+</body></html>`, "https://www.bing.com/search")
+	if len(results) != 1 {
+		t.Fatalf("expected one result, got %d", len(results))
+	}
+	if results[0].URL != "https://sqlite.org/" {
+		t.Fatalf("unexpected result URL %q", results[0].URL)
+	}
+}

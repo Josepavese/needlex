@@ -73,7 +73,7 @@ Seedless DDG smoke with explicit profile/provider selection:
 go run ./benchmarks/seedless_ddg/runner \
   --runs 1 \
   --profiles browser_like_semantic \
-  --provider-chains 'ddg_lite_html=https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/' \
+  --provider-chains 'ddg_bing=https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search' \
   --out improvements/seedless-ddg-benchmark-latest.json
 ```
 

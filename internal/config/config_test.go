@@ -135,7 +135,7 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Semantic.FailureCooldownMS != 5000 {
 		t.Fatalf("unexpected semantic cooldown default: %+v", cfg.Semantic)
 	}
-	if cfg.Discovery.ProviderChain != "brave://search,https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/" {
+	if cfg.Discovery.ProviderChain != "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search" {
 		t.Fatalf("unexpected discovery SSOT defaults: %+v", cfg.Discovery)
 	}
 	if cfg.Memory.Backend != "sqlite" || cfg.Memory.Path != "discovery/discovery.db" || cfg.Memory.EmbeddingBackend != "openai-embeddings" || cfg.Memory.EmbeddingModel != "intfloat/multilingual-e5-small" || cfg.Memory.VectorEngine != "sqlite-vec" {

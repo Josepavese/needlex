@@ -100,20 +100,22 @@ Deterministic suites:
 2. `hard_case_matrix`: `6/6` pass
 3. `hard_case_matrix.avg_lossiness = 0.098`
 
-Isolated live seedless DDG provider/profile smoke:
-1. `case_count = 8`
+Live 100-case seedless no-key provider run:
+1. `case_count = 100`
 2. `runner_runs = 1`
-3. `runner_profiles = ["browser_like_semantic@ddg-lite-html", "browser_like_semantic@ddg-html-lite"]`
-4. `profile_pass_rates = {"browser_like_semantic@ddg-lite-html": 0.375, "browser_like_semantic@ddg-html-lite": 0.375}`
-5. `profile_runtime_rates = {"browser_like_semantic@ddg-lite-html": 1, "browser_like_semantic@ddg-html-lite": 1}`
-6. `error_kinds = {"ranking_miss": 10}`
+3. `runner_profiles = ["browser_like_semantic"]`
+4. `runner_provider_chains = ["ddg-bing"]`
+5. provider chain: `lite.duckduckgo.com`, `html.duckduckgo.com`, `www.bing.com`
+6. `profile_pass_rates = {"browser_like_semantic": 0.31}`
+7. `profile_runtime_rates = {"browser_like_semantic": 0.94}`
+8. `error_kinds = {"ranking_miss": 63, "runtime_error": 5, "benchmark_timeout": 1}`
 
 Interpretation:
 1. semantic-first changes did not regress deterministic discovery quality
-2. seedless runtime reliability is stable in this smoke
-3. open-web seedless failures are still mostly ranking/candidate-source failures
+2. seedless runtime reliability is mostly stable with only no-key public HTML providers
+3. open-web seedless failures are mostly ranking/candidate-source failures, not provider blocking
 4. the seedless runner now supports explicit profile selection and multiple named provider chains
-5. do not extrapolate this 8-case smoke to a 100-domain seedless claim before adding broader provider diversity beyond DDG
+5. broad cold-state seedless quality is not yet a market claim; the next measured target is semantic/family reranking against mirrors and aggregators
 
 ## Quality Interpretation Rule
 

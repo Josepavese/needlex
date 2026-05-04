@@ -37,7 +37,7 @@ Reason:
 ## Discovery Baseline
 
 Current SSOT discovery baseline:
-1. provider chain: `brave://search,https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/`
+1. provider chain: `https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search`
 2. primary bootstrap provider: provider-health ordered chain
 3. fallback provider: next healthy provider in the chain
 

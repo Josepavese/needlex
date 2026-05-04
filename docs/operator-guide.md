@@ -104,10 +104,11 @@ needlex query --goal "company profile" --json
 Bootstrap discovery provider order is SSOT-driven. Current default chain:
 1. `lite.duckduckgo.com`
 2. `html.duckduckgo.com`
+3. `www.bing.com`
 
 Operator override:
 ```bash
-export NEEDLEX_DISCOVERY_PROVIDER_CHAIN='https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/'
+export NEEDLEX_DISCOVERY_PROVIDER_CHAIN='https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search'
 ```
 
 Strict single-page query:
