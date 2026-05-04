@@ -42,17 +42,32 @@ type queryDiscoveryResult struct {
 }
 
 type QueryPlan struct {
-	Goal              string                  `json:"goal"`
-	SeedURL           string                  `json:"seed_url"`
-	Profile           string                  `json:"profile"`
-	Budget            core.Budget             `json:"budget"`
-	LaneMax           int                     `json:"lane_max"`
-	Compiler          queryplan.QueryCompiler `json:"compiler,omitempty"`
-	DiscoveryMode     string                  `json:"discovery_mode,omitempty"`
-	DiscoveryProvider string                  `json:"discovery_provider,omitempty"`
-	SelectedURL       string                  `json:"selected_url,omitempty"`
-	CandidateURLs     []string                `json:"candidate_urls,omitempty"`
-	DomainHints       []string                `json:"domain_hints,omitempty"`
+	Goal                 string                     `json:"goal"`
+	SeedURL              string                     `json:"seed_url"`
+	Profile              string                     `json:"profile"`
+	Budget               core.Budget                `json:"budget"`
+	LaneMax              int                        `json:"lane_max"`
+	Compiler             queryplan.QueryCompiler    `json:"compiler,omitempty"`
+	DiscoveryMode        string                     `json:"discovery_mode,omitempty"`
+	DiscoveryProvider    string                     `json:"discovery_provider,omitempty"`
+	SelectedURL          string                     `json:"selected_url,omitempty"`
+	CandidateURLs        []string                   `json:"candidate_urls,omitempty"`
+	CandidateDiagnostics []QueryCandidateDiagnostic `json:"candidate_diagnostics,omitempty"`
+	DomainHints          []string                   `json:"domain_hints,omitempty"`
+}
+
+type QueryCandidateDiagnostic struct {
+	URL                         string   `json:"url"`
+	Score                       float64  `json:"score,omitempty"`
+	ResourceClass               string   `json:"resource_class,omitempty"`
+	SemanticRole                string   `json:"semantic_role,omitempty"`
+	SemanticRoleConfidence      float64  `json:"semantic_role_confidence,omitempty"`
+	SemanticRoleIntent          float64  `json:"semantic_role_intent,omitempty"`
+	SemanticOriginAlignment     float64  `json:"semantic_origin_alignment,omitempty"`
+	SemanticDerivativeAlignment float64  `json:"semantic_derivative_alignment,omitempty"`
+	ClusterID                   string   `json:"cluster_id,omitempty"`
+	ClusterSize                 int      `json:"cluster_size,omitempty"`
+	Reasons                     []string `json:"reasons,omitempty"`
 }
 
 type QueryResponse struct {

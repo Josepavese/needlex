@@ -15,7 +15,7 @@ const (
 	targetKindDocsLanding         = "docs_landing"
 	targetKindSpecificDocument    = "specific_document"
 	targetKindAPIReference        = "api_reference"
-	targetKindGuideOrTutorial     = "guide_or_tutorial"
+	targetKindLearningPath        = "learning_path"
 	targetKindProductSolutionPage = "product_solution_page"
 	targetKindDownloadRelease     = "download_release"
 	targetKindOrganizationAbout   = "organization_about"
@@ -105,14 +105,14 @@ func (s *Service) inferTargetKindProfile(ctx context.Context, goal string) targe
 
 func targetKindArchetypes() []intel.SemanticCandidate {
 	return []intel.SemanticCandidate{
-		{ID: targetKindCanonicalHome, Text: "official main home page broad overview identity positioning landing page website project organization product what it is overall offering"},
-		{ID: targetKindDocsLanding, Text: "documentation landing index overview developer docs manual reference collection"},
-		{ID: targetKindSpecificDocument, Text: "specific document page exact article chapter section detailed page"},
-		{ID: targetKindAPIReference, Text: "api reference endpoint method parameter schema protocol interface developer reference"},
-		{ID: targetKindGuideOrTutorial, Text: "guide tutorial getting started setup installation onboarding walkthrough learn"},
-		{ID: targetKindProductSolutionPage, Text: "product solution offering feature use case platform service capability"},
-		{ID: targetKindDownloadRelease, Text: "download release changelog version package artifact install archive"},
-		{ID: targetKindOrganizationAbout, Text: "organization about mission company foundation team governance identity profile"},
+		{ID: targetKindCanonicalHome, Text: "Entity origin surface expressing identity, ownership, scope, positioning, and global entry point. Página principal oficial, page d'accueil institutionnelle, homepage canonica, 公式入口."},
+		{ID: targetKindDocsLanding, Text: "Maintained knowledge corpus entry: reference collection, manuals, specifications, documentation family, technical knowledge index. Documentación, documentazione, référence, Dokumentation, 技術文書."},
+		{ID: targetKindSpecificDocument, Text: "Granular record or section: a precise document, chapter, article, clause, page, or bounded evidence unit inside a larger corpus. Documento específico, sezione dettagliata, section précise."},
+		{ID: targetKindAPIReference, Text: "Machine-facing interface contract: protocol, endpoint, method, schema, parameter, data contract, integration boundary, programmatic surface."},
+		{ID: targetKindLearningPath, Text: "Progressive instructional pathway: onboarding, setup sequence, guided explanation, practical learning route, first-use path, percorso introduttivo, parcours d'apprentissage."},
+		{ID: targetKindProductSolutionPage, Text: "Capability or offering surface: product, service, solution, use case, feature family, platform capability, commercial or functional presentation."},
+		{ID: targetKindDownloadRelease, Text: "Artifact acquisition and release provenance: package, binary, archive, changelog, version record, installable distribution, release channel."},
+		{ID: targetKindOrganizationAbout, Text: "Institutional identity and governance surface: organization profile, mission, legal entity, foundation, team, governance, accountability, chi siamo, à propos."},
 	}
 }
 

@@ -30,9 +30,10 @@ type corpus struct {
 
 type queryResponse struct {
 	Plan struct {
-		SelectedURL       string   `json:"selected_url"`
-		DiscoveryProvider string   `json:"discovery_provider"`
-		CandidateURLs     []string `json:"candidate_urls"`
+		SelectedURL          string                `json:"selected_url"`
+		DiscoveryProvider    string                `json:"discovery_provider"`
+		CandidateURLs        []string              `json:"candidate_urls"`
+		CandidateDiagnostics []candidateDiagnostic `json:"candidate_diagnostics"`
 	} `json:"plan"`
 	Document struct {
 		FinalURL  string `json:"final_url"`
@@ -44,6 +45,19 @@ type queryResponse struct {
 			Metadata map[string]string `json:"metadata"`
 		} `json:"stages"`
 	} `json:"trace"`
+}
+
+type candidateDiagnostic struct {
+	URL                         string   `json:"url"`
+	ResourceClass               string   `json:"resource_class"`
+	SemanticRole                string   `json:"semantic_role"`
+	SemanticRoleConfidence      float64  `json:"semantic_role_confidence"`
+	SemanticRoleIntent          float64  `json:"semantic_role_intent"`
+	SemanticOriginAlignment     float64  `json:"semantic_origin_alignment"`
+	SemanticDerivativeAlignment float64  `json:"semantic_derivative_alignment"`
+	ClusterID                   string   `json:"cluster_id"`
+	ClusterSize                 int      `json:"cluster_size"`
+	Reasons                     []string `json:"reasons"`
 }
 
 type runResult struct {
@@ -58,6 +72,7 @@ type runResult struct {
 	SelectedPass     bool         `json:"selected_pass"`
 	DiscoverySource  string       `json:"discovery_provider,omitempty"`
 	CandidateCount   int          `json:"candidate_count"`
+	SelectedRole     string       `json:"selected_role,omitempty"`
 	DocumentFetch    string       `json:"document_fetch_mode,omitempty"`
 	AcquireMetadata  []string     `json:"acquire_metadata,omitempty"`
 	RetryCount       int          `json:"retry_count,omitempty"`
@@ -78,6 +93,7 @@ type runAttempt struct {
 	SelectedPass    bool   `json:"selected_pass"`
 	DiscoverySource string `json:"discovery_provider,omitempty"`
 	CandidateCount  int    `json:"candidate_count"`
+	SelectedRole    string `json:"selected_role,omitempty"`
 	DocumentFetch   string `json:"document_fetch_mode,omitempty"`
 	RetryCount      int    `json:"retry_count,omitempty"`
 	RetrySleepMS    int64  `json:"retry_sleep_ms,omitempty"`
@@ -461,6 +477,7 @@ func runCase(binaryPath, configPath, profile, caseID, goal, expectedDomain strin
 			SelectedPass:    attempt.SelectedPass,
 			DiscoverySource: attempt.DiscoverySource,
 			CandidateCount:  attempt.CandidateCount,
+			SelectedRole:    attempt.SelectedRole,
 			DocumentFetch:   attempt.DocumentFetch,
 			RetryCount:      attempt.RetryCount,
 			RetrySleepMS:    attempt.RetrySleepMS,
@@ -565,6 +582,9 @@ func finalizeRunResult(result runResult, resp queryResponse, expectedDomain stri
 	result.SelectedPass = domainMatches(result.SelectedDomain, expectedDomain)
 	result.DiscoverySource = strings.TrimSpace(resp.Plan.DiscoveryProvider)
 	result.CandidateCount = len(resp.Plan.CandidateURLs)
+	if selected := diagnosticForURL(resp.Plan.CandidateDiagnostics, result.SelectedURL); selected.URL != "" {
+		result.SelectedRole = strings.TrimSpace(selected.SemanticRole)
+	}
 	result.DocumentFetch = strings.TrimSpace(resp.Document.FetchMode)
 	for _, stage := range resp.Trace.Stages {
 		if stage.Stage != "acquire" {
@@ -573,13 +593,60 @@ func finalizeRunResult(result runResult, resp queryResponse, expectedDomain stri
 		applyAcquireStage(&result, stage.Metadata)
 	}
 	if !result.SelectedPass {
-		if strings.TrimSpace(result.SelectedURL) == "" {
-			result.ErrorKind = "empty_selection"
-		} else {
-			result.ErrorKind = "ranking_miss"
-		}
+		result.ErrorKind = classifySelectionMiss(resp, expectedDomain)
 	}
 	return result
+}
+
+func classifySelectionMiss(resp queryResponse, expectedDomain string) string {
+	selectedURL := strings.TrimSpace(resp.Plan.SelectedURL)
+	if selectedURL == "" {
+		return "empty_selection"
+	}
+	if len(resp.Plan.CandidateURLs) == 0 {
+		return "empty_candidates"
+	}
+	selected := diagnosticForURL(resp.Plan.CandidateDiagnostics, selectedURL)
+	if candidatePoolContainsDomain(resp.Plan.CandidateURLs, expectedDomain) {
+		return "right_family_not_selected"
+	}
+	if selected.SemanticRole != "" {
+		switch selected.SemanticRole {
+		case "derivative_representation":
+			return "derivative_surface_selected"
+		case "social_context":
+			return "context_surface_selected"
+		case "distribution_node":
+			return "distribution_surface_selected"
+		}
+	}
+	if selected.ResourceClass != "" && selected.ResourceClass != "html_like" {
+		return "non_document_surface_selected"
+	}
+	return "wrong_family_selected"
+}
+
+func diagnosticForURL(items []candidateDiagnostic, rawURL string) candidateDiagnostic {
+	key := strings.TrimSpace(rawURL)
+	for _, item := range items {
+		if strings.TrimSpace(item.URL) == key {
+			return item
+		}
+	}
+	return candidateDiagnostic{}
+}
+
+func candidatePoolContainsDomain(urls []string, expectedDomain string) bool {
+	expected := canonicalHost("https://" + expectedDomain)
+	if expected == "" {
+		return false
+	}
+	for _, rawURL := range urls {
+		if domainMatches(canonicalHost(rawURL), expected) {
+			return true
+		}
+	}
+	return false
 }
 
 func applyAcquireStage(result *runResult, metadata map[string]string) {
@@ -814,6 +881,7 @@ func runAttempts(run runResult) []runAttempt {
 		SelectedPass:    run.SelectedPass,
 		DiscoverySource: run.DiscoverySource,
 		CandidateCount:  run.CandidateCount,
+		SelectedRole:    run.SelectedRole,
 		DocumentFetch:   run.DocumentFetch,
 		RetryCount:      run.RetryCount,
 		RetrySleepMS:    run.RetrySleepMS,

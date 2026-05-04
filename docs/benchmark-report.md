@@ -106,16 +106,20 @@ Live 100-case seedless no-key provider run:
 3. `runner_profiles = ["browser_like_semantic"]`
 4. `runner_provider_chains = ["ddg-bing"]`
 5. provider chain: `lite.duckduckgo.com`, `html.duckduckgo.com`, `www.bing.com`
-6. `profile_pass_rates = {"browser_like_semantic": 0.31}`
-7. `profile_runtime_rates = {"browser_like_semantic": 0.94}`
-8. `error_kinds = {"ranking_miss": 63, "runtime_error": 5, "benchmark_timeout": 1}`
+6. accepted command: `go run ./benchmarks/seedless_ddg/runner -cases benchmarks/corpora/unique-sources-corpus-v1.json -profiles browser_like_semantic -runs 1 -timeout-ms 30000 -out /tmp/needlex-seedless-100-semantic-role.json`
+7. previous measured pass rate on this lane: `0.31`
+8. accepted `profile_pass_rates = {"browser_like_semantic": 0.56}`
+9. accepted `profile_runtime_rates = {"browser_like_semantic": 0.98}`
+10. accepted `error_kinds = {"right_family_not_selected": 34, "wrong_family_selected": 8, "runtime_error": 2}`
 
 Interpretation:
 1. semantic-first changes did not regress deterministic discovery quality
 2. seedless runtime reliability is mostly stable with only no-key public HTML providers
-3. open-web seedless failures are mostly ranking/candidate-source failures, not provider blocking
+3. the semantic role/family recovery layer improved cold seedless quality by `+25` percentage points on the 100-source lane
 4. the seedless runner now supports explicit profile selection and multiple named provider chains
-5. broad cold-state seedless quality is not yet a market claim; the next measured target is semantic/family reranking against mirrors and aggregators
+5. remaining open-web seedless failures are mostly selection failures where the expected family is already in the candidate pool
+6. this points to family representative selection and candidate promotion, not provider blocking, as the next improvement front
+7. broad cold-state seedless quality is not yet a market claim; the next measured target is converting `right_family_not_selected` into selected-pass without domain-specific rules
 
 ## Quality Interpretation Rule
 

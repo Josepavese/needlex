@@ -40,7 +40,7 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 		return finalizeQueryDiscoveryResult(result, req.SeedURL, seedEvidence, req.FingerprintEvidenceLoader), nil
 	}
 
-	maxCandidates := min(5, s.cfg.Runtime.MaxPages)
+	maxCandidates := min(webCandidateLimit, s.cfg.Runtime.MaxPages)
 	switch discoveryMode {
 	case QueryDiscoverySameSite:
 		discovery, err := s.Discover(ctx, DiscoverRequest{
@@ -103,7 +103,7 @@ func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest)
 		SeedURL:       seed.URL,
 		UserAgent:     req.UserAgent,
 		SameDomain:    true,
-		MaxCandidates: min(5, s.cfg.Runtime.MaxPages),
+		MaxCandidates: min(webCandidateLimit, s.cfg.Runtime.MaxPages),
 		DomainHints:   mergeDomainHints(req.DomainHints, hostFromURLString(seed.URL)),
 	})
 	if err != nil || strings.TrimSpace(discovery.SelectedURL) == "" || len(discovery.Candidates) == 0 {

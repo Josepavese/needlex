@@ -93,11 +93,12 @@ func ExtractSearchResults(rawHTML, baseURL string) []LinkCandidate {
 		if node.Type == html.ElementNode && strings.EqualFold(node.Data, "a") && looksLikeSearchResultAnchor(node) {
 			href := attrValue(node, "href")
 			label := nodeText(node)
+			context := nodeText(searchResultContainer(node))
 			resolved, ok := resolveSearchResultURL(base, href)
 			if ok && label != "" {
 				if _, exists := seen[resolved]; !exists {
 					seen[resolved] = struct{}{}
-					out = append(out, LinkCandidate{URL: resolved, Label: label})
+					out = append(out, LinkCandidate{URL: resolved, Label: label, Context: context})
 				}
 			}
 		}
@@ -122,6 +123,30 @@ func hasClass(node *html.Node, className string) bool {
 func hasAncestorClass(node *html.Node, className string) bool {
 	for current := node; current != nil; current = current.Parent {
 		if hasClass(current, className) {
+			return true
+		}
+	}
+	return false
+}
+
+func searchResultContainer(node *html.Node) *html.Node {
+	for current := node.Parent; current != nil; current = current.Parent {
+		if current.Type != html.ElementNode {
+			continue
+		}
+		if hasClass(current, "b_algo") || hasResultClass(current) {
+			return current
+		}
+		if current.Data == "li" {
+			return current
+		}
+	}
+	return node
+}
+
+func hasResultClass(node *html.Node) bool {
+	for _, class := range strings.Fields(attrValue(node, "class")) {
+		if class == "result" || strings.HasPrefix(class, "result--") || strings.HasPrefix(class, "result__") {
 			return true
 		}
 	}

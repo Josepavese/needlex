@@ -13,8 +13,9 @@ import (
 )
 
 type LinkCandidate struct {
-	URL   string
-	Label string
+	URL     string
+	Label   string
+	Context string
 }
 
 type Candidate struct {
@@ -58,6 +59,9 @@ func ScoreStructuralCandidates(seedURL, seedLabel string, links []LinkCandidate,
 		seen[link.URL] = struct{}{}
 		score, reason := structuralPriorScore(link.URL, false, domainHints)
 		metadata := map[string]string{"resource_class": ResourceClass(link.URL)}
+		if context := strings.TrimSpace(link.Context); context != "" {
+			metadata["source_context"] = compactDiscoveryText(context, 900)
+		}
 		out = append(out, Candidate{
 			URL:      link.URL,
 			Label:    strings.TrimSpace(link.Label),
@@ -426,6 +430,22 @@ func JoinNonEmpty(values ...string) string {
 		}
 	}
 	return strings.Join(parts, " ")
+}
+
+func compactDiscoveryText(value string, maxRunes int) string {
+	fields := strings.Fields(strings.TrimSpace(value))
+	if len(fields) == 0 {
+		return ""
+	}
+	compact := strings.Join(fields, " ")
+	if maxRunes <= 0 {
+		return compact
+	}
+	runes := []rune(compact)
+	if len(runes) <= maxRunes {
+		return compact
+	}
+	return strings.TrimSpace(string(runes[:maxRunes]))
 }
 
 func URLIdentityText(rawURL string) string {

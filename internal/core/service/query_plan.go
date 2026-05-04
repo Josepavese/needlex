@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
@@ -66,9 +67,44 @@ func (s *Service) applyDiscoveryToPlan(plan *QueryPlan, req QueryRequest, discov
 	}
 	plan.SelectedURL = selectedURL
 	plan.CandidateURLs = candidates.URLs()
+	plan.CandidateDiagnostics = queryCandidateDiagnostics(candidates.Sorted())
 	plan.Compiler = queryplan.FinalizeQueryCompiler(plan.Compiler, req.SeedURL, discoveryMode, plan.DiscoveryProvider, selectedURL, queryPlanCandidates(discoveryCandidates))
 	plan.Compiler = queryplan.AnnotateQueryCompilerWithIntentBoundary(plan.Compiler)
 	return nil
+}
+
+func queryCandidateDiagnostics(candidates []DiscoverCandidate) []QueryCandidateDiagnostic {
+	const limit = 8
+	out := make([]QueryCandidateDiagnostic, 0, min(len(candidates), limit))
+	for i, candidate := range candidates {
+		if i >= limit {
+			break
+		}
+		out = append(out, QueryCandidateDiagnostic{
+			URL:                         strings.TrimSpace(candidate.URL),
+			Score:                       candidate.Score,
+			ResourceClass:               strings.TrimSpace(candidate.Metadata["resource_class"]),
+			SemanticRole:                strings.TrimSpace(candidate.Metadata["semantic_role"]),
+			SemanticRoleConfidence:      parseDiagnosticFloat(candidate.Metadata["semantic_role_confidence"]),
+			SemanticRoleIntent:          parseDiagnosticFloat(candidate.Metadata["semantic_role_intent"]),
+			SemanticOriginAlignment:     parseDiagnosticFloat(candidate.Metadata["semantic_origin_alignment"]),
+			SemanticDerivativeAlignment: parseDiagnosticFloat(candidate.Metadata["semantic_derivative_alignment"]),
+			ClusterID:                   strings.TrimSpace(candidate.Metadata["cluster_id"]),
+			ClusterSize:                 parseDiagnosticInt(candidate.Metadata["cluster_size"]),
+			Reasons:                     append([]string{}, candidate.Reason...),
+		})
+	}
+	return out
+}
+
+func parseDiagnosticFloat(raw string) float64 {
+	value, _ := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	return value
+}
+
+func parseDiagnosticInt(raw string) int {
+	value, _ := strconv.Atoi(strings.TrimSpace(raw))
+	return value
 }
 
 func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL string) ReadRequest {

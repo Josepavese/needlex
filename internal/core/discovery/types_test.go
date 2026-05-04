@@ -20,6 +20,22 @@ func TestScoreStructuralCandidatesRemainStructureFirstWithoutSurfaceFormPromotio
 	}
 }
 
+func TestScoreStructuralCandidatesPreservesSourceContextForSemanticLayers(t *testing.T) {
+	candidates := ScoreStructuralCandidates(
+		"",
+		"",
+		[]LinkCandidate{{
+			URL:     "https://source.example/record",
+			Label:   "Source record",
+			Context: "  maintained context\nfrom the search result container\twith provenance details  ",
+		}},
+		nil,
+	)
+	if got := candidates[0].Metadata["source_context"]; got != "maintained context from the search result container with provenance details" {
+		t.Fatalf("unexpected source context %q", got)
+	}
+}
+
 func TestURLStructureBoostPenalizesArticleLikeDeepPaths(t *testing.T) {
 	deepArticle := urlStructureBoost("https://example.com/2025/04/playwright-automation-tutorial.html")
 	shallowRoot := urlStructureBoost("https://playwright.dev/")

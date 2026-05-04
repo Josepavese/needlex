@@ -114,7 +114,7 @@ Rules:
 
 Current calibration:
 1. hard LOC gates still protect against uncontrolled growth
-2. target LOC pressure is aligned to the current semantic, analytics, memory, and provider-diversity production surface
+2. target LOC pressure is aligned to the current semantic, analytics, memory, provider-diversity, and discovery-diagnostics production surface
 3. future LOC wins should ratchet `TARGET_MAX_PROD_LOC` and `TARGET_MAX_PACKAGE_LOC` down after measurable cleanup
 
 ## Processes

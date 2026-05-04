@@ -36,7 +36,10 @@ type DiscoverWebResponse struct {
 	Candidates   []DiscoverCandidate `json:"candidates"`
 }
 
-const webProbeLimit = 5
+const (
+	webCandidateLimit = 8
+	webProbeLimit     = 6
+)
 
 func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, error) {
 	var err error
@@ -80,7 +83,7 @@ func normalizeDiscoverWebRequest(req DiscoverWebRequest) (DiscoverWebRequest, er
 		return DiscoverWebRequest{}, fmt.Errorf("discover web request goal must not be empty")
 	}
 	if req.MaxCandidates <= 0 {
-		req.MaxCandidates = 5
+		req.MaxCandidates = webCandidateLimit
 	}
 	return req, nil
 }
@@ -149,10 +152,11 @@ func (c webBootstrapCollection) NoCandidateError() error {
 func (s *Service) finalizeWebCandidates(ctx context.Context, req DiscoverWebRequest, candidates []DiscoverCandidate) []DiscoverCandidate {
 	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates, false)
 	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, bootstrapped, req.MaxCandidates)
-	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded, false)).Limited(req.MaxCandidates)
+	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded, false)).Sorted()
 	filtered = webdiscover.CanonicalizeCandidateFamilies(filtered)
 	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
 	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
+	filtered = discoverycore.NewSet(filtered).Limited(req.MaxCandidates)
 	return s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
 }
 
