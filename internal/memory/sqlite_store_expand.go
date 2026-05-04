@@ -92,7 +92,7 @@ WHERE host = ? AND (path = ? OR path LIKE ?)
 }
 
 func ancestorRootCandidate(row memoryDocumentRow, supportCount int) Candidate {
-	score := 1.4 + minFloat(0.9, float64(supportCount-1)*0.32)
+	score := 1.4 + min(0.9, float64(supportCount-1)*0.32)
 	reasons := []string{"family_root_inference"}
 	score, reasons = applyDocumentEvidence(score, reasons, row, nil, 0.05, false)
 	reasons = append(reasons, "semantic_family_support")
@@ -200,13 +200,6 @@ func inclusiveAncestorPaths(path string) []string {
 	}
 	out := []string{"/" + clean}
 	return append(out, ancestorPaths(path)...)
-}
-
-func minFloat(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func (s SQLiteStore) ExpandHosts(ctx context.Context, hosts []string, limit int) ([]Candidate, error) {

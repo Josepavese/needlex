@@ -77,17 +77,6 @@ func (r *Recorder) EscalationTriggered(stage, reasonCode, message string, lane i
 	})
 }
 
-func (r *Recorder) BudgetWarning(stage, reasonCode, message string, data map[string]string, at time.Time) {
-	r.trace.Events = append(r.trace.Events, TraceEvent{
-		Type:       EventBudgetWarning,
-		Stage:      stage,
-		Timestamp:  at.UTC(),
-		ReasonCode: reasonCode,
-		Message:    message,
-		Data:       cloneMap(data),
-	})
-}
-
 func (r *Recorder) ModelIntervention(stage, reasonCode, message string, lane int, data map[string]string, at time.Time) {
 	r.trace.Events = append(r.trace.Events, TraceEvent{
 		Type:       EventModelIntervention,

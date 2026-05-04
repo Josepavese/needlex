@@ -16,13 +16,13 @@ var tinyStopwords = map[string]struct{}{
 	"without": {},
 }
 
-func (s *Service) compactTinyText(text, objective string) (string, bool) {
+func (s *Service) compactTinyText(ctx context.Context, text, objective string) (string, bool) {
 	normalized := strings.Join(strings.Fields(strings.TrimSpace(text)), " ")
 	if normalized == "" {
 		return "", false
 	}
 
-	candidate := s.bestCompactSentence(normalized, objective)
+	candidate := s.bestCompactSentence(ctx, normalized, objective)
 	words := strings.Fields(candidate)
 	if len(words) == 0 {
 		return normalized, false
@@ -57,7 +57,7 @@ func (s *Service) compactTinyText(text, objective string) (string, bool) {
 	return compacted, compacted != normalized
 }
 
-func (s *Service) bestCompactSentence(text, objective string) string {
+func (s *Service) bestCompactSentence(ctx context.Context, text, objective string) string {
 	sentences := splitTinySentences(text)
 	if len(sentences) == 0 {
 		return text
@@ -72,7 +72,7 @@ func (s *Service) bestCompactSentence(text, objective string) string {
 			Text: sentence,
 		})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.cfg.Semantic.TimeoutMS)*time.Millisecond)
+	ctx, cancel := semanticOperationContext(ctx, time.Duration(s.cfg.Semantic.TimeoutMS)*time.Millisecond)
 	defer cancel()
 	scores, err := s.semantic.Score(ctx, objective, candidates)
 	if err != nil || len(scores) == 0 {

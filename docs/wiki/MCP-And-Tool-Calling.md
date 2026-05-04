@@ -61,8 +61,8 @@ Canonical query discovery literals:
 3. `off`
 
 Agent note:
-1. aliases like `same-site` are accepted for compatibility
-2. use the canonical literals above in generated tool calls
+1. only the canonical literals above are accepted
+2. do not generate alias spellings such as `same-site` or `web-search`
 
 Retrieval effort:
 1. `retrieval_effort` is optional on `web_read` and `web_query`
@@ -80,7 +80,7 @@ Compact-first output rule:
 
 Tool scope rule:
 1. `web_extract` is intentionally not added yet
-2. Needle-X should first get better through clearer schema, examples, aliases, and compact-first packets
+2. Needle-X should first get better through clearer schema, examples, and compact-first packets
 
 Agent routing rule:
 1. use `web_read` when the exact URL is known and page layout fidelity is not the goal

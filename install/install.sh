@@ -81,11 +81,6 @@ capture_existing_state_root() {
   sed -n 's/^export NEEDLEX_HOME="\(.*\)"$/\1/p' "${wrapper}" | head -n1
 }
 
-cleanup_legacy_wrapper_artifacts() {
-  rm -f "${BIN_DIR}/needle"
-  rm -f "${LIB_DIR}/needle-real"
-}
-
 install_real_binary() {
   local source_bin="$1"
   local target_bin="$2"
@@ -143,7 +138,6 @@ WRAPPER_PATH="${BIN_DIR}/needlex"
 PREVIOUS_STATE_ROOT="$(capture_existing_state_root "${WRAPPER_PATH}")"
 
 mkdir -p "${BIN_DIR}" "${LIB_DIR}"
-cleanup_legacy_wrapper_artifacts
 create_state_tree
 
 TMP_DIR="$(mktemp -d)"

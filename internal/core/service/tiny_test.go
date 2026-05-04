@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -12,7 +13,7 @@ func TestCompactTinyTextPreservesObjectiveTerms(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
-	compacted, changed := svc.compactTinyText(
+	compacted, changed := svc.compactTinyText(context.Background(),
 		"The runtime reduces HTML into a stable intermediate representation before ranking and packing.",
 		"stable ranking packing",
 	)
@@ -31,7 +32,7 @@ func TestCompactTinyTextFallsBackForShortContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
-	compacted, changed := svc.compactTinyText("Proof replay deterministic context.", "proof replay")
+	compacted, changed := svc.compactTinyText(context.Background(), "Proof replay deterministic context.", "proof replay")
 	if changed {
 		t.Fatalf("expected short content to remain unchanged, got %q", compacted)
 	}

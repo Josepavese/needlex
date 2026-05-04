@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -215,9 +216,9 @@ func mcpToolErrorMessage(err error) string {
 	lower := strings.ToLower(message)
 	switch {
 	case strings.Contains(lower, "lane_max"):
-		return `lane_max is no longer supported; use retrieval_effort instead. Valid retrieval_effort values: minimal, light, balanced, standard, exhaustive`
+		return `unsupported field lane_max; use retrieval_effort instead. Valid retrieval_effort values: minimal, light, balanced, standard, exhaustive`
 	case strings.Contains(lower, "quality_budget"):
-		return `quality_budget is not supported; use retrieval_effort instead. Valid retrieval_effort values: minimal, light, balanced, standard, exhaustive`
+		return `unsupported field quality_budget; use retrieval_effort instead. Valid retrieval_effort values: minimal, light, balanced, standard, exhaustive`
 	case strings.Contains(lower, "discovery_mode=off") || strings.Contains(lower, "unexpected status code 404"):
 		return message + `; next_recommended_call: web_query with discovery_mode="same_site_links" and the same seed_url, or discovery_mode="web_search" if the seed URL is uncertain`
 	case strings.Contains(lower, "unsupported discovery_mode"):
@@ -362,16 +363,31 @@ func intArg(args map[string]any, key string) (int, bool) {
 	}
 	switch typed := value.(type) {
 	case float64:
+		if math.IsNaN(typed) || math.IsInf(typed, 0) || math.Trunc(typed) != typed || typed < float64(minSupportedInt()) || typed > float64(maxSupportedInt()) {
+			return 0, false
+		}
 		return int(typed), true
 	case int:
 		return typed, true
 	case json.Number:
 		n, err := typed.Int64()
-		if err == nil {
+		if err == nil && int64FitsInt(n) {
 			return int(n), true
 		}
 	}
 	return 0, false
+}
+
+func int64FitsInt(value int64) bool {
+	return int64(int(value)) == value
+}
+
+func maxSupportedInt() int {
+	return int(^uint(0) >> 1)
+}
+
+func minSupportedInt() int {
+	return -maxSupportedInt() - 1
 }
 
 func boolArg(args map[string]any, key string) bool {

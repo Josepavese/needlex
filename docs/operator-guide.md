@@ -332,7 +332,7 @@ Advertised tool surface:
 2. `tools/list` also exposes `memory` and `analytics` as advanced dispatchers
 3. `memory` actions are `stats`, `search`, `prune`, `export`, `import`, and `rebuild_index`
 4. `analytics` actions are `stats`, `recent_runs`, `value_report`, `hosts`, `providers`, `failures`, `daily`, and `export`
-5. old narrow memory/analytics tool names are compatibility aliases only and should not be advertised to agents
+5. old narrow memory/analytics tool names are retired and are not valid MCP tools
 
 Operational rules:
 1. use raw JSON for clients like OpenCode or simple local wrappers

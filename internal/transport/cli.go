@@ -110,6 +110,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	var objective string
 	var profile string
 	var userAgent string
+	var retrievalEffort string
 	var jsonOut bool
 	var jsonMode string
 
@@ -117,6 +118,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&objective, "objective", "", "optional read objective")
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
+	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 
@@ -136,13 +138,16 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	if !ok {
 		return 1
 	}
+	if err := applyRetrievalEffort(retrievalEffort, &cfg); err != nil {
+		return r.reportCLIErrorCode(stderr, "read", err, map[string]any{"retrieval_effort": retrievalEffort}, 2)
+	}
 
-	resp, artifacts, err := r.executeRead(cfg, coreservice.ReadRequest{
+	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
 		URL:       fs.Arg(0),
 		Objective: objective,
 		Profile:   profile,
 		UserAgent: userAgent,
-	})
+	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "read", err, map[string]any{"url": fs.Arg(0), "objective": objective})
 	}
@@ -160,9 +165,9 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 func writeRootUsage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
-  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]
-  needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]
-  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]
+  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name]
+  needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort name]
+  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort name]
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
   needlex proof <trace-id|proof-id|chunk-id> [--json]
@@ -191,11 +196,11 @@ func (r Runner) runVersion(args []string, stdout, stderr io.Writer) int {
 }
 
 func writeQueryUsage(w io.Writer) {
-	writeUsage(w, "needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode]", "note: when seed-url is omitted, discovery defaults to web_search")
+	writeUsage(w, "needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort minimal|light|balanced|standard|exhaustive]", "note: when seed-url is omitted, discovery defaults to web_search")
 }
 
 func writeReadUsage(w io.Writer) {
-	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua]")
+	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive]")
 }
 
 func writeReplayUsage(w io.Writer) {
@@ -387,14 +392,16 @@ func normalizeArgs(args []string, valueFlags map[string]struct{}) []string {
 }
 
 var readValueFlags = map[string]struct{}{
-	"--config":     {},
-	"-config":      {},
-	"--json-mode":  {},
-	"-json-mode":   {},
-	"--objective":  {},
-	"-objective":   {},
-	"--profile":    {},
-	"-profile":     {},
-	"--user-agent": {},
-	"-user-agent":  {},
+	"--config":           {},
+	"-config":            {},
+	"--json-mode":        {},
+	"-json-mode":         {},
+	"--objective":        {},
+	"-objective":         {},
+	"--profile":          {},
+	"-profile":           {},
+	"--user-agent":       {},
+	"-user-agent":        {},
+	"--retrieval-effort": {},
+	"-retrieval-effort":  {},
 }

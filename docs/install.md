@@ -28,7 +28,7 @@ What it does:
 4. sets `NEEDLEX_HOME` to an OS-appropriate state directory
 5. updates PATH persistence for future shells or terminals
 6. reconciles a previous install without duplicating PATH hooks
-7. removes legacy `needle` wrapper artifacts if they exist
+7. leaves unrelated commands untouched
 
 Default paths:
 1. binary wrapper: `~/.local/bin/needlex`
@@ -67,13 +67,13 @@ Unix:
 1. reuses the same wrapper path and real binary path
 2. rewrites the `needlex` wrapper deterministically
 3. keeps a single `# needlex-path` block in shell startup files
-4. removes legacy `needle` wrapper artifacts
+4. leaves unrelated commands untouched
 5. preserves old state roots on disk if you intentionally switch to a new one
 
 Windows:
 1. rewrites `needlex.cmd` deterministically
 2. deduplicates the user PATH before appending the install directory
-3. removes legacy `needle` command artifacts
+3. leaves unrelated commands untouched
 4. preserves old state roots on disk if you intentionally switch to a new one
 
 ## Build from source

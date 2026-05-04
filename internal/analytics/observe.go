@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -165,8 +165,8 @@ func crawlWindow(resp coreservice.CrawlResponse) (time.Time, time.Time) {
 }
 
 func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode string, seedPresent bool, provider string, trace proof.RunTrace, packetBytes int, documentURL, selectedURL string, pack core.ResultPack, candidateCount int, memoryStats memory.Stats) (RunRecord, []StageEvent) {
-	rawFetchChars, rawFetchBytes := traceAcquireMetrics(trace)
-	reducedChars, reducedNodes := traceReduceMetrics(trace)
+	rawFetchChars, rawFetchBytes := traceMetrics(trace, "acquire", "raw_chars", "raw_bytes")
+	reducedChars, reducedNodes := traceMetrics(trace, "reduce", "reduced_chars", "reduced_nodes")
 	stages := stageEventsFromTrace(trace)
 	selected := strings.TrimSpace(documentURL)
 	if strings.TrimSpace(selectedURL) != "" {
@@ -176,8 +176,6 @@ func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode st
 	for _, chunk := range pack.Chunks {
 		finalContextChars += len(chunk.Text)
 	}
-	reasons := topMetadata(trace, "discover_web", "selected_reason_json")
-	_ = reasons
 	return RunRecord{
 		RunID:                trace.RunID,
 		StartedAt:            trace.StartedAt,
@@ -203,7 +201,7 @@ func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode st
 		ProofRefCount:        len(pack.ProofRefs),
 		ProofUsable:          len(pack.ProofRefs) > 0,
 		PublicBootstrapUsed:  usesPublicBootstrap(provider),
-		LocalMemoryUsed:      usesLocalMemory(provider),
+		LocalMemoryUsed:      strings.Contains(strings.TrimSpace(provider), "discovery_memory"),
 		TopicNodeUsed:        traceReasonPresent(trace, "topic_node_retrieval"),
 		SameSiteRecoveryUsed: strings.Contains(provider, "same_site"),
 		CandidateCount:       candidateCount,
@@ -238,22 +236,12 @@ func stageEventsFromTrace(trace proof.RunTrace) []StageEvent {
 	return out
 }
 
-func traceAcquireMetrics(trace proof.RunTrace) (int, int) {
+func traceMetrics(trace proof.RunTrace, stageName, firstKey, secondKey string) (int, int) {
 	for _, stage := range trace.Stages {
-		if stage.Stage != "acquire" {
+		if stage.Stage != stageName {
 			continue
 		}
-		return atoi(stage.Metadata["raw_chars"]), atoi(stage.Metadata["raw_bytes"])
-	}
-	return 0, 0
-}
-
-func traceReduceMetrics(trace proof.RunTrace) (int, int) {
-	for _, stage := range trace.Stages {
-		if stage.Stage != "reduce" {
-			continue
-		}
-		return atoi(stage.Metadata["reduced_chars"]), atoi(stage.Metadata["reduced_nodes"])
+		return atoi(stage.Metadata[firstKey]), atoi(stage.Metadata[secondKey])
 	}
 	return 0, 0
 }
@@ -271,10 +259,6 @@ func usesPublicBootstrap(provider string) bool {
 	return false
 }
 
-func usesLocalMemory(provider string) bool {
-	return strings.Contains(strings.TrimSpace(provider), "discovery_memory")
-}
-
 func traceReasonPresent(trace proof.RunTrace, needle string) bool {
 	for _, stage := range trace.Stages {
 		for key, value := range stage.Metadata {
@@ -284,15 +268,6 @@ func traceReasonPresent(trace proof.RunTrace, needle string) bool {
 		}
 	}
 	return false
-}
-
-func topMetadata(trace proof.RunTrace, stageName, key string) string {
-	for _, stage := range trace.Stages {
-		if stage.Stage == stageName {
-			return stage.Metadata[key]
-		}
-	}
-	return ""
 }
 
 func cloneMetadata(input map[string]string) map[string]string {
@@ -312,11 +287,7 @@ func prefixedHash(prefix string, parts ...string) string {
 }
 
 func atoi(raw string) int {
-	if strings.TrimSpace(raw) == "" {
-		return 0
-	}
-	var value int
-	_, _ = fmt.Sscanf(strings.TrimSpace(raw), "%d", &value)
+	value, _ := strconv.Atoi(strings.TrimSpace(raw))
 	return value
 }
 
@@ -344,8 +315,8 @@ func failureMessage(err error) string {
 }
 
 func truncate(value string, max int) string {
-	if max <= 0 || len(value) <= max {
-		return value
+	if max > 0 && len(value) > max {
+		return value[:max]
 	}
-	return value[:max]
+	return value
 }

@@ -99,7 +99,7 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 	reason := "semantic_goal_alignment"
 	backend := "configured"
 	if (err != nil || len(scored) == 0) && useNativeFallback && s.cfg.Semantic.Enabled {
-		native := intel.NativeSemanticAligner{Model: "native-discovery-context-v1", Config: s.cfg.Semantic}
+		native := intel.NativeSemanticAligner{}
 		scored, err = native.Score(ctx, goal, semanticCandidates)
 		reason = "native_context_goal_alignment"
 		backend = "native"

@@ -10,7 +10,7 @@ import (
 )
 
 func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
-	configPath, goal, profile, userAgent, discovery, seedURL, jsonMode, jsonOut, ok := parseQueryArgs(args, stderr)
+	configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, jsonMode, jsonOut, ok := parseQueryArgs(args, stderr)
 	if !ok {
 		writeQueryUsage(stderr)
 		return 2
@@ -24,14 +24,17 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	if !ok {
 		return 1
 	}
+	if err := applyRetrievalEffort(retrievalEffort, &cfg); err != nil {
+		return r.reportCLIErrorCode(stderr, "query", err, map[string]any{"retrieval_effort": retrievalEffort}, 2)
+	}
 
-	resp, artifacts, err := r.executeQuery(cfg, coreservice.QueryRequest{
+	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
 		Goal:          goal,
 		SeedURL:       seedURL,
 		Profile:       profile,
 		UserAgent:     userAgent,
 		DiscoveryMode: discovery,
-	})
+	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "query", err, map[string]any{"goal": goal, "seed_url": seedURL, "discovery_mode": discovery})
 	}
@@ -47,7 +50,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile, userAgent, discovery, seedURL, jsonMode string, jsonOut, ok bool) {
+func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, jsonMode string, jsonOut, ok bool) {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
@@ -55,31 +58,34 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile,
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, web_search, or off")
+	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
-		"--config":     {},
-		"-config":      {},
-		"--json-mode":  {},
-		"-json-mode":   {},
-		"--goal":       {},
-		"-goal":        {},
-		"--profile":    {},
-		"-profile":     {},
-		"--user-agent": {},
-		"-user-agent":  {},
-		"--discovery":  {},
-		"-discovery":   {},
+		"--config":           {},
+		"-config":            {},
+		"--json-mode":        {},
+		"-json-mode":         {},
+		"--goal":             {},
+		"-goal":              {},
+		"--profile":          {},
+		"-profile":           {},
+		"--user-agent":       {},
+		"-user-agent":        {},
+		"--discovery":        {},
+		"-discovery":         {},
+		"--retrieval-effort": {},
+		"-retrieval-effort":  {},
 	})); err != nil {
-		return "", "", "", "", "", "", "", false, false
+		return "", "", "", "", "", "", "", "", false, false
 	}
 	if fs.NArg() > 1 || goal == "" {
-		return "", "", "", "", "", "", "", false, false
+		return "", "", "", "", "", "", "", "", false, false
 	}
 	if fs.NArg() == 1 {
 		seedURL = fs.Arg(0)
 	}
-	return configPath, goal, profile, userAgent, discovery, seedURL, jsonMode, jsonOut, true
+	return configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, jsonMode, jsonOut, true
 }
 
 func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts artifactPaths) {

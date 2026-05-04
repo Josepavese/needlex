@@ -1,6 +1,6 @@
 # Tool Calling
 
-Needle-X should be treated as a tool-calling runtime with two compatibility layers:
+Needle-X should be treated as a tool-calling runtime with two current catalog surfaces:
 1. `MCP` as the primary interoperable transport
 2. provider-specific JSON Schema catalogs for direct tool/function calling
 
@@ -54,7 +54,7 @@ needlex tool-catalog --provider anthropic
 ```
 
 These files are not a second source of truth.
-They are compatibility artifacts that must stay aligned with the MCP tool set.
+They are generated catalog artifacts that must stay aligned with the MCP tool set.
 
 That alignment is enforced by tests.
 
@@ -99,9 +99,9 @@ For `web_query`, use the canonical `discovery_mode` literals:
 2. `web_search` to bootstrap with search
 3. `off` for strict seeded mode
 
-Compatibility note:
-1. Needle-X now accepts aliases such as `same-site` and `web-search`
-2. but agents should prefer the canonical literals above to reduce drift
+Strict mode note:
+1. Needle-X accepts only the canonical literals above
+2. non-canonical spellings such as `same-site` or `web-search` are rejected
 
 ### Retrieval Effort
 
@@ -173,7 +173,7 @@ For MCP agent-facing calls:
 
 Tool expansion rule:
 1. do not add narrower tools like `web_extract` until repeated agent misuse shows that `web_read` and `web_query` cannot be made clear enough
-2. improve schema, examples, aliases, and compact output first
+2. improve schema, examples, and compact output first
 
 ## Practical Recommendation
 

@@ -62,7 +62,7 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 	}
 	for _, tool := range []string{"memory_stats", "memory_search", "memory_prune", "memory_export", "memory_import", "memory_rebuild_index", "analytics_stats", "analytics_recent_runs", "analytics_value_report", "analytics_hosts", "analytics_providers", "analytics_failures", "analytics_daily", "analytics_export"} {
 		if strings.Contains(string(responses[1]), `"`+tool+`"`) {
-			t.Fatalf("expected legacy tool %q not to be advertised, got %s", tool, responses[1])
+			t.Fatalf("expected retired tool %q not to be advertised, got %s", tool, responses[1])
 		}
 	}
 }
@@ -109,7 +109,7 @@ func TestMCPToolErrorMessageSuggestsNextCall(t *testing.T) {
 }
 
 func TestMCPToolErrorMessageGuidesRenamedRetrievalEffort(t *testing.T) {
-	message := mcpToolErrorMessage(fmt.Errorf("lane_max is no longer supported"))
+	message := mcpToolErrorMessage(fmt.Errorf("unsupported field lane_max"))
 	if !strings.Contains(message, "retrieval_effort") || !strings.Contains(message, "exhaustive") {
 		t.Fatalf("expected guided retrieval_effort error, got %q", message)
 	}
@@ -141,14 +141,17 @@ func TestMCPRetrievalEffortSchemaGuidesAgents(t *testing.T) {
 	}
 }
 
-func TestRunnerMCPHiddenLegacyToolsRemainCallable(t *testing.T) {
-	runner := Runner{storeRoot: t.TempDir()}
-	result, err := runner.callMCPTool(mcpToolCall{Name: "analytics_stats", Arguments: map[string]any{}})
-	if err != nil {
-		t.Fatalf("expected hidden legacy analytics_stats alias to work: %v", err)
+func TestMCPMemorySchemaUsesCurrentSearchContract(t *testing.T) {
+	props, ok := mcpMemoryTool().InputSchema["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("expected memory schema properties")
 	}
-	if len(result) == 0 {
-		t.Fatal("expected legacy analytics_stats result")
+	if _, ok := props["goal"]; ok {
+		t.Fatal("memory search must expose query, not goal alias")
+	}
+	domainHints, ok := props["domain_hints"].(map[string]any)
+	if !ok || domainHints["type"] != "array" {
+		t.Fatalf("expected domain_hints array schema, got %#v", domainHints)
 	}
 }
 
@@ -459,15 +462,15 @@ func TestRunnerMCPQueryAppliesRetrievalEffort(t *testing.T) {
 	}
 }
 
-func TestRunnerMCPRejectsLegacyLaneMax(t *testing.T) {
+func TestRunnerMCPRejectsUnsupportedLaneMax(t *testing.T) {
 	runner := Runner{storeRoot: t.TempDir()}
 	_, err := runner.callMCPTool(mcpToolCall{Name: "web_query", Arguments: map[string]any{
 		"goal":     "proof replay deterministic",
 		"seed_url": "https://example.com",
 		"lane_max": 5,
 	}})
-	if err == nil || !strings.Contains(err.Error(), "lane_max is no longer supported") || !strings.Contains(err.Error(), "retrieval_effort") {
-		t.Fatalf("expected legacy lane_max rejection, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "unsupported field lane_max") || !strings.Contains(err.Error(), "retrieval_effort") {
+		t.Fatalf("expected lane_max rejection, got %v", err)
 	}
 }
 
@@ -477,8 +480,37 @@ func TestRunnerMCPRejectsAmbiguousQualityBudget(t *testing.T) {
 		"url":            "https://example.com",
 		"quality_budget": "maximum",
 	}})
-	if err == nil || !strings.Contains(err.Error(), "quality_budget is not supported") || !strings.Contains(err.Error(), "retrieval_effort") {
+	if err == nil || !strings.Contains(err.Error(), "unsupported field quality_budget") || !strings.Contains(err.Error(), "retrieval_effort") {
 		t.Fatalf("expected ambiguous quality_budget rejection, got %v", err)
+	}
+}
+
+func TestRunnerMCPRejectsStringDomainHints(t *testing.T) {
+	runner := Runner{storeRoot: t.TempDir()}
+	_, err := runner.callMCPTool(mcpToolCall{Name: "memory", Arguments: map[string]any{
+		"action":       "search",
+		"query":        "playwright installation",
+		"domain_hints": "playwright.dev",
+	}})
+	if err == nil || !strings.Contains(err.Error(), "domain_hints must be an array of strings") {
+		t.Fatalf("expected domain_hints type rejection, got %v", err)
+	}
+}
+
+func TestIntArgRejectsNonIntegralFloat(t *testing.T) {
+	if value, ok := intArg(map[string]any{"limit": float64(1.9)}, "limit"); ok || value != 0 {
+		t.Fatalf("expected non-integral float to be rejected, got value=%d ok=%t", value, ok)
+	}
+	if value, ok := intArg(map[string]any{"limit": float64(2)}, "limit"); !ok || value != 2 {
+		t.Fatalf("expected integral float to be accepted, got value=%d ok=%t", value, ok)
+	}
+}
+
+func TestMCPToolSchemasDisallowAdditionalProperties(t *testing.T) {
+	for _, tool := range mcpTools() {
+		if got := tool.InputSchema["additionalProperties"]; got != false {
+			t.Fatalf("%s: expected additionalProperties=false, got %#v", tool.Name, got)
+		}
 	}
 }
 
@@ -494,10 +526,11 @@ func TestRunnerMCPCrawl(t *testing.T) {
 			"params": map[string]any{
 				"name": "web_crawl",
 				"arguments": map[string]any{
-					"seed_url":    "https://example.com",
-					"max_pages":   2,
-					"max_depth":   1,
-					"same_domain": true,
+					"seed_url":         "https://example.com",
+					"max_pages":        2,
+					"max_depth":        1,
+					"same_domain":      true,
+					"retrieval_effort": "exhaustive",
 				},
 			},
 		},
@@ -505,9 +538,11 @@ func TestRunnerMCPCrawl(t *testing.T) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
+	observedLaneMax := -1
 	runner := Runner{
 		loadConfig: config.Load,
 		crawl: func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error) {
+			observedLaneMax = cfg.Runtime.LaneMax
 			return fakeCrawlResponse(), nil
 		},
 		stdin:     strings.NewReader(input),
@@ -522,6 +557,9 @@ func TestRunnerMCPCrawl(t *testing.T) {
 	responses := decodeMCPResponses(t, stdout.Bytes())
 	if len(responses) != 2 {
 		t.Fatalf("expected 2 responses, got %d", len(responses))
+	}
+	if observedLaneMax != retrievalEffortLanes[retrievalEffortExhaustive] {
+		t.Fatalf("expected retrieval_effort exhaustive to set lane %d, got %d", retrievalEffortLanes[retrievalEffortExhaustive], observedLaneMax)
 	}
 	if !strings.Contains(string(responses[1]), `"summary"`) {
 		t.Fatalf("expected crawl summary, got %s", responses[1])

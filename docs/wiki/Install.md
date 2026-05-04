@@ -27,7 +27,7 @@ Installed command:
 4. wires `NEEDLEX_HOME`
 5. prepares the same runtime surface for CLI and MCP
 6. reconciles reruns without duplicating PATH hooks
-7. removes legacy `needle` wrapper artifacts
+7. leaves unrelated commands untouched
 8. prints the optional Codex skill path for agent-side usage guidance
 9. creates the PAL runtime log directory used by `needlex logs`
 

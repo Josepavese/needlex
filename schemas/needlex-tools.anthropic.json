@@ -5,10 +5,12 @@
       "name": "web_crawl",
       "description": "Traverse linked pages starting from one seed URL.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "max_depth": 1,
             "max_pages": 5,
+            "retrieval_effort": "standard",
             "same_domain": true,
             "seed_url": "https://example.com/docs"
           }
@@ -21,6 +23,18 @@
             "type": "integer"
           },
           "profile": {
+            "type": "string"
+          },
+          "retrieval_effort": {
+            "default": "standard",
+            "description": "Optional retrieval effort for semantic extraction and internal escalation. This is not a result count, page count, crawl depth, or candidate limit. Omit it for standard behavior.",
+            "enum": [
+              "minimal",
+              "light",
+              "balanced",
+              "standard",
+              "exhaustive"
+            ],
             "type": "string"
           },
           "same_domain": {
@@ -43,6 +57,7 @@
       "name": "web_query",
       "description": "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "discovery_mode": "same_site_links",
@@ -107,6 +122,7 @@
       "name": "web_read",
       "description": "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory and Analytics PAL for future seedless reuse.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "objective": "Extract pricing and policy details",
@@ -150,6 +166,7 @@
       "name": "web_replay",
       "description": "Replay a stored trace and report deterministic stage completion.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "trace_id": "trace_123"
@@ -170,6 +187,7 @@
       "name": "web_diff",
       "description": "Compare two stored traces and report changed stages.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "trace_a": "trace_a",
@@ -195,6 +213,7 @@
       "name": "web_proof",
       "description": "Load proof records by trace id, proof id, or chunk id.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "chunk_id": "chk_123"
@@ -221,6 +240,7 @@
       "name": "web_prune",
       "description": "Prune local traces, proofs, fingerprints, and genome files.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "older_than_hours": 24
@@ -241,6 +261,7 @@
       "name": "memory",
       "description": "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "action": "stats"
@@ -279,10 +300,6 @@
             },
             "type": "array"
           },
-          "goal": {
-            "description": "Alias for query when action=search.",
-            "type": "string"
-          },
           "in_dir": {
             "description": "Source directory for action=import.",
             "type": "string"
@@ -310,6 +327,7 @@
       "name": "analytics",
       "description": "Advanced non-core Analytics PAL control. Use only for diagnostics, value reporting, or maintenance; normal web_read/web_query/web_crawl record analytics automatically. Actions: value_report is the user-facing WOW report; stats/recent_runs are quick diagnostics; hosts/providers/failures/daily are maintainer rollups; export writes full analytics artifacts.",
       "input_schema": {
+        "additionalProperties": false,
         "examples": [
           {
             "action": "value_report"

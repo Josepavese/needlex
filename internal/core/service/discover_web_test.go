@@ -30,7 +30,7 @@ func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
 		t.Fatalf("expected probe-driven reasons, got %#v", candidate.Reason)
 	}
 	if containsReason(candidate.Reason, "host_page_coherence") {
-		t.Fatalf("expected legacy lexical host-page coherence to be absent, got %#v", candidate.Reason)
+		t.Fatalf("expected lexical host-page coherence to be absent, got %#v", candidate.Reason)
 	}
 }
 

@@ -154,6 +154,8 @@ func (a OllamaSemanticAligner) Score(ctx context.Context, objective string, cand
 	if strings.TrimSpace(objective) == "" || len(candidates) == 0 {
 		return nil, nil
 	}
+	ctx, cancel := contextWithTimeoutMS(ctx, a.Config.TimeoutMS)
+	defer cancel()
 	input := []string{strings.TrimSpace(objective)}
 	for _, candidate := range candidates {
 		input = append(input, semanticCandidateText(candidate))
@@ -164,10 +166,7 @@ func (a OllamaSemanticAligner) Score(ctx context.Context, objective string, cand
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := a.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
+	client := httpClientOrDefault(a.Client, time.Duration(a.Config.TimeoutMS)*time.Millisecond)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -179,7 +178,7 @@ func (a OllamaSemanticAligner) Score(ctx context.Context, objective string, cand
 	var payload struct {
 		Embeddings [][]float64 `json:"embeddings"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "semantic embed", &payload); err != nil {
 		return nil, err
 	}
 	if len(payload.Embeddings) != len(input) {
@@ -200,6 +199,8 @@ func (a OpenAISemanticAligner) Score(ctx context.Context, objective string, cand
 	if strings.TrimSpace(objective) == "" || len(candidates) == 0 {
 		return nil, nil
 	}
+	ctx, cancel := contextWithTimeoutMS(ctx, a.Config.TimeoutMS)
+	defer cancel()
 	input := []string{strings.TrimSpace(objective)}
 	for _, candidate := range candidates {
 		input = append(input, semanticCandidateText(candidate))
@@ -210,10 +211,7 @@ func (a OpenAISemanticAligner) Score(ctx context.Context, objective string, cand
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := a.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
+	client := httpClientOrDefault(a.Client, time.Duration(a.Config.TimeoutMS)*time.Millisecond)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -228,7 +226,7 @@ func (a OpenAISemanticAligner) Score(ctx context.Context, objective string, cand
 			Index     int       `json:"index"`
 		} `json:"data"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "semantic embeddings", &payload); err != nil {
 		return nil, err
 	}
 	if len(payload.Data) != len(input) {
@@ -279,7 +277,7 @@ func reduceSemanticScores(model string, cfg config.SemanticConfig, scores []Sema
 		Model:            model,
 		TopID:            best.ID,
 		TopSimilarity:    best.Similarity,
-		SecondSimilarity: maxFloat(second, 0),
+		SecondSimilarity: max(second, 0),
 	}
 	if alignment.TopSimilarity >= cfg.SimilarityThreshold && alignment.TopSimilarity-alignment.SecondSimilarity >= cfg.DominanceDelta {
 		alignment.Suppressed = true
@@ -308,11 +306,4 @@ func cosineSimilarity(a, b []float64) float64 {
 		return 0
 	}
 	return dot / (math.Sqrt(normA) * math.Sqrt(normB))
-}
-
-func maxFloat(left, right float64) float64 {
-	if left > right {
-		return left
-	}
-	return right
 }

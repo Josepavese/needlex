@@ -33,7 +33,7 @@ func (s *Service) prepareQuery(req QueryRequest) (string, string, string, QueryR
 	return profile, requestedMode, discoveryMode, req, nil
 }
 
-func (s *Service) buildQueryPlan(req QueryRequest, profile, requestedMode, discoveryMode string) (QueryPlan, QueryCompiler, QueryFingerprintEvidence) {
+func (s *Service) buildQueryPlan(req QueryRequest, profile, requestedMode, discoveryMode string) (QueryPlan, queryplan.QueryCompiler, QueryFingerprintEvidence) {
 	plan := QueryPlan{
 		Goal:    req.Goal,
 		SeedURL: req.SeedURL,

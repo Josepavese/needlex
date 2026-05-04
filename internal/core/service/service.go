@@ -118,7 +118,7 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		return ReadResponse{}, err
 	}
 
-	resultPack, proofRecords, err := s.pack(recorder, req, document, dom, webIR, segments)
+	resultPack, proofRecords, err := s.pack(ctx, recorder, req, document, dom, webIR, segments)
 	if err != nil {
 		return ReadResponse{}, err
 	}

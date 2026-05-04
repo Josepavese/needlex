@@ -32,6 +32,36 @@ func (a textMatchSemanticAligner) Score(_ context.Context, _ string, candidates 
 	return out, nil
 }
 
+type contextProbeSemanticAligner struct {
+	sawCanceled bool
+}
+
+func (a *contextProbeSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (a *contextProbeSemanticAligner) Score(ctx context.Context, _ string, _ []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	a.sawCanceled = ctx.Err() != nil
+	return nil, ctx.Err()
+}
+
+func TestSegmentSemanticAlignmentUsesCallerContext(t *testing.T) {
+	probe := &contextProbeSemanticAligner{}
+	svc, err := New(config.Defaults(), nil)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.semantic = probe
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_ = svc.segmentSemanticAlignment(ctx, "doc_1", "proof replay", []pipeline.Segment{{Text: "Proof replay context.", HeadingPath: []string{"Guide"}}})
+
+	if !probe.sawCanceled {
+		t.Fatal("expected semantic scorer to receive canceled caller context")
+	}
+}
+
 func TestResolveProfileDefaultsToStandard(t *testing.T) {
 	profile, err := resolveProfile("")
 	if err != nil {
@@ -48,7 +78,7 @@ func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
 		t.Fatalf("new service: %v", err)
 	}
 	svc.semantic = textMatchSemanticAligner{needle: "authentication tokens"}
-	ranked := svc.rankSegments("doc_1", "authentication tokens api keys", core.WebIR{
+	ranked := svc.rankSegments(context.Background(), "doc_1", "authentication tokens api keys", core.WebIR{
 		Version:   core.WebIRVersion,
 		SourceURL: "https://example.com",
 		NodeCount: 2,
@@ -87,7 +117,7 @@ func TestRankSegmentsUsesWebIREmbeddedEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
-	ranked := svc.rankSegments("doc_1", "company profile", core.WebIR{
+	ranked := svc.rankSegments(context.Background(), "doc_1", "company profile", core.WebIR{
 		Version:   core.WebIRVersion,
 		SourceURL: "https://example.com",
 		NodeCount: 2,

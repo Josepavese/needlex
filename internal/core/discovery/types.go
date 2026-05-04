@@ -340,9 +340,9 @@ func resourceClassContextBoost(rawURL string) contextBoost {
 func sameSiteRouteRelationBoost(seedDepth, candidateDepth int, candidatePath, seedScope string) contextBoost {
 	switch {
 	case seedDepth == 0 && candidateDepth > 0:
-		return contextBoost{Value: minFloat(0.54, 0.18+float64(candidateDepth)*0.12), Reasons: []string{"same_site_specific_route"}}
+		return contextBoost{Value: min(0.54, 0.18+float64(candidateDepth)*0.12), Reasons: []string{"same_site_specific_route"}}
 	case candidateDepth > seedDepth:
-		return contextBoost{Value: minFloat(0.50, 0.22+float64(candidateDepth-seedDepth)*0.12), Reasons: []string{"same_site_deeper_route"}}
+		return contextBoost{Value: min(0.50, 0.22+float64(candidateDepth-seedDepth)*0.12), Reasons: []string{"same_site_deeper_route"}}
 	case candidateDepth == seedDepth && sameDiscoveryParent(candidatePath, seedScope):
 		return contextBoost{Value: 0.30, Reasons: []string{"same_site_sibling_route"}}
 	case candidateDepth > 0 && !isDiscoveryAncestor(candidatePath, seedScope):
@@ -415,20 +415,6 @@ func ResourceClass(rawURL string) string {
 		return ResourceClassArchiveFile
 	default:
 		return ResourceClassUnknown
-	}
-}
-
-func ProbableNonHTMLURL(rawURL string) bool {
-	parsed, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil {
-		return false
-	}
-	ext := strings.ToLower(strings.TrimSpace(path.Ext(parsed.Path)))
-	switch ext {
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".pdf", ".xml", ".rss", ".atom", ".css", ".js", ".mjs", ".map", ".zip", ".gz", ".tgz", ".mp4", ".mp3":
-		return true
-	default:
-		return false
 	}
 }
 
@@ -723,11 +709,4 @@ func opaqueAlnumSegment(segment string) bool {
 		}
 	}
 	return hasLetter && hasDigit
-}
-
-func minFloat(left, right float64) float64 {
-	if left < right {
-		return left
-	}
-	return right
 }

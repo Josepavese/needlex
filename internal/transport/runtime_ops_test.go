@@ -3,6 +3,8 @@ package transport
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -119,5 +121,53 @@ func TestExecuteReadSuccessWritesFetchRuntimeEvent(t *testing.T) {
 	}
 	if events[0].Fields["fetch_profile"] != "browser_like" || events[0].Fields["retry_count"] != float64(1) {
 		t.Fatalf("unexpected fetch fields: %+v", events[0].Fields)
+	}
+}
+
+func TestExecuteReadProvidesOperationDeadline(t *testing.T) {
+	root := t.TempDir()
+	cfg := config.Defaults()
+	cfg.Runtime.TimeoutMS = 100
+	cfg.Models.MicroTimeoutMS = 0
+	cfg.Models.StructuredTimeoutMS = 0
+	cfg.Models.SpecialistTimeoutMS = 0
+	cfg.Semantic.TimeoutMS = 0
+
+	runner := NewRunner()
+	runner.storeRoot = root
+	runner.read = func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+		if _, ok := ctx.Deadline(); !ok {
+			t.Fatal("expected read context to carry an operation deadline")
+		}
+		return fakeResponse(), nil
+	}
+
+	if _, _, err := runner.executeReadWithSurface(cfg, coreservice.ReadRequest{
+		URL:     "https://example.com",
+		Profile: "standard",
+	}, "cli"); err != nil {
+		t.Fatalf("execute read: %v", err)
+	}
+}
+
+func TestObserveAnalyticsReadLogsPersistenceFailure(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "analytics"), []byte("not a directory"), 0o644); err != nil {
+		t.Fatalf("create analytics collision: %v", err)
+	}
+	runner := NewRunner()
+	runner.storeRoot = root
+
+	runner.observeAnalyticsRead(config.Defaults(), "cli", coreservice.ReadRequest{
+		URL:     "https://example.com",
+		Profile: "standard",
+	}, fakeResponse())
+
+	events, err := runner.runtimeLogger().Tail(1)
+	if err != nil {
+		t.Fatalf("tail logs: %v", err)
+	}
+	if len(events) != 1 || events[0].Level != "warn" || events[0].Event != "analytics.observe_failed" {
+		t.Fatalf("expected analytics persistence warning, got %+v", events)
 	}
 }

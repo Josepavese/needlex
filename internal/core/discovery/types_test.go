@@ -37,15 +37,6 @@ func TestHostCompactnessBoostPrefersCanonicalHostOverSubdomain(t *testing.T) {
 	}
 }
 
-func TestProbableNonHTMLURLDetectsAssets(t *testing.T) {
-	if !ProbableNonHTMLURL("https://example.com/logo.png") {
-		t.Fatal("expected png asset url to be detected as non-html")
-	}
-	if ProbableNonHTMLURL("https://developers.openai.com/api") {
-		t.Fatal("expected docs page not to be detected as non-html")
-	}
-}
-
 func TestResourceClassClassification(t *testing.T) {
 	if got := ResourceClass("https://example.com/logo.png"); got != ResourceClassMediaAsset {
 		t.Fatalf("expected media asset, got %q", got)

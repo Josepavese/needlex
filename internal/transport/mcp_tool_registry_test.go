@@ -3,9 +3,8 @@ package transport
 import "testing"
 
 func TestMCPToolRegistryIsSingleSourceForDefinitionsAndHandlers(t *testing.T) {
-	runner := NewRunner()
 	definitions := mcpTools()
-	handlers := runner.mcpToolHandlers()
+	handlers := mcpToolHandlersByName
 	if len(definitions) == 0 {
 		t.Fatal("expected MCP tool definitions")
 	}

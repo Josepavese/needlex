@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
@@ -16,13 +15,13 @@ type ExtractResult struct {
 	AdditionalRisk []string
 }
 
-func Extract(cfg config.Config, semantic SemanticAligner, decision Decision, chunk core.Chunk, objective, profile string) ExtractResult {
+func Extract(ctx context.Context, cfg config.Config, semantic SemanticAligner, decision Decision, chunk core.Chunk, objective, profile string) ExtractResult {
 	if decision.Lane < 2 {
 		return ExtractResult{Text: chunk.Text}
 	}
 
 	text := strings.TrimSpace(chunk.Text)
-	best := bestFocusSpan(cfg, semantic, text, objective, profile)
+	best := bestFocusSpan(ctx, cfg, semantic, text, objective, profile)
 	if best == "" {
 		best = text
 	}
@@ -51,7 +50,7 @@ func Extract(cfg config.Config, semantic SemanticAligner, decision Decision, chu
 	}
 }
 
-func bestFocusSpan(cfg config.Config, semantic SemanticAligner, text, objective, profile string) string {
+func bestFocusSpan(ctx context.Context, cfg config.Config, semantic SemanticAligner, text, objective, profile string) string {
 	sentences := splitSentences(text)
 	if len(sentences) == 0 {
 		return ""
@@ -68,7 +67,7 @@ func bestFocusSpan(cfg config.Config, semantic SemanticAligner, text, objective,
 		})
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), semanticTimeout(cfg))
+	ctx, cancel := contextWithTimeoutMS(ctx, cfg.Semantic.TimeoutMS)
 	defer cancel()
 	scores, err := semantic.Score(ctx, objective, candidates)
 	if err != nil || len(scores) == 0 {
@@ -160,12 +159,4 @@ func sentenceIndex(id string) int {
 		return -1
 	}
 	return idx
-}
-
-func semanticTimeout(cfg config.Config) time.Duration {
-	timeout := cfg.Semantic.TimeoutMS
-	if timeout <= 0 {
-		timeout = 250
-	}
-	return time.Duration(timeout) * time.Millisecond
 }

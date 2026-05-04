@@ -94,6 +94,31 @@ func TestRunnerReadJSONFull(t *testing.T) {
 	}
 }
 
+func TestRunnerReadRetrievalEffortUpdatesRuntimeLaneMax(t *testing.T) {
+	root := t.TempDir()
+	observedLaneMax := -1
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			observedLaneMax = cfg.Runtime.LaneMax
+			return fakeResponse(), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"read", "https://example.com", "--retrieval-effort", "exhaustive", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if observedLaneMax != retrievalEffortLanes[retrievalEffortExhaustive] {
+		t.Fatalf("expected lane max %d, got %d", retrievalEffortLanes[retrievalEffortExhaustive], observedLaneMax)
+	}
+}
+
 func TestRunnerQueryJSON(t *testing.T) {
 	root := t.TempDir()
 	var captured coreservice.QueryRequest
@@ -128,6 +153,31 @@ func TestRunnerQueryJSON(t *testing.T) {
 	}
 }
 
+func TestRunnerQueryRetrievalEffortUpdatesRuntimeLaneMax(t *testing.T) {
+	root := t.TempDir()
+	observedLaneMax := -1
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			observedLaneMax = cfg.Runtime.LaneMax
+			return fakeQueryResponse(req), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"query", "https://example.com", "--goal", "proof replay deterministic", "--retrieval-effort", "minimal", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if observedLaneMax != retrievalEffortLanes[retrievalEffortMinimal] {
+		t.Fatalf("expected lane max %d, got %d", retrievalEffortLanes[retrievalEffortMinimal], observedLaneMax)
+	}
+}
+
 func TestRunnerQueryJSONFull(t *testing.T) {
 	root := t.TempDir()
 	runner := Runner{
@@ -148,6 +198,31 @@ func TestRunnerQueryJSONFull(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), `"result_pack"`) || !strings.Contains(stdout.String(), `"proof_records"`) {
 		t.Fatalf("expected full query json payload, got %q", stdout.String())
+	}
+}
+
+func TestRunnerCrawlRetrievalEffortUpdatesRuntimeLaneMax(t *testing.T) {
+	root := t.TempDir()
+	observedLaneMax := -1
+	runner := Runner{
+		loadConfig: func(path string) (config.Config, error) {
+			return config.Defaults(), nil
+		},
+		crawl: func(ctx context.Context, cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, error) {
+			observedLaneMax = cfg.Runtime.LaneMax
+			return fakeCrawlResponse(), nil
+		},
+		storeRoot: root,
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := runner.Run([]string{"crawl", "https://example.com", "--retrieval-effort", "balanced", "--json"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	}
+	if observedLaneMax != retrievalEffortLanes[retrievalEffortBalanced] {
+		t.Fatalf("expected lane max %d, got %d", retrievalEffortLanes[retrievalEffortBalanced], observedLaneMax)
 	}
 }
 

@@ -382,7 +382,7 @@ func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 	}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
 
-	seed := svc.rankSegments("doc_seed", "", core.WebIR{}, []pipeline.Segment{{Text: "Needle-X compiles noisy pages into compact context.", HeadingPath: []string{"Needle Runtime"}}})
+	seed := svc.rankSegments(context.Background(), "doc_seed", "", core.WebIR{}, []pipeline.Segment{{Text: "Needle-X compiles noisy pages into compact context.", HeadingPath: []string{"Needle Runtime"}}})
 	resp, err := svc.Read(context.Background(), ReadRequest{
 		URL:                server.URL,
 		Profile:            core.ProfileTiny,

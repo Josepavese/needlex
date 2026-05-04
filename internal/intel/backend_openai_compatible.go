@@ -60,7 +60,9 @@ func (r OpenAICompatibleRuntime) Run(ctx context.Context, req ModelRequest) (Mod
 		return ModelResponse{}, err
 	}
 
-	httpReq, err := r.buildRequest(ctx, body, req.TimeoutMS)
+	reqCtx, cancel := contextWithTimeoutMS(ctx, req.TimeoutMS)
+	defer cancel()
+	httpReq, err := r.buildRequest(reqCtx, body)
 	if err != nil {
 		return ModelResponse{}, err
 	}
@@ -97,13 +99,10 @@ func marshalChatRequest(model string, req ModelRequest) ([]byte, error) {
 }
 
 func (r OpenAICompatibleRuntime) httpClient(timeoutMS int64) *http.Client {
-	if r.Client != nil {
-		return r.Client
-	}
-	return &http.Client{Timeout: time.Duration(timeoutMS) * time.Millisecond}
+	return httpClientOrDefault(r.Client, time.Duration(timeoutMS)*time.Millisecond)
 }
 
-func (r OpenAICompatibleRuntime) buildRequest(ctx context.Context, body []byte, timeoutMS int64) (*http.Request, error) {
+func (r OpenAICompatibleRuntime) buildRequest(ctx context.Context, body []byte) (*http.Request, error) {
 	endpoint := strings.TrimRight(strings.TrimSpace(r.BaseURL), "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
@@ -113,13 +112,12 @@ func (r OpenAICompatibleRuntime) buildRequest(ctx context.Context, body []byte, 
 	if strings.TrimSpace(r.APIKey) != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+strings.TrimSpace(r.APIKey))
 	}
-	_ = timeoutMS
 	return httpReq, nil
 }
 
 func decodeChatResponse(httpResp *http.Response) (openAIChatResponse, error) {
 	var payload openAIChatResponse
-	if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+	if err := decodeJSONLimited(httpResp.Body, maxModelResponseBytes, "model backend", &payload); err != nil {
 		return openAIChatResponse{}, err
 	}
 	if len(payload.Choices) == 0 {

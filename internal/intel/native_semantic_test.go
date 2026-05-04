@@ -8,7 +8,7 @@ import (
 )
 
 func TestNativeSemanticAlignerRanksContextualCandidate(t *testing.T) {
-	aligner := NativeSemanticAligner{Config: config.Defaults().Semantic}
+	aligner := NativeSemanticAligner{}
 	scores, err := aligner.Score(context.Background(), "virtual environments", []SemanticCandidate{
 		{ID: "root", Text: "Python documentation docs.python.org/3/index.html"},
 		{ID: "venv", Text: "Virtual environments docs.python.org/3/tutorial/venv.html"},

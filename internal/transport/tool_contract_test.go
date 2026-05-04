@@ -72,6 +72,9 @@ func TestOpenAIStrictCatalog(t *testing.T) {
 		if !tool.Function.Strict {
 			t.Fatalf("expected tool %q to be strict", tool.Function.Name)
 		}
+		if got := tool.Function.Parameters["additionalProperties"]; got != false {
+			t.Fatalf("expected strict tool %q to disallow additional properties, got %#v", tool.Function.Name, got)
+		}
 	}
 }
 

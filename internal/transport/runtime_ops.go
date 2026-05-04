@@ -9,6 +9,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/core/queryplan"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
@@ -16,15 +17,13 @@ import (
 	"github.com/josepavese/needlex/internal/store"
 )
 
-func (r Runner) executeCrawl(cfg config.Config, req coreservice.CrawlRequest) (coreservice.CrawlResponse, crawlArtifacts, error) {
-	return r.executeCrawlWithSurface(cfg, req, "cli")
-}
-
 func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.CrawlRequest, surface string) (coreservice.CrawlResponse, crawlArtifacts, error) {
 	req = coreservice.PrepareCrawlRequestWithLocalState(r.storeRoot, req)
 
 	startedAt := time.Now().UTC()
-	resp, err := r.callCrawl(context.Background(), cfg, req)
+	ctx, cancel := runtimeOperationContext(cfg, "crawl", req.MaxPages)
+	defer cancel()
+	resp, err := r.callCrawl(ctx, cfg, req)
 	if err != nil {
 		r.observeRuntimeFailure("crawl", "crawl.failed", surface, startedAt, err, map[string]any{
 			"seed_url":       req.SeedURL,
@@ -51,16 +50,13 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 		}
 		_, _ = store.NewProofStore(r.storeRoot).SaveProofRecords(page.Trace.TraceID, page.ProofRecords)
 		_, _ = store.NewFingerprintStore(r.storeRoot).SaveChunks(page.Trace.TraceID, page.ResultPack.Chunks)
-		r.observeDiscoveryMemory(cfg, memory.Observation{
-			Document:        page.Document,
-			ResultPack:      page.ResultPack,
-			ProofRecords:    page.ProofRecords,
-			TraceID:         page.Trace.TraceID,
-			SourceKind:      "crawl",
-			StableRatio:     pageFingerprintStable(r.storeRoot, page.Document.FinalURL),
-			NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, page.Document.FinalURL),
-			ChangedRecently: pageFingerprintChanged(r.storeRoot, page.Document.FinalURL),
-		})
+		r.observeDiscoveryMemory(cfg, observationWithFingerprintEvidence(r.storeRoot, page.Document.FinalURL, memory.Observation{
+			Document:     page.Document,
+			ResultPack:   page.ResultPack,
+			ProofRecords: page.ProofRecords,
+			TraceID:      page.Trace.TraceID,
+			SourceKind:   "crawl",
+		}))
 	}
 	r.observeAnalyticsCrawl(cfg, surface, req, resp, storedRuns)
 	r.observeRuntimeCrawlDiagnostics(surface, req, resp, storedRuns)
@@ -69,15 +65,13 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
 }
 
-func (r Runner) executeRead(cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, artifactPaths, error) {
-	return r.executeReadWithSurface(cfg, req, "cli")
-}
-
 func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRequest, surface string) (coreservice.ReadResponse, artifactPaths, error) {
 	req = coreservice.PrepareReadRequestWithLocalState(r.storeRoot, req)
 
 	startedAt := time.Now().UTC()
-	resp, err := r.callRead(context.Background(), cfg, req)
+	ctx, cancel := runtimeOperationContext(cfg, "read", 1)
+	defer cancel()
+	resp, err := r.callRead(ctx, cfg, req)
 	if err != nil {
 		r.observeRuntimeFailure("read", "fetch.failed", surface, startedAt, err, map[string]any{
 			"url":       req.URL,
@@ -109,16 +103,13 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 		return coreservice.ReadResponse{}, artifactPaths{}, err
 	}
 	coreservice.ObserveReadResponseWithLocalState(r.storeRoot, req, resp)
-	r.observeDiscoveryMemory(cfg, memory.Observation{
-		Document:        resp.Document,
-		ResultPack:      resp.ResultPack,
-		ProofRecords:    resp.ProofRecords,
-		TraceID:         resp.Trace.TraceID,
-		SourceKind:      "read",
-		StableRatio:     pageFingerprintStable(r.storeRoot, resp.Document.FinalURL),
-		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
-		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
-	})
+	r.observeDiscoveryMemory(cfg, observationWithFingerprintEvidence(r.storeRoot, resp.Document.FinalURL, memory.Observation{
+		Document:     resp.Document,
+		ResultPack:   resp.ResultPack,
+		ProofRecords: resp.ProofRecords,
+		TraceID:      resp.Trace.TraceID,
+		SourceKind:   "read",
+	}))
 	r.observeAnalyticsRead(cfg, surface, req, resp)
 	r.observeRuntimeReadDiagnostics(surface, req, resp)
 
@@ -129,15 +120,13 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 	}, nil
 }
 
-func (r Runner) executeQuery(cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, artifactPaths, error) {
-	return r.executeQueryWithSurface(cfg, req, "cli")
-}
-
 func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.QueryRequest, surface string) (coreservice.QueryResponse, artifactPaths, error) {
 	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req, cfg, r.semanticAligner(cfg))
 	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(r.storeRoot)
 	startedAt := time.Now().UTC()
-	resp, err := r.callQuery(context.Background(), cfg, req)
+	ctx, cancel := runtimeOperationContext(cfg, "query", 1)
+	defer cancel()
+	resp, err := r.callQuery(ctx, cfg, req)
 	if err != nil {
 		r.observeRuntimeFailure("query", "discovery_or_fetch.failed", surface, startedAt, err, map[string]any{
 			"seed_url":       req.SeedURL,
@@ -171,19 +160,17 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 		return coreservice.QueryResponse{}, artifactPaths{}, err
 	}
 	coreservice.ObserveQueryResponseWithLocalState(r.storeRoot, req, resp)
-	r.observeDiscoveryMemory(cfg, memory.Observation{
-		Document:        resp.Document,
-		ResultPack:      resp.ResultPack,
-		ProofRecords:    resp.ProofRecords,
-		TraceID:         resp.TraceID,
-		SourceKind:      "query",
-		EntityHints:     queryCompilerEntityHints(resp.Plan.Compiler),
-		LocalityHints:   queryCompilerListMetadata(resp.Plan.Compiler, "locality_hints"),
-		CategoryHints:   queryCompilerListMetadata(resp.Plan.Compiler, "category_hints"),
-		StableRatio:     pageFingerprintStable(r.storeRoot, resp.Document.FinalURL),
-		NoveltyRatio:    pageFingerprintNovelty(r.storeRoot, resp.Document.FinalURL),
-		ChangedRecently: pageFingerprintChanged(r.storeRoot, resp.Document.FinalURL),
-	})
+	entityHints, localityHints, categoryHints := queryCompilerMemoryHints(resp.Plan.Compiler)
+	r.observeDiscoveryMemory(cfg, observationWithFingerprintEvidence(r.storeRoot, resp.Document.FinalURL, memory.Observation{
+		Document:      resp.Document,
+		ResultPack:    resp.ResultPack,
+		ProofRecords:  resp.ProofRecords,
+		TraceID:       resp.TraceID,
+		SourceKind:    "query",
+		EntityHints:   entityHints,
+		LocalityHints: localityHints,
+		CategoryHints: categoryHints,
+	}))
 	r.observeAnalyticsQuery(cfg, surface, req, resp)
 	r.observeRuntimeQueryDiagnostics(surface, req, resp)
 
@@ -240,21 +227,48 @@ func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Obs
 	}
 	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
 	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Semantic.TimeoutMS)*time.Millisecond)
+	ctx, cancel := persistenceOperationContext(cfg)
 	defer cancel()
-	_ = service.Observe(ctx, observation)
+	if err := service.Observe(ctx, observation); err != nil {
+		r.logRuntimeWarning("memory", "memory.observe_failed", "memory observation failed", map[string]any{
+			"source_kind": observation.SourceKind,
+			"url":         firstNonEmptyRuntimeString(observation.Document.FinalURL, observation.Document.URL),
+			"trace_id":    observation.TraceID,
+			"error":       err.Error(),
+		})
+	}
 }
 
 func (r Runner) observeAnalyticsRead(cfg config.Config, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactReadResponse(resp))
-	_ = analytics.ObserveRead(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
+	ctx, cancel := persistenceOperationContext(cfg)
+	defer cancel()
+	if err := analytics.ObserveRead(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats); err != nil {
+		r.logRuntimeWarning("analytics", "analytics.observe_failed", "analytics read observation failed", map[string]any{
+			"operation": "read",
+			"surface":   surface,
+			"url":       req.URL,
+			"trace_id":  resp.Trace.TraceID,
+			"error":     err.Error(),
+		})
+	}
 }
 
 func (r Runner) observeAnalyticsQuery(cfg config.Config, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactQueryResponse(resp))
-	_ = analytics.ObserveQuery(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
+	ctx, cancel := persistenceOperationContext(cfg)
+	defer cancel()
+	if err := analytics.ObserveQuery(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats); err != nil {
+		r.logRuntimeWarning("analytics", "analytics.observe_failed", "analytics query observation failed", map[string]any{
+			"operation":  "query",
+			"surface":    surface,
+			"goal_chars": len(strings.TrimSpace(req.Goal)),
+			"trace_id":   resp.TraceID,
+			"error":      err.Error(),
+		})
+	}
 }
 
 func (r Runner) observeRuntimeReadDiagnostics(surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
@@ -304,7 +318,16 @@ func (r Runner) observeRuntimeQueryDiagnostics(surface string, req coreservice.Q
 func (r Runner) observeAnalyticsCrawl(cfg config.Config, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactCrawlResponse(resp, crawlArtifacts{StoredRuns: storedRuns}))
-	_ = analytics.ObserveCrawl(context.Background(), analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats)
+	ctx, cancel := persistenceOperationContext(cfg)
+	defer cancel()
+	if err := analytics.ObserveCrawl(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats); err != nil {
+		r.logRuntimeWarning("analytics", "analytics.observe_failed", "analytics crawl observation failed", map[string]any{
+			"operation": "crawl",
+			"surface":   surface,
+			"seed_url":  req.SeedURL,
+			"error":     err.Error(),
+		})
+	}
 }
 
 func (r Runner) observeRuntimeCrawlDiagnostics(surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
@@ -325,7 +348,15 @@ func (r Runner) observeRuntimeCrawlDiagnostics(surface string, req coreservice.C
 
 func (r Runner) observeAnalyticsFailure(cfg config.Config, failure analytics.FailureObservation) {
 	failure.MemoryStats = r.analyticsMemoryStats(cfg)
-	_ = analytics.ObserveFailure(context.Background(), analytics.NewSQLiteStore(r.storeRoot), failure)
+	ctx, cancel := persistenceOperationContext(cfg)
+	defer cancel()
+	if err := analytics.ObserveFailure(ctx, analytics.NewSQLiteStore(r.storeRoot), failure); err != nil {
+		r.logRuntimeWarning("analytics", "analytics.failure_observe_failed", "analytics failure observation failed", map[string]any{
+			"operation": failure.Operation,
+			"surface":   failure.Surface,
+			"error":     err.Error(),
+		})
+	}
 }
 
 func (r Runner) observeRuntimeFailure(operation, eventName, surface string, startedAt time.Time, err error, fields map[string]any) {
@@ -348,30 +379,82 @@ func (r Runner) analyticsMemoryStats(cfg config.Config) memory.Stats {
 	if !cfg.Memory.Enabled {
 		return memory.Stats{}
 	}
-	stats, err := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path).GetStats(context.Background())
+	ctx, cancel := persistenceOperationContext(cfg)
+	defer cancel()
+	stats, err := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path).GetStats(ctx)
 	if err != nil {
+		r.logRuntimeWarning("memory", "memory.stats_failed", "memory stats unavailable for analytics enrichment", map[string]any{
+			"error": err.Error(),
+		})
 		return memory.Stats{}
 	}
 	return stats
 }
 
+func persistenceOperationContext(cfg config.Config) (context.Context, context.CancelFunc) {
+	timeout := maxDuration(
+		2*time.Second,
+		time.Duration(cfg.Semantic.TimeoutMS)*time.Millisecond,
+		time.Duration(cfg.Runtime.TimeoutMS/2)*time.Millisecond,
+	)
+	timeout = min(timeout, 10*time.Second)
+	return context.WithTimeout(context.Background(), timeout)
+}
+
 func compactJSONSize(value any) int {
-	data, err := json.Marshal(value)
-	if err != nil {
+	data, _ := json.Marshal(value)
+	return len(data)
+}
+
+func runtimeOperationContext(cfg config.Config, operation string, workItems int) (context.Context, context.CancelFunc) {
+	if timeout := runtimeOperationTimeout(cfg, operation, workItems); timeout > 0 {
+		return context.WithTimeout(context.Background(), timeout)
+	}
+	return context.WithCancel(context.Background())
+}
+
+func runtimeOperationTimeout(cfg config.Config, operation string, workItems int) time.Duration {
+	unit := time.Duration(cfg.Runtime.TimeoutMS) * time.Millisecond
+	if unit <= 0 {
 		return 0
 	}
-	return len(data)
+	model := maxDuration(
+		time.Duration(cfg.Models.MicroTimeoutMS)*time.Millisecond,
+		time.Duration(cfg.Models.StructuredTimeoutMS)*time.Millisecond,
+		time.Duration(cfg.Models.SpecialistTimeoutMS)*time.Millisecond,
+		time.Duration(cfg.Semantic.TimeoutMS)*time.Millisecond,
+	)
+	readBudget := unit*4 + model + 2*time.Second
+	if operation == "query" {
+		return readBudget * 2
+	}
+	if operation == "crawl" {
+		if workItems <= 0 {
+			workItems = cfg.Runtime.MaxPages
+		}
+		if workItems <= 0 {
+			workItems = 1
+		}
+		return readBudget * time.Duration(min(workItems*2, 80))
+	}
+	return readBudget
+}
+
+func maxDuration(values ...time.Duration) time.Duration {
+	var out time.Duration
+	for _, value := range values {
+		out = max(out, value)
+	}
+	return out
 }
 
 func firstCandidateURLs(candidates []coreservice.AgentCandidate, limit int) []string {
 	if limit <= 0 || len(candidates) == 0 {
 		return nil
 	}
-	out := make([]string, 0, min(len(candidates), limit))
-	for i, candidate := range candidates {
-		if i >= limit {
-			break
-		}
+	limit = min(limit, len(candidates))
+	out := make([]string, 0, limit)
+	for _, candidate := range candidates[:limit] {
 		out = append(out, candidate.URL)
 	}
 	return out
@@ -419,82 +502,33 @@ func stageLatencyMS(stage proof.StageSnapshot) int64 {
 }
 
 func intMetadata(metadata map[string]string, key string) int {
-	value, err := strconv.Atoi(strings.TrimSpace(metadata[key]))
-	if err != nil {
-		return 0
-	}
+	value, _ := strconv.Atoi(strings.TrimSpace(metadata[key]))
 	return value
 }
 
-func pageFingerprintStable(storeRoot, rawURL string) float64 {
+func observationWithFingerprintEvidence(storeRoot, rawURL string, obs memory.Observation) memory.Observation {
 	evidence, ok := coreservice.NewFingerprintEvidenceLoader(storeRoot)(rawURL)
 	if !ok {
-		return 0
+		return obs
 	}
-	return evidence.Stable
+	obs.StableRatio = evidence.Stable
+	obs.NoveltyRatio = evidence.Novelty
+	obs.ChangedRecently = evidence.Changed
+	return obs
 }
 
-func pageFingerprintNovelty(storeRoot, rawURL string) float64 {
-	evidence, ok := coreservice.NewFingerprintEvidenceLoader(storeRoot)(rawURL)
-	if !ok {
-		return 0
-	}
-	return evidence.Novelty
-}
-
-func pageFingerprintChanged(storeRoot, rawURL string) bool {
-	evidence, ok := coreservice.NewFingerprintEvidenceLoader(storeRoot)(rawURL)
-	if !ok {
-		return false
-	}
-	return evidence.Changed
-}
-
-func queryCompilerEntityHints(plan coreservice.QueryCompiler) []string {
-	entity := ""
+func queryCompilerMemoryHints(plan queryplan.QueryCompiler) ([]string, []string, []string) {
 	for _, decision := range plan.Decisions {
 		if decision.Stage != "plan.query_rewrite" {
 			continue
 		}
-		if value := decision.Metadata["canonical_entity"]; value != "" {
-			entity = value
-			break
+		var entities []string
+		if entity := strings.TrimSpace(decision.Metadata["canonical_entity"]); entity != "" {
+			entities = []string{entity}
 		}
+		return entities, splitCSV(decision.Metadata["locality_hints"]), splitCSV(decision.Metadata["category_hints"])
 	}
-	if entity == "" {
-		return nil
-	}
-	return []string{entity}
-}
-
-func queryCompilerListMetadata(plan coreservice.QueryCompiler, key string) []string {
-	for _, decision := range plan.Decisions {
-		if decision.Stage != "plan.query_rewrite" {
-			continue
-		}
-		if raw := decision.Metadata[key]; raw != "" {
-			return splitCommaMetadata(raw)
-		}
-	}
-	return nil
-}
-
-func splitCommaMetadata(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	seen := map[string]struct{}{}
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		if _, ok := seen[part]; ok {
-			continue
-		}
-		seen[part] = struct{}{}
-		out = append(out, part)
-	}
-	return out
+	return nil, nil, nil
 }
 
 func (r Runner) loadReplay(traceID string) (proof.ReplayReport, error) {

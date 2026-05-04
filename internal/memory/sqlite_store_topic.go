@@ -170,8 +170,8 @@ func averageTopicVector(docs []topicDoc) []float32 {
 }
 
 func topicSupportBoost(supportCount, childCount int) float64 {
-	score := 0.18 * minFloat(4, float64(maxInt(0, supportCount-1)))
-	score += 0.12 * minFloat(3, float64(childCount))
+	score := 0.18 * min(4, float64(maxInt(0, supportCount-1)))
+	score += 0.12 * min(3, float64(childCount))
 	return score
 }
 

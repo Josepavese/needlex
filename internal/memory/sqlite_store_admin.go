@@ -190,6 +190,10 @@ func (s SQLiteStore) open(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open discovery db: %w", err)
 	}
+	if err := platform.ConfigureSQLite(ctx, db); err != nil {
+		platform.Close(db)
+		return nil, fmt.Errorf("configure discovery db: %w", err)
+	}
 	if err := db.PingContext(ctx); err != nil {
 		platform.Close(db)
 		return nil, fmt.Errorf("ping discovery db: %w", err)

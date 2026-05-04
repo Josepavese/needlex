@@ -74,10 +74,6 @@ New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "candidates") | 
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "domain_graph") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "fingerprint_graph") | Out-Null
 New-Item -ItemType File -Force -Path (Join-Path $StateRoot "discovery\discovery.db") | Out-Null
-Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $BinDir "needle.cmd")
-Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $BinDir "needle.bat")
-Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $BinDir "needle.exe")
-Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $BinDir "needle-real.exe")
 
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("needlex-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null

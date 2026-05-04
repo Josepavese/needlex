@@ -110,7 +110,7 @@ func scoreCandidateIntelligence(
 		PageSimilarity: pageSimilarity[candidate.URL],
 		Centrality:     cluster.Centrality[idx],
 	}
-	card.Boost = minFloat(card.Similarity*0.28, 0.20)
+	card.Boost = min(card.Similarity*0.28, 0.20)
 	card.Boost += clusterIntelligenceBoost(cluster, card.Centrality)
 	card.Boost += resourceClassIntelligenceBoost(candidate.Metadata["resource_class"])
 	if boost, reason := identityAlignmentBoost(card.PageSimilarity, card.HostSimilarity); reason != "" {
@@ -127,10 +127,10 @@ func clusterIntelligenceBoost(cluster candidateCluster, centrality float64) floa
 		boost += 0.04 * float64(min(cluster.ClusterSize()-1, 2))
 	}
 	if cluster.Coherence > 0 {
-		boost += minFloat(cluster.Coherence*0.07, 0.08)
+		boost += min(cluster.Coherence*0.07, 0.08)
 	}
 	if centrality > 0 {
-		boost += minFloat(centrality*0.14, 0.16)
+		boost += min(centrality*0.14, 0.16)
 	}
 	return boost
 }
@@ -242,7 +242,7 @@ func scoreCandidateSetToGoal(ctx context.Context, semantic intel.SemanticAligner
 	}
 	out := make(map[string]float64, len(scored))
 	for _, item := range scored {
-		out[item.ID] = maxFloat(item.Similarity, 0)
+		out[item.ID] = max(item.Similarity, 0)
 	}
 	return out
 }
@@ -269,7 +269,7 @@ func buildCandidateSemanticGraph(ctx context.Context, semantic intel.SemanticAli
 		}
 		for _, score := range scores {
 			if idx, ok := indexByID[score.ID]; ok {
-				row[idx] = maxFloat(score.Similarity, 0)
+				row[idx] = max(score.Similarity, 0)
 			}
 		}
 		raw[i] = row
@@ -315,16 +315,16 @@ func mutualSemanticSimilarity(raw [][]float64, left, right int) float64 {
 func candidateStructuralAffinity(left, right discoverycore.Candidate) float64 {
 	affinity := 0.0
 	if sameCandidateFamily(left.URL, right.URL) {
-		affinity = maxFloat(affinity, 1.0)
+		affinity = max(affinity, 1.0)
 	}
 	if sameDiscoverHost(left.URL, right.URL) {
-		affinity = maxFloat(affinity, 0.95)
+		affinity = max(affinity, 0.95)
 	}
 	if left.Metadata["host_root_title"] != "" && left.Metadata["host_root_title"] == right.Metadata["host_root_title"] {
-		affinity = maxFloat(affinity, 0.72)
+		affinity = max(affinity, 0.72)
 	}
 	if left.Metadata["resource_class"] != "" && left.Metadata["resource_class"] == right.Metadata["resource_class"] {
-		affinity = maxFloat(affinity, 0.28)
+		affinity = max(affinity, 0.28)
 	}
 	return affinity
 }
@@ -469,7 +469,7 @@ func clusterCentrality(idxs []int, graph candidateSemanticGraph) map[int]float64
 func normalizeCentrality(centrality map[int]float64) map[int]float64 {
 	maxCentrality := 0.0
 	for _, value := range centrality {
-		maxCentrality = maxFloat(maxCentrality, value)
+		maxCentrality = max(maxCentrality, value)
 	}
 	if maxCentrality == 0 {
 		return centrality
@@ -517,7 +517,7 @@ func clusterRepresentativeScore(candidate discoverycore.Candidate, cluster candi
 		score += centrality * 0.30
 	}
 	if similarity := goalSimilarity[candidate.URL]; similarity > 0 {
-		score += minFloat(similarity*0.24, 0.18)
+		score += min(similarity*0.24, 0.18)
 	}
 	depth := discoverycore.URLPathDepth(candidate.URL)
 	switch {
@@ -540,17 +540,3 @@ func clusterRepresentativeScore(candidate discoverycore.Candidate, cluster candi
 }
 
 func (c candidateCluster) ClusterSize() int { return len(c.MemberIdx) }
-
-func maxFloat(left, right float64) float64 {
-	if left > right {
-		return left
-	}
-	return right
-}
-
-func minFloat(left, right float64) float64 {
-	if left < right {
-		return left
-	}
-	return right
-}

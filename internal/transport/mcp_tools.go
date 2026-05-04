@@ -11,51 +11,24 @@ import (
 	"github.com/josepavese/needlex/internal/store"
 )
 
-type mcpToolSpec struct {
-	Definition mcpTool
-	Handler    func(Runner, map[string]any) (map[string]any, error)
-}
-
 func (r Runner) callMCPTool(call mcpToolCall) (map[string]any, error) {
-	handler, ok := r.mcpToolHandlers()[call.Name]
+	handler, ok := mcpToolHandlersByName[call.Name]
 	if !ok {
-		legacyHandler, legacyOK := r.legacyMCPToolHandlers()[call.Name]
-		if !legacyOK {
-			return nil, fmt.Errorf("unsupported tool %q", call.Name)
-		}
-		return legacyHandler(call.Arguments)
+		return nil, fmt.Errorf("unsupported tool %q", call.Name)
 	}
-	return handler(call.Arguments)
+	return handler(r, call.Arguments)
 }
 
-func (r Runner) mcpToolHandlers() map[string]func(map[string]any) (map[string]any, error) {
-	out := make(map[string]func(map[string]any) (map[string]any, error))
-	for _, spec := range mcpToolSpecs() {
-		handler := spec.Handler
-		out[spec.Definition.Name] = func(args map[string]any) (map[string]any, error) {
-			return handler(r, args)
-		}
-	}
-	return out
-}
-
-func (r Runner) legacyMCPToolHandlers() map[string]func(map[string]any) (map[string]any, error) {
-	return map[string]func(map[string]any) (map[string]any, error){
-		"memory_stats":           r.callMCPMemoryStatsTool,
-		"memory_search":          r.callMCPMemorySearchTool,
-		"memory_prune":           r.callMCPMemoryPruneTool,
-		"memory_export":          r.callMCPMemoryExportTool,
-		"memory_import":          r.callMCPMemoryImportTool,
-		"memory_rebuild_index":   r.callMCPMemoryRebuildIndexTool,
-		"analytics_stats":        r.callMCPAnalyticsStatsTool,
-		"analytics_recent_runs":  r.callMCPAnalyticsRecentRunsTool,
-		"analytics_value_report": r.callMCPAnalyticsValueReportTool,
-		"analytics_hosts":        r.callMCPAnalyticsHostsTool,
-		"analytics_providers":    r.callMCPAnalyticsProvidersTool,
-		"analytics_failures":     r.callMCPAnalyticsFailuresTool,
-		"analytics_daily":        r.callMCPAnalyticsDailyTool,
-		"analytics_export":       r.callMCPAnalyticsExportTool,
-	}
+var mcpToolHandlersByName = map[string]func(Runner, map[string]any) (map[string]any, error){
+	"web_crawl":  Runner.callMCPCrawlTool,
+	"web_query":  Runner.callMCPQueryTool,
+	"web_read":   Runner.callMCPReadTool,
+	"web_replay": Runner.callMCPReplayTool,
+	"web_diff":   Runner.callMCPDiffTool,
+	"web_proof":  Runner.callMCPProofTool,
+	"web_prune":  Runner.callMCPPruneTool,
+	"memory":     Runner.callMCPMemoryTool,
+	"analytics":  Runner.callMCPAnalyticsTool,
 }
 
 func (r Runner) callMCPReplayTool(args map[string]any) (map[string]any, error) {
@@ -77,7 +50,7 @@ func (r Runner) callMCPDiffTool(args map[string]any) (map[string]any, error) {
 }
 
 func (r Runner) callMCPProofTool(args map[string]any) (map[string]any, error) {
-	lookup := firstNonEmptyString(
+	lookup := firstNonEmptyRuntimeString(
 		stringArg(args, "chunk_id"),
 		stringArg(args, "proof_id"),
 		stringArg(args, "trace_id"),
@@ -107,19 +80,13 @@ func (r Runner) callMCPPruneTool(args map[string]any) (map[string]any, error) {
 	return mcpToolResult(payload, payload), nil
 }
 
-func firstNonEmptyString(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
-}
-
 func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {
 	cfg, err := config.Load(stringArg(args, "config_path"))
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
+	}
+	if err := applyMCPRetrievalEffort(args, &cfg); err != nil {
+		return nil, err
 	}
 	resp, artifacts, err := r.executeCrawlWithSurface(cfg, coreservice.CrawlRequest{
 		SeedURL:    stringArg(args, "seed_url"),
@@ -235,25 +202,16 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 }
 
 func mcpTools() []mcpTool {
-	specs := mcpToolSpecs()
-	out := make([]mcpTool, 0, len(specs))
-	for _, spec := range specs {
-		out = append(out, spec.Definition)
-	}
-	return out
-}
-
-func mcpToolSpecs() []mcpToolSpec {
-	return []mcpToolSpec{
-		{Definition: mcpCrawlTool(), Handler: Runner.callMCPCrawlTool},
-		{Definition: mcpQueryTool(), Handler: Runner.callMCPQueryTool},
-		{Definition: mcpReadTool(), Handler: Runner.callMCPReadTool},
-		{Definition: mcpReplayTool(), Handler: Runner.callMCPReplayTool},
-		{Definition: mcpDiffTool(), Handler: Runner.callMCPDiffTool},
-		{Definition: mcpProofTool(), Handler: Runner.callMCPProofTool},
-		{Definition: mcpPruneTool(), Handler: Runner.callMCPPruneTool},
-		{Definition: mcpMemoryTool(), Handler: Runner.callMCPMemoryTool},
-		{Definition: mcpAnalyticsTool(), Handler: Runner.callMCPAnalyticsTool},
+	return []mcpTool{
+		mcpCrawlTool(),
+		mcpQueryTool(),
+		mcpReadTool(),
+		mcpReplayTool(),
+		mcpDiffTool(),
+		mcpProofTool(),
+		mcpPruneTool(),
+		mcpMemoryTool(),
+		mcpAnalyticsTool(),
 	}
 }
 
@@ -262,14 +220,15 @@ func mcpCrawlTool() mcpTool {
 		Name:        "web_crawl",
 		Description: "Traverse linked pages starting from one seed URL.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"seed_url":    map[string]any{"type": "string"},
-			"profile":     map[string]any{"type": "string"},
-			"user_agent":  map[string]any{"type": "string"},
-			"max_pages":   map[string]any{"type": "integer"},
-			"max_depth":   map[string]any{"type": "integer"},
-			"same_domain": map[string]any{"type": "boolean"},
+			"seed_url":         map[string]any{"type": "string"},
+			"profile":          map[string]any{"type": "string"},
+			"user_agent":       map[string]any{"type": "string"},
+			"max_pages":        map[string]any{"type": "integer"},
+			"max_depth":        map[string]any{"type": "integer"},
+			"same_domain":      map[string]any{"type": "boolean"},
+			"retrieval_effort": retrievalEffortSchema(),
 		}, "seed_url"),
-			map[string]any{"seed_url": "https://example.com/docs", "same_domain": true, "max_pages": 5, "max_depth": 1},
+			map[string]any{"seed_url": "https://example.com/docs", "same_domain": true, "max_pages": 5, "max_depth": 1, "retrieval_effort": "standard"},
 		),
 	}
 }
@@ -387,7 +346,6 @@ func mcpMemoryTool() mcpTool {
 				"description": "Required operation. Prefer stats or search for debugging; prune/export/import/rebuild_index are maintenance actions.",
 			},
 			"query":        map[string]any{"type": "string", "description": "Semantic query for action=search."},
-			"goal":         map[string]any{"type": "string", "description": "Alias for query when action=search."},
 			"limit":        map[string]any{"type": "integer", "description": "Maximum rows for action=search."},
 			"domain_hints": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional host/domain hints for action=search."},
 			"out_dir":      map[string]any{"type": "string", "description": "Destination directory for action=export."},
@@ -411,12 +369,10 @@ func (r Runner) callMCPMemoryStatsTool(args map[string]any) (map[string]any, err
 		return nil, err
 	}
 	compact := compactStats(stats)
-	payload := map[string]any{
-		"kind":    "memory_stats",
-		"stats":   compact,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(map[string]any{
+		"kind":  "memory_stats",
+		"stats": compact,
+	}), compact), nil
 }
 
 func (r Runner) callMCPMemorySearchTool(args map[string]any) (map[string]any, error) {
@@ -426,25 +382,21 @@ func (r Runner) callMCPMemorySearchTool(args map[string]any) (map[string]any, er
 	}
 	limit := intDefault(args, "limit", 5)
 	query := stringArg(args, "query")
-	if query == "" {
-		query = stringArg(args, "goal")
-	}
-	candidates, err := r.searchMemory(cfg, query, limit, csvOrListArg(args, "domain_hints"))
+	domainHints, err := stringListArg(args, "domain_hints")
 	if err != nil {
 		return nil, err
 	}
+	candidates, err := r.searchMemory(cfg, query, limit, domainHints)
+	if err != nil {
+		return nil, err
+	}
+	items := compactMemoryCandidates(candidates)
 	compact := map[string]any{
 		"kind":       "memory_search",
 		"query":      query,
-		"candidates": compactMemoryCandidates(candidates),
+		"candidates": items,
 	}
-	payload := map[string]any{
-		"kind":       "memory_search",
-		"query":      query,
-		"candidates": compactMemoryCandidates(candidates),
-		"compact":    compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPMemoryPruneTool(args map[string]any) (map[string]any, error) {
@@ -467,14 +419,8 @@ func (r Runner) callMCPMemoryPruneTool(args map[string]any) (map[string]any, err
 		"after":   compactStats(after),
 		"removed": removed,
 	}
-	payload := map[string]any{
-		"kind":    "memory_prune",
-		"before":  compactStats(before),
-		"after":   compactStats(after),
-		"policy":  policy,
-		"removed": removed,
-		"compact": compact,
-	}
+	payload := compactPayload(compact)
+	payload["policy"] = policy
 	return mcpToolResult(payload, compact), nil
 }
 
@@ -495,12 +441,7 @@ func (r Runner) callMCPMemoryExportTool(args map[string]any) (map[string]any, er
 		"kind":   "memory_export",
 		"export": exported,
 	}
-	payload := map[string]any{
-		"kind":    "memory_export",
-		"export":  exported,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPMemoryImportTool(args map[string]any) (map[string]any, error) {
@@ -520,12 +461,7 @@ func (r Runner) callMCPMemoryImportTool(args map[string]any) (map[string]any, er
 		"kind":   "memory_import",
 		"import": imported,
 	}
-	payload := map[string]any{
-		"kind":    "memory_import",
-		"import":  imported,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPMemoryRebuildIndexTool(args map[string]any) (map[string]any, error) {
@@ -541,12 +477,7 @@ func (r Runner) callMCPMemoryRebuildIndexTool(args map[string]any) (map[string]a
 		"kind":  "memory_rebuild_index",
 		"stats": compactStats(stats),
 	}
-	payload := map[string]any{
-		"kind":    "memory_rebuild_index",
-		"stats":   compactStats(stats),
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsTool(args map[string]any) (map[string]any, error) {
@@ -602,12 +533,7 @@ func (r Runner) callMCPAnalyticsStatsTool(_ map[string]any) (map[string]any, err
 		"kind":  "analytics_stats",
 		"stats": stats,
 	}
-	payload := map[string]any{
-		"kind":    "analytics_stats",
-		"stats":   stats,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsRecentRunsTool(args map[string]any) (map[string]any, error) {
@@ -619,12 +545,7 @@ func (r Runner) callMCPAnalyticsRecentRunsTool(args map[string]any) (map[string]
 		"kind": "analytics_recent_runs",
 		"runs": runs,
 	}
-	payload := map[string]any{
-		"kind":    "analytics_recent_runs",
-		"runs":    runs,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsValueReportTool(_ map[string]any) (map[string]any, error) {
@@ -636,12 +557,7 @@ func (r Runner) callMCPAnalyticsValueReportTool(_ map[string]any) (map[string]an
 		"kind":   "analytics_value_report",
 		"report": report,
 	}
-	payload := map[string]any{
-		"kind":    "analytics_value_report",
-		"report":  report,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsHostsTool(args map[string]any) (map[string]any, error) {
@@ -653,12 +569,7 @@ func (r Runner) callMCPAnalyticsHostsTool(args map[string]any) (map[string]any, 
 		"kind":  "analytics_hosts",
 		"hosts": hosts,
 	}
-	payload := map[string]any{
-		"kind":    "analytics_hosts",
-		"hosts":   hosts,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]any, error) {
@@ -670,12 +581,7 @@ func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]a
 		"kind":      "analytics_providers",
 		"providers": providers,
 	}
-	payload := map[string]any{
-		"kind":      "analytics_providers",
-		"providers": providers,
-		"compact":   compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsFailuresTool(args map[string]any) (map[string]any, error) {
@@ -687,12 +593,7 @@ func (r Runner) callMCPAnalyticsFailuresTool(args map[string]any) (map[string]an
 		"kind":     "analytics_failures",
 		"failures": failures,
 	}
-	payload := map[string]any{
-		"kind":     "analytics_failures",
-		"failures": failures,
-		"compact":  compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsDailyTool(args map[string]any) (map[string]any, error) {
@@ -704,12 +605,7 @@ func (r Runner) callMCPAnalyticsDailyTool(args map[string]any) (map[string]any, 
 		"kind": "analytics_daily",
 		"days": days,
 	}
-	payload := map[string]any{
-		"kind":    "analytics_daily",
-		"days":    days,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
 func (r Runner) callMCPAnalyticsExportTool(args map[string]any) (map[string]any, error) {
@@ -725,41 +621,48 @@ func (r Runner) callMCPAnalyticsExportTool(args map[string]any) (map[string]any,
 		"kind":   "analytics_export",
 		"export": exported,
 	}
-	payload := map[string]any{
-		"kind":    "analytics_export",
-		"export":  exported,
-		"compact": compact,
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpToolResult(compactPayload(compact), compact), nil
 }
 
-func csvOrListArg(args map[string]any, key string) []string {
+func compactPayload(compact map[string]any) map[string]any {
+	payload := make(map[string]any, len(compact)+1)
+	for key, value := range compact {
+		payload[key] = value
+	}
+	payload["compact"] = compact
+	return payload
+}
+
+func stringListArg(args map[string]any, key string) ([]string, error) {
 	raw, ok := args[key]
 	if !ok || raw == nil {
-		return nil
+		return nil, nil
 	}
 	switch typed := raw.(type) {
-	case string:
-		return splitCSV(typed)
 	case []any:
 		out := make([]string, 0, len(typed))
 		for _, item := range typed {
-			if value, ok := item.(string); ok && strings.TrimSpace(value) != "" {
+			value, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("%s must be an array of strings", key)
+			}
+			if strings.TrimSpace(value) != "" {
 				out = append(out, strings.TrimSpace(value))
 			}
 		}
-		return out
+		return out, nil
 	case []string:
-		return typed
+		return typed, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("%s must be an array of strings", key)
 	}
 }
 
 func toolSchema(properties map[string]any, required ...string) map[string]any {
 	schema := map[string]any{
-		"type":       "object",
-		"properties": properties,
+		"type":                 "object",
+		"properties":           properties,
+		"additionalProperties": false,
 	}
 	if len(required) > 0 {
 		schema["required"] = required

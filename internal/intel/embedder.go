@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 )
@@ -17,26 +18,22 @@ type TextEmbedder interface {
 	Embed(ctx context.Context, inputs []string) ([][]float32, error)
 }
 
-type NoopTextEmbedder struct{}
-
-func (NoopTextEmbedder) Embed(context.Context, []string) ([][]float32, error) {
-	return nil, nil
-}
-
 type NativeTextEmbedder struct {
 	Dimensions int
 }
 
 type OllamaTextEmbedder struct {
-	BaseURL string
-	Model   string
-	Client  *http.Client
+	BaseURL   string
+	Model     string
+	Client    *http.Client
+	TimeoutMS int64
 }
 
 type OpenAITextEmbedder struct {
-	BaseURL string
-	Model   string
-	Client  *http.Client
+	BaseURL   string
+	Model     string
+	Client    *http.Client
+	TimeoutMS int64
 }
 
 type fallbackTextEmbedder struct {
@@ -54,9 +51,9 @@ func NewTextEmbedder(cfg config.Config, client *http.Client) TextEmbedder {
 	var primary TextEmbedder
 	switch backend {
 	case "ollama-embed":
-		primary = OllamaTextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client}
+		primary = OllamaTextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client, TimeoutMS: cfg.Semantic.TimeoutMS}
 	case "openai-embeddings":
-		primary = OpenAITextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client}
+		primary = OpenAITextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client, TimeoutMS: cfg.Semantic.TimeoutMS}
 	default:
 		return fallback
 	}
@@ -97,16 +94,15 @@ func (e OllamaTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]flo
 	if len(clean) == 0 {
 		return nil, nil
 	}
+	ctx, cancel := contextWithTimeoutMS(ctx, e.TimeoutMS)
+	defer cancel()
 	body, _ := json.Marshal(map[string]any{"model": e.Model, "input": clean})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.BaseURL+"/api/embed", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := e.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
+	client := httpClientOrDefault(e.Client, time.Duration(e.TimeoutMS)*time.Millisecond)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -118,7 +114,7 @@ func (e OllamaTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]flo
 	var payload struct {
 		Embeddings [][]float64 `json:"embeddings"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "memory embed", &payload); err != nil {
 		return nil, err
 	}
 	if len(payload.Embeddings) != len(clean) {
@@ -132,16 +128,15 @@ func (e OpenAITextEmbedder) Embed(ctx context.Context, inputs []string) ([][]flo
 	if len(clean) == 0 {
 		return nil, nil
 	}
+	ctx, cancel := contextWithTimeoutMS(ctx, e.TimeoutMS)
+	defer cancel()
 	body, _ := json.Marshal(map[string]any{"model": e.Model, "input": clean})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.BaseURL+"/v1/embeddings", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := e.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
+	client := httpClientOrDefault(e.Client, time.Duration(e.TimeoutMS)*time.Millisecond)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -156,7 +151,7 @@ func (e OpenAITextEmbedder) Embed(ctx context.Context, inputs []string) ([][]flo
 			Index     int       `json:"index"`
 		} `json:"data"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "memory embeddings", &payload); err != nil {
 		return nil, err
 	}
 	if len(payload.Data) != len(clean) {

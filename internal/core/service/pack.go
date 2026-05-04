@@ -24,12 +24,12 @@ type segmentIREvidence struct {
 	averageNodeDepth                   float64
 }
 
-func (s *Service) pack(recorder *proof.Recorder, req ReadRequest, document core.Document, dom pipeline.SimplifiedDOM, webIR core.WebIR, segments []pipeline.Segment) (core.ResultPack, []proof.ProofRecord, error) {
+func (s *Service) pack(ctx context.Context, recorder *proof.Recorder, req ReadRequest, document core.Document, dom pipeline.SimplifiedDOM, webIR core.WebIR, segments []pipeline.Segment) (core.ResultPack, []proof.ProofRecord, error) {
 	const stage = "pack"
 	if err := recorder.StageStarted(stage, segments, s.now().UTC()); err != nil {
 		return core.ResultPack{}, nil, err
 	}
-	intelSummary, selected, taskExecutions, irPolicy, reuseEligible, reuseApplied, err := s.preparePackSelection(recorder, req, dom, webIR, document.ID, segments)
+	intelSummary, selected, taskExecutions, irPolicy, reuseEligible, reuseApplied, err := s.preparePackSelection(ctx, recorder, req, dom, webIR, document.ID, segments)
 	if err != nil {
 		return core.ResultPack{}, nil, err
 	}
@@ -85,8 +85,8 @@ func completePackStage(recorder *proof.Recorder, req ReadRequest, webIR core.Web
 	return resultPack, proofRecords, nil
 }
 
-func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest, dom pipeline.SimplifiedDOM, webIR core.WebIR, documentID string, segments []pipeline.Segment) (intel.Summary, []rankedSegment, []executedIntelTask, webIRSelectionPolicyReport, int, int, error) {
-	ranked := s.rankSegments(documentID, req.Objective, webIR, segments)
+func (s *Service) preparePackSelection(ctx context.Context, recorder *proof.Recorder, req ReadRequest, dom pipeline.SimplifiedDOM, webIR core.WebIR, documentID string, segments []pipeline.Segment) (intel.Summary, []rankedSegment, []executedIntelTask, webIRSelectionPolicyReport, int, int, error) {
+	ranked := s.rankSegments(ctx, documentID, req.Objective, webIR, segments)
 	ranked = applyBoilerplatePenalty(ranked)
 	ranked = applySubordinateFragmentDemotion(ranked)
 	ranked = applyIndexLikeDemotion(ranked)
@@ -95,7 +95,7 @@ func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest
 	intelSummary := s.analyzeRanked(recorder, req, ranked)
 	selected := selectProfile(ranked, req.Profile)
 	traceCtx := recorder.Trace()
-	selected, taskExecutions, err := s.executeIntelTasks(context.Background(), recorder, req, webIR, selected, intelSummary.Decisions, intel.ModelTraceContext{
+	selected, taskExecutions, err := s.executeIntelTasks(ctx, recorder, req, webIR, selected, intelSummary.Decisions, intel.ModelTraceContext{
 		TraceID:    traceCtx.TraceID,
 		RunID:      traceCtx.RunID,
 		ReasonCode: "NX_INTEL_TASK_ROUTED",
@@ -104,7 +104,7 @@ func (s *Service) preparePackSelection(recorder *proof.Recorder, req ReadRequest
 		recorder.Error("pack", "NX_INTEL_TASK_EXEC_FAILED", err.Error(), nil, s.now().UTC())
 		return intel.Summary{}, nil, nil, webIRSelectionPolicyReport{}, 0, 0, err
 	}
-	selected = s.applyIntel(req, selected, intelSummary.Decisions)
+	selected = s.applyIntel(ctx, req, selected, intelSummary.Decisions)
 	selected, irPolicy := applyIRSelectionPolicy(ranked, selected, webIR, req.Profile)
 	if req.Profile == core.ProfileTiny {
 		selected = deduplicateSelected(selected, req.StableFingerprints)
@@ -153,9 +153,9 @@ func packStageMetadata(req ReadRequest, webIR core.WebIR, chunks []core.Chunk, s
 	}
 }
 
-func (s *Service) rankSegments(docID, objective string, webIR core.WebIR, segments []pipeline.Segment) []rankedSegment {
+func (s *Service) rankSegments(ctx context.Context, docID, objective string, webIR core.WebIR, segments []pipeline.Segment) []rankedSegment {
 	irEvidence := buildIRSegmentEvidence(webIR)
-	alignments := s.segmentSemanticAlignment(docID, objective, segments)
+	alignments := s.segmentSemanticAlignment(ctx, docID, objective, segments)
 	ranked := make([]rankedSegment, 0, len(segments))
 	for index, segment := range segments {
 		fingerprint := prefixedHash("fp", docID, strings.Join(segment.HeadingPath, "/"), segment.Text)
@@ -184,7 +184,7 @@ func (s *Service) rankSegments(docID, objective string, webIR core.WebIR, segmen
 	return ranked
 }
 
-func (s *Service) segmentSemanticAlignment(docID, objective string, segments []pipeline.Segment) map[string]float64 {
+func (s *Service) segmentSemanticAlignment(ctx context.Context, docID, objective string, segments []pipeline.Segment) map[string]float64 {
 	out := make(map[string]float64, len(segments))
 	objective = strings.TrimSpace(objective)
 	if objective == "" || len(segments) == 0 {
@@ -199,7 +199,7 @@ func (s *Service) segmentSemanticAlignment(docID, objective string, segments []p
 			Text:    segment.Text,
 		})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.cfg.Semantic.TimeoutMS)*time.Millisecond)
+	ctx, cancel := semanticOperationContext(ctx, time.Duration(s.cfg.Semantic.TimeoutMS)*time.Millisecond)
 	defer cancel()
 	scores, err := s.semantic.Score(ctx, objective, candidates)
 	if err != nil {
@@ -392,12 +392,12 @@ func (s *Service) analyzeRanked(recorder *proof.Recorder, req ReadRequest, ranke
 	return summary
 }
 
-func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decisions map[string]intel.Decision) []rankedSegment {
+func (s *Service) applyIntel(ctx context.Context, req ReadRequest, selected []rankedSegment, decisions map[string]intel.Decision) []rankedSegment {
 	out := make([]rankedSegment, 0, len(selected))
 	for _, item := range selected {
 		decision := decisions[item.chunk.Fingerprint]
 		if decision.Lane >= 2 {
-			extracted := intel.Extract(s.cfg, s.semantic, decision, item.chunk, req.Objective, req.Profile)
+			extracted := intel.Extract(ctx, s.cfg, s.semantic, decision, item.chunk, req.Objective, req.Profile)
 			applyIntelTextResult(&item.chunk, &decision, extracted.Text, extracted.Invocation, extracted.AdditionalRisk)
 		}
 		if decision.Lane >= 3 {
@@ -405,7 +405,7 @@ func (s *Service) applyIntel(req ReadRequest, selected []rankedSegment, decision
 			applyIntelTextResult(&item.chunk, &decision, formatted.Text, formatted.Invocation, formatted.AdditionalRisk)
 		}
 		if req.Profile == core.ProfileTiny {
-			if compacted, changed := s.compactTinyText(item.chunk.Text, req.Objective); changed {
+			if compacted, changed := s.compactTinyText(ctx, item.chunk.Text, req.Objective); changed {
 				item.chunk.Text = compacted
 				decision.RiskFlags = append(decision.RiskFlags, "tiny_compaction")
 				decision.TransformChain = append(decision.TransformChain, "pack:tiny_compact:v1")

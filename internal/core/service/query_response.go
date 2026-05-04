@@ -7,7 +7,7 @@ import (
 	"github.com/josepavese/needlex/internal/proof"
 )
 
-func finalizeQueryResponse(plan QueryPlan, baseCompiler QueryCompiler, candidates []DiscoverCandidate, readResp ReadResponse) (QueryResponse, error) {
+func finalizeQueryResponse(plan QueryPlan, baseCompiler queryplan.QueryCompiler, candidates []DiscoverCandidate, readResp ReadResponse) (QueryResponse, error) {
 	readResp.ResultPack.Query = plan.Goal
 	resp := QueryResponse{
 		Plan:         plan,

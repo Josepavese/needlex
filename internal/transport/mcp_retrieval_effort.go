@@ -34,10 +34,10 @@ func retrievalEffortSchema() map[string]any {
 
 func applyMCPRetrievalEffort(args map[string]any, cfg *config.Config) error {
 	if _, ok := args["lane_max"]; ok {
-		return fmt.Errorf("lane_max is no longer supported; use retrieval_effort with one of: %s", retrievalEffortValues())
+		return fmt.Errorf("unsupported field lane_max; use retrieval_effort with one of: %s", retrievalEffortValues())
 	}
 	if _, ok := args["quality_budget"]; ok {
-		return fmt.Errorf("quality_budget is not supported; use retrieval_effort with one of: %s", retrievalEffortValues())
+		return fmt.Errorf("unsupported field quality_budget; use retrieval_effort with one of: %s", retrievalEffortValues())
 	}
 	raw, ok := args["retrieval_effort"]
 	if !ok || raw == nil {
@@ -47,7 +47,14 @@ func applyMCPRetrievalEffort(args map[string]any, cfg *config.Config) error {
 	if !ok {
 		return fmt.Errorf("retrieval_effort must be a string with one of: %s", retrievalEffortValues())
 	}
+	return applyRetrievalEffort(value, cfg)
+}
+
+func applyRetrievalEffort(value string, cfg *config.Config) error {
 	effort := strings.ToLower(strings.TrimSpace(value))
+	if effort == "" {
+		return nil
+	}
 	lane, ok := retrievalEffortLanes[effort]
 	if !ok {
 		return fmt.Errorf("retrieval_effort must be one of: %s", retrievalEffortValues())

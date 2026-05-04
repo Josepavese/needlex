@@ -42,17 +42,17 @@ type queryDiscoveryResult struct {
 }
 
 type QueryPlan struct {
-	Goal              string        `json:"goal"`
-	SeedURL           string        `json:"seed_url"`
-	Profile           string        `json:"profile"`
-	Budget            core.Budget   `json:"budget"`
-	LaneMax           int           `json:"lane_max"`
-	Compiler          QueryCompiler `json:"compiler,omitempty"`
-	DiscoveryMode     string        `json:"discovery_mode,omitempty"`
-	DiscoveryProvider string        `json:"discovery_provider,omitempty"`
-	SelectedURL       string        `json:"selected_url,omitempty"`
-	CandidateURLs     []string      `json:"candidate_urls,omitempty"`
-	DomainHints       []string      `json:"domain_hints,omitempty"`
+	Goal              string                  `json:"goal"`
+	SeedURL           string                  `json:"seed_url"`
+	Profile           string                  `json:"profile"`
+	Budget            core.Budget             `json:"budget"`
+	LaneMax           int                     `json:"lane_max"`
+	Compiler          queryplan.QueryCompiler `json:"compiler,omitempty"`
+	DiscoveryMode     string                  `json:"discovery_mode,omitempty"`
+	DiscoveryProvider string                  `json:"discovery_provider,omitempty"`
+	SelectedURL       string                  `json:"selected_url,omitempty"`
+	CandidateURLs     []string                `json:"candidate_urls,omitempty"`
+	DomainHints       []string                `json:"domain_hints,omitempty"`
 }
 
 type QueryResponse struct {

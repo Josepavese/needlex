@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func WriteJSON(path string, value any) error {
@@ -23,20 +22,4 @@ func Ratio(num, den int) float64 {
 		return 0
 	}
 	return float64(num) / float64(den)
-}
-
-func FirstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
-}
-
-func MinInt64(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
 }

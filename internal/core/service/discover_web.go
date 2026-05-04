@@ -294,7 +294,7 @@ func (s *Service) discoverWebBootstrapBrave(ctx context.Context, req DiscoverWeb
 func (s *Service) doBootstrapJSON(ctx context.Context, method, endpoint string, headers map[string]string, body []byte) ([]byte, string, error) {
 	client := s.httpClient
 	if client == nil {
-		client = http.DefaultClient
+		client = &http.Client{Timeout: time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond}
 	}
 	reqCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Runtime.TimeoutMS)*time.Millisecond)
 	defer cancel()

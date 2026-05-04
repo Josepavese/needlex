@@ -6,22 +6,9 @@ import (
 	"slices"
 	"strings"
 	"unicode"
-
-	"github.com/josepavese/needlex/internal/config"
 )
 
-type NativeSemanticAligner struct {
-	Model  string
-	Config config.SemanticConfig
-}
-
-func (a NativeSemanticAligner) Align(ctx context.Context, objective string, candidates []SemanticCandidate) (SemanticAlignment, error) {
-	scores, err := a.Score(ctx, objective, candidates)
-	if err != nil {
-		return SemanticAlignment{}, err
-	}
-	return reduceSemanticScores(a.modelName(), a.Config, scores), nil
-}
+type NativeSemanticAligner struct{}
 
 func (a NativeSemanticAligner) Score(ctx context.Context, objective string, candidates []SemanticCandidate) ([]SemanticScore, error) {
 	if strings.TrimSpace(objective) == "" || len(candidates) == 0 {
@@ -46,13 +33,6 @@ func (a NativeSemanticAligner) Score(ctx context.Context, objective string, cand
 		})
 	}
 	return scores, nil
-}
-
-func (a NativeSemanticAligner) modelName() string {
-	if strings.TrimSpace(a.Model) != "" {
-		return strings.TrimSpace(a.Model)
-	}
-	return "native-char-ngram-v1"
 }
 
 func nativeSemanticVector(text string) map[string]float64 {

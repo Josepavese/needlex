@@ -272,20 +272,6 @@ func clamp(value, lower, upper float64) float64 {
 	}
 }
 
-func max(left, right int) int {
-	if left > right {
-		return left
-	}
-	return right
-}
-
-func min(left, right int) int {
-	if left < right {
-		return left
-	}
-	return right
-}
-
 func (d Decision) Metadata() map[string]string {
 	taskNames := make([]string, 0, len(d.TaskRoutes))
 	for _, route := range d.TaskRoutes {

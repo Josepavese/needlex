@@ -13,11 +13,11 @@ type crawlArtifacts struct {
 }
 
 func writeCrawlUsage(w io.Writer) {
-	writeUsage(w, "needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain]")
+	writeUsage(w, "needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort minimal|light|balanced|standard|exhaustive]")
 }
 
 func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
-	configPath, profile, userAgent, seedURL, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, ok := parseCrawlArgs(args, stderr)
+	configPath, profile, userAgent, seedURL, retrievalEffort, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, ok := parseCrawlArgs(args, stderr)
 	if !ok {
 		writeCrawlUsage(stderr)
 		return 2
@@ -31,15 +31,18 @@ func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
 	if !ok {
 		return 1
 	}
+	if err := applyRetrievalEffort(retrievalEffort, &cfg); err != nil {
+		return r.reportCLIErrorCode(stderr, "crawl", err, map[string]any{"retrieval_effort": retrievalEffort}, 2)
+	}
 
-	resp, artifacts, err := r.executeCrawl(cfg, coreservice.CrawlRequest{
+	resp, artifacts, err := r.executeCrawlWithSurface(cfg, coreservice.CrawlRequest{
 		SeedURL:    seedURL,
 		Profile:    profile,
 		UserAgent:  userAgent,
 		MaxPages:   maxPages,
 		MaxDepth:   maxDepth,
 		SameDomain: sameDomain,
-	})
+	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "crawl", err, map[string]any{"seed_url": seedURL, "same_domain": sameDomain})
 	}
@@ -55,37 +58,40 @@ func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userAgent, seedURL, jsonMode string, maxPages, maxDepth int, sameDomain, jsonOut, ok bool) {
+func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userAgent, seedURL, retrievalEffort, jsonMode string, maxPages, maxDepth int, sameDomain, jsonOut, ok bool) {
 	fs := flag.NewFlagSet("crawl", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
+	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 	fs.IntVar(&maxPages, "max-pages", 0, "maximum pages to visit")
 	fs.IntVar(&maxDepth, "max-depth", 0, "maximum crawl depth")
 	fs.BoolVar(&sameDomain, "same-domain", false, "restrict crawl to the seed domain")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
-		"--config":     {},
-		"-config":      {},
-		"--json-mode":  {},
-		"-json-mode":   {},
-		"--profile":    {},
-		"-profile":     {},
-		"--max-pages":  {},
-		"-max-pages":   {},
-		"--max-depth":  {},
-		"-max-depth":   {},
-		"--user-agent": {},
-		"-user-agent":  {},
+		"--config":           {},
+		"-config":            {},
+		"--json-mode":        {},
+		"-json-mode":         {},
+		"--profile":          {},
+		"-profile":           {},
+		"--max-pages":        {},
+		"-max-pages":         {},
+		"--max-depth":        {},
+		"-max-depth":         {},
+		"--user-agent":       {},
+		"-user-agent":        {},
+		"--retrieval-effort": {},
+		"-retrieval-effort":  {},
 	})); err != nil {
-		return "", "", "", "", "", 0, 0, false, false, false
+		return "", "", "", "", "", "", 0, 0, false, false, false
 	}
 	if fs.NArg() != 1 {
-		return "", "", "", "", "", 0, 0, false, false, false
+		return "", "", "", "", "", "", 0, 0, false, false, false
 	}
-	return configPath, profile, userAgent, fs.Arg(0), jsonMode, maxPages, maxDepth, sameDomain, jsonOut, true
+	return configPath, profile, userAgent, fs.Arg(0), retrievalEffort, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, true
 }
 
 func renderCrawlText(w io.Writer, resp coreservice.CrawlResponse, artifacts crawlArtifacts) {

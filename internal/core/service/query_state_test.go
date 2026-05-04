@@ -406,13 +406,12 @@ func TestRunQueryDiscoveryKeepsOverviewSeedWhenRecoveredFamilyContainsOnlyDescen
 	}
 }
 
-func TestResolveDiscoveryModeAcceptsCommonAliases(t *testing.T) {
+func TestResolveDiscoveryModeAcceptsOnlyCanonicalLiterals(t *testing.T) {
 	cases := map[string]string{
-		"same-site":  QueryDiscoverySameSite,
-		"same_site":  QueryDiscoverySameSite,
-		"same site":  QueryDiscoverySameSite,
-		"web-search": QueryDiscoveryWeb,
-		"web search": QueryDiscoveryWeb,
+		"":                QueryDiscoverySameSite,
+		"same_site_links": QueryDiscoverySameSite,
+		" web_search ":    QueryDiscoveryWeb,
+		"OFF":             QueryDiscoveryOff,
 	}
 	for input, want := range cases {
 		got, err := resolveDiscoveryMode(input)
@@ -421,6 +420,11 @@ func TestResolveDiscoveryModeAcceptsCommonAliases(t *testing.T) {
 		}
 		if got != want {
 			t.Fatalf("resolveDiscoveryMode(%q)=%q want %q", input, got, want)
+		}
+	}
+	for _, input := range []string{"same-site", "same_site", "same site", "web-search", "web search"} {
+		if _, err := resolveDiscoveryMode(input); err == nil {
+			t.Fatalf("expected non-canonical discovery_mode %q to be rejected", input)
 		}
 	}
 }
