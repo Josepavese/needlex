@@ -4,11 +4,6 @@ set -euo pipefail
 ROOT="${1:-.}"
 cd "$ROOT"
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "FAIL: ripgrep is required for semantic guard"
-  exit 1
-fi
-
 scan_paths=(
   AGENTS.md
   README.md
@@ -46,19 +41,46 @@ for path in "${scan_paths[@]}"; do
   fi
 done
 
-if rg -n --hidden \
-  --glob '!docs/assets/**' \
-  --glob '!docs/archive/**/node_modules/**' \
-  --glob '!**/*.png' \
-  --glob '!**/*.jpg' \
-  --glob '!**/*.jpeg' \
-  --glob '!**/*.webp' \
-  --glob '!**/*.gif' \
-  --glob '!**/*.ico' \
-  --glob '!**/*.zip' \
-  --glob '!**/*.tar.gz' \
-  -e "$pattern" "${existing_paths[@]}" >"$tmp"; then
+set +e
+if command -v rg >/dev/null 2>&1; then
+  rg -n --hidden \
+    --glob '!docs/assets/**' \
+    --glob '!docs/archive/**/node_modules/**' \
+    --glob '!**/*.png' \
+    --glob '!**/*.jpg' \
+    --glob '!**/*.jpeg' \
+    --glob '!**/*.webp' \
+    --glob '!**/*.gif' \
+    --glob '!**/*.ico' \
+    --glob '!**/*.zip' \
+    --glob '!**/*.tar.gz' \
+    -e "$pattern" "${existing_paths[@]}" >"$tmp"
+  search_status=$?
+else
+  grep -RInE \
+    --exclude='*.png' \
+    --exclude='*.jpg' \
+    --exclude='*.jpeg' \
+    --exclude='*.webp' \
+    --exclude='*.gif' \
+    --exclude='*.ico' \
+    --exclude='*.zip' \
+    --exclude='*.tar.gz' \
+    --exclude-dir='assets' \
+    --exclude-dir='node_modules' \
+    "$pattern" "${existing_paths[@]}" >"$tmp"
+  search_status=$?
+fi
+set -e
+
+if [ "$search_status" -eq 0 ]; then
   echo "FAIL: semantic guard found banned surface-form retrieval residues"
+  cat "$tmp"
+  exit 1
+fi
+
+if [ "$search_status" -gt 1 ]; then
+  echo "FAIL: semantic guard search failed"
   cat "$tmp"
   exit 1
 fi
