@@ -45,6 +45,7 @@ func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverRe
 	}
 	candidates := discoverycore.NewSet(scored)
 	candidates = discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates.Sorted(), req.PreferSpecificSameSite))
+	candidates = discoverycore.NewSet(s.applyTargetKindRerank(ctx, req.Goal, candidates.Sorted()))
 	selected := candidates.SelectedURL(rawPage.FinalURL)
 	return DiscoverResponse{SeedURL: req.SeedURL, SelectedURL: selected, DiscoveryURL: rawPage.FinalURL, Candidates: candidates.Limited(req.MaxCandidates)}, nil
 }

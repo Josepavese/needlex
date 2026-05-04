@@ -193,6 +193,7 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 		"host_pacing_ms": fmt.Sprintf("%d", page.HostPacingMS),
 		"raw_chars":      fmt.Sprintf("%d", len(page.HTML)),
 		"raw_bytes":      fmt.Sprintf("%d", len([]byte(page.HTML))),
+		"partial_body":   fmt.Sprintf("%t", page.Partial),
 	}
 	if page.RetryReason != "" {
 		metadata["retry_reason"] = page.RetryReason

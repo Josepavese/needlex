@@ -16,8 +16,11 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 	}
 	if strings.TrimSpace(req.SeedURL) == "" && len(req.MemoryCandidates) > 0 {
 		result.provider = "discovery_memory"
-		result.candidates = append([]DiscoverCandidate{}, req.MemoryCandidates...)
+		result.candidates = s.applyTargetKindRerank(ctx, req.Goal, req.MemoryCandidates)
 		result.selected = req.MemoryCandidates[0].URL
+		if len(result.candidates) > 0 {
+			result.selected = result.candidates[0].URL
+		}
 		if discoveryMode == QueryDiscoveryWeb {
 			if recovered, ok := s.tryMemoryFamilyRecovery(ctx, req); ok && shouldPromoteRecoveredMemoryFamily(result.selected, recovered) {
 				result.provider = "discovery_memory_same_site"
@@ -75,6 +78,9 @@ func preferRecoveredMemoryFamily(currentURL, recoveredURL string) bool {
 }
 
 func shouldPromoteRecoveredMemoryFamily(currentURL string, recovered DiscoverResponse) bool {
+	if recoveredSelectedTargetKind(recovered, targetKindCanonicalHome, targetKindOrganizationAbout) {
+		return true
+	}
 	if preferRecoveredMemoryFamily(currentURL, recovered.SelectedURL) {
 		return true
 	}
@@ -170,6 +176,9 @@ func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse) str
 	if seedHost == "" {
 		return strings.TrimSpace(discovery.SelectedURL)
 	}
+	if recoveredSelectedTargetKind(discovery, targetKindCanonicalHome, targetKindOrganizationAbout) {
+		return strings.TrimSpace(discovery.SelectedURL)
+	}
 	if urlPathDepth(seedURL) == 0 {
 		best = strings.TrimSpace(discovery.SelectedURL)
 		bestDepth := urlPathDepth(best)
@@ -192,6 +201,29 @@ func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse) str
 		}
 	}
 	return best
+}
+
+func recoveredSelectedTargetKind(discovery DiscoverResponse, kinds ...string) bool {
+	selected := strings.TrimSpace(discovery.SelectedURL)
+	if selected == "" {
+		return false
+	}
+	for _, candidate := range discovery.Candidates {
+		if !sameNormalizedURL(candidate.URL, selected) {
+			continue
+		}
+		actual := strings.TrimSpace(candidate.Metadata["target_kind"])
+		if actual == "" {
+			return false
+		}
+		for _, kind := range kinds {
+			if actual == kind {
+				return true
+			}
+		}
+		return false
+	}
+	return false
 }
 
 func sameNormalizedURL(a, b string) bool {

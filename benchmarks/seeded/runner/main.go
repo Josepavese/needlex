@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 )
 
 type corpus struct {
@@ -475,23 +475,5 @@ func averageInt64(total int64, count int) int64 {
 }
 
 func sameCanonicalURL(a, b string) bool {
-	return canonicalizeURL(a) == canonicalizeURL(b)
-}
-
-func canonicalizeURL(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-	u, err := url.Parse(raw)
-	if err != nil {
-		return strings.TrimRight(strings.ToLower(raw), "/")
-	}
-	host := strings.ToLower(strings.TrimSpace(u.Host))
-	host = strings.TrimPrefix(host, "www.")
-	path := strings.TrimRight(u.EscapedPath(), "/")
-	if path == "" {
-		path = "/"
-	}
-	return host + path
+	return discoverycore.SameCanonicalURL(a, b)
 }

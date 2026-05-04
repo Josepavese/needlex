@@ -8,7 +8,6 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
 	"github.com/josepavese/needlex/internal/config"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 )
 
 type corpus struct {
@@ -329,25 +329,7 @@ func runNeedle(binaryPath, workDir string, args ...string) ([]byte, error) {
 }
 
 func sameCanonicalURL(actual, expected string) bool {
-	return canonicalizeURL(actual) == canonicalizeURL(expected)
-}
-
-func canonicalizeURL(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-	u, err := url.Parse(raw)
-	if err != nil {
-		return strings.TrimRight(strings.ToLower(raw), "/")
-	}
-	host := strings.ToLower(strings.TrimSpace(u.Host))
-	host = strings.TrimPrefix(host, "www.")
-	path := strings.TrimRight(u.EscapedPath(), "/")
-	if path == "" {
-		path = "/"
-	}
-	return host + path
+	return discoverycore.SameCanonicalURL(actual, expected)
 }
 
 func classifyExecError(msg string) string {

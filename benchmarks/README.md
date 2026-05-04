@@ -44,6 +44,14 @@ go run ./benchmarks/discovery_memory/runner \
   --out improvements/discovery-memory-benchmark-latest.json
 ```
 
+Unique-source seeded benchmark:
+
+```bash
+go run ./benchmarks/seeded/runner \
+  --cases benchmarks/corpora/unique-sources-corpus-v1.json \
+  --out improvements/unique-sources-seeded-latest.json
+```
+
 Live-read evaluation:
 
 ```bash
@@ -57,6 +65,16 @@ Discovery evaluation:
 
 ```bash
 go test ./benchmarks/discovery_eval/runner -run TestExportDiscoveryEval -count=1 -v
+```
+
+Seedless DDG smoke with explicit profile/provider selection:
+
+```bash
+go run ./benchmarks/seedless_ddg/runner \
+  --runs 1 \
+  --profiles browser_like_semantic \
+  --provider-chains 'ddg_lite_html=https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/' \
+  --out improvements/seedless-ddg-benchmark-latest.json
 ```
 
 Hard-case matrix:

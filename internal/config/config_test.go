@@ -17,6 +17,9 @@ func TestDefaultsUseOperatorGradeRuntimeTimeout(t *testing.T) {
 	if cfg.Runtime.TimeoutMS != 8000 {
 		t.Fatalf("expected runtime timeout default 8000ms, got %d", cfg.Runtime.TimeoutMS)
 	}
+	if cfg.Runtime.MaxBytes != 4_000_000 {
+		t.Fatalf("expected runtime max bytes default 4000000, got %d", cfg.Runtime.MaxBytes)
+	}
 }
 
 func TestDefaultsUseBrowserLikeFetchProfile(t *testing.T) {

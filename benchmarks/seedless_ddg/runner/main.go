@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -103,6 +104,8 @@ type summary struct {
 	ImprovementRate             float64            `json:"improvement_rate"`
 	BrowserLikeBeatsStandard    int                `json:"browser_like_beats_standard"`
 	BestProfile                 string             `json:"best_profile"`
+	ProfilePassRates            map[string]float64 `json:"profile_pass_rates,omitempty"`
+	ProfileRuntimeRates         map[string]float64 `json:"profile_runtime_rates,omitempty"`
 	RetryRateByProfile          map[string]float64 `json:"retry_rate_by_profile,omitempty"`
 	AvgRetryCountByProfile      map[string]float64 `json:"avg_retry_count_by_profile,omitempty"`
 	AvgRetrySleepMSByProfile    map[string]float64 `json:"avg_retry_sleep_ms_by_profile,omitempty"`
@@ -111,6 +114,8 @@ type summary struct {
 	ErrorKinds                  map[string]int     `json:"error_kinds,omitempty"`
 	RunnerRuns                  int                `json:"runner_runs,omitempty"`
 	RunnerTimeoutMS             int64              `json:"runner_timeout_ms,omitempty"`
+	RunnerProfiles              []string           `json:"runner_profiles,omitempty"`
+	RunnerProviderChains        []string           `json:"runner_provider_chains,omitempty"`
 }
 
 type report struct {
@@ -122,22 +127,41 @@ type report struct {
 }
 
 type seedlessOptions struct {
-	outPath   string
-	casesPath string
-	runs      int
-	timeoutMS int64
+	outPath        string
+	casesPath      string
+	profiles       string
+	providerChains string
+	runs           int
+	timeoutMS      int64
 }
 
 type seedlessConfigs struct {
-	standard         string
-	standardSemantic string
-	browser          string
-	browserSemantic  string
+	profiles       []seedlessProfileConfig
+	providerChains []string
+}
+
+type seedlessProfileConfig struct {
+	name string
+	path string
+}
+
+type seedlessProfileDefinition struct {
+	name         string
+	fetchProfile string
+	retryProfile string
+	semantic     bool
+}
+
+type seedlessProviderChain struct {
+	name          string
+	providerChain string
 }
 
 type seedlessSummaryAgg struct {
 	stdPass, stdSemPass, browserPass, browserSemPass int
 	profileWins                                      map[string]int
+	profilePass                                      map[string]int
+	profileRuntimePass                               map[string]int
 	retryRuns                                        map[string]int
 	totalRuns                                        map[string]int
 	retryCountSum                                    map[string]int
@@ -168,7 +192,7 @@ func main() {
 	}
 	defer func() { _ = os.RemoveAll(tempDir) }()
 
-	cfgs, stopSemantic, err := prepareSeedlessConfigs(tempDir)
+	cfgs, stopSemantic, err := prepareSeedlessConfigs(tempDir, opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "prepare configs: %v\n", err)
 		os.Exit(1)
@@ -180,7 +204,7 @@ func main() {
 		GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339),
 		CorpusVersion:  c.Version,
 		BinaryPath:     binaryPath,
-		Summary:        summarize(results, opts.runs, opts.timeoutMS),
+		Summary:        summarize(results, opts.runs, opts.timeoutMS, cfgs),
 		Results:        results,
 	}
 	if err := evalutil.WriteJSON(opts.outPath, rep); err != nil {
@@ -194,6 +218,8 @@ func parseSeedlessOptions() seedlessOptions {
 	var opts seedlessOptions
 	flag.StringVar(&opts.outPath, "out", "improvements/seedless-ddg-benchmark-latest.json", "output report path")
 	flag.StringVar(&opts.casesPath, "cases", "benchmarks/corpora/seedless-ddg-corpus-v1.json", "seedless ddg corpus path")
+	flag.StringVar(&opts.profiles, "profiles", "standard,standard_semantic,browser_like,browser_like_semantic", "comma-separated profiles: standard, standard_semantic, browser_like, browser_like_semantic")
+	flag.StringVar(&opts.providerChains, "provider-chains", "ddg_lite_html=https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/", "semicolon-separated provider chains, optionally name=url1,url2")
 	flag.IntVar(&opts.runs, "runs", 3, "number of attempts per case/profile")
 	flag.Int64Var(&opts.timeoutMS, "timeout-ms", 25000, "per-run timeout in milliseconds")
 	flag.Parse()
@@ -206,31 +232,120 @@ func parseSeedlessOptions() seedlessOptions {
 	return opts
 }
 
-func prepareSeedlessConfigs(tempDir string) (seedlessConfigs, func(), error) {
-	providerChain := "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/"
-	standardCfg, err := writeSeedlessConfig(tempDir, "standard.json", providerChain, "standard", "standard", "")
+func parseSeedlessProfiles(raw string) ([]seedlessProfileDefinition, error) {
+	parts := strings.Split(raw, ",")
+	out := make([]seedlessProfileDefinition, 0, len(parts))
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+		profile, ok := seedlessProfileByName(name)
+		if !ok {
+			return nil, fmt.Errorf("unsupported seedless profile %q", name)
+		}
+		out = append(out, profile)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("at least one seedless profile is required")
+	}
+	return out, nil
+}
+
+func seedlessProfileByName(name string) (seedlessProfileDefinition, bool) {
+	switch strings.TrimSpace(name) {
+	case "standard":
+		return seedlessProfileDefinition{name: "standard", fetchProfile: "standard", retryProfile: "standard"}, true
+	case "standard_semantic":
+		return seedlessProfileDefinition{name: "standard_semantic", fetchProfile: "standard", retryProfile: "standard", semantic: true}, true
+	case "browser_like":
+		return seedlessProfileDefinition{name: "browser_like", fetchProfile: "browser_like", retryProfile: "hardened"}, true
+	case "browser_like_semantic":
+		return seedlessProfileDefinition{name: "browser_like_semantic", fetchProfile: "browser_like", retryProfile: "hardened", semantic: true}, true
+	default:
+		return seedlessProfileDefinition{}, false
+	}
+}
+
+func seedlessProfilesNeedSemantic(profiles []seedlessProfileDefinition) bool {
+	for _, profile := range profiles {
+		if profile.semantic {
+			return true
+		}
+	}
+	return false
+}
+
+func parseProviderChains(raw string) ([]seedlessProviderChain, error) {
+	entries := strings.Split(raw, ";")
+	out := make([]seedlessProviderChain, 0, len(entries))
+	for i, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		name := fmt.Sprintf("chain_%d", i+1)
+		providerChain := entry
+		if before, after, ok := strings.Cut(entry, "="); ok {
+			name = safeStateComponent(before)
+			providerChain = strings.TrimSpace(after)
+		}
+		if strings.TrimSpace(providerChain) == "" {
+			return nil, fmt.Errorf("provider chain %q is empty", entry)
+		}
+		out = append(out, seedlessProviderChain{name: name, providerChain: providerChain})
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("at least one provider chain is required")
+	}
+	return out, nil
+}
+
+func providerChainNames(chains []seedlessProviderChain) []string {
+	out := make([]string, 0, len(chains))
+	for _, chain := range chains {
+		out = append(out, chain.name)
+	}
+	return out
+}
+
+func prepareSeedlessConfigs(tempDir string, opts seedlessOptions) (seedlessConfigs, func(), error) {
+	selectedProfiles, err := parseSeedlessProfiles(opts.profiles)
 	if err != nil {
 		return seedlessConfigs{}, nil, err
 	}
-	browserCfg, err := writeSeedlessConfig(tempDir, "browser.json", providerChain, "browser_like", "hardened", "")
+	chains, err := parseProviderChains(opts.providerChains)
 	if err != nil {
 		return seedlessConfigs{}, nil, err
 	}
-	semanticBaseURL, stopSemantic, err := startSemanticServer(tempDir)
-	if err != nil {
-		return seedlessConfigs{}, nil, err
+	semanticBaseURL := ""
+	stopSemantic := func() {}
+	if seedlessProfilesNeedSemantic(selectedProfiles) {
+		semanticBaseURL, stopSemantic, err = startSemanticServer(tempDir)
+		if err != nil {
+			return seedlessConfigs{}, nil, err
+		}
 	}
-	standardSemanticCfg, err := writeSeedlessConfig(tempDir, "standard-semantic.json", providerChain, "standard", "standard", semanticBaseURL)
-	if err != nil {
-		stopSemantic()
-		return seedlessConfigs{}, nil, err
+	configs := make([]seedlessProfileConfig, 0, len(selectedProfiles)*len(chains))
+	for _, chain := range chains {
+		for _, profile := range selectedProfiles {
+			name := profile.name
+			if len(chains) > 1 {
+				name += "@" + chain.name
+			}
+			baseURL := ""
+			if profile.semantic {
+				baseURL = semanticBaseURL
+			}
+			path, err := writeSeedlessConfig(tempDir, safeStateComponent(name)+".json", chain.providerChain, profile.fetchProfile, profile.retryProfile, baseURL)
+			if err != nil {
+				stopSemantic()
+				return seedlessConfigs{}, nil, err
+			}
+			configs = append(configs, seedlessProfileConfig{name: name, path: path})
+		}
 	}
-	browserSemanticCfg, err := writeSeedlessConfig(tempDir, "browser-semantic.json", providerChain, "browser_like", "hardened", semanticBaseURL)
-	if err != nil {
-		stopSemantic()
-		return seedlessConfigs{}, nil, err
-	}
-	return seedlessConfigs{standard: standardCfg, standardSemantic: standardSemanticCfg, browser: browserCfg, browserSemantic: browserSemanticCfg}, stopSemantic, nil
+	return seedlessConfigs{profiles: configs, providerChains: providerChainNames(chains)}, stopSemantic, nil
 }
 
 func writeSeedlessConfig(tempDir, name, providerChain, fetchProfile, retryProfile, semanticBaseURL string) (string, error) {
@@ -260,22 +375,30 @@ func runSeedlessCases(binaryPath string, cases []struct {
 		fmt.Printf("[seedless-ddg] %s case %d/%d start id=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID)
 		row := runSeedlessCase(binaryPath, item.ID, item.Goal, item.ExpectedDomain, cfgs, opts)
 		results = append(results, row)
-		fmt.Printf("[seedless-ddg] %s case %d/%d done id=%s std=%t std_sem=%t browser=%t browser_sem=%t delta=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID, row.Runs[0].SelectedPass, row.Runs[1].SelectedPass, row.Runs[2].SelectedPass, row.Runs[3].SelectedPass, row.Delta)
+		fmt.Printf("[seedless-ddg] %s case %d/%d done id=%s best=%s profile_passes=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID, row.Delta, formatProfilePasses(row.Runs))
 	}
 	return results
 }
 
 func runSeedlessCase(binaryPath, id, goal, expectedDomain string, cfgs seedlessConfigs, opts seedlessOptions) caseResult {
-	standard := runCase(binaryPath, cfgs.standard, "standard", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
-	standardSemantic := runCase(binaryPath, cfgs.standardSemantic, "standard_semantic", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
-	browser := runCase(binaryPath, cfgs.browser, "browser_like", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
-	browserSemantic := runCase(binaryPath, cfgs.browserSemantic, "browser_like_semantic", id, goal, expectedDomain, opts.runs, opts.timeoutMS)
+	runs := make([]runResult, 0, len(cfgs.profiles))
+	for _, profile := range cfgs.profiles {
+		runs = append(runs, runCase(binaryPath, profile.path, profile.name, id, goal, expectedDomain, opts.runs, opts.timeoutMS))
+	}
 	return caseResult{
 		ID:    id,
 		Goal:  goal,
-		Runs:  []runResult{standard, standardSemantic, browser, browserSemantic},
-		Delta: compareAllRuns(standard, standardSemantic, browser, browserSemantic),
+		Runs:  runs,
+		Delta: compareAllRuns(runs...),
 	}
+}
+
+func formatProfilePasses(runs []runResult) string {
+	parts := make([]string, 0, len(runs))
+	for _, run := range runs {
+		parts = append(parts, fmt.Sprintf("%s=%t", run.Profile, run.SelectedPass))
+	}
+	return strings.Join(parts, ",")
 }
 
 func loadCorpus(path string) (corpus, error) {
@@ -548,8 +671,10 @@ func domainMatches(actual, expected string) bool {
 	return actual == expected || strings.HasSuffix(actual, "."+expected)
 }
 
-func compareAllRuns(standard, standardSemantic, browser, browserSemantic runResult) string {
-	profiles := []runResult{standard, standardSemantic, browser, browserSemantic}
+func compareAllRuns(profiles ...runResult) string {
+	if len(profiles) == 0 {
+		return ""
+	}
 	best := profiles[0]
 	for _, profile := range profiles[1:] {
 		if boolScore(profile) > boolScore(best) {
@@ -573,7 +698,7 @@ func boolScore(r runResult) int {
 	return score
 }
 
-func summarize(results []caseResult, runs int, timeoutMS int64) summary {
+func summarize(results []caseResult, runs int, timeoutMS int64, cfgs seedlessConfigs) summary {
 	agg := newSeedlessSummaryAgg()
 	for _, row := range results {
 		agg.recordRow(row)
@@ -592,6 +717,8 @@ func summarize(results []caseResult, runs int, timeoutMS int64) summary {
 		ImprovementRate:             float64(agg.browserSemPass-agg.stdPass) / float64(count),
 		BrowserLikeBeatsStandard:    agg.browserSemPass - agg.stdPass,
 		BestProfile:                 bestProfile(agg.profileWins),
+		ProfilePassRates:            profileRates(agg.profilePass, count),
+		ProfileRuntimeRates:         profileRates(agg.profileRuntimePass, count),
 		RetryRateByProfile:          retry.retryRateByProfile,
 		AvgRetryCountByProfile:      retry.avgRetryCountByProfile,
 		AvgRetrySleepMSByProfile:    retry.avgRetrySleepMSByProfile,
@@ -600,19 +727,23 @@ func summarize(results []caseResult, runs int, timeoutMS int64) summary {
 		ErrorKinds:                  agg.errorKinds,
 		RunnerRuns:                  runs,
 		RunnerTimeoutMS:             timeoutMS,
+		RunnerProfiles:              seedlessConfigNames(cfgs.profiles),
+		RunnerProviderChains:        cfgs.providerChains,
 	}
 }
 
 func newSeedlessSummaryAgg() seedlessSummaryAgg {
 	return seedlessSummaryAgg{
-		profileWins:   map[string]int{},
-		retryRuns:     map[string]int{},
-		totalRuns:     map[string]int{},
-		retryCountSum: map[string]int{},
-		retrySleepSum: map[string]int64{},
-		hostPacingSum: map[string]int64{},
-		retryReasons:  map[string]int{},
-		errorKinds:    map[string]int{},
+		profileWins:        map[string]int{},
+		profilePass:        map[string]int{},
+		profileRuntimePass: map[string]int{},
+		retryRuns:          map[string]int{},
+		totalRuns:          map[string]int{},
+		retryCountSum:      map[string]int{},
+		retrySleepSum:      map[string]int64{},
+		hostPacingSum:      map[string]int64{},
+		retryReasons:       map[string]int{},
+		errorKinds:         map[string]int{},
 	}
 }
 
@@ -643,18 +774,32 @@ func (a *seedlessSummaryAgg) recordRun(run runResult) {
 }
 
 func (a *seedlessSummaryAgg) recordProfilePass(run runResult) {
-	if !run.SelectedPass {
+	if run.RuntimeOK {
+		a.profileRuntimePass[run.Profile]++
+	}
+	if run.SelectedPass {
+		a.profilePass[run.Profile]++
+	}
+	if strings.Contains(run.Profile, "@") {
 		return
 	}
 	switch run.Profile {
 	case "standard":
-		a.stdPass++
+		if run.SelectedPass {
+			a.stdPass++
+		}
 	case "standard_semantic":
-		a.stdSemPass++
+		if run.SelectedPass {
+			a.stdSemPass++
+		}
 	case "browser_like":
-		a.browserPass++
+		if run.SelectedPass {
+			a.browserPass++
+		}
 	case "browser_like_semantic":
-		a.browserSemPass++
+		if run.SelectedPass {
+			a.browserSemPass++
+		}
 	}
 }
 
@@ -694,7 +839,7 @@ func (a seedlessSummaryAgg) retrySummaries() retrySummaryMaps {
 		avgRetrySleepMSByProfile: map[string]float64{},
 		avgHostPacingMSByProfile: map[string]float64{},
 	}
-	for _, name := range []string{"standard", "standard_semantic", "browser_like", "browser_like_semantic"} {
+	for _, name := range sortedSeedlessMapKeys(a.totalRuns) {
 		if a.totalRuns[name] == 0 {
 			continue
 		}
@@ -709,13 +854,41 @@ func (a seedlessSummaryAgg) retrySummaries() retrySummaryMaps {
 func bestProfile(profileWins map[string]int) string {
 	best := ""
 	bestCount := -1
-	for _, name := range []string{"standard", "standard_semantic", "browser_like", "browser_like_semantic"} {
+	for _, name := range sortedSeedlessMapKeys(profileWins) {
 		if profileWins[name] > bestCount {
 			bestCount = profileWins[name]
 			best = name
 		}
 	}
 	return best
+}
+
+func profileRates(counts map[string]int, denominator int) map[string]float64 {
+	if denominator <= 0 {
+		return nil
+	}
+	out := map[string]float64{}
+	for _, name := range sortedSeedlessMapKeys(counts) {
+		out[name] = float64(counts[name]) / float64(denominator)
+	}
+	return out
+}
+
+func seedlessConfigNames(configs []seedlessProfileConfig) []string {
+	out := make([]string, 0, len(configs))
+	for _, cfg := range configs {
+		out = append(out, cfg.name)
+	}
+	return out
+}
+
+func sortedSeedlessMapKeys[V any](items map[string]V) []string {
+	keys := make([]string, 0, len(items))
+	for key := range items {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func startSemanticServer(tempDir string) (string, func(), error) {

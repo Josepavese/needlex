@@ -36,6 +36,15 @@ func TestHostCompactnessBoostPrefersCanonicalHostOverSubdomain(t *testing.T) {
 	}
 }
 
+func TestCanonicalURLKeyTreatsIndexHomeAsRoot(t *testing.T) {
+	if !SameCanonicalURL("https://www.sqlite.org/", "https://sqlite.org/index.html") {
+		t.Fatalf("expected root and index page to share canonical URL key")
+	}
+	if SameCanonicalURL("https://sqlite.org/", "https://sqlite.org/download.html") {
+		t.Fatalf("expected internal page to remain distinct from root")
+	}
+}
+
 func TestResourceClassClassification(t *testing.T) {
 	if got := ResourceClass("https://example.com/logo.png"); got != ResourceClassMediaAsset {
 		t.Fatalf("expected media asset, got %q", got)

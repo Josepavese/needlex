@@ -49,16 +49,47 @@ Interpretation:
 
 ## Discovery Memory Benchmark
 
-Active warm-state result:
-1. `case_count = 30`
-2. `warm_selected_pass_rate = 1`
-3. `warm_memory_provider_rate = 1`
-4. `improvement_rate = 1`
+Latest 100-case warm-state result:
+1. `case_count = 100`
+2. `warm_runtime_success_rate = 1`
+3. `warm_selected_pass_rate = 0.94`
+4. `warm_local_provider_rate = 1`
+5. `warm_memory_provider_rate = 0.02`
+6. `improvement_rate = 0.94`
+7. `avg_warm_latency_ms = 455`
 
 Read it correctly:
-1. local warm-state retrieval is strong
-2. repeated use materially improves retrieval
-3. this does not prove cold-state open-web seedless performance
+1. local warm-state retrieval is strong on a broad seeded corpus
+2. repeated use materially improves retrieval even when public bootstrap is noisy
+3. remaining misses are mostly canonical-home/list-page intent problems
+4. this does not prove cold-state open-web seedless performance
+
+## 100-Case Seeded Benchmarks
+
+Latest seeded corpus result:
+1. `case_count = 100`
+2. `runtime_success_rate = 1`
+3. `pass_rate = 0.99`
+4. `selected_url_pass_rate = 0.99`
+5. `proof_usability_rate = 1`
+6. `avg_latency_ms = 528`
+7. `avg_packet_bytes = 5360`
+
+Latest unique-source seeded result:
+1. `case_count = 100`
+2. `unique_expected_domains = 100`
+3. `runtime_success_rate = 1`
+4. `pass_rate = 1`
+5. `selected_url_pass_rate = 1`
+6. `proof_usability_rate = 1`
+7. `avg_latency_ms = 588`
+8. `avg_packet_bytes = 4343`
+
+Read it correctly:
+1. the curated seeded corpus is stable at `99/100`
+2. the broader 100-domain corpus is currently `100/100`
+3. the improvement came from generic acquisition fixes and canonical corpus cleanup, not single-domain ranking rules
+4. this is the right direction for product-quality measurement because every case targets a different expected domain
 
 ## Semantic-First Validation
 
@@ -69,20 +100,20 @@ Deterministic suites:
 2. `hard_case_matrix`: `6/6` pass
 3. `hard_case_matrix.avg_lossiness = 0.098`
 
-Isolated live seedless DDG smoke:
+Isolated live seedless DDG provider/profile smoke:
 1. `case_count = 8`
 2. `runner_runs = 1`
-3. `standard_pass_rate = 0.125`
-4. `standard_semantic_pass_rate = 0.25`
-5. `browser_like_pass_rate = 0.375`
-6. `browser_like_semantic_pass_rate = 0.375`
-7. `error_kinds = {"ranking_miss": 23}`
+3. `runner_profiles = ["browser_like_semantic@ddg-lite-html", "browser_like_semantic@ddg-html-lite"]`
+4. `profile_pass_rates = {"browser_like_semantic@ddg-lite-html": 0.375, "browser_like_semantic@ddg-html-lite": 0.375}`
+5. `profile_runtime_rates = {"browser_like_semantic@ddg-lite-html": 1, "browser_like_semantic@ddg-html-lite": 1}`
+6. `error_kinds = {"ranking_miss": 10}`
 
 Interpretation:
 1. semantic-first changes did not regress deterministic discovery quality
-2. semantic profiles improved at least one live seedless case in this smoke
-3. open-web seedless failures are mostly candidate/source quality failures, not runtime/provider blocks in this run
-4. the seedless DDG benchmark now isolates `NEEDLEX_HOME` per case/profile/attempt to avoid contamination from a developer's local Discovery Memory
+2. seedless runtime reliability is stable in this smoke
+3. open-web seedless failures are still mostly ranking/candidate-source failures
+4. the seedless runner now supports explicit profile selection and multiple named provider chains
+5. do not extrapolate this 8-case smoke to a 100-domain seedless claim before adding broader provider diversity beyond DDG
 
 ## Quality Interpretation Rule
 

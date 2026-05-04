@@ -11,7 +11,32 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/intel"
 )
+
+type targetKindTestAligner struct {
+	target string
+}
+
+func (a targetKindTestAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (a targetKindTestAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.10
+		if strings.HasPrefix(candidate.ID, "http://") || strings.HasPrefix(candidate.ID, "https://") {
+			out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+			continue
+		}
+		if candidate.ID == a.target {
+			score = 0.92
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
 
 func TestExtractLinkCandidatesPreservesLabels(t *testing.T) {
 	links := extractLinkCandidates(
@@ -115,6 +140,44 @@ func TestDiscoverSameSiteSpecificityPriorRoutesWithoutSemanticBackend(t *testing
 	}
 	if !containsReason(resp.Candidates[0].Reason, "same_site_specific_route") {
 		t.Fatalf("expected same-site specificity reason, got %#v", resp.Candidates[0].Reason)
+	}
+}
+
+func TestDiscoverTargetKindKeepsBroadIdentityOnHome(t *testing.T) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Atlas Project</title></head><body><article><h1>Atlas Project</h1><a href="%s/products/cloud">Cloud</a><a href="%s/resources/case-studies">Case studies</a></article></body></html>`, serverURL, serverURL)
+		case "/products/cloud":
+			_, _ = fmt.Fprint(w, `<html><head><title>Atlas Cloud</title></head><body><article><h1>Cloud</h1></article></body></html>`)
+		case "/resources/case-studies":
+			_, _ = fmt.Fprint(w, `<html><head><title>Atlas Case Studies</title></head><body><article><h1>Case studies</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	cfg := config.Defaults()
+	svc := newTestService(t, cfg, server.Client())
+	svc.semantic = targetKindTestAligner{target: targetKindCanonicalHome}
+	resp, err := svc.Discover(context.Background(), DiscoverRequest{
+		Goal:                   "capire l'identità complessiva del progetto",
+		SeedURL:                server.URL,
+		SameDomain:             true,
+		PreferSpecificSameSite: true,
+	})
+	if err != nil {
+		t.Fatalf("discover failed: %v", err)
+	}
+	if resp.SelectedURL != server.URL {
+		t.Fatalf("expected broad identity goal to keep root page, got %q with candidates %#v", resp.SelectedURL, resp.Candidates)
+	}
+	if !containsReason(resp.Candidates[0].Reason, "target_kind_topology_alignment") {
+		t.Fatalf("expected target-kind topology reason, got %#v", resp.Candidates[0].Reason)
 	}
 }
 

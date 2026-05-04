@@ -41,6 +41,35 @@ func TestAcquireFollowsRedirectAndCapturesHTML(t *testing.T) {
 	}
 }
 
+func TestAcquireFollowsZeroDelayMetaRefresh(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><meta http-equiv="refresh" content="0; url=/final"></head></html>`)
+	})
+	mux.HandleFunc("/final", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, "<html><body><article><p>Semantic destination content.</p></article></body></html>")
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:      server.URL + "/start",
+		Timeout:  2 * time.Second,
+		MaxBytes: 4096,
+	})
+	if err != nil {
+		t.Fatalf("acquire failed: %v", err)
+	}
+	if page.FinalURL != server.URL+"/final" {
+		t.Fatalf("expected meta-refresh final url, got %q", page.FinalURL)
+	}
+	if !strings.Contains(page.HTML, "Semantic destination content") {
+		t.Fatalf("expected destination body, got %q", page.HTML)
+	}
+}
+
 func TestAcquireRejectsOversizedBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -55,6 +84,30 @@ func TestAcquireRejectsOversizedBody(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected oversized body to fail")
+	}
+}
+
+func TestAcquireCanKeepPartialOversizedBodyWhenAllowed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = fmt.Fprint(w, strings.Repeat("a", 64))
+	}))
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:          server.URL,
+		Timeout:      2 * time.Second,
+		MaxBytes:     8,
+		AllowPartial: true,
+	})
+	if err != nil {
+		t.Fatalf("expected partial oversized body to succeed, got %v", err)
+	}
+	if !page.Partial {
+		t.Fatal("expected page to be marked partial")
+	}
+	if len(page.HTML) != 8 {
+		t.Fatalf("expected truncated body length 8, got %d", len(page.HTML))
 	}
 }
 
@@ -181,6 +234,9 @@ func TestAcquireRetriesWithRetryProfileOnBlockedStatus(t *testing.T) {
 func TestShouldFallbackToHTTP(t *testing.T) {
 	if !shouldFallbackToHTTP(errors.New(`fetch page: Get "https://sqlite.org/about.html": http2: unexpected ALPN protocol ""; want "h2"`)) {
 		t.Fatal("expected ALPN mismatch to trigger HTTP fallback")
+	}
+	if !shouldFallbackToHTTP(statusError(http.StatusForbidden)) {
+		t.Fatal("expected blocked status to trigger HTTP adapter fallback")
 	}
 	if shouldFallbackToHTTP(errors.New("fetch page: context deadline exceeded")) {
 		t.Fatal("did not expect timeout to trigger HTTP fallback")

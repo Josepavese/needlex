@@ -13,6 +13,7 @@ import (
 	"time"
 
 	req "github.com/imroc/req/v3"
+	"golang.org/x/net/html"
 )
 
 const (
@@ -36,9 +37,10 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 		return RawPage{}, err
 	}
 
-	page, err := a.acquireAttempt(ctx, input, input.Timeout, normalizeFetchProfile(input.Profile))
+	profile := normalizeFetchProfile(input.Profile)
+	page, err := a.acquireAttempt(ctx, input, input.Timeout, profile)
 	if err == nil {
-		return page, nil
+		return a.followClientSideRedirects(ctx, input, page, profile)
 	}
 	if retryProfile := normalizeRetryProfile(input.RetryProfile); shouldRetryOnBlocked(err, retryProfile) {
 		retrySleep, waitErr := sleepWithJitter(ctx, input.BlockedRetryBackoff, input.BlockedRetryJitter)
@@ -50,7 +52,7 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 			page.RetryCount = 1
 			page.RetryReason = "blocked_status"
 			page.RetrySleepMS = retrySleep.Milliseconds()
-			return page, nil
+			return a.followClientSideRedirects(ctx, input, page, retryProfile)
 		}
 		err = retryErr
 	}
@@ -63,12 +65,12 @@ func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, err
 	if waitErr != nil {
 		return RawPage{}, waitErr
 	}
-	page, retryErr := a.acquireAttempt(ctx, input, retryTimeout, normalizeFetchProfile(input.Profile))
+	page, retryErr := a.acquireAttempt(ctx, input, retryTimeout, profile)
 	if retryErr == nil {
 		page.RetryCount = 1
 		page.RetryReason = "timeout"
 		page.RetrySleepMS = retrySleep.Milliseconds()
-		return page, nil
+		return a.followClientSideRedirects(ctx, input, page, profile)
 	}
 	return RawPage{}, retryErr
 }
@@ -112,6 +114,29 @@ func (a Acquirer) acquireAttempt(ctx context.Context, input AcquireInput, timeou
 	}
 }
 
+func (a Acquirer) followClientSideRedirects(ctx context.Context, input AcquireInput, page RawPage, profile string) (RawPage, error) {
+	current := page
+	for range 3 {
+		target := metaRefreshTarget(current)
+		if strings.TrimSpace(target) == "" {
+			return current, nil
+		}
+		nextInput := input
+		nextInput.URL = target
+		nextInput.Profile = profile
+		next, err := a.acquireAttempt(ctx, nextInput, nextInput.Timeout, profile)
+		if err != nil {
+			return RawPage{}, err
+		}
+		next.RetryCount += current.RetryCount
+		next.RetryReason = firstNonEmptyAcquireString(next.RetryReason, current.RetryReason)
+		next.RetrySleepMS += current.RetrySleepMS
+		next.HostPacingMS += current.HostPacingMS
+		current = next
+	}
+	return current, nil
+}
+
 func supportsBrowserImpersonation(rawURL string) bool {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
@@ -150,7 +175,7 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		return RawPage{}, fmt.Errorf("unsupported content type %q", contentType)
 	}
 
-	htmlBody, err := readBounded(resp.Body, input.MaxBytes)
+	htmlBody, partial, err := readBounded(resp.Body, input.MaxBytes, input.AllowPartial)
 	if err != nil {
 		return RawPage{}, err
 	}
@@ -161,6 +186,7 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		StatusCode:   resp.StatusCode,
 		ContentType:  contentType,
 		HTML:         htmlBody,
+		Partial:      partial,
 		FetchMode:    "http",
 		FetchProfile: profile,
 		FetchedAt:    time.Now().UTC(),
@@ -201,7 +227,7 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		return RawPage{}, fmt.Errorf("empty response body")
 	}
 	defer resp.Body.Close() //nolint:errcheck
-	body, err := readBoundedBytes(resp.Body, input.MaxBytes)
+	body, partial, err := readBoundedBytes(resp.Body, input.MaxBytes, input.AllowPartial)
 	if err != nil {
 		return RawPage{}, fmt.Errorf("read body: %w", err)
 	}
@@ -220,6 +246,7 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		StatusCode:   resp.GetStatusCode(),
 		ContentType:  contentType,
 		HTML:         string(body),
+		Partial:      partial,
 		FetchMode:    "req",
 		FetchProfile: profile,
 		FetchedAt:    time.Now().UTC(),
@@ -319,6 +346,15 @@ func shouldFallbackToHTTP(err error) bool {
 	if err == nil {
 		return false
 	}
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		switch statusErr.StatusCode {
+		case http.StatusForbidden, http.StatusTooManyRequests, http.StatusServiceUnavailable:
+			return true
+		default:
+			return false
+		}
+	}
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "unexpected alpn protocol") ||
 		strings.Contains(message, `want "h2"`) ||
@@ -397,24 +433,130 @@ func isAllowedContentType(contentType string) bool {
 		strings.Contains(contentType, "image/svg+xml")
 }
 
-func readBounded(body io.Reader, maxBytes int64) (string, error) {
-	data, err := readBoundedBytes(body, maxBytes)
+func readBounded(body io.Reader, maxBytes int64, allowPartial bool) (string, bool, error) {
+	data, partial, err := readBoundedBytes(body, maxBytes, allowPartial)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
-	return string(data), nil
+	return string(data), partial, nil
 }
 
-func readBoundedBytes(body io.Reader, maxBytes int64) ([]byte, error) {
+func readBoundedBytes(body io.Reader, maxBytes int64, allowPartial bool) ([]byte, bool, error) {
 	limited := io.LimitReader(body, maxBytes+1)
 	data, err := io.ReadAll(limited)
 	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+		return nil, false, fmt.Errorf("read body: %w", err)
 	}
 	if int64(len(data)) > maxBytes {
-		return nil, fmt.Errorf("response exceeds max bytes budget")
+		if allowPartial {
+			return data[:int(maxBytes)], true, nil
+		}
+		return nil, false, fmt.Errorf("response exceeds max bytes budget")
 	}
-	return data, nil
+	return data, false, nil
+}
+
+func metaRefreshTarget(page RawPage) string {
+	if !isHTMLLikeContentType(page.ContentType) || strings.TrimSpace(page.HTML) == "" {
+		return ""
+	}
+	root, err := html.Parse(strings.NewReader(page.HTML))
+	if err != nil {
+		return ""
+	}
+	target := findMetaRefreshTarget(root)
+	if target == "" {
+		return ""
+	}
+	base := strings.TrimSpace(page.FinalURL)
+	if base == "" {
+		base = strings.TrimSpace(page.URL)
+	}
+	resolved, err := resolveAcquireURL(base, target)
+	if err != nil {
+		return ""
+	}
+	if sameAcquireURL(base, resolved) {
+		return ""
+	}
+	return resolved
+}
+
+func findMetaRefreshTarget(node *html.Node) string {
+	if node == nil {
+		return ""
+	}
+	if node.Type == html.ElementNode && strings.EqualFold(node.Data, "meta") {
+		var refresh bool
+		var content string
+		for _, attr := range node.Attr {
+			switch strings.ToLower(strings.TrimSpace(attr.Key)) {
+			case "http-equiv":
+				refresh = strings.EqualFold(strings.TrimSpace(attr.Val), "refresh")
+			case "content":
+				content = strings.TrimSpace(attr.Val)
+			}
+		}
+		if refresh {
+			return parseMetaRefreshContent(content)
+		}
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if target := findMetaRefreshTarget(child); target != "" {
+			return target
+		}
+	}
+	return ""
+}
+
+func parseMetaRefreshContent(content string) string {
+	parts := strings.Split(content, ";")
+	if len(parts) < 2 {
+		return ""
+	}
+	delay := strings.TrimSpace(parts[0])
+	if delay != "0" && delay != "0.0" {
+		return ""
+	}
+	for _, part := range parts[1:] {
+		key, value, ok := strings.Cut(strings.TrimSpace(part), "=")
+		if ok && strings.EqualFold(strings.TrimSpace(key), "url") {
+			return strings.Trim(strings.TrimSpace(value), `"'`)
+		}
+	}
+	return ""
+}
+
+func resolveAcquireURL(base, ref string) (string, error) {
+	baseURL, err := url.Parse(strings.TrimSpace(base))
+	if err != nil {
+		return "", err
+	}
+	refURL, err := url.Parse(strings.TrimSpace(ref))
+	if err != nil {
+		return "", err
+	}
+	return baseURL.ResolveReference(refURL).String(), nil
+}
+
+func sameAcquireURL(left, right string) bool {
+	leftURL, leftErr := url.Parse(strings.TrimSpace(left))
+	rightURL, rightErr := url.Parse(strings.TrimSpace(right))
+	if leftErr != nil || rightErr != nil {
+		return strings.TrimRight(strings.TrimSpace(left), "/") == strings.TrimRight(strings.TrimSpace(right), "/")
+	}
+	leftURL.Fragment = ""
+	rightURL.Fragment = ""
+	return strings.TrimRight(leftURL.String(), "/") == strings.TrimRight(rightURL.String(), "/")
+}
+
+func firstNonEmptyAcquireString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 type httpStatusError struct {

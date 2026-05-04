@@ -30,5 +30,6 @@ func (s *Service) fetchAcquireInputWithProfiles(rawURL, userAgent, fetchProfile,
 		PerHostJitter:       time.Duration(s.cfg.Fetch.PerHostJitterMS) * time.Millisecond,
 		TimeoutRetryBackoff: time.Duration(s.cfg.Fetch.TimeoutRetryBackoffMS) * time.Millisecond,
 		TimeoutRetryJitter:  time.Duration(s.cfg.Fetch.TimeoutRetryJitterMS) * time.Millisecond,
+		AllowPartial:        true,
 	}
 }

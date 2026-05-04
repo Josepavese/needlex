@@ -15,6 +15,7 @@ type AcquireInput struct {
 	PerHostJitter       time.Duration
 	TimeoutRetryBackoff time.Duration
 	TimeoutRetryJitter  time.Duration
+	AllowPartial        bool
 }
 
 type RawPage struct {
@@ -23,6 +24,7 @@ type RawPage struct {
 	StatusCode   int
 	ContentType  string
 	HTML         string
+	Partial      bool
 	FetchMode    string
 	FetchProfile string
 	RetryCount   int
