@@ -236,7 +236,7 @@ func mcpCrawlTool() mcpTool {
 func mcpQueryTool() mcpTool {
 	return mcpTool{
 		Name:        "web_query",
-		Description: "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
+		Description: "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Internally, Needle-X records semantic family evidence and provider observations for future seedless reuse. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"goal":       map[string]any{"type": "string", "description": "Retrieval objective or question to answer."},
 			"seed_url":   map[string]any{"type": "string", "description": "Optional starting URL. If present, same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist."},
@@ -259,7 +259,7 @@ func mcpQueryTool() mcpTool {
 func mcpReadTool() mcpTool {
 	return mcpTool{
 		Name:        "web_read",
-		Description: "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory and Analytics PAL for future seedless reuse.",
+		Description: "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory, semantic family graph evidence, and Analytics PAL for future seedless reuse.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"url":              map[string]any{"type": "string"},
 			"profile":          map[string]any{"type": "string"},

@@ -24,10 +24,5 @@ Reason:
 3. seedless local reuse is already part of the product
 4. the document still matters because the full memory substrate is not complete
 
-### Moved to archive
-1. `seedless-discovery-strategy.md` -> [`../archive/seedless-discovery-strategy.md`](../archive/seedless-discovery-strategy.md)
-
-Reason:
-1. its framing of seedless as merely `best-effort` is no longer aligned with the product direction
-2. parts of its provider/taxonomy doctrine are already absorbed
-3. it is still useful as historical strategy context, not as current experimental doctrine
+### Removed From Active Tree
+Documents whose framing is no longer aligned with current doctrine are removed instead of kept as operator-facing archaeology.

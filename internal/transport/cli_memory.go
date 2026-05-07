@@ -42,12 +42,17 @@ type memoryRebuildResult struct {
 }
 
 type compactMemoryStats struct {
-	DocumentCount  int       `json:"document_count"`
-	EdgeCount      int       `json:"edge_count"`
-	EmbeddingCount int       `json:"embedding_count"`
-	LastObservedAt time.Time `json:"last_observed_at,omitempty"`
-	LastRebuildAt  time.Time `json:"last_rebuild_at,omitempty"`
-	DBPath         string    `json:"db_path"`
+	DocumentCount       int       `json:"document_count"`
+	EdgeCount           int       `json:"edge_count"`
+	EmbeddingCount      int       `json:"embedding_count"`
+	TopicNodeCount      int       `json:"topic_node_count,omitempty"`
+	SemanticFamilyCount int       `json:"semantic_family_count,omitempty"`
+	SemanticMemberCount int       `json:"semantic_member_count,omitempty"`
+	VectorEngine        string    `json:"vector_engine,omitempty"`
+	VectorDimensions    []int     `json:"vector_dimensions,omitempty"`
+	LastObservedAt      time.Time `json:"last_observed_at,omitempty"`
+	LastRebuildAt       time.Time `json:"last_rebuild_at,omitempty"`
+	DBPath              string    `json:"db_path"`
 }
 
 type compactMemoryCandidate struct {
@@ -124,6 +129,12 @@ func (r Runner) runMemoryStats(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Documents: %d\n", stats.DocumentCount)
 	fmt.Fprintf(stdout, "Edges: %d\n", stats.EdgeCount)
 	fmt.Fprintf(stdout, "Embeddings: %d\n", stats.EmbeddingCount)
+	fmt.Fprintf(stdout, "Topic Nodes: %d\n", stats.TopicNodeCount)
+	fmt.Fprintf(stdout, "Semantic Families: %d\n", stats.SemanticFamilyCount)
+	fmt.Fprintf(stdout, "Semantic Family Members: %d\n", stats.SemanticMemberCount)
+	if stats.VectorEngine != "" {
+		fmt.Fprintf(stdout, "Vector Engine: %s\n", stats.VectorEngine)
+	}
 	fmt.Fprintf(stdout, "DB Path: %s\n", stats.DBPath)
 	if !stats.LastObservedAt.IsZero() {
 		fmt.Fprintf(stdout, "Last Observed At: %s\n", stats.LastObservedAt.Format(time.RFC3339))
@@ -392,12 +403,17 @@ func (r Runner) rebuildMemoryIndex(cfg config.Config) (memory.Stats, error) {
 
 func compactStats(stats memory.Stats) compactMemoryStats {
 	return compactMemoryStats{
-		DocumentCount:  stats.DocumentCount,
-		EdgeCount:      stats.EdgeCount,
-		EmbeddingCount: stats.EmbeddingCount,
-		LastObservedAt: stats.LastObservedAt,
-		LastRebuildAt:  stats.LastRebuildAt,
-		DBPath:         stats.DBPath,
+		DocumentCount:       stats.DocumentCount,
+		EdgeCount:           stats.EdgeCount,
+		EmbeddingCount:      stats.EmbeddingCount,
+		TopicNodeCount:      stats.TopicNodeCount,
+		SemanticFamilyCount: stats.SemanticFamilyCount,
+		SemanticMemberCount: stats.SemanticMemberCount,
+		VectorEngine:        stats.VectorEngine,
+		VectorDimensions:    append([]int{}, stats.VectorDimensions...),
+		LastObservedAt:      stats.LastObservedAt,
+		LastRebuildAt:       stats.LastRebuildAt,
+		DBPath:              stats.DBPath,
 	}
 }
 

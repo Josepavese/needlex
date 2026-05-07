@@ -25,12 +25,10 @@ needlex/
     semantic-alignment-gate.md
     vademecum.md
     vercel-browser-agent-bridge.md
-    archive/
     experimental/
     wiki/
   improvements/
     README.md
-    archive/
     competitive-benchmark-latest.json
     discovery-eval-latest.json
     discovery-memory-benchmark-latest.json
@@ -63,7 +61,6 @@ needlex/
     transport/
   schemas/
   scripts/
-    archive/
     external_baselines/
     lib/
     check_budget.sh
@@ -74,7 +71,6 @@ needlex/
     run_live_read_eval.sh
     run_live_semantic_eval.sh
     run_qwen35_cpu_matrix.sh
-    run_semantic_embed_upstream.py
     run_semantic_gate_smoke.sh
   testdata/
     golden/
@@ -93,9 +89,6 @@ Thin operator wrappers and helper scripts only.
 
 `improvements/`
 Active benchmark outputs only.
-
-`docs/archive/`
-Historical material only.
 
 `docs/experimental/`
 Strategic but non-active specs only.

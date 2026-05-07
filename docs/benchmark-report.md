@@ -155,3 +155,47 @@ Important:
 3. [seeded-benchmark-latest.json](../improvements/seeded-benchmark-latest.json)
 4. [competitive-benchmark-latest.json](../improvements/competitive-benchmark-latest.json)
 5. [discovery-memory-benchmark-latest.json](../improvements/discovery-memory-benchmark-latest.json)
+
+## Experimental Semantic Jump Work
+
+Latest development slice: `2026-05-04`.
+
+Implemented and wired into the bounded final candidate stack:
+
+1. local late-interaction reranker PAL
+2. semantic-only calibration registry
+3. semantic quorum provider-fusion primitives
+4. candidate intelligence cluster/role metadata
+
+The implementation is embeddings-first and operates only on the already-small candidate set. It does not add API-key providers, lexical query expansion, or site-specific recipes.
+
+Implemented and active where safe:
+
+1. Discovery Memory semantic family graph persistence
+2. exact vector index PAL for local memory search
+3. provider observation metadata preservation
+4. semantic family graph export/import
+5. vector PAL diagnostics in `memory stats` and `doctor`
+
+Measured gate results:
+
+1. previous accepted 100-case cold seedless lane: `0.56` pass, `0.98` runtime
+2. active late-interaction/calibration full 100-case run: `0.55` pass, `0.96` runtime
+3. shadow late-interaction/calibration full 100-case run: `0.48` pass, `0.93` runtime
+4. first-30 smoke with shadow features showed local upside; the older full run rejected broad promotion, so the current implementation constrains the stack to the bounded final candidate set
+
+Decision:
+
+1. the extra semantic calls are now active only after initial bootstrap/probing, not as broad first-stage retrieval
+2. the next release gate must rerun the 100-case cold seedless lane and compare latency/failure taxonomy
+3. if p95 runtime degrades, the bounded stack must be tuned or narrowed, not replaced by lexical shortcuts
+4. public behavior remains governed by benchmark evidence, not by architectural preference
+
+Observability read:
+
+1. the accepted `0.56` run was not shadow-instrumented; it was the normal `browser_like_semantic` lane with benchmark-level observation only
+2. benchmark-level observation recorded selected URL, provider chain, candidate count, selected role, fetch metadata, latency, runtime status, and failure taxonomy
+3. shadow semantic reranking still added runtime work even when it did not intentionally change ranking
+4. the rejected shadow run showed lower runtime rate and higher p95 pressure, including benchmark timeouts
+5. future seedless benchmark reports now include profile-level average latency, p95 latency, timeout rate, average candidate count, and failure mix by profile
+6. shadow promotion is therefore accepted only if both quality and timing stay above baseline

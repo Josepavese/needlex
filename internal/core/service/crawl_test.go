@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 )
 
@@ -28,7 +27,7 @@ func TestCrawlVisitsLinkedPagesSameDomain(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}

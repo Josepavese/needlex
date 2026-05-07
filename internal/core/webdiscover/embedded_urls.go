@@ -23,7 +23,6 @@ func RefineCandidate(_ string, candidate discoverycore.Candidate, finalURL, page
 		reasons = append(reasons, "web_ir_probe")
 	}
 	if webIR.Signals.EmbeddedNodeCount > 0 {
-		score += 0.12
 		reasons = append(reasons, "web_ir_embedded")
 	}
 	if strings.TrimSpace(finalURL) != "" && finalURL != candidate.URL {
@@ -35,6 +34,9 @@ func RefineCandidate(_ string, candidate discoverycore.Candidate, finalURL, page
 	}
 	if strings.TrimSpace(pageTitle) != "" {
 		metadata["page_title"] = strings.TrimSpace(pageTitle)
+	}
+	if context := IRContext(webIR, 1200); context != "" {
+		metadata["web_ir_context"] = context
 	}
 	if host, ok := discoverycore.Hostname(finalURL); ok {
 		metadata["final_host"] = host
@@ -122,18 +124,14 @@ func embeddedURLDiscoverCandidates(scored []discoverycore.Candidate, candidate d
 		if sourceClass == discoverycore.ResourceClassHTMLLike && resourceClass == discoverycore.ResourceClassMediaAsset {
 			continue
 		}
-		boost := 1.10
-		if discoverycore.URLPathDepth(item.URL) >= 3 {
-			boost += 0.12
-		}
+		boost, boostReasons := embeddedURLContextBoost(candidate.URL, item.URL, sourceClass, resourceClass)
 		out = append(out, discoverycore.Candidate{
 			URL:   item.URL,
 			Label: discoverycore.FirstNonEmpty(item.Label, dom.Title, candidate.Label),
 			Score: item.Score + boost,
 			Reason: discoverycore.AppendUniqueReason(
 				append([]string{}, item.Reason...),
-				"embedded_url_provenance",
-				"embedded_url_same_family",
+				append([]string{"embedded_url_provenance", "embedded_url_same_family"}, boostReasons...)...,
 			),
 			Metadata: discoverycore.MergeMetadata(candidate.Metadata, map[string]string{
 				"embedded_url_source": candidate.URL,
@@ -146,6 +144,32 @@ func embeddedURLDiscoverCandidates(scored []discoverycore.Candidate, candidate d
 		}
 	}
 	return out
+}
+
+func embeddedURLContextBoost(sourceURL, embeddedURL, sourceClass, resourceClass string) (float64, []string) {
+	boost := 0.34
+	reasons := []string{"embedded_url_contextual_evidence"}
+	depthDelta := discoverycore.URLPathDepth(embeddedURL) - discoverycore.URLPathDepth(sourceURL)
+	if depthDelta >= 2 {
+		boost += 1.10
+		reasons = append(reasons, "embedded_url_deep_resource")
+	}
+	if sourceClass != discoverycore.ResourceClassHTMLLike {
+		boost += 0.34
+		reasons = append(reasons, "embedded_url_non_html_source")
+	}
+	switch resourceClass {
+	case discoverycore.ResourceClassHTMLLike:
+		boost += 0.04
+	case discoverycore.ResourceClassStructured, discoverycore.ResourceClassTextAsset, discoverycore.ResourceClassDocumentFile:
+		boost += 0.02
+	case discoverycore.ResourceClassMediaAsset, discoverycore.ResourceClassArchiveFile:
+		boost -= 0.12
+	case discoverycore.ResourceClassUnknown:
+		boost -= 0.10
+		reasons = append(reasons, "embedded_url_untyped_resource")
+	}
+	return boost, reasons
 }
 
 func trimEmbeddedURL(raw string) string {
@@ -168,4 +192,33 @@ func IRMetadata(webIR core.WebIR) map[string]string {
 		"web_ir_heading_ratio":       strconv.FormatFloat(webIR.Signals.HeadingRatio, 'f', 3, 64),
 		"web_ir_short_text_ratio":    strconv.FormatFloat(webIR.Signals.ShortTextRatio, 'f', 3, 64),
 	}
+}
+
+func IRContext(webIR core.WebIR, maxChars int) string {
+	if maxChars <= 0 {
+		return ""
+	}
+	parts := make([]string, 0, min(len(webIR.Nodes)+1, 13))
+	if title := strings.TrimSpace(webIR.Title); title != "" {
+		parts = append(parts, title)
+	}
+	for _, node := range webIR.Nodes {
+		text := strings.TrimSpace(node.Text)
+		if text == "" {
+			continue
+		}
+		parts = append(parts, text)
+		if len(parts) >= 13 {
+			break
+		}
+	}
+	return compactIRContext(strings.Join(parts, "\n"), maxChars)
+}
+
+func compactIRContext(text string, maxChars int) string {
+	text = strings.Join(strings.Fields(strings.TrimSpace(text)), " ")
+	if len(text) <= maxChars {
+		return text
+	}
+	return strings.TrimSpace(text[:maxChars])
 }

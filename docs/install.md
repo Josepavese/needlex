@@ -25,10 +25,13 @@ What it does:
 1. downloads the latest release binary for your OS and architecture
 2. installs a user-local wrapper command `needlex`
 3. creates the local state root and subdirectories
-4. sets `NEEDLEX_HOME` to an OS-appropriate state directory
-5. updates PATH persistence for future shells or terminals
-6. reconciles a previous install without duplicating PATH hooks
-7. leaves unrelated commands untouched
+4. creates the PAL SSOT config at `<state-root>/configs/needlex.json`
+5. sets `NEEDLEX_HOME` and `NEEDLEX_CONFIG` inside the wrapper
+6. installs or verifies local Ollama semantic prerequisites
+7. pulls the default embedding model `embeddinggemma:latest`
+8. updates PATH persistence for future shells or terminals
+9. reconciles a previous install without duplicating PATH hooks
+10. leaves unrelated commands untouched
 
 Default paths:
 1. binary wrapper: `~/.local/bin/needlex`
@@ -37,6 +40,7 @@ Default paths:
    Linux: `~/.local/share/needlex`
    macOS: `~/Library/Application Support/NeedleX`
 4. runtime log: `<state-root>/logs/needlex.jsonl`
+5. config: `<state-root>/configs/needlex.json`
 
 Diagnostic export:
 
@@ -58,6 +62,38 @@ Default paths:
 1. binary wrapper: `%LOCALAPPDATA%\NeedleX\bin\needlex.cmd`
 2. real binary: `%LOCALAPPDATA%\NeedleX\bin\needlex-real.exe`
 3. state root: `%LOCALAPPDATA%\NeedleX`
+4. config: `%LOCALAPPDATA%\NeedleX\configs\needlex.json`
+
+## Semantic Prerequisites
+
+Needle-X is embeddings-first and has no production mode without dense embeddings.
+
+Default installed semantic backend:
+1. runtime: local Ollama
+2. endpoint: `http://127.0.0.1:11434/api/embed`
+3. embedding model: `embeddinggemma:latest`
+4. vector space: `ollama-embeddinggemma-v1`
+
+The installer attempts to prepare these prerequisites:
+1. Linux: installs Ollama through the official install script when `ollama` is missing
+2. macOS: uses Homebrew when available; otherwise it stops with the official Ollama download URL
+3. Windows: uses `winget install Ollama.Ollama` when `ollama` is missing
+4. all platforms: starts the local Ollama API when needed, pulls the embedding model, and probes `/api/embed`
+
+Skip only for controlled CI or packaging tests:
+
+```bash
+NEEDLEX_INSTALL_SKIP_SEMANTIC_PREREQS=1 bash install/install.sh
+```
+
+Change semantic config through the PAL SSOT file, not per-command env:
+
+```bash
+needlex config path
+needlex config show
+needlex config set semantic.provider_model nomic-embed-text:latest
+needlex doctor
+```
 
 ## Re-running the installer
 

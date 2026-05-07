@@ -4,12 +4,10 @@ import (
 	"context"
 	"strings"
 	"testing"
-
-	"github.com/josepavese/needlex/internal/config"
 )
 
 func TestCompactTinyTextPreservesObjectiveTerms(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
+	svc, err := New(testConfig(), nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -28,7 +26,7 @@ func TestCompactTinyTextPreservesObjectiveTerms(t *testing.T) {
 }
 
 func TestCompactTinyTextFallsBackForShortContent(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
+	svc, err := New(testConfig(), nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}

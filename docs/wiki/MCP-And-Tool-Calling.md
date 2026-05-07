@@ -19,9 +19,15 @@ Transport compatibility:
 
 State and logging:
 1. MCP uses `NEEDLEX_HOME` when set
-2. otherwise it falls back to a stable absolute PAL-aware state root
-3. diagnostics go to the shared PAL runtime log
-4. inspect diagnostics with `needlex logs path` and `needlex logs tail`
+2. installed MCP uses `NEEDLEX_CONFIG` from the wrapper to read the PAL SSOT config
+3. otherwise it falls back to a stable absolute PAL-aware state root
+4. diagnostics go to the shared PAL runtime log
+5. inspect diagnostics with `needlex logs path` and `needlex logs tail`
+
+Semantic prerequisite:
+1. Needle-X requires dense embeddings
+2. default installed backend is local Ollama `embeddinggemma:latest`
+3. change it with `needlex config set`, not per-tool MCP arguments
 
 Current MCP tool set:
 1. `web_read`

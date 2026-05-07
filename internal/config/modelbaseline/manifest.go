@@ -23,10 +23,10 @@ type DiscoveryManifest struct {
 }
 
 type SemanticManifest struct {
-	RecommendedBackend string `json:"recommended_backend"`
-	RecommendedBaseURL string `json:"recommended_base_url"`
-	Model              string `json:"model"`
-	TimeoutMS          int64  `json:"timeout_ms"`
+	EmbeddingURL  string `json:"embedding_url,omitempty"`
+	ProviderModel string `json:"provider_model,omitempty"`
+	VectorSpace   string `json:"vector_space,omitempty"`
+	TimeoutMS     int64  `json:"timeout_ms"`
 }
 
 type ModelsManifest struct {

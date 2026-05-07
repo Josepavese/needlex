@@ -117,16 +117,28 @@ func mergeMetadata(existing, incoming map[string]string) map[string]string {
 }
 
 func candidateSemanticallyGrounded(candidate discoverycore.Candidate) bool {
-	if similarity, ok := candidate.Metadata["semantic_goal_similarity"]; ok {
-		if value, err := strconv.ParseFloat(strings.TrimSpace(similarity), 64); err == nil && value >= 0.30 {
-			return true
-		}
+	if candidateGoalSimilarity(candidate) >= 0.30 {
+		return true
 	}
 	for _, reason := range candidate.Reason {
 		switch strings.TrimSpace(reason) {
-		case "candidate_intelligence", "candidate_identity_alignment", "candidate_cluster_representative", "local_memory_hit":
+		case "local_memory_hit":
 			return true
 		}
 	}
 	return false
+}
+
+func candidateGoalSimilarity(candidate discoverycore.Candidate) float64 {
+	for _, key := range []string{"semantic_goal_similarity", "candidate_goal_similarity"} {
+		similarity, ok := candidate.Metadata[key]
+		if !ok {
+			continue
+		}
+		value, err := strconv.ParseFloat(strings.TrimSpace(similarity), 64)
+		if err == nil && value >= 0.30 {
+			return value
+		}
+	}
+	return 0
 }

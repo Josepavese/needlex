@@ -14,11 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/net/html"
-
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"golang.org/x/net/html"
 )
 
 var wordPattern = regexp.MustCompile(`\S+`)
@@ -254,7 +252,7 @@ func BenchmarkReadGoldenArticle(b *testing.B) {
 	}))
 	defer server.Close()
 
-	svc := newTestService(b, config.Defaults(), server.Client())
+	svc := newTestService(b, testConfig(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -319,7 +317,7 @@ func BenchmarkQueryGoldenArticle(b *testing.B) {
 	}))
 	defer server.Close()
 
-	svc := newTestService(b, config.Defaults(), server.Client())
+	svc := newTestService(b, testConfig(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -358,7 +356,7 @@ func BenchmarkCrawlGoldenArticle(b *testing.B) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc := newTestService(b, config.Defaults(), server.Client())
+	svc := newTestService(b, testConfig(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -385,7 +383,7 @@ func runGoldenRead(t *testing.T, fixture string, req ReadRequest) ReadResponse {
 	}))
 	defer server.Close()
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 
 	req.URL = server.URL
 	resp, err := svc.Read(context.Background(), req)
@@ -413,7 +411,7 @@ func benchmarkQueryModes(b *testing.B, mode string) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc := newTestService(b, config.Defaults(), server.Client())
+	svc := newTestService(b, testConfig(), server.Client())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

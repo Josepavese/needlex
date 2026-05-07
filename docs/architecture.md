@@ -61,7 +61,7 @@ Needle-X retrieval is organized as replaceable layers:
 3. `core/discovery` owns structural candidate scoring and same-site context priors
 4. `core/webdiscover` owns web bootstrap family/entity recovery helpers
 5. `memory` owns local semantic recall, topic nodes, graph expansion, import/export, and pruning
-6. `intel` owns semantic adapters and native fallbacks
+6. `intel` owns dense embedding adapters, semantic alignment, and model runtimes
 7. `analytics` owns value/reporting state, not retrieval decisions
 
 Replacement rule:

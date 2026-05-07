@@ -47,6 +47,7 @@ var sqliteSchemaStatements = []string{
 	)`,
 	`CREATE TABLE IF NOT EXISTS topic_nodes (
 	  topic_key TEXT PRIMARY KEY,
+	  vector_space TEXT NOT NULL DEFAULT '',
 	  host TEXT NOT NULL,
 	  root_path TEXT NOT NULL,
 	  representative_url TEXT NOT NULL,
@@ -61,6 +62,31 @@ var sqliteSchemaStatements = []string{
 	  vector BLOB NOT NULL
 	)`,
 	`CREATE INDEX IF NOT EXISTS idx_topic_nodes_host ON topic_nodes(host)`,
+	`CREATE TABLE IF NOT EXISTS semantic_families (
+	  family_id TEXT PRIMARY KEY,
+	  vector_space TEXT NOT NULL DEFAULT '',
+	  representative_url TEXT NOT NULL,
+	  representative_title TEXT NOT NULL,
+	  semantic_summary TEXT NOT NULL,
+	  support_count INTEGER NOT NULL,
+	  contradiction_count INTEGER NOT NULL,
+	  confidence REAL NOT NULL,
+	  observed_at TEXT NOT NULL,
+	  updated_at TEXT NOT NULL,
+	  vector BLOB NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_semantic_families_representative_url ON semantic_families(representative_url)`,
+	`CREATE TABLE IF NOT EXISTS semantic_family_members (
+	  family_id TEXT NOT NULL,
+	  resource_url TEXT NOT NULL,
+	  role TEXT NOT NULL,
+	  evidence_kind TEXT NOT NULL,
+	  confidence REAL NOT NULL,
+	  trace_ref TEXT NOT NULL,
+	  observed_at TEXT NOT NULL,
+	  PRIMARY KEY (family_id, resource_url, evidence_kind)
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_semantic_family_members_resource_url ON semantic_family_members(resource_url)`,
 	`CREATE TABLE IF NOT EXISTS memory_state (
 	  key TEXT PRIMARY KEY,
 	  value TEXT NOT NULL,

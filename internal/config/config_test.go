@@ -112,6 +112,69 @@ func TestLoadRejectsInvalidEnvValue(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsUnknownConfigFields(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "needlex.json")
+	data := []byte(`{"semantic":{"backend":"dense"}}`)
+
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected unknown semantic backend field to fail")
+	}
+}
+
+func TestLoadRejectsLegacySemanticEnabledField(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "needlex.json")
+	data := []byte(`{"semantic":{"` + "enabled" + `":false}}`)
+
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected legacy semantic enabled field to fail strict decode")
+	}
+}
+
+func TestLoadUsesNeedlexConfigEnvAsSSOTPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "configs", "needlex.json")
+	cfg := Defaults()
+	cfg.Runtime.MaxPages = 77
+	if err := Write(path, cfg); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	t.Setenv("NEEDLEX_CONFIG", path)
+
+	loaded, err := Load("")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if loaded.Runtime.MaxPages != 77 {
+		t.Fatalf("expected SSOT config value, got %d", loaded.Runtime.MaxPages)
+	}
+}
+
+func TestValidateRequiresSemanticSubstrate(t *testing.T) {
+	cfg := Defaults()
+	cfg.Semantic.EmbeddingURL = ""
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected missing semantic endpoint to fail")
+	}
+	cfg = Defaults()
+	cfg.Semantic.ProviderModel = ""
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected missing semantic provider model to fail")
+	}
+	cfg = Defaults()
+	cfg.Semantic.VectorSpace = ""
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected missing semantic vector space to fail")
+	}
+}
+
 func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	cfg := Defaults()
 	if cfg.Models.Router != "gemma3:1b-it-q8_0" {
@@ -126,11 +189,8 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Models.MicroTimeoutMS != 8000 || cfg.Models.StructuredTimeoutMS != 20000 || cfg.Models.SpecialistTimeoutMS != 8000 {
 		t.Fatalf("unexpected SSOT timeout defaults: %+v", cfg.Models)
 	}
-	if cfg.Semantic.Backend != "openai-embeddings" || cfg.Semantic.BaseURL != "http://127.0.0.1:18180" || cfg.Semantic.Model != "intfloat/multilingual-e5-small" || cfg.Semantic.TimeoutMS != 1200 {
+	if cfg.Semantic.EmbeddingURL != DefaultSemanticEmbeddingURL || cfg.Semantic.ProviderModel != DefaultSemanticProviderModel || cfg.Semantic.VectorSpace != DefaultSemanticVectorSpace || cfg.Semantic.TimeoutMS != 1200 {
 		t.Fatalf("unexpected semantic SSOT defaults: %+v", cfg.Semantic)
-	}
-	if !cfg.Semantic.Enabled {
-		t.Fatal("expected semantic gate enabled by default")
 	}
 	if cfg.Semantic.FailureCooldownMS != 5000 {
 		t.Fatalf("unexpected semantic cooldown default: %+v", cfg.Semantic)
@@ -138,7 +198,7 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Discovery.ProviderChain != "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search" {
 		t.Fatalf("unexpected discovery SSOT defaults: %+v", cfg.Discovery)
 	}
-	if cfg.Memory.Backend != "sqlite" || cfg.Memory.Path != "discovery/discovery.db" || cfg.Memory.EmbeddingBackend != "openai-embeddings" || cfg.Memory.EmbeddingModel != "intfloat/multilingual-e5-small" || cfg.Memory.VectorEngine != "sqlite-vec" {
+	if cfg.Memory.Backend != "sqlite" || cfg.Memory.Path != "discovery/discovery.db" || cfg.Memory.VectorEngine != "sqlite-vec" {
 		t.Fatalf("unexpected memory SSOT defaults: %+v", cfg.Memory)
 	}
 	if !cfg.Memory.Enabled {
@@ -149,10 +209,9 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 func TestApplyEnvOverridesSemanticValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
-		"NEEDLEX_SEMANTIC_ENABLED":              "true",
-		"NEEDLEX_SEMANTIC_BACKEND":              "ollama-embed",
-		"NEEDLEX_SEMANTIC_BASE_URL":             "http://localhost:11434",
-		"NEEDLEX_SEMANTIC_MODEL":                "embed-x",
+		"NEEDLEX_SEMANTIC_EMBEDDING_URL":        "http://127.0.0.1:18080/embed",
+		"NEEDLEX_SEMANTIC_PROVIDER_MODEL":       "provider-embed-x",
+		"NEEDLEX_SEMANTIC_VECTOR_SPACE":         "vector-space-x",
 		"NEEDLEX_SEMANTIC_TIMEOUT_MS":           "1500",
 		"NEEDLEX_SEMANTIC_FAILURE_COOLDOWN_MS":  "2500",
 		"NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD": "0.66",
@@ -162,7 +221,7 @@ func TestApplyEnvOverridesSemanticValues(t *testing.T) {
 	if err := cfg.ApplyEnv(env); err != nil {
 		t.Fatalf("apply env: %v", err)
 	}
-	if !cfg.Semantic.Enabled || cfg.Semantic.Model != "embed-x" || cfg.Semantic.MaxCandidates != 5 || cfg.Semantic.FailureCooldownMS != 2500 {
+	if cfg.Semantic.EmbeddingURL != "http://127.0.0.1:18080/embed" || cfg.Semantic.ProviderModel != "provider-embed-x" || cfg.Semantic.VectorSpace != "vector-space-x" || cfg.Semantic.MaxCandidates != 5 || cfg.Semantic.FailureCooldownMS != 2500 {
 		t.Fatalf("unexpected semantic config override: %+v", cfg.Semantic)
 	}
 }
@@ -194,17 +253,15 @@ func TestApplyEnvOverridesDiscoveryValues(t *testing.T) {
 func TestApplyEnvOverridesMemoryValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
-		"NEEDLEX_MEMORY_ENABLED":           "true",
-		"NEEDLEX_MEMORY_BACKEND":           "sqlite",
-		"NEEDLEX_MEMORY_PATH":              "memory/custom.db",
-		"NEEDLEX_MEMORY_MAX_DOCUMENTS":     "500",
-		"NEEDLEX_MEMORY_MAX_EDGES":         "900",
-		"NEEDLEX_MEMORY_MAX_EMBEDDINGS":    "500",
-		"NEEDLEX_MEMORY_EMBEDDING_BACKEND": "openai-embeddings",
-		"NEEDLEX_MEMORY_EMBEDDING_MODEL":   "embed-y",
-		"NEEDLEX_MEMORY_VECTOR_MODE":       "embedded",
-		"NEEDLEX_MEMORY_VECTOR_ENGINE":     "vec1",
-		"NEEDLEX_MEMORY_PRUNE_POLICY":      "lru",
+		"NEEDLEX_MEMORY_ENABLED":        "true",
+		"NEEDLEX_MEMORY_BACKEND":        "sqlite",
+		"NEEDLEX_MEMORY_PATH":           "memory/custom.db",
+		"NEEDLEX_MEMORY_MAX_DOCUMENTS":  "500",
+		"NEEDLEX_MEMORY_MAX_EDGES":      "900",
+		"NEEDLEX_MEMORY_MAX_EMBEDDINGS": "500",
+		"NEEDLEX_MEMORY_VECTOR_MODE":    "embedded",
+		"NEEDLEX_MEMORY_VECTOR_ENGINE":  "vec1",
+		"NEEDLEX_MEMORY_PRUNE_POLICY":   "lru",
 	}
 	if err := cfg.ApplyEnv(env); err != nil {
 		t.Fatalf("apply env: %v", err)

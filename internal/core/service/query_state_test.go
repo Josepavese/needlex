@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
@@ -47,7 +46,7 @@ func TestPrepareQueryRequestWithLocalStateGraphExpansionNeedsConfidence(t *testi
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://seed.example/root",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, config.Defaults(), intel.NoopSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{})
 	if containsString(first.DomainHints, "expansion.example") {
 		t.Fatalf("did not expect low-confidence expansion hint, got %#v", first.DomainHints)
 	}
@@ -59,7 +58,7 @@ func TestPrepareQueryRequestWithLocalStateGraphExpansionNeedsConfidence(t *testi
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://seed.example/root",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, config.Defaults(), intel.NoopSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{})
 	if !containsString(second.DomainHints, "expansion.example") {
 		t.Fatalf("expected confident expansion hint, got %#v", second.DomainHints)
 	}
@@ -117,7 +116,7 @@ func TestPrepareQueryRequestWithLocalStateLoadsFingerprintEvidence(t *testing.T)
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://example.com/docs",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, config.Defaults(), intel.NoopSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{})
 	if req.SeedTraceID != "trace_1" {
 		t.Fatalf("expected seed trace trace_1, got %#v", req)
 	}
@@ -145,7 +144,7 @@ func TestPrepareQueryRequestWithLocalStateAppliesFetchGenomeHints(t *testing.T) 
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://example.com/docs",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, config.Defaults(), intel.NoopSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{})
 	if req.FetchProfile != "hardened" || req.FetchRetryProfile != "hardened" {
 		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
 	}
@@ -170,15 +169,12 @@ func TestNewFingerprintEvidenceLoaderLoadsGraphEvidence(t *testing.T) {
 
 func TestPrepareQueryRequestWithLocalStateLoadsMemoryCandidates(t *testing.T) {
 	root := t.TempDir()
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	cfg.Memory.Enabled = true
 
 	store := memory.NewSQLiteStore(root, cfg.Memory.Path)
-	svc := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, semantic.Client()))
+	svc := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
 	err := svc.Observe(context.Background(), memory.Observation{
 		Document: core.Document{
 			URL:       "https://playwright.dev/docs/intro",
@@ -211,7 +207,7 @@ func TestPrepareQueryRequestWithLocalStateLoadsMemoryCandidates(t *testing.T) {
 	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
 		Goal:          "playwright installation",
 		DiscoveryMode: QueryDiscoveryWeb,
-	}, cfg, intel.NoopSemanticAligner{})
+	}, cfg, noScoreSemanticAligner{})
 
 	if len(req.MemoryCandidates) == 0 {
 		t.Fatalf("expected memory candidates, got %#v", req)
@@ -229,15 +225,12 @@ func TestPrepareQueryRequestWithLocalStateLoadsMemoryCandidates(t *testing.T) {
 
 func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedOverMemoryCandidates(t *testing.T) {
 	root := t.TempDir()
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	cfg.Memory.Enabled = true
 
 	memStore := memory.NewSQLiteStore(root, cfg.Memory.Path)
-	memSvc := memory.NewService(cfg.Memory, memStore, intel.NewTextEmbedder(cfg, semantic.Client()))
+	memSvc := memory.NewService(cfg.Memory, memStore, intel.NewTextEmbedder(cfg, nil))
 	if err := memSvc.Observe(context.Background(), memory.Observation{
 		Document: core.Document{
 			URL:       "https://playwright.dev/docs/intro",
@@ -268,7 +261,7 @@ func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedOverMemoryCandidates(t 
 	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
 		Goal:          "playwright installation",
 		DiscoveryMode: QueryDiscoveryWeb,
-	}, cfg, intel.NewSemanticAligner(cfg, semantic.Client()))
+	}, cfg, intel.NewSemanticAligner(cfg, nil))
 
 	if len(req.MemoryCandidates) == 0 {
 		t.Fatalf("expected memory candidates, got %#v", req)
@@ -279,7 +272,7 @@ func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedOverMemoryCandidates(t 
 }
 
 func TestRunQueryDiscoveryPrefersMemoryCandidatesForSeedlessWeb(t *testing.T) {
-	svc := newTestService(t, config.Defaults(), nil)
+	svc := newTestService(t, testConfig(), nil)
 
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "playwright installation",
@@ -322,7 +315,7 @@ func TestRunQueryDiscoveryUsesMemoryFamilyRecoveryBeforeWebBootstrap(t *testing.
 	defer server.Close()
 	seedURL = server.URL
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "playwright installation",
 		MemoryCandidates: []DiscoverCandidate{
@@ -349,7 +342,7 @@ func TestRunQueryDiscoveryTrustsProofBackedMemoryBeforePublicBootstrap(t *testin
 	}))
 	defer searchServer.Close()
 
-	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc := newTestService(t, testConfig(), searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "playwright installation",
@@ -385,7 +378,7 @@ func TestRunQueryDiscoveryKeepsOverviewSeedWhenRecoveredFamilyContainsOnlyDescen
 	defer server.Close()
 	seedURL = server.URL + "/docs/Web/JavaScript"
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "MDN JavaScript overview",
 		MemoryCandidates: []DiscoverCandidate{

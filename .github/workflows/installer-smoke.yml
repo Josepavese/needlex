@@ -31,10 +31,12 @@ jobs:
           test -d "${state_root}/fingerprints"
           test -d "${state_root}/genome"
           test -d "${state_root}/logs"
+          test -d "${state_root}/configs"
           test -d "${state_root}/candidates"
           test -d "${state_root}/domain_graph"
           test -d "${state_root}/fingerprint_graph"
           test -f "${state_root}/discovery/discovery.db"
+          test -f "${state_root}/configs/needlex.json"
           test ! -e "${HOME}/.local/bin/needle"
           python3 - <<'PY'
           from pathlib import Path
@@ -51,6 +53,7 @@ jobs:
           source "${HOME}/.profile" >/dev/null 2>&1 || true
           source "${HOME}/.bashrc" >/dev/null 2>&1 || true
           needlex memory stats --json
+          needlex config show --json
           needlex logs stats --json
           needlex support bundle --out /tmp/needlex-support --json
           needlex read https://example.com --json > /tmp/needlex-read.json

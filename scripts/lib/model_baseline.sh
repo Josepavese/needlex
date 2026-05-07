@@ -32,14 +32,13 @@ needlex_apply_model_baseline_env() {
 }
 
 needlex_apply_semantic_baseline_env() {
-  local semantic_backend="${NEEDLEX_SEMANTIC_BACKEND:-$(needlex_model_baseline_jq '.semantic.recommended_backend')}"
-  local semantic_base_url="${NEEDLEX_SEMANTIC_BASE_URL:-$(needlex_model_baseline_jq '.semantic.recommended_base_url')}"
-  local semantic_model="${NEEDLEX_SEMANTIC_MODEL:-$(needlex_model_baseline_jq '.semantic.model')}"
+  local semantic_endpoint="${NEEDLEX_SEMANTIC_EMBEDDING_URL:-$(needlex_model_baseline_jq '.semantic.embedding_url')}"
+  local semantic_provider_model="${NEEDLEX_SEMANTIC_PROVIDER_MODEL:-$(needlex_model_baseline_jq '.semantic.provider_model')}"
+  local semantic_vector_space="${NEEDLEX_SEMANTIC_VECTOR_SPACE:-$(needlex_model_baseline_jq '.semantic.vector_space')}"
   local semantic_timeout="${NEEDLEX_SEMANTIC_TIMEOUT_MS:-$(needlex_model_baseline_jq '.semantic.timeout_ms')}"
 
-  export NEEDLEX_SEMANTIC_ENABLED="${NEEDLEX_SEMANTIC_ENABLED:-true}"
-  export NEEDLEX_SEMANTIC_BACKEND="$semantic_backend"
-  export NEEDLEX_SEMANTIC_BASE_URL="$semantic_base_url"
-  export NEEDLEX_SEMANTIC_MODEL="$semantic_model"
+  export NEEDLEX_SEMANTIC_EMBEDDING_URL="$semantic_endpoint"
+  export NEEDLEX_SEMANTIC_PROVIDER_MODEL="$semantic_provider_model"
+  export NEEDLEX_SEMANTIC_VECTOR_SPACE="$semantic_vector_space"
   export NEEDLEX_SEMANTIC_TIMEOUT_MS="$semantic_timeout"
 }

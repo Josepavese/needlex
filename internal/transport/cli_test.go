@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"hash/fnv"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -24,6 +22,40 @@ import (
 
 type stubSemanticAligner struct {
 	scores map[string]float64
+}
+
+type transportMemoryEmbedder struct{}
+
+func (transportMemoryEmbedder) ModelID() string {
+	return intel.DenseSemanticVectorSpace
+}
+
+func (transportMemoryEmbedder) Embed(_ context.Context, inputs []string) ([][]float32, error) {
+	out := make([][]float32, 0, len(inputs))
+	for range inputs {
+		out = append(out, []float32{1, 0, 0})
+	}
+	return out, nil
+}
+
+func newTransportEmbeddingServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode embedding request: %v", err)
+		}
+		out := make([][]float32, 0, len(req.Input))
+		for range req.Input {
+			out = append(out, []float32{1, 0, 0})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": out})
+	}))
+	t.Cleanup(server.Close)
+	return server
 }
 
 func (s stubSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
@@ -311,22 +343,11 @@ func TestRunnerQueryAutoSeedsFromCandidateMemory(t *testing.T) {
 	}
 
 	var captured coreservice.QueryRequest
-	semantic := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/embeddings" {
-			http.NotFound(w, r)
-			return
-		}
-		_, _ = fmt.Fprint(w, `{"object":"list","data":[{"object":"embedding","index":0,"embedding":[1,0]},{"object":"embedding","index":1,"embedding":[0.95,0.05]}],"model":"cli-semantic"}`)
-	}))
-	defer semantic.Close()
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			cfg := config.Defaults()
 			cfg.Memory.Enabled = false
-			cfg.Semantic.Enabled = true
-			cfg.Semantic.Backend = "openai-embeddings"
-			cfg.Semantic.BaseURL = semantic.URL
-			cfg.Semantic.Model = "cli-semantic"
+			cfg.Semantic.VectorSpace = intel.DenseSemanticVectorSpace
 			cfg.Semantic.TimeoutMS = 5000
 			return cfg, nil
 		},
@@ -366,22 +387,11 @@ func TestRunnerQueryDoesNotAutoSeedWhenDiscoveryOff(t *testing.T) {
 	}
 
 	var captured coreservice.QueryRequest
-	semantic := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/embeddings" {
-			http.NotFound(w, r)
-			return
-		}
-		_, _ = fmt.Fprint(w, `{"object":"list","data":[{"object":"embedding","index":0,"embedding":[1,0]},{"object":"embedding","index":1,"embedding":[0.95,0.05]}],"model":"cli-semantic"}`)
-	}))
-	defer semantic.Close()
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			cfg := config.Defaults()
 			cfg.Memory.Enabled = false
-			cfg.Semantic.Enabled = true
-			cfg.Semantic.Backend = "openai-embeddings"
-			cfg.Semantic.BaseURL = semantic.URL
-			cfg.Semantic.Model = "cli-semantic"
+			cfg.Semantic.VectorSpace = intel.DenseSemanticVectorSpace
 			cfg.Semantic.TimeoutMS = 5000
 			return cfg, nil
 		},
@@ -729,19 +739,13 @@ func TestRunnerPruneAll(t *testing.T) {
 
 func TestRunnerMemoryStatsAndSearch(t *testing.T) {
 	root := t.TempDir()
-	semantic := newMemoryEmbeddingServer()
-	defer semantic.Close()
 
 	cfg := config.Defaults()
 	cfg.Memory.Enabled = true
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "memory-test-embed"
-	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
-	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+	cfg.Semantic.VectorSpace = intel.DenseSemanticVectorSpace
+	cfg.Semantic.EmbeddingURL = newTransportEmbeddingServer(t).URL
 
-	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+	seedMemoryDocument(t, root, cfg, "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
 
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
@@ -771,23 +775,17 @@ func TestRunnerMemoryStatsAndSearch(t *testing.T) {
 
 func TestRunnerMemoryPrune(t *testing.T) {
 	root := t.TempDir()
-	semantic := newMemoryEmbeddingServer()
-	defer semantic.Close()
 
 	cfg := config.Defaults()
 	cfg.Memory.Enabled = true
 	cfg.Memory.MaxDocuments = 1
 	cfg.Memory.MaxEmbeddings = 1
 	cfg.Memory.MaxEdges = 1
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "memory-test-embed"
-	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
-	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+	cfg.Semantic.VectorSpace = intel.DenseSemanticVectorSpace
+	cfg.Semantic.EmbeddingURL = newTransportEmbeddingServer(t).URL
 
-	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
-	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/test-runners", "Test Runners | Playwright", "Integrate Playwright with common test runners and tooling.")
+	seedMemoryDocument(t, root, cfg, "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+	seedMemoryDocument(t, root, cfg, "https://playwright.dev/docs/test-runners", "Test Runners | Playwright", "Integrate Playwright with common test runners and tooling.")
 
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
@@ -808,19 +806,13 @@ func TestRunnerMemoryPrune(t *testing.T) {
 
 func TestRunnerMemoryExportImportAndRebuildIndex(t *testing.T) {
 	root := t.TempDir()
-	semantic := newMemoryEmbeddingServer()
-	defer semantic.Close()
 
 	cfg := config.Defaults()
 	cfg.Memory.Enabled = true
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "memory-test-embed"
-	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
-	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+	cfg.Semantic.VectorSpace = intel.DenseSemanticVectorSpace
+	cfg.Semantic.EmbeddingURL = newTransportEmbeddingServer(t).URL
 
-	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+	seedMemoryDocument(t, root, cfg, "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
 
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
@@ -1024,74 +1016,10 @@ func fakeResponse() coreservice.ReadResponse {
 	}
 }
 
-func newMemoryEmbeddingServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/embeddings" {
-			http.NotFound(w, r)
-			return
-		}
-		var payload struct {
-			Input any `json:"input"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		inputs := memoryInputsForTest(payload.Input)
-		data := make([]map[string]any, 0, len(inputs))
-		for i, input := range inputs {
-			data = append(data, map[string]any{
-				"object":    "embedding",
-				"index":     i,
-				"embedding": memoryVectorForTest(input),
-			})
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"object": "list",
-			"data":   data,
-			"model":  "memory-test-embed",
-		})
-	}))
-}
-
-func memoryInputsForTest(raw any) []string {
-	switch typed := raw.(type) {
-	case string:
-		return []string{typed}
-	case []any:
-		out := make([]string, 0, len(typed))
-		for _, item := range typed {
-			if value, ok := item.(string); ok {
-				out = append(out, value)
-			}
-		}
-		return out
-	default:
-		return nil
-	}
-}
-
-func memoryVectorForTest(text string) []float64 {
-	const dims = 64
-	vector := make([]float64, dims)
-	for _, token := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
-		return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
-	}) {
-		if token == "" {
-			continue
-		}
-		h := fnv.New32a()
-		_, _ = h.Write([]byte(token))
-		idx := int(h.Sum32() % dims)
-		vector[idx] += 1
-	}
-	return vector
-}
-
-func seedMemoryDocument(t *testing.T, root string, cfg config.Config, client *http.Client, pageURL, title, text string) {
+func seedMemoryDocument(t *testing.T, root string, cfg config.Config, pageURL, title, text string) {
 	t.Helper()
 	store := memory.NewSQLiteStore(root, cfg.Memory.Path)
-	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, client))
+	service := memory.NewService(cfg.Memory, store, transportMemoryEmbedder{})
 	err := service.Observe(context.Background(), memory.Observation{
 		Document: core.Document{
 			URL:       pageURL,

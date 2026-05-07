@@ -16,8 +16,8 @@ Se un task locale confligge con questo file, il task locale è sbagliato finché
 - Product identity: `local-first web context compiler for AI agents`
 - Primary output contract: `agent answer packet`
 - Active CPU baseline: `Gemma 3 1B`
-- Active semantic baseline: `intfloat/multilingual-e5-small`
-- Active semantic backend: `openai-embeddings`
+- Active semantic baseline: dense embeddings are mandatory through the PAL SSOT config
+- Active semantic vectorizer: local/no-key Ollama `embeddinggemma` through provider-neutral dense HTTP embeddings
 - Active model task: `resolve_ambiguity`
 - Default philosophy: `AI-first compact output, diagnostics explicit`
 - Search status: `seed-first strong, seedless best-effort`
@@ -46,12 +46,13 @@ Needle-X is:
 4. Proof, trace, replay, and diff stay first-class, but not default.
 5. Semantic signals arbitrate meaning; surface-form overlap does not.
 6. No linguistic heuristics as primary decision logic.
-7. Models are bounded solvers, not the substrate.
-8. No new active model capability without direct evidence.
-9. No widening of the market claim while behavior is narrower.
-10. No infra requirement as a precondition for using the repo.
-11. Seedless discovery is allowed only as best-effort; it is not the product core.
-12. Every macrostep must improve one of:
+7. No dense vector endpoint means no valid Needle-X runtime; Needle-X must fail instead of emulating semantics with string or sub-token overlap.
+8. Models are bounded solvers, not the substrate.
+9. No new active model capability without direct evidence.
+10. No widening of the market claim while behavior is narrower.
+11. Local/no-key embedding infra is part of the installed product contract and must be prepared by the installer.
+12. Seedless discovery is allowed only as best-effort; it is not the product core.
+13. Every macrostep must improve one of:
    - user value
    - output quality
    - trust/provenance
@@ -69,7 +70,7 @@ These fronts are not the active focus anymore unless a real regression reopens t
 5. Operator guide baseline
 6. Go-to-market narrative baseline
 7. Core package concentration recovery
-8. Docs cleanup: active / experimental / archive split
+8. Docs cleanup: active / experimental split
 
 ## What Is Not The Focus Now
 
@@ -176,15 +177,14 @@ We optimize the strongest path first:
 Status: `[pending]`
 
 Goal:
-Remove or archive anything that weakens the public repo story.
+Remove anything that weakens the public repo story.
 
 Definition of done:
 1. docs root contains only active product documents
 2. experimental ideas stay in `docs/experimental`
-3. historical material stays in `docs/archive`
-4. `improvements/` root contains only active operational artifacts
-5. dead scripts and dead reports are removed or archived
-6. examples shown in README and operator docs actually work
+3. `improvements/` root contains only active operational artifacts
+4. dead scripts and dead reports are removed
+5. examples shown in README and operator docs actually work
 
 Hard rule:
 The repo must not ask a new user to perform archaeology.
@@ -319,8 +319,7 @@ Search is now governed by this rule:
 5. `Discovery Memory` is partly absorbed already, but not yet the dominant seedless substrate
 
 References:
-1. [seedless-discovery-strategy.md](archive/seedless-discovery-strategy.md)
-2. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
+1. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
 
 ## Output Policy
 

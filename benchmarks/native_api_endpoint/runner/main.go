@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -92,11 +90,13 @@ type report struct {
 }
 
 type benchmarkConfigs struct {
-	baseline      string
-	semantic      string
-	llm           string
-	llmConfigured bool
-	llmSkipReason string
+	baseline           string
+	semantic           string
+	semanticConfigured bool
+	semanticSkipReason string
+	llm                string
+	llmConfigured      bool
+	llmSkipReason      string
 }
 
 func main() {
@@ -152,21 +152,18 @@ func prepareBenchmarkConfigs(tempDir string) (benchmarkConfigs, func(), error) {
 	if err != nil {
 		return benchmarkConfigs{}, nil, err
 	}
-	semanticBaseURL, stopSemantic, err := startSemanticServer(tempDir)
-	if err != nil {
-		return benchmarkConfigs{}, nil, err
-	}
-	semanticCfg, err := writeEndpointSemanticConfig(tempDir, providerChain, semanticBaseURL)
+	stopSemantic := func() {}
+	semanticCfg, err := writeEndpointSemanticConfig(tempDir, providerChain)
 	if err != nil {
 		stopSemantic()
 		return benchmarkConfigs{}, nil, err
 	}
-	llmCfg, llmConfigured, llmSkipReason, err := maybeWriteLLMConfig(tempDir, providerChain, semanticBaseURL)
+	llmCfg, llmConfigured, llmSkipReason, err := maybeWriteLLMConfig(tempDir, providerChain)
 	if err != nil {
 		stopSemantic()
 		return benchmarkConfigs{}, nil, err
 	}
-	return benchmarkConfigs{baseline: baselineCfg, semantic: semanticCfg, llm: llmCfg, llmConfigured: llmConfigured, llmSkipReason: llmSkipReason}, stopSemantic, nil
+	return benchmarkConfigs{baseline: baselineCfg, semantic: semanticCfg, semanticConfigured: true, semanticSkipReason: "", llm: llmCfg, llmConfigured: llmConfigured, llmSkipReason: llmSkipReason}, stopSemantic, nil
 }
 
 func writeEndpointBaselineConfig(tempDir, providerChain string) (string, error) {
@@ -174,21 +171,15 @@ func writeEndpointBaselineConfig(tempDir, providerChain string) (string, error) 
 		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
 		"discovery": map[string]any{"provider_chain": providerChain},
 		"models":    map[string]any{"backend": "noop"},
-		"semantic":  map[string]any{"enabled": false},
 	})
 }
 
-func writeEndpointSemanticConfig(tempDir, providerChain, semanticBaseURL string) (string, error) {
+func writeEndpointSemanticConfig(tempDir, providerChain string) (string, error) {
 	return writeConfig(tempDir, "semantic.json", map[string]any{
 		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
 		"discovery": map[string]any{"provider_chain": providerChain},
 		"models":    map[string]any{"backend": "noop"},
-		"semantic": map[string]any{
-			"enabled":  true,
-			"backend":  "openai-embeddings",
-			"base_url": semanticBaseURL,
-			"model":    "intfloat/multilingual-e5-small",
-		},
+		"semantic":  endpointSemanticPayload(),
 	})
 }
 
@@ -218,8 +209,12 @@ func runEndpointCase(binaryPath, id, goal, expectedURL string, cfgs benchmarkCon
 		ExpectedURL: expectedURL,
 		Runs: []runResult{
 			runCase(binaryPath, cfgs.baseline, "baseline", goal, expectedURL),
-			runCase(binaryPath, cfgs.semantic, "semantic", goal, expectedURL),
 		},
+	}
+	if cfgs.semanticConfigured {
+		row.Runs = append(row.Runs, runCase(binaryPath, cfgs.semantic, "semantic", goal, expectedURL))
+	} else {
+		row.Runs = append(row.Runs, runResult{Profile: "semantic", Skipped: true, SkipReason: cfgs.semanticSkipReason})
 	}
 	if cfgs.llmConfigured {
 		row.Runs = append(row.Runs, runCase(binaryPath, cfgs.llm, "llm_enabled", goal, expectedURL))
@@ -264,22 +259,17 @@ func writeConfig(dir, name string, payload map[string]any) (string, error) {
 	return path, os.WriteFile(path, raw, 0o644)
 }
 
-func maybeWriteLLMConfig(dir, providerChain, semanticBaseURL string) (string, bool, string, error) {
+func maybeWriteLLMConfig(dir, providerChain string) (string, bool, string, error) {
 	backend := strings.TrimSpace(os.Getenv("NEEDLEX_MODELS_BACKEND"))
 	baseURL := strings.TrimSpace(os.Getenv("NEEDLEX_MODELS_BASE_URL"))
 	router := strings.TrimSpace(os.Getenv("NEEDLEX_MODELS_ROUTER"))
-	if (backend != "openai-compatible" && backend != "ollama") || baseURL == "" || router == "" {
-		return "", false, "set NEEDLEX_MODELS_BACKEND=openai-compatible|ollama, NEEDLEX_MODELS_BASE_URL and NEEDLEX_MODELS_ROUTER", nil
+	if backend != "openai-compatible" || baseURL == "" || router == "" {
+		return "", false, "set NEEDLEX_MODELS_BACKEND=openai-compatible, NEEDLEX_MODELS_BASE_URL and NEEDLEX_MODELS_ROUTER", nil
 	}
 	payload := map[string]any{
 		"fetch":     map[string]any{"profile": "browser_like", "retry_profile": "hardened"},
 		"discovery": map[string]any{"provider_chain": providerChain},
-		"semantic": map[string]any{
-			"enabled":  true,
-			"backend":  "openai-embeddings",
-			"base_url": semanticBaseURL,
-			"model":    "intfloat/multilingual-e5-small",
-		},
+		"semantic":  endpointSemanticPayload(),
 		"models": map[string]any{
 			"backend":   backend,
 			"base_url":  baseURL,
@@ -292,6 +282,20 @@ func maybeWriteLLMConfig(dir, providerChain, semanticBaseURL string) (string, bo
 	}
 	configPath, err := writeConfig(dir, "llm.json", payload)
 	return configPath, true, "", err
+}
+
+func endpointSemanticPayload() map[string]any {
+	payload := map[string]any{}
+	if endpoint := strings.TrimSpace(os.Getenv("NEEDLEX_SEMANTIC_EMBEDDING_URL")); endpoint != "" {
+		payload["embedding_url"] = endpoint
+	}
+	if providerModel := strings.TrimSpace(os.Getenv("NEEDLEX_SEMANTIC_PROVIDER_MODEL")); providerModel != "" {
+		payload["provider_model"] = providerModel
+	}
+	if vectorSpace := strings.TrimSpace(os.Getenv("NEEDLEX_SEMANTIC_VECTOR_SPACE")); vectorSpace != "" {
+		payload["vector_space"] = vectorSpace
+	}
+	return payload
 }
 
 func runCase(binaryPath, configPath, profile, goal, expectedURL string) runResult {
@@ -486,43 +490,6 @@ func summarize(results []caseResult, llmConfigured bool) summary {
 		AvgHostPacingMSByProfile: avgHostPacingMSByProfile,
 		RetryReasons:             retryReasons,
 	}
-}
-
-func startSemanticServer(tempDir string) (string, func(), error) {
-	logPath := filepath.Join(tempDir, "semantic.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		return "", nil, err
-	}
-	cmd := exec.Command("python3", "scripts/run_semantic_embed_upstream.py")
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
-	if err := cmd.Start(); err != nil {
-		_ = logFile.Close()
-		return "", nil, err
-	}
-	baseURL := "http://127.0.0.1:18180"
-	deadline := time.Now().Add(90 * time.Second)
-	for time.Now().Before(deadline) {
-		resp, err := http.Get(baseURL + "/healthz")
-		if err == nil {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				return baseURL, func() {
-					_ = cmd.Process.Kill()
-					_, _ = cmd.Process.Wait()
-					_ = logFile.Close()
-				}, nil
-			}
-		}
-		time.Sleep(1 * time.Second)
-	}
-	_ = cmd.Process.Kill()
-	_, _ = cmd.Process.Wait()
-	_ = logFile.Close()
-	logRaw, _ := os.ReadFile(logPath)
-	return "", nil, fmt.Errorf("semantic server not healthy: %s", strings.TrimSpace(string(logRaw)))
 }
 
 func firstNonEmpty(values ...string) string {

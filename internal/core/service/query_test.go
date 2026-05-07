@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/queryflow"
@@ -88,6 +87,70 @@ func TestQueryBuildsPlanAndResultPack(t *testing.T) {
 	}
 }
 
+func TestApplyDiscoveryToPlanPublishesRankedCandidateURLs(t *testing.T) {
+	svc := newSemanticService(t, nil)
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "ranked candidates", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+
+	err := svc.applyDiscoveryToPlan(&plan, QueryRequest{Goal: "ranked candidates"}, QueryDiscoveryWeb, queryDiscoveryResult{
+		selected: "https://high.example/docs",
+		candidates: []DiscoverCandidate{
+			{URL: "https://low.example/docs", Score: 0.8},
+			{URL: "https://high.example/docs", Score: 1.7},
+			{URL: "https://mid.example/docs", Score: 1.2},
+		},
+	})
+	if err != nil {
+		t.Fatalf("apply discovery: %v", err)
+	}
+	want := []string{"https://high.example/docs", "https://mid.example/docs", "https://low.example/docs"}
+	if fmt.Sprint(plan.CandidateURLs) != fmt.Sprint(want) {
+		t.Fatalf("expected ranked candidate urls %v, got %v", want, plan.CandidateURLs)
+	}
+}
+
+func TestReadQuerySelectedCandidateFallsBackFromUnsupportedContent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/asset":
+			w.Header().Set("Content-Type", "application/octet-stream")
+			_, _ = fmt.Fprint(w, "binary")
+		case "/docs":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, testHTML)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc := newSemanticService(t, server.Client())
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "runtime fallback", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+	plan.SelectedURL = server.URL + "/asset"
+	plan.CandidateURLs = []string{server.URL + "/asset", server.URL + "/docs"}
+	plan.CandidateDiagnostics = []QueryCandidateDiagnostic{
+		{URL: server.URL + "/asset", Score: 1.2},
+		{URL: server.URL + "/docs", Score: 1.1},
+	}
+
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback"}, core.ProfileTiny, QueryDiscoveryWeb, &plan)
+	if err != nil {
+		t.Fatalf("expected fallback read to succeed: %v", err)
+	}
+	if plan.SelectedURL != server.URL+"/docs" || resp.Document.FinalURL != server.URL+"/docs" {
+		t.Fatalf("expected fallback docs selection, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	foundDecision := false
+	for _, decision := range plan.Compiler.Decisions {
+		if decision.Stage == "select.candidate_runtime_fallback" && decision.Choice == server.URL+"/docs" && decision.Metadata["runtime_error_class"] == "unsupported_content_type" {
+			foundDecision = true
+			break
+		}
+	}
+	if !foundDecision {
+		t.Fatalf("expected runtime fallback decision, got %#v", plan.Compiler.Decisions)
+	}
+}
+
 func TestQueryCompilerRecordsForcedLanePolicy(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -151,7 +214,7 @@ func TestQueryCompilerRecordsRuntimeEffectsDetected(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:      "proof replay deterministic",
 		SeedURL:   server.URL,
@@ -236,7 +299,7 @@ func TestQueryDiscoveryOffKeepsSeedURL(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -304,7 +367,7 @@ func TestQueryCompilerAddsStableFingerprintEvidence(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:        "proof replay deterministic",
 		SeedURL:     server.URL,
@@ -328,7 +391,7 @@ func TestQueryCompilerAddsNoveltyAndDeltaRiskEvidence(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:        "proof replay deterministic",
 		SeedURL:     server.URL,
@@ -446,7 +509,7 @@ func TestQueryWebSearchExpandsLandingPageToSelectedChild(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc := newTestService(t, testConfig(), searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
@@ -467,7 +530,7 @@ func TestQueryWebSearchExpandsLandingPageToSelectedChild(t *testing.T) {
 }
 
 func TestQueryRejectsMissingGoal(t *testing.T) {
-	svc := newTestService(t, config.Defaults(), nil)
+	svc := newTestService(t, testConfig(), nil)
 	_, err := svc.Query(context.Background(), QueryRequest{SeedURL: "https://example.com"})
 	if err == nil {
 		t.Fatal("expected missing goal to fail")
@@ -475,7 +538,7 @@ func TestQueryRejectsMissingGoal(t *testing.T) {
 }
 
 func TestQueryRequiresSeedWhenDiscoveryOff(t *testing.T) {
-	svc := newTestService(t, config.Defaults(), nil)
+	svc := newTestService(t, testConfig(), nil)
 	_, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
 		DiscoveryMode: QueryDiscoveryOff,
@@ -498,7 +561,7 @@ func TestQueryWithoutSeedUsesWebDiscovery(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc := newTestService(t, testConfig(), searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
@@ -536,7 +599,7 @@ func TestQueryRecordsGraphEvidenceForCrossDomainHintSelection(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc := newTestService(t, config.Defaults(), searchServer.Client())
+	svc := newTestService(t, testConfig(), searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
@@ -623,12 +686,12 @@ func TestQuerySeedlessWebSearchUsesRewriteQueries(t *testing.T) {
 	}))
 	defer modelServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	cfg.Models.Backend = "openai-compatible"
 	cfg.Models.BaseURL = modelServer.URL
 	cfg.Models.Router = "gemma3:1b-it-q8_0"
 	cfg.Models.MicroTimeoutMS = 1500
-	cfg.Semantic.Enabled = false
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, pageServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
@@ -654,7 +717,7 @@ func TestQueryDiscoveryOffGuidesOnSeed404(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := newTestService(t, config.Defaults(), server.Client())
+	svc := newTestService(t, testConfig(), server.Client())
 	_, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "Read the initialize method",
 		SeedURL:       server.URL + "/missing-page",

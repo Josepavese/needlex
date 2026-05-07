@@ -14,8 +14,12 @@ import (
 	"time"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/core/providerfusion"
+	"github.com/josepavese/needlex/internal/core/semanticcalibrate"
+	"github.com/josepavese/needlex/internal/core/semanticrank"
 	"github.com/josepavese/needlex/internal/core/webdiscover"
 	"github.com/josepavese/needlex/internal/intel"
+	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/store"
 )
 
@@ -121,7 +125,7 @@ func (s *Service) bootstrapProviderQueries(ctx context.Context, provider discove
 		}
 		s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
 		out.DiscoveryURL = bootURL
-		out.Candidates.Merge(bootstrapped)
+		out.Candidates.Merge(providerfusion.AnnotateProvider(bootstrapped, providerName))
 		out.ProviderNames = append(out.ProviderNames, providerName)
 	}
 	return out
@@ -150,14 +154,26 @@ func (c webBootstrapCollection) NoCandidateError() error {
 }
 
 func (s *Service) finalizeWebCandidates(ctx context.Context, req DiscoverWebRequest, candidates []DiscoverCandidate) []DiscoverCandidate {
-	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates, false)
+	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates)
 	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, bootstrapped, req.MaxCandidates)
-	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded, false)).Sorted()
+	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Sorted()
 	filtered = webdiscover.CanonicalizeCandidateFamilies(filtered)
+	filtered = webdiscover.DampenWeakProvenanceTraps(filtered)
+	filtered = webdiscover.DampenCrossFamilyMirrorRoutes(filtered)
 	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
 	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
+	filtered = s.applySemanticSelectionStack(ctx, req.Goal, filtered)
 	filtered = discoverycore.NewSet(filtered).Limited(req.MaxCandidates)
 	return s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
+}
+
+func (s *Service) applySemanticSelectionStack(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
+	if len(candidates) < 2 || strings.TrimSpace(goal) == "" {
+		return candidates
+	}
+	out := providerfusion.Apply(candidates)
+	out = semanticrank.Reranker{Semantic: s.semantic, Config: semanticrank.DefaultConfig()}.Rerank(ctx, goal, out)
+	return semanticcalibrate.Apply(out, semanticcalibrate.DefaultModel())
 }
 
 func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
@@ -194,6 +210,7 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 			texts = append(texts, discoverycore.JoinNonEmpty(
 				group[i].Metadata["host_root_title"],
 				group[i].Metadata["page_title"],
+				group[i].Metadata["web_ir_context"],
 				group[i].Label,
 				discoverycore.HostIdentityText(group[i].URL),
 				family,
@@ -250,7 +267,7 @@ func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req 
 		return nil, "", err
 	}
 
-	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(searchURL, effectiveUserAgent(req.UserAgent, true)))
+	rawPage, err := s.acquirer.Acquire(ctx, s.fetchProviderBootstrapInput(searchURL, req.UserAgent))
 	if err != nil {
 		if discoverycore.IsDuckDuckGoProvider(baseURL) && (strings.Contains(err.Error(), "unexpected status code 403") || strings.Contains(err.Error(), "unexpected status code 202")) {
 			return nil, "", fmt.Errorf("duckduckgo provider blocked by anti-bot challenge")
@@ -263,6 +280,12 @@ func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req 
 
 	results := discoverycore.ExtractSearchResults(rawPage.HTML, rawPage.FinalURL)
 	return discoverycore.ScoreStructuralCandidates(req.SeedURL, "", results, req.DomainHints), rawPage.FinalURL, nil
+}
+
+func (s *Service) fetchProviderBootstrapInput(searchURL, userAgent string) pipeline.AcquireInput {
+	// Provider result pages are a transport surface, not the target document. Keep
+	// bootstrap stable and let configured retry profiles handle blocked responses.
+	return s.fetchAcquireInputWithProfiles(searchURL, effectiveUserAgent(userAgent, true), "standard", "")
 }
 
 func (s *Service) discoverWebBootstrapBrave(ctx context.Context, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {
@@ -370,7 +393,7 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 			refined.Metadata = discoverycore.MergeMetadata(refined.Metadata, hostProbe.Metadata)
 			out[0] = refined
 		}
-		if strings.TrimSpace(hostProbe.URL) != "" && strings.TrimSpace(hostProbe.URL) != strings.TrimSpace(refined.URL) && hostProbe.Score > 0 {
+		if strings.TrimSpace(hostProbe.URL) != "" && !discoverycore.SameCanonicalURL(hostProbe.URL, refined.URL) && hostProbe.Score > 0 {
 			out = append(out, DiscoverCandidate{
 				URL:      hostProbe.URL,
 				Label:    discoverycore.FirstNonEmpty(hostProbe.Title, hostProbe.URL),
@@ -383,14 +406,14 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 
 	identityRefs := webdiscover.ExtractIdentityReferenceCandidates(rawPage.HTML, rawPage.FinalURL, discoverycore.FirstNonEmpty(dom.Title, candidate.Label))
 	if len(identityRefs) > 0 {
-		out = append(out, s.selectIdentityReferenceCandidates(ctx, goal, candidate, identityRefs)...)
+		out = append(out, s.selectIdentityReferenceCandidates(ctx, goal, refined, identityRefs)...)
 	}
 	expanded := extractLinkCandidates(rawPage.HTML, rawPage.FinalURL, false)
 	expandedScored := discoverycore.ScoreStructuralCandidates("", "", expanded, domainHints)
 	if len(expandedScored) > 0 {
 		out = append(out, s.selectExpandedRecoveryCandidates(ctx, goal, candidate, expandedScored)...)
 	}
-	out = append(out, webdiscover.ExtractEmbeddedURLCandidates(goal, candidate, rawPage.FinalURL, rawPage.HTML, dom, domainHints)...)
+	out = append(out, webdiscover.ExtractEmbeddedURLCandidates(goal, refined, rawPage.FinalURL, rawPage.HTML, dom, domainHints)...)
 	return out, nil
 }
 
@@ -467,6 +490,13 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 		return nil
 	}
 	ordered := append([]DiscoverCandidate{}, expanded...)
+	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, expandedRecoverySemanticCandidates(source, ordered))
+	applyExpandedRecoveryScores(source.URL, ordered, goalSimilarity)
+	discoverycore.SortCandidates(ordered)
+	return selectExpandedRecoveryLeaders(ordered)
+}
+
+func expandedRecoverySemanticCandidates(source DiscoverCandidate, ordered []DiscoverCandidate) []intel.SemanticCandidate {
 	semanticCandidates := make([]intel.SemanticCandidate, 0, len(ordered))
 	for _, candidate := range ordered {
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
@@ -474,29 +504,41 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 			Text: discoverycore.JoinNonEmpty(
 				source.Metadata["host_root_title"],
 				source.Metadata["page_title"],
+				source.Metadata["web_ir_context"],
 				source.Label,
+				candidate.Metadata["source_context"],
 				candidate.Label,
 				discoverycore.URLIdentityText(candidate.URL),
+				candidate.Metadata["resource_class"],
 			),
 		})
 	}
-	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, semanticCandidates)
-	sourceFamily, _ := webdiscover.CandidateFamily(source.URL)
+	return semanticCandidates
+}
+
+func applyExpandedRecoveryScores(sourceURL string, ordered []DiscoverCandidate, goalSimilarity map[string]float64) {
+	sourceFamily, _ := webdiscover.CandidateFamily(sourceURL)
+	sourceDepth := discoverycore.URLPathDepth(sourceURL)
 	for i := range ordered {
 		similarity := goalSimilarity[ordered[i].URL]
 		family, familyOK := webdiscover.CandidateFamily(ordered[i].URL)
 		sameFamily := familyOK && family != "" && family == sourceFamily
+		candidateDepth := discoverycore.URLPathDepth(ordered[i].URL)
 		if similarity > 0 {
 			ordered[i].Score += similarity * 1.35
 			ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "page_expand_semantic_grounding")
 		}
 		if sameFamily {
-			if discoverycore.URLPathDepth(ordered[i].URL) > discoverycore.URLPathDepth(source.URL) {
+			switch {
+			case candidateDepth > sourceDepth:
 				ordered[i].Score += 0.42
 				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "same_family_child_recovery")
-			} else {
+			case candidateDepth == sourceDepth:
 				ordered[i].Score += 0.14
 				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "same_family_page_expand")
+			default:
+				ordered[i].Score -= 0.16
+				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "same_family_scope_regression")
 			}
 		}
 		if familyOK && family != "" && family != sourceFamily {
@@ -509,8 +551,9 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 			}
 		}
 	}
-	discoverycore.SortCandidates(ordered)
+}
 
+func selectExpandedRecoveryLeaders(ordered []DiscoverCandidate) []DiscoverCandidate {
 	out := make([]DiscoverCandidate, 0, 3)
 	seenFamilies := map[string]struct{}{}
 	for _, candidate := range ordered {
@@ -521,8 +564,16 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 			}
 			seenFamilies[family] = struct{}{}
 		}
-		candidate.Score += 0.40
-		candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, "page_expand")
+		if candidateHasAnyReason(candidate, "same_family_scope_regression") {
+			candidate.Score += 0.04
+			candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, "page_expand_scope_context")
+		} else if candidateHasAnyReason(candidate, "same_family_child_recovery") {
+			candidate.Score += 0.70
+			candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, "page_expand", "page_expand_child_context")
+		} else {
+			candidate.Score += 0.40
+			candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, "page_expand")
+		}
 		out = append(out, candidate)
 		if len(out) >= 3 {
 			break
@@ -533,7 +584,7 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 
 func (s *Service) maybePromoteEndpointCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidates []DiscoverCandidate) []DiscoverCandidate {
 	backend := strings.TrimSpace(s.cfg.Models.Backend)
-	if len(candidates) == 0 || (backend != intel.BackendOpenAICompatible && backend != intel.BackendOllama) {
+	if len(candidates) == 0 || backend != intel.BackendOpenAICompatible {
 		return candidates
 	}
 	pageInputs, allowed := s.collectEndpointPageInputs(ctx, goal, userAgent, candidates)
@@ -614,8 +665,11 @@ func (s *Service) orderEndpointCandidates(ctx context.Context, goal string, cand
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
 			ID: candidate.URL,
 			Text: discoverycore.JoinNonEmpty(
+				candidate.Metadata["source_context"],
+				candidate.Metadata["page_title"],
 				candidate.Label,
 				discoverycore.URLIdentityText(candidate.URL),
+				candidate.Metadata["resource_class"],
 			),
 		})
 	}

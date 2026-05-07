@@ -88,7 +88,30 @@ func MergeMetadata(existing, incoming map[string]string) map[string]string {
 		if strings.TrimSpace(value) == "" {
 			continue
 		}
+		if key == "provider_observations" {
+			out[key] = mergeCommaList(out[key], value)
+			continue
+		}
 		out[key] = value
 	}
 	return out
+}
+
+func mergeCommaList(left, right string) string {
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, raw := range []string{left, right} {
+		for _, part := range strings.Split(raw, ",") {
+			value := strings.TrimSpace(part)
+			if value == "" {
+				continue
+			}
+			if _, ok := seen[value]; ok {
+				continue
+			}
+			seen[value] = struct{}{}
+			out = append(out, value)
+		}
+	}
+	return strings.Join(out, ",")
 }

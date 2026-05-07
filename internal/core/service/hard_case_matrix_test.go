@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 )
 
@@ -103,7 +102,9 @@ func runHardCaseMetrics(t *testing.T, html string, expected []string, req ReadRe
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
+	svc, err := New(cfg, server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}

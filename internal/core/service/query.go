@@ -67,6 +67,10 @@ type QueryCandidateDiagnostic struct {
 	SemanticDerivativeAlignment float64  `json:"semantic_derivative_alignment,omitempty"`
 	ClusterID                   string   `json:"cluster_id,omitempty"`
 	ClusterSize                 int      `json:"cluster_size,omitempty"`
+	LateInteractionScore        float64  `json:"late_interaction_score,omitempty"`
+	LateInteractionConfidence   float64  `json:"late_interaction_confidence,omitempty"`
+	SemanticQuorumProviderCount int      `json:"semantic_quorum_provider_count,omitempty"`
+	SemanticCalibrationScore    float64  `json:"semantic_calibration_score,omitempty"`
 	Reasons                     []string `json:"reasons,omitempty"`
 }
 
@@ -103,7 +107,7 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 	if err := s.applyDiscoveryToPlan(&plan, req, discoveryMode, discoveryResult); err != nil {
 		return QueryResponse{}, err
 	}
-	readResp, err := s.Read(ctx, s.readRequestForQuery(req, profile, plan.SelectedURL))
+	readResp, err := s.readQuerySelectedCandidate(ctx, req, profile, discoveryMode, &plan)
 	if err != nil {
 		if discoveryMode == QueryDiscoveryOff && strings.TrimSpace(req.SeedURL) != "" && strings.Contains(strings.ToLower(err.Error()), "unexpected status code 404") {
 			return QueryResponse{}, fmt.Errorf("seed_url returned 404; discovery_mode=off requires an exact canonical page. Use same_site_links or web_search first")
@@ -111,6 +115,66 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 		return QueryResponse{}, err
 	}
 	return finalizeQueryResponse(plan, baseCompiler, discoveryResult.candidates, readResp)
+}
+
+func (s *Service) readQuerySelectedCandidate(ctx context.Context, req QueryRequest, profile, discoveryMode string, plan *QueryPlan) (ReadResponse, error) {
+	selected := strings.TrimSpace(plan.SelectedURL)
+	readResp, err := s.Read(ctx, s.readRequestForQuery(req, profile, selected))
+	errorKind, recoverable := recoverableQueryReadErrorKind(err)
+	if err == nil || discoveryMode == QueryDiscoveryOff || !recoverable {
+		return readResp, err
+	}
+	for _, candidateURL := range plan.CandidateURLs {
+		candidateURL = strings.TrimSpace(candidateURL)
+		if candidateURL == "" || candidateURL == selected {
+			continue
+		}
+		nextResp, nextErr := s.Read(ctx, s.readRequestForQuery(req, profile, candidateURL))
+		if nextErr != nil {
+			if _, ok := recoverableQueryReadErrorKind(nextErr); ok {
+				continue
+			}
+			return ReadResponse{}, err
+		}
+		previous := plan.SelectedURL
+		plan.SelectedURL = candidateURL
+		annotateQueryReadFallback(plan, previous, candidateURL, errorKind)
+		return nextResp, nil
+	}
+	return ReadResponse{}, err
+}
+
+func recoverableQueryReadErrorKind(err error) (string, bool) {
+	if err == nil {
+		return "", false
+	}
+	text := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(text, "unsupported content type"):
+		return "unsupported_content_type", true
+	case strings.Contains(text, "unexpected status code 404"):
+		return "status_404", true
+	case strings.Contains(text, "unexpected status code 403"):
+		return "status_403", true
+	case strings.Contains(text, "unexpected status code 410"):
+		return "status_410", true
+	case strings.Contains(text, "no segments produced"):
+		return "empty_segments", true
+	default:
+		return "", false
+	}
+}
+
+func annotateQueryReadFallback(plan *QueryPlan, previousURL, selectedURL, errorKind string) {
+	plan.Compiler.Decisions = append(plan.Compiler.Decisions, queryplan.QueryPlanDecision{
+		Stage:      "select.candidate_runtime_fallback",
+		Choice:     selectedURL,
+		ReasonCode: queryplan.QueryPlanReasonSelection,
+		Metadata: map[string]string{
+			"previous_selected_url": strings.TrimSpace(previousURL),
+			"runtime_error_class":   strings.TrimSpace(errorKind),
+		},
+	})
 }
 
 func (r QueryRequest) withQueries(queries []string) QueryRequest {

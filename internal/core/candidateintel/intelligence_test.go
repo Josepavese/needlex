@@ -58,6 +58,28 @@ func TestWindowKeepsExpandedSemanticCandidatePool(t *testing.T) {
 	}
 }
 
+func TestWindowSkipsClearStructuralLeaderWithoutProvenanceConflict(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://example.com/root", Score: 4.8},
+		{URL: "https://example.com/docs", Score: 4.1},
+		{URL: "https://example.com/other", Score: 3.4},
+	}
+	if got := Window(candidates); got != 0 {
+		t.Fatalf("expected clear structural leader to skip semantic review, got %d", got)
+	}
+}
+
+func TestWindowKeepsSemanticReviewForProvenanceConflict(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://related.example/", Score: 4.8, Reason: []string{"same_family_canonical_root"}},
+		{URL: "https://origin.example/docs", Score: 3.7, Reason: []string{"host_root_identity_probe"}},
+		{URL: "https://example.com/other", Score: 3.4},
+	}
+	if got := Window(candidates); got != 3 {
+		t.Fatalf("expected provenance conflict to trigger semantic review, got %d", got)
+	}
+}
+
 type roleSemanticAligner struct{}
 
 func (roleSemanticAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {

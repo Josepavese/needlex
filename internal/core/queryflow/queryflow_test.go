@@ -26,6 +26,41 @@ func TestShouldEscalateRewriteSkipsGroundedLeaderWithClearDelta(t *testing.T) {
 	}
 }
 
+func TestShouldEscalateRewriteRequiresObservableSemanticGrounding(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://example.com/generic", Score: 1.5, Reason: []string{"candidate_intelligence"}},
+		{URL: "https://example.com/other", Score: 1.0, Reason: []string{"structure_hint"}},
+	}
+	if !ShouldEscalateRewrite(candidates[0].URL, candidates) {
+		t.Fatal("expected generic intelligence without similarity evidence to escalate")
+	}
+}
+
+func TestShouldEscalateRewriteAcceptsCandidateSimilarityMetadata(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:      "https://example.com/entity",
+			Score:    1.5,
+			Reason:   []string{"candidate_intelligence"},
+			Metadata: map[string]string{"candidate_goal_similarity": "0.510"},
+		},
+		{URL: "https://example.com/other", Score: 1.0, Reason: []string{"structure_hint"}},
+	}
+	if ShouldEscalateRewrite(candidates[0].URL, candidates) {
+		t.Fatal("expected strong candidate similarity metadata to prevent rewrite")
+	}
+}
+
+func TestShouldEscalateRewriteDoesNotTrustReasonOnlyGrounding(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://example.com/entity", Score: 1.5, Reason: []string{"candidate_identity_alignment"}},
+		{URL: "https://example.com/other", Score: 1.0, Reason: []string{"structure_hint"}},
+	}
+	if !ShouldEscalateRewrite(candidates[0].URL, candidates) {
+		t.Fatal("expected qualitative reason without semantic score to escalate")
+	}
+}
+
 func TestRerankCandidatesWithFingerprintEvidencePromotesNovelCandidate(t *testing.T) {
 	candidates := []discoverycore.Candidate{
 		{URL: "https://example.com/stable", Score: 1.0, Reason: []string{"semantic_goal_alignment"}},

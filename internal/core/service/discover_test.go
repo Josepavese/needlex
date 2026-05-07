@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/intel"
 )
@@ -72,14 +71,8 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 	}))
 	defer server.Close()
 	serverURL = server.URL
-
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "discover-test-embed"
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -101,7 +94,7 @@ func TestDiscoverChoosesBestGoalMatch(t *testing.T) {
 	}
 }
 
-func TestDiscoverSameSiteSpecificityPriorRoutesWithoutSemanticBackend(t *testing.T) {
+func TestDiscoverSameSiteSpecificityPriorRoutesWithSemanticEndpoint(t *testing.T) {
 	var serverURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -119,8 +112,8 @@ func TestDiscoverSameSiteSpecificityPriorRoutesWithoutSemanticBackend(t *testing
 	defer server.Close()
 	serverURL = server.URL
 
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = false
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -136,7 +129,7 @@ func TestDiscoverSameSiteSpecificityPriorRoutesWithoutSemanticBackend(t *testing
 		t.Fatalf("discover failed: %v", err)
 	}
 	if resp.SelectedURL != server.URL+"/docs/replay" {
-		t.Fatalf("expected same-site route to beat seed without semantic backend, got %q", resp.SelectedURL)
+		t.Fatalf("expected same-site route to beat seed without semantic support, got %q", resp.SelectedURL)
 	}
 	if !containsReason(resp.Candidates[0].Reason, "same_site_specific_route") {
 		t.Fatalf("expected same-site specificity reason, got %#v", resp.Candidates[0].Reason)
@@ -161,7 +154,7 @@ func TestDiscoverTargetKindKeepsBroadIdentityOnHome(t *testing.T) {
 	defer server.Close()
 	serverURL = server.URL
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	svc := newTestService(t, cfg, server.Client())
 	svc.semantic = targetKindTestAligner{target: targetKindCanonicalHome}
 	resp, err := svc.Discover(context.Background(), DiscoverRequest{
@@ -199,9 +192,8 @@ func TestDiscoverSameSiteUsesNativeContextFallbackForSiblingChoice(t *testing.T)
 	defer server.Close()
 	serverURL = server.URL
 
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "unsupported-native-test"
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -217,10 +209,10 @@ func TestDiscoverSameSiteUsesNativeContextFallbackForSiblingChoice(t *testing.T)
 		t.Fatalf("discover failed: %v", err)
 	}
 	if resp.SelectedURL != server.URL+"/download.html" {
-		t.Fatalf("expected native context fallback to select download route, got %q with candidates %#v", resp.SelectedURL, resp.Candidates)
+		t.Fatalf("expected semantic context to select download route, got %q with candidates %#v", resp.SelectedURL, resp.Candidates)
 	}
-	if !containsReason(resp.Candidates[0].Reason, "native_context_goal_alignment") {
-		t.Fatalf("expected native context alignment reason, got %#v", resp.Candidates[0].Reason)
+	if !containsReason(resp.Candidates[0].Reason, "semantic_goal_alignment") {
+		t.Fatalf("expected semantic alignment reason, got %#v", resp.Candidates[0].Reason)
 	}
 }
 
@@ -306,13 +298,8 @@ func TestDiscoverWebChoosesBestCrossSiteCandidate(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "discover-test-embed"
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -355,13 +342,8 @@ func TestDiscoverWebReranksUsingFetchedPageTitle(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "discover-test-embed"
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -416,7 +398,7 @@ func TestDiscoverWebExpandsLandingPageToBetterChild(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	svc, err := New(config.Defaults(), searchServer.Client())
+	svc, err := New(testConfig(), searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -464,13 +446,8 @@ func TestDiscoverWebMergesMultipleProviders(t *testing.T) {
 	}))
 	defer searchTwo.Close()
 
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "discover-test-embed"
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, searchOne.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -511,13 +488,8 @@ func TestDiscoverWebUsesLocalSubstrateBeforeWebBootstrap(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "discover-test-embed"
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc, err := New(cfg, seedServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)

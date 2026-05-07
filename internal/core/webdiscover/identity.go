@@ -15,6 +15,10 @@ type IdentityReferenceCandidate struct {
 	Relation string
 }
 
+const (
+	identityExternalMinSimilarity = 0.20
+)
+
 func ExtractIdentityReferenceCandidates(rawHTML, baseURL, label string) []IdentityReferenceCandidate {
 	root, err := html.Parse(strings.NewReader(rawHTML))
 	if err != nil {
@@ -69,7 +73,7 @@ func IdentityBaseLinks(sourceURL string, refs []IdentityReferenceCandidate) ([]d
 	relationByURL := make(map[string]string, len(refs))
 	cleanSourceURL := strings.TrimSpace(sourceURL)
 	for _, ref := range refs {
-		if strings.TrimSpace(ref.URL) == cleanSourceURL {
+		if discoverycore.SameCanonicalURL(ref.URL, cleanSourceURL) {
 			continue
 		}
 		baseLinks = append(baseLinks, discoverycore.LinkCandidate{URL: ref.URL, Label: ref.Label})
@@ -87,8 +91,10 @@ func IdentitySemanticCandidates(source discoverycore.Candidate, scored []discove
 				source.Metadata["host_root_title"],
 				source.Metadata["page_title"],
 				source.Label,
+				candidate.Metadata["source_context"],
 				candidate.Label,
 				discoverycore.URLIdentityText(candidate.URL),
+				candidate.Metadata["resource_class"],
 			),
 		})
 	}
@@ -100,43 +106,32 @@ func IdentityDiscoverCandidates(source discoverycore.Candidate, scored []discove
 	out := make([]discoverycore.Candidate, 0, 2)
 	for _, candidate := range scored {
 		similarity := goalSimilarity[candidate.URL]
-		switch relationByURL[candidate.URL] {
-		case "alternate":
-			if similarity < 0.22 {
-				continue
-			}
-		case "og_url":
-			if similarity < 0.18 {
-				continue
-			}
+		relation := discoverycore.FirstNonEmpty(relationByURL[candidate.URL], "unknown")
+		family, familyOK := CandidateFamily(candidate.URL)
+		externalFamily := familyOK && family != "" && sourceFamily != "" && family != sourceFamily
+		if externalFamily && relation != "canonical" && similarity < identityExternalMinSimilarity {
+			continue
 		}
-		boost := 1.10
-		if similarity > 0 {
-			boost += similarity * 1.4
+		boost := identityReferenceBoost(relation, similarity, externalFamily)
+		if boost == 0 {
+			continue
 		}
-		if family, ok := CandidateFamily(candidate.URL); ok && family != "" && family != sourceFamily {
-			boost += 0.45
-		}
-		switch relationByURL[candidate.URL] {
-		case "canonical":
-			boost += 0.75
-		case "og_url":
-			boost += 0.60
-		case "alternate":
-			boost += 0.35
+		reasons := discoverycore.AppendUniqueReason(candidate.Reason,
+			"identity_reference",
+			"identity_reference_"+relation,
+		)
+		if externalFamily {
+			reasons = discoverycore.AppendUniqueReason(reasons, "external_family_recovery")
 		}
 		out = append(out, discoverycore.Candidate{
-			URL:   candidate.URL,
-			Label: discoverycore.FirstNonEmpty(candidate.Label, source.Label, candidate.URL),
-			Score: candidate.Score + boost,
-			Reason: discoverycore.AppendUniqueReason(candidate.Reason,
-				"identity_reference",
-				"external_family_recovery",
-				"identity_reference_"+discoverycore.FirstNonEmpty(relationByURL[candidate.URL], "unknown"),
-			),
+			URL:    candidate.URL,
+			Label:  discoverycore.FirstNonEmpty(candidate.Label, source.Label, candidate.URL),
+			Score:  candidate.Score + boost,
+			Reason: reasons,
 			Metadata: discoverycore.MergeMetadata(source.Metadata, map[string]string{
 				"identity_reference_source": source.URL,
-				"identity_reference_kind":   relationByURL[candidate.URL],
+				"identity_reference_kind":   relation,
+				"identity_reference_scope":  identityReferenceScope(externalFamily),
 				"resource_class":            discoverycore.ResourceClass(candidate.URL),
 			}),
 		})
@@ -145,6 +140,38 @@ func IdentityDiscoverCandidates(source discoverycore.Candidate, scored []discove
 		}
 	}
 	return out
+}
+
+func identityReferenceBoost(relation string, similarity float64, externalFamily bool) float64 {
+	if externalFamily {
+		boost := 0.26 + similarity*1.05
+		switch relation {
+		case "canonical":
+			boost += 1.12
+		case "og_url":
+			boost += 0.22
+		case "alternate":
+			boost += 0.16
+		}
+		return boost
+	}
+	boost := 0.08 + similarity*0.24
+	switch relation {
+	case "canonical":
+		boost += 0.12
+	case "og_url":
+		boost += 0.08
+	case "alternate":
+		boost += 0.06
+	}
+	return boost
+}
+
+func identityReferenceScope(externalFamily bool) string {
+	if externalFamily {
+		return "external_family"
+	}
+	return "same_family"
 }
 
 func resolveReferenceURL(base *url.URL, raw string) string {

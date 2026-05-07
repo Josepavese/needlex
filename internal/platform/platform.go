@@ -7,7 +7,10 @@ import (
 	"strings"
 )
 
-const EnvHome = "NEEDLEX_HOME"
+const (
+	EnvHome   = "NEEDLEX_HOME"
+	EnvConfig = "NEEDLEX_CONFIG"
+)
 
 func DefaultStateRoot() string {
 	return StableStateRoot()

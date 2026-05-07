@@ -61,6 +61,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) (exitCode int) {
 		return r.runMemory(args[1:], stdout, stderr)
 	case "analytics":
 		return r.runAnalytics(args[1:], stdout, stderr)
+	case "config":
+		return r.runConfig(args[1:], stdout, stderr)
 	case "logs":
 		return r.runLogs(args[1:], stdout, stderr)
 	case "support":
@@ -173,6 +175,7 @@ func writeRootUsage(w io.Writer) {
   needlex proof <trace-id|proof-id|chunk-id> [--json]
   needlex memory <stats|search|prune|export|import|rebuild-index> [args]
   needlex analytics <stats|recent|value-report|hosts|providers|failures|daily|export> [args]
+  needlex config <path|show|init|set> [args]
   needlex logs <path|stats|tail> [args]
   needlex support bundle --out DIR [args]
   needlex prune (--all | --older-than-hours N) [--json]

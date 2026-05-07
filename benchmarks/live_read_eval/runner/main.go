@@ -437,7 +437,7 @@ func semanticAlignmentForChunks(objective string, chunks []core.Chunk, client *h
 		return 0
 	}
 	cfg, err := config.Load("")
-	if err != nil || !cfg.Semantic.Enabled || strings.TrimSpace(cfg.Semantic.Model) == "" {
+	if err != nil || !intel.SemanticConfigured(cfg) {
 		return 0
 	}
 	aligner := intel.NewSemanticAligner(cfg, client)

@@ -25,11 +25,36 @@ Installed command:
 2. installs the binary wrapper
 3. creates the local state root
 4. wires `NEEDLEX_HOME`
-5. prepares the same runtime surface for CLI and MCP
-6. reconciles reruns without duplicating PATH hooks
-7. leaves unrelated commands untouched
-8. prints the optional Codex skill path for agent-side usage guidance
-9. creates the PAL runtime log directory used by `needlex logs`
+5. wires `NEEDLEX_CONFIG` to the PAL SSOT config
+6. installs or verifies local Ollama embeddings prerequisites
+7. pulls the default embedding model `embeddinggemma:latest`
+8. prepares the same runtime surface for CLI and MCP
+9. reconciles reruns without duplicating PATH hooks
+10. leaves unrelated commands untouched
+11. prints the optional Codex skill path for agent-side usage guidance
+12. creates the PAL runtime log directory used by `needlex logs`
+
+## Semantic Config
+
+Needle-X is embeddings-first. The installed command reads:
+
+```text
+<state-root>/configs/needlex.json
+```
+
+Default semantic backend:
+1. Ollama local API
+2. `http://127.0.0.1:11434/api/embed`
+3. `embeddinggemma:latest`
+4. `ollama-embeddinggemma-v1`
+
+Operators change this with:
+
+```bash
+needlex config show
+needlex config set semantic.provider_model nomic-embed-text:latest
+needlex doctor
+```
 
 ## Optional Agent Skill
 

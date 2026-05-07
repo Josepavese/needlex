@@ -159,7 +159,7 @@
         "small or self-contained"
       ],
       "must_expose_proof": true,
-      "notes": "Homepage understanding for a legacy technical site."
+      "notes": "Homepage understanding for a classic technical site."
     },
     {
       "id": "sqlite-chronology-overview",
@@ -322,24 +322,24 @@
       "notes": "Modern product homepage with strong marketing surface."
     },
     {
-      "id": "sqlite-home-legacy",
-      "family": "legacy_homepage",
+      "id": "sqlite-home-classic",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://sqlite.org",
       "task_type": "read_page_understanding",
-      "goal": "understand this legacy homepage",
+      "goal": "understand this classic homepage",
       "expected_url": "https://sqlite.org",
       "expected_domain": "sqlite.org",
       "must_contain_facts": [
         "what SQLite is",
-        "legacy technical homepage"
+        "classic technical homepage"
       ],
       "must_expose_proof": true,
       "notes": "Legacy homepage with menu/index noise."
     },
     {
       "id": "sqlite-chronology-list-like",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://www.sqlite.org/chronology.html",
       "task_type": "read_page_understanding",
@@ -351,11 +351,11 @@
         "long chronology list"
       ],
       "must_expose_proof": true,
-      "notes": "List-like legacy page where the list is the content."
+      "notes": "List-like classic page where the list is the content."
     },
     {
       "id": "nginx-home",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://nginx.org/en/",
       "task_type": "read_then_answer",
@@ -371,7 +371,7 @@
     },
     {
       "id": "lua-home",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://www.lua.org/",
       "task_type": "read_page_understanding",
@@ -1369,7 +1369,7 @@
     },
     {
       "id": "curl-docs-read",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://curl.se/docs/",
       "task_type": "read_page_understanding",
@@ -1384,7 +1384,7 @@
     },
     {
       "id": "lua-manual-read",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://www.lua.org/manual/5.4/",
       "task_type": "read_then_answer",
@@ -1399,7 +1399,7 @@
     },
     {
       "id": "gnu-make-manual-read",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://www.gnu.org/software/make/manual/make.html",
       "task_type": "read_then_answer",
@@ -1414,7 +1414,7 @@
     },
     {
       "id": "nginx-docs-read",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://nginx.org/en/docs/",
       "task_type": "read_page_understanding",
@@ -1429,7 +1429,7 @@
     },
     {
       "id": "cmake-help-read",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://cmake.org/cmake/help/latest/",
       "task_type": "read_page_understanding",

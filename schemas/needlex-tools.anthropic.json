@@ -55,7 +55,7 @@
     },
     {
       "name": "web_query",
-      "description": "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
+      "description": "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Internally, Needle-X records semantic family evidence and provider observations for future seedless reuse. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [
@@ -120,7 +120,7 @@
     },
     {
       "name": "web_read",
-      "description": "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory and Analytics PAL for future seedless reuse.",
+      "description": "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory, semantic family graph evidence, and Analytics PAL for future seedless reuse.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [

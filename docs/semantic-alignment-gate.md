@@ -16,8 +16,8 @@ The old surface-form gate is now considered auxiliary and weak for context decis
 
 - Input: objective + top selected chunks
 - Output: suppress or allow `resolve_ambiguity`
-- Backend: optional embeddings provider
-- Default: disabled
+- Vectorizer: dense embedding endpoint configured through the PAL SSOT config
+- Default: active with local Ollama `embeddinggemma:latest`
 
 This is not a retrieval layer, not a vector database, and not a new ranking substrate.
 It is a narrow semantic control plane for context decisions.
@@ -35,30 +35,28 @@ It is a narrow semantic control plane for context decisions.
 - The gate may suppress a model route immediately.
 - The gate may later become the primary context gate for meaning-sensitive routing.
 - The gate must stay local to context interpretation and ambiguity routing. It must not become a general retrieval stack.
-- If the embeddings backend is unavailable, Needle-X falls back to deterministic behavior.
+- Semantic vectors are produced only by the configured dense embedding endpoint.
+- If no endpoint is configured, Needle-X fails instead of falling back to text overlap.
 
 ## Backend
 
-Current implementation supports:
-
-- `ollama /api/embed`
-- `openai-like /v1/embeddings`
+Current implementation supports dense HTTP embeddings only.
 
 The semantic gate follows SSOT defaults from:
 - [model-baseline.json](../internal/config/modelbaseline/model-baseline.json)
 
 Current SSOT semantic baseline:
 
-- backend: `openai-embeddings`
-- model: `intfloat/multilingual-e5-small`
-- base_url: `http://127.0.0.1:18180`
+- endpoint: `http://127.0.0.1:11434/api/embed`
+- provider model: `embeddinggemma:latest`
+- vector space: `ollama-embeddinggemma-v1`
 
 Reason:
 
-1. multilingual and CPU-friendly enough for a local gate
-2. commercial-friendly license
-3. adequate dimensionality and quality for local objective-to-chunk alignment
-4. much better fit for a small suppression gate than a heavyweight retrieval model
+1. multilingual meaning requires a real embedding space
+2. a character or token overlap vector is not acceptable as semantic ranking
+3. the endpoint contract is no-key friendly and can be provided by any local or trusted embedding service
+4. the default path is bounded and local: no valid endpoint means no valid Needle-X runtime
 
 Other candidates worth later evaluation:
 
@@ -88,9 +86,9 @@ Needle-X should not trust surface-form matching as the main judge of context mea
 
 ## Rollout
 
-1. Keep disabled by default until the semantic gate is benchmarked broadly
-2. Enable first in evaluation environments
-3. Compare live latency and accepted/rejected interventions before promotion
+1. Keep dense embeddings mandatory in installed/runtime surfaces
+2. Use `needlex config` to change endpoint, model, or vector space
+3. Compare live latency and accepted/rejected interventions before changing defaults
 4. Promote semantic alignment to first-class report metric as soon as live evidence is real
 5. Replace surface-form meaning-gates in macrosteps, not piecemeal
 6. Evaluate eventual removal of surface-form gating from meaning-sensitive decisions
@@ -100,7 +98,7 @@ Needle-X should not trust surface-form matching as the main judge of context mea
 As of `2026-03-30`:
 
 1. live multilingual evaluation already shows semantic alignment on real Chinese, German, Russian, Japanese, French, and Spanish pages
-2. the same cases previously showed `context_coverage = 0.0`, which is why that legacy metric was removed from the active live context reports
+2. the same cases previously showed `context_coverage = 0.0`, which is why that retired metric was removed from the active live context reports
 3. this means surface-form overlap is not merely imperfect; it is empirically blind for a core class of real web inputs
 
 So the doctrine is now:
@@ -129,19 +127,9 @@ Correct layering:
 
 This is the stronger direction for a product that aims to compile the web rather than pattern-match strings.
 
-## Local CPU Upstream
+## Dense Embedding Smoke
 
-Needle-X now ships a local CPU upstream for the SSOT semantic baseline:
-
-- [run_semantic_embed_upstream.py](../scripts/run_semantic_embed_upstream.py)
-
-It exposes:
-
-- `/healthz`
-- `/v1/models`
-- `/v1/embeddings`
-
-Smoke command:
+The semantic baseline is exercised directly through core Go tests:
 
 ```bash
 ./scripts/run_semantic_gate_smoke.sh

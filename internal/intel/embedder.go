@@ -3,168 +3,123 @@ package intel
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
+	"io"
 	"math"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/josepavese/needlex/internal/config"
 )
 
+const (
+	DenseSemanticVectorSpace = "needlex-dense-vector-space-v1"
+	DenseEmbeddingSource     = "dense-http"
+)
+
 type TextEmbedder interface {
+	ModelID() string
 	Embed(ctx context.Context, inputs []string) ([][]float32, error)
 }
 
-type NativeTextEmbedder struct {
-	Dimensions int
-}
-
-type OllamaTextEmbedder struct {
-	BaseURL   string
-	Model     string
-	Client    *http.Client
-	TimeoutMS int64
-}
-
-type OpenAITextEmbedder struct {
-	BaseURL   string
-	Model     string
-	Client    *http.Client
-	TimeoutMS int64
-}
-
-type fallbackTextEmbedder struct {
-	primary  TextEmbedder
-	fallback TextEmbedder
+func SemanticConfigured(cfg config.Config) bool {
+	return strings.TrimSpace(cfg.Semantic.EmbeddingURL) != "" &&
+		strings.TrimSpace(cfg.Semantic.ProviderModel) != "" &&
+		strings.TrimSpace(cfg.Semantic.VectorSpace) != ""
 }
 
 func NewTextEmbedder(cfg config.Config, client *http.Client) TextEmbedder {
-	backend := strings.TrimSpace(cfg.Memory.EmbeddingBackend)
-	model := strings.TrimSpace(cfg.Memory.EmbeddingModel)
-	fallback := NativeTextEmbedder{Dimensions: 384}
-	if backend == "" || model == "" {
-		return fallback
+	return DenseHTTPTextEmbedder{
+		Endpoint:      cfg.Semantic.EmbeddingURL,
+		ProviderModel: cfg.Semantic.ProviderModel,
+		VectorSpace:   cfg.Semantic.VectorSpace,
+		TimeoutMS:     cfg.Semantic.TimeoutMS,
+		Client:        client,
 	}
-	var primary TextEmbedder
-	switch backend {
-	case "ollama-embed":
-		primary = OllamaTextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client, TimeoutMS: cfg.Semantic.TimeoutMS}
-	case "openai-embeddings":
-		primary = OpenAITextEmbedder{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: model, Client: client, TimeoutMS: cfg.Semantic.TimeoutMS}
-	default:
-		return fallback
-	}
-	return fallbackTextEmbedder{primary: primary, fallback: fallback}
 }
 
-func (e fallbackTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
-	vectors, err := e.primary.Embed(ctx, inputs)
-	if err == nil && len(vectors) > 0 {
-		return vectors, nil
-	}
-	return e.fallback.Embed(ctx, inputs)
+type DenseHTTPTextEmbedder struct {
+	Endpoint      string
+	ProviderModel string
+	VectorSpace   string
+	TimeoutMS     int64
+	Client        *http.Client
 }
 
-func (e NativeTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
+func (e DenseHTTPTextEmbedder) ModelID() string {
+	if vectorSpace := strings.TrimSpace(e.VectorSpace); vectorSpace != "" {
+		return vectorSpace
+	}
+	return derivedDenseVectorSpace(e.Endpoint, e.ProviderModel)
+}
+
+func (e DenseHTTPTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
 	clean := compactEmbedInputs(inputs)
 	if len(clean) == 0 {
 		return nil, nil
 	}
-	dimensions := e.Dimensions
-	if dimensions <= 0 {
-		dimensions = 384
-	}
-	out := make([][]float32, 0, len(clean))
-	for _, input := range clean {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-		out = append(out, nativeTextEmbedding(input, dimensions))
-	}
-	return out, nil
-}
-
-func (e OllamaTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
-	clean := compactEmbedInputs(inputs)
-	if len(clean) == 0 {
+	endpoint := strings.TrimSpace(e.Endpoint)
+	if endpoint == "" {
 		return nil, nil
 	}
-	ctx, cancel := contextWithTimeoutMS(ctx, e.TimeoutMS)
-	defer cancel()
-	body, _ := json.Marshal(map[string]any{"model": e.Model, "input": clean})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.BaseURL+"/api/embed", bytes.NewReader(body))
+	payload := map[string]any{"input": clean}
+	if providerModel := strings.TrimSpace(e.ProviderModel); providerModel != "" {
+		payload["model"] = providerModel
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encode embedding request: %w", err)
+	}
+	if e.TimeoutMS > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(e.TimeoutMS)*time.Millisecond)
+		defer cancel()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("build embedding request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := httpClientOrDefault(e.Client, time.Duration(e.TimeoutMS)*time.Millisecond)
+	req.Header.Set("Accept", "application/json")
+	client := e.Client
+	if client == nil {
+		client = http.DefaultClient
+	}
 	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send embedding request: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("embedding endpoint status %d", resp.StatusCode)
+	}
+	vectors, err := decodeEmbeddingResponse(io.LimitReader(resp.Body, 16<<20))
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close() //nolint:errcheck
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("memory embed upstream returned %d", resp.StatusCode)
+	if len(vectors) != len(clean) {
+		return nil, fmt.Errorf("embedding endpoint returned %d vectors for %d inputs", len(vectors), len(clean))
 	}
-	var payload struct {
-		Embeddings [][]float64 `json:"embeddings"`
+	for i := range vectors {
+		normalizeFloat32(vectors[i])
 	}
-	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "memory embed", &payload); err != nil {
-		return nil, err
-	}
-	if len(payload.Embeddings) != len(clean) {
-		return nil, fmt.Errorf("memory embed returned %d vectors for %d inputs", len(payload.Embeddings), len(clean))
-	}
-	return convertEmbeddings(payload.Embeddings), nil
+	return vectors, nil
 }
 
-func (e OpenAITextEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
-	clean := compactEmbedInputs(inputs)
-	if len(clean) == 0 {
-		return nil, nil
+func derivedDenseVectorSpace(endpoint, providerModel string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		return ""
 	}
-	ctx, cancel := contextWithTimeoutMS(ctx, e.TimeoutMS)
-	defer cancel()
-	body, _ := json.Marshal(map[string]any{"model": e.Model, "input": clean})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.BaseURL+"/v1/embeddings", bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := httpClientOrDefault(e.Client, time.Duration(e.TimeoutMS)*time.Millisecond)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("memory embeddings upstream returned %d", resp.StatusCode)
-	}
-	var payload struct {
-		Data []struct {
-			Embedding []float64 `json:"embedding"`
-			Index     int       `json:"index"`
-		} `json:"data"`
-	}
-	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "memory embeddings", &payload); err != nil {
-		return nil, err
-	}
-	if len(payload.Data) != len(clean) {
-		return nil, fmt.Errorf("memory embeddings returned %d vectors for %d inputs", len(payload.Data), len(clean))
-	}
-	ordered := make([][]float64, len(payload.Data))
-	for _, row := range payload.Data {
-		if row.Index < 0 || row.Index >= len(payload.Data) {
-			return nil, fmt.Errorf("memory embeddings index %d out of range", row.Index)
-		}
-		ordered[row.Index] = row.Embedding
-	}
-	return convertEmbeddings(ordered), nil
+	sum := sha256.Sum256([]byte(DenseEmbeddingSource + "|" + endpoint + "|" + strings.TrimSpace(providerModel)))
+	return DenseEmbeddingSource + ":" + hex.EncodeToString(sum[:8])
 }
 
 func compactEmbedInputs(inputs []string) []string {
@@ -179,33 +134,84 @@ func compactEmbedInputs(inputs []string) []string {
 	return out
 }
 
-func convertEmbeddings(vectors [][]float64) [][]float32 {
-	out := make([][]float32, 0, len(vectors))
-	for _, vector := range vectors {
-		converted := make([]float32, 0, len(vector))
-		for _, value := range vector {
-			converted = append(converted, float32(value))
+type embeddingWireResponse struct {
+	Embedding  json.RawMessage          `json:"embedding"`
+	Embeddings []json.RawMessage        `json:"embeddings"`
+	Vectors    []json.RawMessage        `json:"vectors"`
+	Data       []embeddingWireDataEntry `json:"data"`
+}
+
+type embeddingWireDataEntry struct {
+	Index     int             `json:"index"`
+	Embedding json.RawMessage `json:"embedding"`
+}
+
+func decodeEmbeddingResponse(reader io.Reader) ([][]float32, error) {
+	var wire embeddingWireResponse
+	decoder := json.NewDecoder(reader)
+	if err := decoder.Decode(&wire); err != nil {
+		return nil, fmt.Errorf("decode embedding response: %w", err)
+	}
+	if len(wire.Embeddings) > 0 {
+		return decodeRawVectors(wire.Embeddings)
+	}
+	if len(wire.Vectors) > 0 {
+		return decodeRawVectors(wire.Vectors)
+	}
+	if len(wire.Data) > 0 {
+		sort.SliceStable(wire.Data, func(i, j int) bool { return wire.Data[i].Index < wire.Data[j].Index })
+		raw := make([]json.RawMessage, 0, len(wire.Data))
+		seen := map[int]struct{}{}
+		for idx, entry := range wire.Data {
+			if entry.Index < 0 || entry.Index >= len(wire.Data) {
+				return nil, fmt.Errorf("embedding response data index %d out of range for %d vectors", entry.Index, len(wire.Data))
+			}
+			if _, ok := seen[entry.Index]; ok {
+				return nil, fmt.Errorf("embedding response data index %d is duplicated", entry.Index)
+			}
+			seen[entry.Index] = struct{}{}
+			if len(entry.Embedding) == 0 {
+				return nil, fmt.Errorf("embedding response data[%d] contains no vector", idx)
+			}
+			raw = append(raw, entry.Embedding)
 		}
-		out = append(out, converted)
+		return decodeRawVectors(raw)
 	}
-	return out
+	if len(wire.Embedding) > 0 {
+		vector, err := decodeRawVector(wire.Embedding)
+		if err != nil {
+			return nil, err
+		}
+		return [][]float32{vector}, nil
+	}
+	return nil, fmt.Errorf("embedding response contains no vectors")
 }
 
-func nativeTextEmbedding(input string, dimensions int) []float32 {
-	vector := make([]float32, dimensions)
-	features := nativeEmbeddingFeatures(input)
-	for key, weight := range features {
-		idx := nativeFeatureIndex(key, dimensions)
-		vector[idx] += float32(weight)
+func decodeRawVectors(raw []json.RawMessage) ([][]float32, error) {
+	vectors := make([][]float32, 0, len(raw))
+	for _, item := range raw {
+		vector, err := decodeRawVector(item)
+		if err != nil {
+			return nil, err
+		}
+		vectors = append(vectors, vector)
 	}
-	normalizeFloat32(vector)
-	return vector
+	return vectors, nil
 }
 
-func nativeFeatureIndex(key string, dimensions int) int {
-	h := fnv.New32a()
-	_, _ = h.Write([]byte(key))
-	return int(h.Sum32() % uint32(dimensions))
+func decodeRawVector(raw json.RawMessage) ([]float32, error) {
+	var values []float64
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return nil, fmt.Errorf("decode embedding vector: %w", err)
+	}
+	if len(values) == 0 {
+		return nil, fmt.Errorf("embedding vector must not be empty")
+	}
+	vector := make([]float32, len(values))
+	for i, value := range values {
+		vector[i] = float32(value)
+	}
+	return vector, nil
 }
 
 func normalizeFloat32(vector []float32) {
@@ -220,4 +226,33 @@ func normalizeFloat32(vector []float32) {
 	for i := range vector {
 		vector[i] *= scale
 	}
+}
+
+func zeroFloat32Vector(vector []float32) bool {
+	for _, value := range vector {
+		if value != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func cosineSimilarityFloat32(left, right []float32) float64 {
+	if len(left) == 0 || len(left) != len(right) {
+		return 0
+	}
+	dot := 0.0
+	normLeft := 0.0
+	normRight := 0.0
+	for i := range left {
+		leftValue := float64(left[i])
+		rightValue := float64(right[i])
+		dot += leftValue * rightValue
+		normLeft += leftValue * leftValue
+		normRight += rightValue * rightValue
+	}
+	if normLeft == 0 || normRight == 0 {
+		return 0
+	}
+	return dot / (math.Sqrt(normLeft) * math.Sqrt(normRight))
 }

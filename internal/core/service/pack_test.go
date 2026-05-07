@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
@@ -47,7 +46,7 @@ func (a *contextProbeSemanticAligner) Score(ctx context.Context, _ string, _ []i
 
 func TestSegmentSemanticAlignmentUsesCallerContext(t *testing.T) {
 	probe := &contextProbeSemanticAligner{}
-	svc, err := New(config.Defaults(), nil)
+	svc, err := New(testConfig(), nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -73,7 +72,7 @@ func TestResolveProfileDefaultsToStandard(t *testing.T) {
 }
 
 func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
+	svc, err := New(testConfig(), nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -113,7 +112,7 @@ func TestRankSegmentsBoostsObjectiveMatch(t *testing.T) {
 }
 
 func TestRankSegmentsUsesWebIREmbeddedEvidence(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
+	svc, err := New(testConfig(), nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}

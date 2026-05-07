@@ -139,16 +139,8 @@ func (s SQLiteStore) UpsertEmbedding(ctx context.Context, emb Embedding, vector 
 	}
 	defer platform.Close(conn)
 	_, err = conn.ExecContext(ctx, `
-INSERT INTO embeddings (embedding_ref, document_url, model, backend, input_text, dimension, vector, created_at, updated_at)
+INSERT OR REPLACE INTO embeddings (embedding_ref, document_url, model, backend, input_text, dimension, vector, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(embedding_ref) DO UPDATE SET
-  document_url=excluded.document_url,
-  model=excluded.model,
-  backend=excluded.backend,
-  input_text=excluded.input_text,
-  dimension=excluded.dimension,
-  vector=excluded.vector,
-  updated_at=excluded.updated_at
 `,
 		emb.EmbeddingRef,
 		emb.DocumentURL,
@@ -166,10 +158,11 @@ ON CONFLICT(embedding_ref) DO UPDATE SET
 	return nil
 }
 
-func (s SQLiteStore) RefreshTopicNodes(ctx context.Context, doc Document) error {
+func (s SQLiteStore) RefreshTopicNodes(ctx context.Context, doc Document, vectorSpace string) error {
+	vectorSpace = strings.TrimSpace(vectorSpace)
 	host := strings.TrimSpace(strings.ToLower(doc.Host))
 	path := firstNonEmpty(doc.Path, "/")
-	if host == "" || strings.TrimSpace(path) == "" || path == "/" {
+	if vectorSpace == "" || host == "" || strings.TrimSpace(path) == "" || path == "/" {
 		return nil
 	}
 	conn, err := s.open(ctx)
@@ -178,7 +171,7 @@ func (s SQLiteStore) RefreshTopicNodes(ctx context.Context, doc Document) error 
 	}
 	defer platform.Close(conn)
 	for _, rootPath := range topicRootPaths(path) {
-		row, ok, err := loadTopicNodeRow(ctx, conn, host, rootPath)
+		row, ok, err := loadTopicNodeRow(ctx, conn, vectorSpace, host, rootPath)
 		if err != nil {
 			return err
 		}

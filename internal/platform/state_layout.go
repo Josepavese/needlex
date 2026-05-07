@@ -12,6 +12,8 @@ type StateLayout struct {
 	AnalyticsDir        string `json:"analytics_dir"`
 	AnalyticsDB         string `json:"analytics_db"`
 	CandidatesDir       string `json:"candidates_dir"`
+	ConfigsDir          string `json:"configs_dir"`
+	ConfigPath          string `json:"config_path"`
 	DiscoveryDir        string `json:"discovery_dir"`
 	DiscoveryDB         string `json:"discovery_db"`
 	DomainGraphDir      string `json:"domain_graph_dir"`
@@ -34,6 +36,8 @@ func NewStateLayout(root string) StateLayout {
 		AnalyticsDir:        filepath.Join(cleanRoot, "analytics"),
 		AnalyticsDB:         filepath.Join(cleanRoot, "analytics", "analytics.db"),
 		CandidatesDir:       filepath.Join(cleanRoot, "candidates"),
+		ConfigsDir:          filepath.Join(cleanRoot, "configs"),
+		ConfigPath:          filepath.Join(cleanRoot, "configs", "needlex.json"),
 		DiscoveryDir:        filepath.Join(cleanRoot, "discovery"),
 		DiscoveryDB:         filepath.Join(cleanRoot, DefaultDiscoveryDBRelativePath),
 		DomainGraphDir:      filepath.Join(cleanRoot, "domain_graph"),
@@ -51,6 +55,8 @@ func (l StateLayout) Paths() map[string]string {
 	return map[string]string{
 		"analytics":         l.AnalyticsDir,
 		"candidates":        l.CandidatesDir,
+		"configs":           l.ConfigsDir,
+		"config":            l.ConfigPath,
 		"discovery":         l.DiscoveryDir,
 		"domain_graph":      l.DomainGraphDir,
 		"fingerprint_graph": l.FingerprintGraphDir,

@@ -18,6 +18,7 @@ import (
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/intel"
 )
 
 func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
@@ -569,17 +570,11 @@ func TestRunnerMCPCrawl(t *testing.T) {
 
 func TestRunnerMCPMemoryTools(t *testing.T) {
 	root := t.TempDir()
-	semantic := newMemoryEmbeddingServer()
-	defer semantic.Close()
 
 	cfg := config.Defaults()
 	cfg.Memory.Enabled = true
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = semantic.URL
-	cfg.Semantic.Model = "memory-test-embed"
-	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
-	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+	cfg.Semantic.VectorSpace = intel.DenseSemanticVectorSpace
+	cfg.Semantic.EmbeddingURL = newTransportEmbeddingServer(t).URL
 	configPath := filepath.Join(root, "needlex-memory.json")
 	rawCfg, err := json.Marshal(cfg)
 	if err != nil {
@@ -589,7 +584,7 @@ func TestRunnerMCPMemoryTools(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	seedMemoryDocument(t, root, cfg, semantic.Client(), "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
+	seedMemoryDocument(t, root, cfg, "https://playwright.dev/docs/intro", "Installation | Playwright", "Install Playwright and run the installation command to download browser binaries.")
 	exportDir := filepath.Join(root, "memory-export")
 	importRoot := t.TempDir()
 

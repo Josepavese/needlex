@@ -20,10 +20,12 @@ func (s SQLiteStore) GetStats(ctx context.Context) (Stats, error) {
 	defer platform.Close(conn)
 	stats := Stats{DBPath: s.dbPath}
 	for query, target := range map[string]*int{
-		"SELECT COUNT(*) FROM documents":   &stats.DocumentCount,
-		"SELECT COUNT(*) FROM edges":       &stats.EdgeCount,
-		"SELECT COUNT(*) FROM embeddings":  &stats.EmbeddingCount,
-		"SELECT COUNT(*) FROM topic_nodes": &stats.TopicNodeCount,
+		"SELECT COUNT(*) FROM documents":               &stats.DocumentCount,
+		"SELECT COUNT(*) FROM edges":                   &stats.EdgeCount,
+		"SELECT COUNT(*) FROM embeddings":              &stats.EmbeddingCount,
+		"SELECT COUNT(*) FROM topic_nodes":             &stats.TopicNodeCount,
+		"SELECT COUNT(*) FROM semantic_families":       &stats.SemanticFamilyCount,
+		"SELECT COUNT(*) FROM semantic_family_members": &stats.SemanticMemberCount,
 	} {
 		if err := conn.QueryRowContext(ctx, query).Scan(target); err != nil {
 			return Stats{}, fmt.Errorf("query discovery stats: %w", err)
@@ -39,6 +41,14 @@ func (s SQLiteStore) GetStats(ctx context.Context) (Stats, error) {
 	var lastRebuild sql.NullString
 	if err := conn.QueryRowContext(ctx, "SELECT value FROM memory_state WHERE key = 'vector_index_rebuilt_at'").Scan(&lastRebuild); err == nil && lastRebuild.Valid {
 		stats.LastRebuildAt, _ = time.Parse(time.RFC3339Nano, lastRebuild.String)
+	}
+	var vectorEngine sql.NullString
+	if err := conn.QueryRowContext(ctx, "SELECT value FROM memory_state WHERE key = 'vector_engine'").Scan(&vectorEngine); err == nil && vectorEngine.Valid {
+		stats.VectorEngine = vectorEngine.String
+	}
+	stats.VectorDimensions, err = distinctEmbeddingDimensions(ctx, conn)
+	if err != nil {
+		return Stats{}, err
 	}
 	return stats, nil
 }
@@ -72,18 +82,23 @@ func (s SQLiteStore) RebuildIndex(ctx context.Context) error {
 	if _, err := conn.ExecContext(ctx, `DELETE FROM topic_nodes`); err != nil {
 		return fmt.Errorf("clear topic nodes during rebuild: %w", err)
 	}
-	rows, err := conn.QueryContext(ctx, `SELECT host, path FROM documents ORDER BY observed_at DESC`)
+	rows, err := conn.QueryContext(ctx, `
+SELECT DISTINCT d.host, d.path, e.model
+FROM documents d
+JOIN embeddings e ON e.document_url = d.url
+ORDER BY d.observed_at DESC
+`)
 	if err != nil {
 		return fmt.Errorf("load documents for topic rebuild: %w", err)
 	}
-	var docs [][2]string
+	var docs [][3]string
 	for rows.Next() {
-		var host, path string
-		if err := rows.Scan(&host, &path); err != nil {
+		var host, path, vectorSpace string
+		if err := rows.Scan(&host, &path, &vectorSpace); err != nil {
 			platform.Close(rows)
 			return fmt.Errorf("scan document during topic rebuild: %w", err)
 		}
-		docs = append(docs, [2]string{host, path})
+		docs = append(docs, [3]string{host, path, vectorSpace})
 	}
 	if err := rows.Err(); err != nil {
 		platform.Close(rows)
@@ -92,7 +107,7 @@ func (s SQLiteStore) RebuildIndex(ctx context.Context) error {
 	platform.Close(rows)
 	for _, item := range docs {
 		for _, rootPath := range topicRootPaths(item[1]) {
-			row, ok, err := loadTopicNodeRow(ctx, conn, item[0], rootPath)
+			row, ok, err := loadTopicNodeRow(ctx, conn, item[2], item[0], rootPath)
 			if err != nil {
 				return err
 			}
@@ -107,7 +122,7 @@ func (s SQLiteStore) RebuildIndex(ctx context.Context) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for key, value := range map[string]string{
 		"vector_index_rebuilt_at": now,
-		"vector_engine":           "linear_fallback",
+		"vector_engine":           "exact",
 	} {
 		if _, err := conn.ExecContext(ctx, `
 INSERT INTO memory_state (key, value, updated_at) VALUES (?, ?, ?)
@@ -117,6 +132,26 @@ ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated
 		}
 	}
 	return nil
+}
+
+func distinctEmbeddingDimensions(ctx context.Context, conn *sql.DB) ([]int, error) {
+	rows, err := conn.QueryContext(ctx, `SELECT DISTINCT dimension FROM embeddings ORDER BY dimension ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("query embedding dimensions: %w", err)
+	}
+	defer platform.Close(rows)
+	out := []int{}
+	for rows.Next() {
+		var dimension int
+		if err := rows.Scan(&dimension); err != nil {
+			return nil, fmt.Errorf("scan embedding dimension: %w", err)
+		}
+		out = append(out, dimension)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate embedding dimensions: %w", err)
+	}
+	return out, nil
 }
 
 func (s SQLiteStore) ExportJSONL(ctx context.Context, dir string) (ExportStats, error) {
@@ -133,10 +168,12 @@ func (s SQLiteStore) ExportJSONL(ctx context.Context, dir string) (ExportStats, 
 		return ExportStats{}, fmt.Errorf("create memory export dir: %w", err)
 	}
 	stats := ExportStats{
-		DocumentsPath:  filepath.Join(cleanDir, "documents.jsonl"),
-		EdgesPath:      filepath.Join(cleanDir, "edges.jsonl"),
-		EmbeddingsPath: filepath.Join(cleanDir, "embeddings.jsonl"),
-		TopicNodesPath: filepath.Join(cleanDir, "topic_nodes.jsonl"),
+		DocumentsPath:     filepath.Join(cleanDir, "documents.jsonl"),
+		EdgesPath:         filepath.Join(cleanDir, "edges.jsonl"),
+		EmbeddingsPath:    filepath.Join(cleanDir, "embeddings.jsonl"),
+		TopicNodesPath:    filepath.Join(cleanDir, "topic_nodes.jsonl"),
+		FamiliesPath:      filepath.Join(cleanDir, "semantic_families.jsonl"),
+		FamilyMembersPath: filepath.Join(cleanDir, "semantic_family_members.jsonl"),
 	}
 	if stats.DocumentCount, err = exportDocuments(ctx, conn, stats.DocumentsPath); err != nil {
 		return ExportStats{}, err
@@ -148,6 +185,12 @@ func (s SQLiteStore) ExportJSONL(ctx context.Context, dir string) (ExportStats, 
 		return ExportStats{}, err
 	}
 	if stats.TopicNodeCount, err = exportTopicNodes(ctx, conn, stats.TopicNodesPath); err != nil {
+		return ExportStats{}, err
+	}
+	if stats.FamilyCount, err = exportSemanticFamilies(ctx, conn, stats.FamiliesPath); err != nil {
+		return ExportStats{}, err
+	}
+	if stats.MemberCount, err = exportSemanticFamilyMembers(ctx, conn, stats.FamilyMembersPath); err != nil {
 		return ExportStats{}, err
 	}
 	return stats, nil
@@ -178,6 +221,16 @@ func (s SQLiteStore) ImportJSONL(ctx context.Context, dir string) (ImportStats, 
 		return ImportStats{}, err
 	} else {
 		stats.TopicNodeCount = count
+	}
+	if count, err := importSemanticFamilies(ctx, s, filepath.Join(cleanDir, "semantic_families.jsonl")); err != nil {
+		return ImportStats{}, err
+	} else {
+		stats.FamilyCount = count
+	}
+	if count, err := importSemanticFamilyMembers(ctx, s, filepath.Join(cleanDir, "semantic_family_members.jsonl")); err != nil {
+		return ImportStats{}, err
+	} else {
+		stats.MemberCount = count
 	}
 	return stats, nil
 }
@@ -210,6 +263,49 @@ func (s SQLiteStore) ensureSchema(ctx context.Context, db *sql.DB) error {
 		if _, err := db.ExecContext(ctx, stmt); err != nil {
 			return fmt.Errorf("ensure discovery schema: %w", err)
 		}
+	}
+	if err := ensureColumn(ctx, db, "topic_nodes", "vector_space", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if err := ensureColumn(ctx, db, "semantic_families", "vector_space", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	for _, stmt := range []string{
+		`CREATE INDEX IF NOT EXISTS idx_topic_nodes_vector_space ON topic_nodes(vector_space)`,
+		`CREATE INDEX IF NOT EXISTS idx_semantic_families_vector_space ON semantic_families(vector_space)`,
+		`CREATE INDEX IF NOT EXISTS idx_embeddings_model ON embeddings(model)`,
+	} {
+		if _, err := db.ExecContext(ctx, stmt); err != nil {
+			return fmt.Errorf("ensure discovery schema index: %w", err)
+		}
+	}
+	return nil
+}
+
+func ensureColumn(ctx context.Context, db *sql.DB, table, column, definition string) error {
+	rows, err := db.QueryContext(ctx, `PRAGMA table_info(`+table+`)`)
+	if err != nil {
+		return fmt.Errorf("inspect %s schema: %w", table, err)
+	}
+	defer platform.Close(rows)
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("scan %s schema: %w", table, err)
+		}
+		if strings.EqualFold(name, column) {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate %s schema: %w", table, err)
+	}
+	if _, err := db.ExecContext(ctx, `ALTER TABLE `+table+` ADD COLUMN `+column+` `+definition); err != nil {
+		return fmt.Errorf("add %s.%s column: %w", table, column, err)
 	}
 	return nil
 }

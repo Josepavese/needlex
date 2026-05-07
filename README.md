@@ -50,7 +50,7 @@ The story is simple:
 2. later runs reuse local verified evidence
 3. repeated use improves local retrieval without hosted infra
 
-Discovery Memory is enabled by default and stored in the PAL state root. If an external embeddings service is unavailable, Needle-X falls back to a native local semantic vectorizer so memory still accumulates and remains searchable.
+Discovery Memory is enabled by default and stored in the PAL state root. Dense embeddings are mandatory: the installer creates a PAL SSOT config at `<state-root>/configs/needlex.json` with local Ollama `embeddinggemma` as the default no-key embedding backend.
 
 Current verified seeded result on `seeded-corpus-v2`:
 1. **100/100** selected-url correctness
@@ -77,6 +77,7 @@ Guardrail:
 9. `logs path/stats/tail`
 10. `support bundle`
 11. `doctor`
+12. `config path/show/init/set`
 
 Default output is AI-first:
 1. compact packet first
@@ -125,6 +126,19 @@ Installed command:
 
 This installer downloads the right release binary. Full details:
 1. [Install](docs/wiki/Install.md)
+
+The installer also prepares semantic prerequisites:
+1. installs or verifies Ollama where the platform supports automated install
+2. pulls the default embedding model `embeddinggemma:latest`
+3. writes the PAL-home SSOT config
+4. wires the `needlex` wrapper to that config so users do not export env vars per command
+
+Change defaults with:
+
+```bash
+needlex config show
+needlex config set semantic.provider_model nomic-embed-text:latest
+```
 
 ## Agent Skill
 

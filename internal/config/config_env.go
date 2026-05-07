@@ -18,9 +18,6 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 		return err
 	}
 	c.applyStringEnv(env)
-	if err := applyBool(env, "NEEDLEX_SEMANTIC_ENABLED", &c.Semantic.Enabled); err != nil {
-		return err
-	}
 	if err := applyBool(env, "NEEDLEX_MEMORY_ENABLED", &c.Memory.Enabled); err != nil {
 		return err
 	}
@@ -99,13 +96,11 @@ func (c *Config) applyStringEnv(env map[string]string) {
 		{"NEEDLEX_MODELS_FORMATTER", &c.Models.Formatter},
 		{"NEEDLEX_DISCOVERY_PROVIDER_CHAIN", &c.Discovery.ProviderChain},
 		{"BRAVE_SEARCH_API_KEY", &c.Discovery.BraveAPIKey},
-		{"NEEDLEX_SEMANTIC_BACKEND", &c.Semantic.Backend},
-		{"NEEDLEX_SEMANTIC_BASE_URL", &c.Semantic.BaseURL},
-		{"NEEDLEX_SEMANTIC_MODEL", &c.Semantic.Model},
+		{"NEEDLEX_SEMANTIC_EMBEDDING_URL", &c.Semantic.EmbeddingURL},
+		{"NEEDLEX_SEMANTIC_PROVIDER_MODEL", &c.Semantic.ProviderModel},
+		{"NEEDLEX_SEMANTIC_VECTOR_SPACE", &c.Semantic.VectorSpace},
 		{"NEEDLEX_MEMORY_BACKEND", &c.Memory.Backend},
 		{"NEEDLEX_MEMORY_PATH", &c.Memory.Path},
-		{"NEEDLEX_MEMORY_EMBEDDING_BACKEND", &c.Memory.EmbeddingBackend},
-		{"NEEDLEX_MEMORY_EMBEDDING_MODEL", &c.Memory.EmbeddingModel},
 		{"NEEDLEX_MEMORY_VECTOR_MODE", &c.Memory.VectorMode},
 		{"NEEDLEX_MEMORY_VECTOR_ENGINE", &c.Memory.VectorEngine},
 		{"NEEDLEX_MEMORY_PRUNE_POLICY", &c.Memory.PrunePolicy},

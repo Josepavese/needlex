@@ -29,7 +29,7 @@
     },
     {
       "id": "sqlite-home",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://sqlite.org/",
       "task_type": "read_page_understanding",
@@ -185,7 +185,7 @@
     },
     {
       "id": "nginx-home",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://nginx.org/",
       "task_type": "read_page_understanding",
@@ -211,7 +211,7 @@
     },
     {
       "id": "curl-home",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://curl.se/",
       "task_type": "read_page_understanding",
@@ -731,7 +731,7 @@
     },
     {
       "id": "lua-docs",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://www.lua.org/docs.html",
       "task_type": "read_page_understanding",
@@ -808,17 +808,17 @@
       "notes": "Unique-source read benchmark case."
     },
     {
-      "id": "pytorch-docs",
+      "id": "matplotlib-docs",
       "family": "docs",
       "language": "en",
-      "seed_url": "https://pytorch.org/docs/stable/index.html",
+      "seed_url": "https://matplotlib.org/stable/",
       "task_type": "read_page_understanding",
-      "goal": "PyTorch documentation overview",
-      "expected_url": "https://pytorch.org/docs/2.11/index.html",
-      "expected_domain": "pytorch.org",
+      "goal": "Matplotlib documentation overview",
+      "expected_url": "https://matplotlib.org/stable/",
+      "expected_domain": "matplotlib.org",
       "must_contain_facts": [],
       "must_expose_proof": true,
-      "notes": "Seed URL resolves through the current PyTorch stable docs canonical landing page."
+      "notes": "Unique-source read benchmark case."
     },
     {
       "id": "tensorflow-docs",
@@ -847,14 +847,14 @@
       "notes": "Unique-source read benchmark case."
     },
     {
-      "id": "huggingface-docs",
+      "id": "requests-docs",
       "family": "docs",
       "language": "en",
-      "seed_url": "https://huggingface.co/docs",
+      "seed_url": "https://requests.readthedocs.io/en/latest/",
       "task_type": "read_page_understanding",
-      "goal": "Hugging Face documentation overview",
-      "expected_url": "https://huggingface.co/docs",
-      "expected_domain": "huggingface.co",
+      "goal": "Requests documentation overview",
+      "expected_url": "https://requests.readthedocs.io/en/latest/",
+      "expected_domain": "requests.readthedocs.io",
       "must_contain_facts": [],
       "must_expose_proof": true,
       "notes": "Unique-source read benchmark case."
@@ -886,14 +886,14 @@
       "notes": "Unique-source read benchmark case."
     },
     {
-      "id": "ollama-docs",
+      "id": "pandas-docs",
       "family": "docs",
       "language": "en",
-      "seed_url": "https://github.com/ollama/ollama/tree/main/docs",
+      "seed_url": "https://pandas.pydata.org/docs/",
       "task_type": "read_page_understanding",
-      "goal": "Ollama documentation overview",
-      "expected_url": "https://github.com/ollama/ollama/tree/main/docs",
-      "expected_domain": "github.com",
+      "goal": "pandas documentation overview",
+      "expected_url": "https://pandas.pydata.org/docs/",
+      "expected_domain": "pandas.pydata.org",
       "must_contain_facts": [],
       "must_expose_proof": true,
       "notes": "Unique-source read benchmark case."
@@ -978,7 +978,7 @@
     },
     {
       "id": "cmake-docs",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://cmake.org/documentation/",
       "task_type": "read_page_understanding",
@@ -991,7 +991,7 @@
     },
     {
       "id": "linux-man-pages",
-      "family": "legacy_homepage",
+      "family": "classic_homepage",
       "language": "en",
       "seed_url": "https://man7.org/linux/man-pages/",
       "task_type": "read_page_understanding",
@@ -1000,7 +1000,7 @@
       "expected_domain": "man7.org",
       "must_contain_facts": [],
       "must_expose_proof": true,
-      "notes": "Stable legacy documentation source replacing an upstream-unavailable GNU endpoint."
+      "notes": "Stable documentation source replacing an upstream-unavailable GNU endpoint."
     },
     {
       "id": "llvm-docs",

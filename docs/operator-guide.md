@@ -356,7 +356,7 @@ Logging:
 
 Use `memory` when you want to inspect or control the local discovery store.
 
-Discovery Memory is enabled by default. Successful `read`, `query`, and `crawl` runs feed it automatically under the PAL state root. If the configured embedding backend is unavailable, Needle-X uses a native local semantic fallback so the store still grows and remains useful for seedless discovery.
+Discovery Memory is enabled by default. Successful `read`, `query`, and `crawl` runs feed it automatically under the PAL state root. Dense vectors are mandatory and come from the semantic backend configured in the PAL SSOT config at `<state-root>/configs/needlex.json`. If semantic config is disabled or incomplete, Needle-X should fail instead of degrading into lexical retrieval.
 
 Stats:
 
@@ -407,7 +407,7 @@ Evaluation artifacts live under `improvements/`.
 Operator rule:
 1. treat `improvements/` root as the active working surface
 2. expect only `baseline` and `latest` style reports there
-3. look under `improvements/archive/` for historical waves, provider experiments, and empirical one-offs
+3. remove old one-off reports instead of keeping them in the active repository
 
 ## Active Runtime Contract
 

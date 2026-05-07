@@ -7,9 +7,9 @@
     "recommended_provider_chain": "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search"
   },
   "semantic": {
-    "recommended_backend": "openai-embeddings",
-    "recommended_base_url": "http://127.0.0.1:18180",
-    "model": "intfloat/multilingual-e5-small",
+    "embedding_url": "http://127.0.0.1:11434/api/embed",
+    "provider_model": "embeddinggemma:latest",
+    "vector_space": "ollama-embeddinggemma-v1",
     "timeout_ms": 1200
   },
   "models": {
@@ -35,10 +35,9 @@
     "NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS",
     "NEEDLEX_DISCOVERY_PROVIDER_CHAIN",
     "BRAVE_SEARCH_API_KEY",
-    "NEEDLEX_SEMANTIC_ENABLED",
-    "NEEDLEX_SEMANTIC_BACKEND",
-    "NEEDLEX_SEMANTIC_BASE_URL",
-    "NEEDLEX_SEMANTIC_MODEL",
+    "NEEDLEX_SEMANTIC_EMBEDDING_URL",
+    "NEEDLEX_SEMANTIC_PROVIDER_MODEL",
+    "NEEDLEX_SEMANTIC_VECTOR_SPACE",
     "NEEDLEX_SEMANTIC_TIMEOUT_MS",
     "NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD",
     "NEEDLEX_SEMANTIC_DOMINANCE_DELTA",

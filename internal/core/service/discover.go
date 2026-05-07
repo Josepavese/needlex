@@ -44,7 +44,9 @@ func (s *Service) Discover(ctx context.Context, req DiscoverRequest) (DiscoverRe
 		scored = discoverycore.ApplySameSiteContextPrior(rawPage.FinalURL, scored)
 	}
 	candidates := discoverycore.NewSet(scored)
-	candidates = discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates.Sorted(), req.PreferSpecificSameSite))
+	candidates = discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates.Sorted()))
+	candidates = discoverycore.NewSet(s.applyCandidateIntelligence(ctx, req.Goal, candidates.Sorted()))
+	candidates = discoverycore.NewSet(s.applySemanticSelectionStack(ctx, req.Goal, candidates.Sorted()))
 	candidates = discoverycore.NewSet(s.applyTargetKindRerank(ctx, req.Goal, candidates.Sorted()))
 	selected := candidates.SelectedURL(rawPage.FinalURL)
 	return DiscoverResponse{SeedURL: req.SeedURL, SelectedURL: selected, DiscoveryURL: rawPage.FinalURL, Candidates: candidates.Limited(req.MaxCandidates)}, nil
@@ -80,16 +82,20 @@ func (s *Service) acquireDiscoverPage(ctx context.Context, rawURL, userAgent str
 	return rawPage, dom, nil
 }
 
-func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal string, candidates []DiscoverCandidate, allowLocalEmbeddingFallback bool) []DiscoverCandidate {
+func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
 	if strings.TrimSpace(goal) == "" || len(candidates) == 0 {
 		return candidates
 	}
 	semanticCandidates := make([]intel.SemanticCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
 		text := discoverycore.JoinNonEmpty(
+			candidate.Metadata["source_context"],
+			candidate.Metadata["host_root_title"],
 			candidate.Metadata["page_title"],
+			candidate.Metadata["web_ir_context"],
 			strings.TrimSpace(candidate.Label),
 			discoverycore.URLIdentityText(candidate.URL),
+			candidate.Metadata["resource_class"],
 		)
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
 			ID:   candidate.URL,
@@ -98,13 +104,6 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 	}
 	scored, err := s.semantic.Score(ctx, goal, semanticCandidates)
 	reason := "semantic_goal_alignment"
-	backend := "configured"
-	if (err != nil || len(scored) == 0) && allowLocalEmbeddingFallback && s.cfg.Semantic.Enabled {
-		native := intel.NativeSemanticAligner{}
-		scored, err = native.Score(ctx, goal, semanticCandidates)
-		reason = "native_context_goal_alignment"
-		backend = "native"
-	}
 	if err != nil || len(scored) == 0 {
 		return candidates
 	}
@@ -119,7 +118,6 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, reason)
 			out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
 				"semantic_goal_similarity": strconv.FormatFloat(similarity, 'f', 3, 64),
-				"semantic_backend":         backend,
 			})
 		}
 	}

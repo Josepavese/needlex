@@ -25,7 +25,6 @@ type targetKindProfile struct {
 	Kind       string
 	Similarity float64
 	Margin     float64
-	Backend    string
 }
 
 func (s *Service) applyTargetKindRerank(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
@@ -60,7 +59,6 @@ func (s *Service) applyTargetKindRerank(ctx context.Context, goal string, candid
 			"target_kind":               profile.Kind,
 			"target_kind_similarity":    strconv.FormatFloat(profile.Similarity, 'f', 3, 64),
 			"target_kind_margin":        strconv.FormatFloat(profile.Margin, 'f', 3, 64),
-			"target_kind_backend":       profile.Backend,
 			"target_kind_compatibility": strconv.FormatFloat(compatibility, 'f', 3, 64),
 		})
 	}
@@ -71,12 +69,6 @@ func (s *Service) applyTargetKindRerank(ctx context.Context, goal string, candid
 func (s *Service) inferTargetKindProfile(ctx context.Context, goal string) targetKindProfile {
 	archetypes := targetKindArchetypes()
 	scored, err := s.semantic.Score(ctx, goal, archetypes)
-	backend := "configured"
-	if err != nil || len(scored) == 0 {
-		native := intel.NativeSemanticAligner{}
-		scored, err = native.Score(ctx, goal, archetypes)
-		backend = "native"
-	}
 	if err != nil || len(scored) == 0 {
 		return targetKindProfile{}
 	}
@@ -99,7 +91,6 @@ func (s *Service) inferTargetKindProfile(ctx context.Context, goal string) targe
 		Kind:       best.ID,
 		Similarity: best.Similarity,
 		Margin:     max(best.Similarity-second, 0),
-		Backend:    backend,
 	}
 }
 
@@ -117,9 +108,6 @@ func targetKindArchetypes() []intel.SemanticCandidate {
 }
 
 func targetKindWeight(profile targetKindProfile) float64 {
-	if profile.Backend == "native" && (profile.Kind == targetKindCanonicalHome || profile.Kind == targetKindOrganizationAbout) {
-		return 0
-	}
 	if (profile.Kind == targetKindCanonicalHome || profile.Kind == targetKindOrganizationAbout) && (profile.Similarity < 0.45 || profile.Margin < 0.12) {
 		return 0
 	}

@@ -5,15 +5,18 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
 	"github.com/josepavese/needlex/internal/observability"
 	"github.com/josepavese/needlex/internal/platform"
@@ -32,7 +35,9 @@ type doctorReport struct {
 	DiscoveryDBPath string                 `json:"discovery_db_path"`
 	LogsDir         string                 `json:"logs_dir"`
 	RuntimeLogPath  string                 `json:"runtime_log_path"`
+	ConfigPath      string                 `json:"config_path"`
 	StorePaths      map[string]string      `json:"store_paths"`
+	Semantic        doctorSemantic         `json:"semantic"`
 	AnalyticsStats  analytics.Stats        `json:"analytics_stats,omitempty"`
 	MemoryStats     memory.Stats           `json:"memory_stats,omitempty"`
 	LogStats        observability.LogStats `json:"log_stats,omitempty"`
@@ -54,6 +59,15 @@ type doctorDiagnostics struct {
 	RuntimeLevelCounts  map[string]int             `json:"runtime_level_counts,omitempty"`
 	FailureClassCounts  map[string]int             `json:"failure_class_counts,omitempty"`
 	LastRuntimeLogEvent observability.Event        `json:"last_runtime_log_event,omitempty"`
+}
+
+type doctorSemantic struct {
+	EmbeddingURL  string `json:"embedding_url"`
+	ProviderModel string `json:"provider_model"`
+	VectorSpace   string `json:"vector_space"`
+	Ready         bool   `json:"ready"`
+	Dimension     int    `json:"dimension,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 type doctorMCPProcess struct {
@@ -115,7 +129,9 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 		DiscoveryDBPath: memoryStore.DBPath(),
 		LogsDir:         layout.LogsDir,
 		RuntimeLogPath:  layout.RuntimeLog,
+		ConfigPath:      effectiveConfigPath(configPath),
 		StorePaths:      layout.Paths(),
+		Semantic:        probeDoctorSemantic(context.Background(), cfg),
 		Diagnostics:     diagnostics,
 		MCPProcesses:    processes,
 	}
@@ -158,8 +174,17 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 	fmt.Fprintf(w, "Analytics DB: %s\n", report.AnalyticsDBPath)
 	fmt.Fprintf(w, "Discovery DB: %s\n", report.DiscoveryDBPath)
 	fmt.Fprintf(w, "Runtime Log: %s\n", report.RuntimeLogPath)
+	fmt.Fprintf(w, "Config: %s\n", report.ConfigPath)
+	fmt.Fprintf(w, "Semantic: ready=%t provider=%s vector_space=%s endpoint=%s\n", report.Semantic.Ready, report.Semantic.ProviderModel, report.Semantic.VectorSpace, report.Semantic.EmbeddingURL)
+	if report.Semantic.Error != "" {
+		fmt.Fprintf(w, "Semantic Error: %s\n", report.Semantic.Error)
+	}
 	fmt.Fprintf(w, "Analytics Runs: %d (%d successful)\n", report.AnalyticsStats.RunCount, report.AnalyticsStats.SuccessfulRuns)
 	fmt.Fprintf(w, "Memory Docs: %d\n", report.MemoryStats.DocumentCount)
+	fmt.Fprintf(w, "Memory Semantic Families: %d\n", report.MemoryStats.SemanticFamilyCount)
+	if report.MemoryStats.VectorEngine != "" {
+		fmt.Fprintf(w, "Memory Vector Engine: %s\n", report.MemoryStats.VectorEngine)
+	}
 	fmt.Fprintf(w, "Log Events: %d\n", report.LogStats.LineCount)
 	fmt.Fprintf(w, "Recent Runtime Errors: %d\n", report.Diagnostics.RecentErrors)
 	fmt.Fprintf(w, "Recent Runtime Warnings: %d\n", report.Diagnostics.RecentWarnings)
@@ -182,6 +207,37 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 			fmt.Fprintf(w, "  - %s\n", warning)
 		}
 	}
+}
+
+func probeDoctorSemantic(ctx context.Context, cfg config.Config) doctorSemantic {
+	out := doctorSemantic{
+		EmbeddingURL:  cfg.Semantic.EmbeddingURL,
+		ProviderModel: cfg.Semantic.ProviderModel,
+		VectorSpace:   cfg.Semantic.VectorSpace,
+	}
+	if err := cfg.Validate(); err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	timeout := time.Duration(cfg.Semantic.TimeoutMS) * time.Millisecond
+	if timeout <= 0 {
+		timeout = 1200 * time.Millisecond
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	embedder := intel.NewTextEmbedder(cfg, &http.Client{Timeout: timeout})
+	vectors, err := embedder.Embed(ctx, []string{"Needle-X semantic readiness probe"})
+	if err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	if len(vectors) == 0 || len(vectors[0]) == 0 {
+		out.Error = "embedding endpoint returned no vector"
+		return out
+	}
+	out.Ready = true
+	out.Dimension = len(vectors[0])
+	return out
 }
 
 func buildDoctorDiagnostics(ctx context.Context, analyticsStore analytics.SQLiteStore, logger observability.Logger) (doctorDiagnostics, []string) {

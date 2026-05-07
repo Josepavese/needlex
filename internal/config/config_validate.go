@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -98,6 +99,24 @@ func validateBudget(budget BudgetConfig) []error {
 
 func validateSemantic(semantic SemanticConfig) []error {
 	errs := []error{}
+	rawURL := strings.TrimSpace(semantic.EmbeddingURL)
+	if rawURL == "" {
+		errs = append(errs, fmt.Errorf("semantic.embedding_url must not be empty; configure the PAL SSOT config or run needlex config init"))
+	}
+	if rawURL != "" {
+		parsed, err := url.Parse(rawURL)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+			errs = append(errs, fmt.Errorf("semantic.embedding_url must be an absolute http or https URL"))
+		} else if parsed.Scheme != "http" && parsed.Scheme != "https" {
+			errs = append(errs, fmt.Errorf("semantic.embedding_url must use http or https"))
+		}
+	}
+	if strings.TrimSpace(semantic.ProviderModel) == "" {
+		errs = append(errs, fmt.Errorf("semantic.provider_model must not be empty; default is %s", DefaultSemanticProviderModel))
+	}
+	if strings.TrimSpace(semantic.VectorSpace) == "" {
+		errs = append(errs, fmt.Errorf("semantic.vector_space must not be empty; it is required for durable local memory"))
+	}
 	if semantic.TimeoutMS <= 0 {
 		errs = append(errs, fmt.Errorf("semantic.timeout_ms must be > 0"))
 	}
@@ -131,12 +150,12 @@ func validateModels(models ModelsConfig) []error {
 		}
 	}
 	switch strings.TrimSpace(models.Backend) {
-	case "", "noop", "openai-compatible", "ollama":
+	case "", "noop", "openai-compatible":
 	default:
-		errs = append(errs, fmt.Errorf("models.backend must be one of noop, openai-compatible, ollama"))
+		errs = append(errs, fmt.Errorf("models.backend must be one of noop, openai-compatible"))
 	}
 	switch strings.TrimSpace(models.Backend) {
-	case "openai-compatible", "ollama":
+	case "openai-compatible":
 		if strings.TrimSpace(models.BaseURL) == "" {
 			errs = append(errs, fmt.Errorf("models.base_url must not be empty when models.backend is %s", strings.TrimSpace(models.Backend)))
 		}
@@ -189,12 +208,6 @@ func validateMemory(memory MemoryConfig) []error {
 		if value <= 0 {
 			errs = append(errs, fmt.Errorf("%s must be > 0", field))
 		}
-	}
-	if strings.TrimSpace(memory.EmbeddingBackend) == "" {
-		errs = append(errs, fmt.Errorf("memory.embedding_backend must not be empty"))
-	}
-	if strings.TrimSpace(memory.EmbeddingModel) == "" {
-		errs = append(errs, fmt.Errorf("memory.embedding_model must not be empty"))
 	}
 	switch strings.TrimSpace(memory.VectorMode) {
 	case "", "fallback-linear", "embedded":

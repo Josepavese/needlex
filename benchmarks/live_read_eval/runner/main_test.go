@@ -79,7 +79,7 @@ func TestCompareReportsDoesNotFlagMissingHistoricalWebIRFields(t *testing.T) {
 	issues := compareReports(previous, current)
 	for _, issue := range issues {
 		if strings.Contains(issue, "web_ir") {
-			t.Fatalf("expected no web_ir regression for legacy baseline, got %v", issues)
+			t.Fatalf("expected no web_ir regression for current baseline, got %v", issues)
 		}
 	}
 }

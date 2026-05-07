@@ -25,7 +25,10 @@ Needle-X already ships:
 2. provider health memory
 3. warm-state reuse through `discovery.db`
 4. semantic reranking and family recovery in the discovery path
-5. native local semantic fallback when external embeddings are unavailable
+5. dense embedding vectors from the configured semantic endpoint
+
+Needle-X does not synthesize memory vectors from surface or sub-token overlap.
+If no semantic endpoint is configured, the runtime is invalid; Needle-X must fail rather than silently storing lexical-only memory.
 
 What remains experimental is the broader strategic shape:
 1. stronger long-horizon local accumulation
@@ -40,6 +43,7 @@ Successful `read`, `query`, and `crawl` runs automatically observe:
 3. proof references
 4. discovered links and same-host edges
 5. topic nodes and host/family expansions
+6. semantic family graph evidence and membership edges
 
 Seedless `web_query` consults this local substrate before public bootstrap. Public providers are fallback, not the first preferred source when local proof-backed memory is strong enough.
 
@@ -67,6 +71,14 @@ needlex memory import --in /tmp/needlex-memory
 needlex memory rebuild-index --json
 ```
 
+`memory stats` and `doctor` expose the local semantic substrate:
+1. document, edge, embedding, topic, family, and family-member counts
+2. vector engine identity
+3. stored embedding dimensions
+4. last rebuild timestamp
+
+`memory export` and `memory import` include the semantic family graph, not only documents and page embeddings.
+
 ## Next
 
 1. [Benchmarks](./Benchmarks.md)
@@ -76,4 +88,3 @@ needlex memory rebuild-index --json
 
 1. [Benchmark Report](../benchmark-report.md)
 2. [Discovery Memory Spec](../experimental/discovery-memory-spec.md)
-3. [Archived Seedless Discovery Strategy](../archive/seedless-discovery-strategy.md)

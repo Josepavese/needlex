@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-source scripts/lib/ollama.sh
 source scripts/lib/model_benchmark.sh
 
 CANDIDATES_FILE="${NEEDLEX_MODEL_BENCHMARK_CANDIDATES:-benchmarks/corpora/model-candidates-cpu-v1.json}"
@@ -12,7 +11,6 @@ LIVE_CASES_FILE="${NEEDLEX_MODEL_BENCHMARK_LIVE_CASES:-benchmarks/corpora/live-s
 OUT_DIR="${NEEDLEX_MODEL_BENCHMARK_OUT_DIR:-improvements/model-benchmark-cpu}"
 SUMMARY_OUT="${NEEDLEX_MODEL_BENCHMARK_OUT:-improvements/model-benchmark-cpu-latest.json}"
 BASE_URL="${NEEDLEX_MODELS_BASE_URL:-http://127.0.0.1:11434/v1}"
-OLLAMA_BIN="${OLLAMA_BIN:-ollama}"
 SELECT_IDS="${NEEDLEX_MODEL_BENCHMARK_IDS:-}"
 GO_TEST_TIMEOUT="${NEEDLEX_MODEL_BENCHMARK_GO_TEST_TIMEOUT:-45m}"
 LIVE_TIMEOUT_MS="${NEEDLEX_MODEL_BENCHMARK_LIVE_TIMEOUT_MS:-25000}"
@@ -20,12 +18,18 @@ LIVE_TIMEOUT_MS="${NEEDLEX_MODEL_BENCHMARK_LIVE_TIMEOUT_MS:-25000}"
 mkdir -p "$OUT_DIR"
 
 needlex_require_command jq "jq is required"
-needlex_ollama_ensure_ready "$OLLAMA_BIN" "$BASE_URL"
-trap 'needlex_ollama_cleanup; rm -f "$rows_file"' EXIT
+needlex_require_command curl "curl is required for model endpoint preflight"
+
+if ! curl -fsS --max-time 5 "$BASE_URL/models" >/dev/null; then
+	echo "Model endpoint preflight failed: $BASE_URL/models is not reachable." >&2
+	echo "Start a no-key OpenAI-compatible local endpoint or set NEEDLEX_MODELS_BASE_URL to the active endpoint before running this benchmark." >&2
+	exit 1
+fi
 
 mapfile -t IDS < <(needlex_model_benchmark_candidate_ids "$CANDIDATES_FILE" "$SELECT_IDS")
 
 rows_file="$(mktemp)"
+trap 'rm -f "$rows_file"' EXIT
 
 for id in "${IDS[@]}"; do
 	candidate_json="$(needlex_model_benchmark_candidate_json "$CANDIDATES_FILE" "$id")"
@@ -50,7 +54,6 @@ for id in "${IDS[@]}"; do
 	echo
 	echo "== Benchmarking $id =="
 	echo "label=$label"
-	needlex_ollama_pull_unique "$OLLAMA_BIN" "$router" "$extractor" "$formatter"
 
 	hard_status=0
 	NEEDLEX_HARD_CASE_MATRIX_USE_LIVE_BACKEND=1 \

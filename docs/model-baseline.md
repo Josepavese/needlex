@@ -22,17 +22,19 @@ Reason:
 ## Semantic Gate Baseline
 
 Current SSOT semantic gate baseline:
-1. backend: `openai-embeddings`
-2. model: `intfloat/multilingual-e5-small`
-3. base URL: `http://127.0.0.1:18180`
-4. semantic gate enabled by default: `true`
-5. native local semantic fallback available for discovery and memory
+1. semantic gate enabled by default: `true`
+2. embedding endpoint: `http://127.0.0.1:11434/api/embed`
+3. provider model: `embeddinggemma:latest`
+4. vector space: `ollama-embeddinggemma-v1`
+5. if semantic config is missing, disabled, or incomplete, Needle-X must fail instead of falling back to lexical ranking
 
 Reason:
 1. the product needs multilingual objective-to-chunk alignment
 2. semantic context is now the primary meaning signal
-3. the model is CPU-practical for a narrow gate role
-4. provider and model are SSOT-defined, then overrideable by env
+3. Needle-X must not emulate meaning with surface or sub-token overlap
+4. the endpoint contract is local/no-key friendly and provider-neutral
+5. provider model and vector-space identity are separate so memory never mixes incompatible vectors
+6. installed commands read the PAL SSOT config at `<state-root>/configs/needlex.json`
 
 ## Discovery Baseline
 
@@ -52,38 +54,40 @@ Current SSOT memory baseline:
 1. backend: `sqlite`
 2. path: `discovery/discovery.db`
 3. enabled by default: `true`
-4. external embedding backend: `openai-embeddings`
-5. fallback embedding backend: native local char/context vectorizer
+4. vector-space identity: inherited from the active dense embedder
 
 Reason:
 1. seedless discovery must improve as the tool is used
 2. local proof-backed memory should be tried before public bootstrap
-3. memory must still work when no embedding daemon is running
+3. memory must never fork a second embedding identity from semantic config
+4. without a valid embedding endpoint, operational use is invalid; memory must not invent vectors
 
 ## Override Policy
 
 The baseline is a default, not a lock.
 
-Users can override:
+Users can override through `needlex config set`:
 1. main runtime backend
 2. main runtime base URL
 3. main runtime model id
-4. semantic backend
-5. semantic base URL
-6. semantic model id
+4. semantic embedding endpoint
+5. semantic provider model id
+6. semantic vector-space id
 7. timeouts
 8. discovery provider chain
 
 This lets an operator reuse models already present on the machine without changing repo state.
 
-Relevant override env:
-1. `NEEDLEX_MODELS_BACKEND`
-2. `NEEDLEX_MODELS_BASE_URL`
-3. `NEEDLEX_MODELS_ROUTER`
-4. `NEEDLEX_SEMANTIC_BACKEND`
-5. `NEEDLEX_SEMANTIC_BASE_URL`
-6. `NEEDLEX_SEMANTIC_MODEL`
-7. `NEEDLEX_DISCOVERY_PROVIDER_CHAIN`
+Relevant commands:
+```bash
+needlex config path
+needlex config show
+needlex config set semantic.embedding_url http://127.0.0.1:11434/api/embed
+needlex config set semantic.provider_model embeddinggemma:latest
+needlex config set semantic.vector_space ollama-embeddinggemma-v1
+```
+
+The installer wrapper sets `NEEDLEX_CONFIG` to the PAL config path. Operators should prefer `needlex config` over per-shell env vars.
 
 ## Baseline Commands
 

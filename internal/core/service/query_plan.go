@@ -60,17 +60,28 @@ func (s *Service) buildQueryPlan(req QueryRequest, profile, requestedMode, disco
 func (s *Service) applyDiscoveryToPlan(plan *QueryPlan, req QueryRequest, discoveryMode string, discoveryResult queryDiscoveryResult) error {
 	selectedURL, discoveryCandidates := discoveryResult.selected, discoveryResult.candidates
 	candidates := discoverycore.NewSet(discoveryCandidates)
+	sortedCandidates := candidates.Sorted()
 	plan.DiscoveryProvider = discoveryResult.provider
 	plan.Compiler = queryplan.AnnotateQueryCompilerWithPlanningWebIR(plan.Compiler, queryPlanCandidate(candidates.ByURL(selectedURL)))
 	if selectedURL == "" {
 		return fmt.Errorf("query discovery returned empty selected_url")
 	}
 	plan.SelectedURL = selectedURL
-	plan.CandidateURLs = candidates.URLs()
-	plan.CandidateDiagnostics = queryCandidateDiagnostics(candidates.Sorted())
+	plan.CandidateURLs = queryCandidateURLs(sortedCandidates)
+	plan.CandidateDiagnostics = queryCandidateDiagnostics(sortedCandidates)
 	plan.Compiler = queryplan.FinalizeQueryCompiler(plan.Compiler, req.SeedURL, discoveryMode, plan.DiscoveryProvider, selectedURL, queryPlanCandidates(discoveryCandidates))
 	plan.Compiler = queryplan.AnnotateQueryCompilerWithIntentBoundary(plan.Compiler)
 	return nil
+}
+
+func queryCandidateURLs(candidates []DiscoverCandidate) []string {
+	out := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		if url := strings.TrimSpace(candidate.URL); url != "" {
+			out = append(out, url)
+		}
+	}
+	return out
 }
 
 func queryCandidateDiagnostics(candidates []DiscoverCandidate) []QueryCandidateDiagnostic {
@@ -91,6 +102,10 @@ func queryCandidateDiagnostics(candidates []DiscoverCandidate) []QueryCandidateD
 			SemanticDerivativeAlignment: parseDiagnosticFloat(candidate.Metadata["semantic_derivative_alignment"]),
 			ClusterID:                   strings.TrimSpace(candidate.Metadata["cluster_id"]),
 			ClusterSize:                 parseDiagnosticInt(candidate.Metadata["cluster_size"]),
+			LateInteractionScore:        parseDiagnosticFloat(candidate.Metadata["late_interaction_score"]),
+			LateInteractionConfidence:   parseDiagnosticFloat(candidate.Metadata["late_interaction_confidence"]),
+			SemanticQuorumProviderCount: parseDiagnosticInt(candidate.Metadata["semantic_quorum_provider_count"]),
+			SemanticCalibrationScore:    parseDiagnosticFloat(candidate.Metadata["semantic_calibration_score"]),
 			Reasons:                     append([]string{}, candidate.Reason...),
 		})
 	}

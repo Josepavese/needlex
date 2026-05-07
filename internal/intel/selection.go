@@ -5,7 +5,6 @@ import "strings"
 const (
 	BackendNoop             = "noop"
 	BackendOpenAICompatible = "openai-compatible"
-	BackendOllama           = "ollama"
 )
 
 func TaskAllowedForBackend(backend, task string) (bool, string) {
@@ -14,7 +13,7 @@ func TaskAllowedForBackend(backend, task string) (bool, string) {
 	switch backend {
 	case "", BackendNoop:
 		return false, "backend_disabled"
-	case BackendOpenAICompatible, BackendOllama:
+	case BackendOpenAICompatible:
 		switch task {
 		case TaskResolveAmbiguity, TaskQueryRewrite:
 			return true, "benchmark_proven"

@@ -171,8 +171,8 @@ The wrong shape is:
 {
   "embedding_ref": "emb_...",
   "document_url": "https://example.com/about",
-  "model": "intfloat/multilingual-e5-small",
-  "backend": "openai-embeddings",
+  "model": "dense-http:<vector-space-id>",
+  "backend": "dense-http",
   "input_text": "About Example\nExample is a design studio focused on ...",
   "dimension": 384,
   "created_at": "2026-03-31T10:00:00Z"
@@ -697,11 +697,12 @@ Minimum manifest fields:
 4. `memory.max_documents`
 5. `memory.max_edges`
 6. `memory.max_embeddings`
-7. `memory.embedding_model`
-8. `memory.embedding_backend`
-9. `memory.vector_mode`
-10. `memory.vector_engine`
-11. `memory.prune_policy`
+7. `memory.vector_mode`
+8. `memory.vector_engine`
+9. `memory.prune_policy`
+
+Embedding identity belongs to the semantic embedder, not to memory.
+Memory stores the model and backend actually used by the embedder for provenance.
 
 No hardcoded memory behavior in service constructors.
 
@@ -715,7 +716,7 @@ Expected failure classes:
 5. duplicate result inflation
 6. memory pollution from weak pages
 7. vector index stale versus canonical rows
-8. embedding backend mismatch after migration
+8. embedding model mismatch after migration
 
 The system must classify these explicitly.
 

@@ -111,10 +111,11 @@ func importTopicNodes(ctx context.Context, store SQLiteStore, path string) (int,
 		}
 		_, err = conn.ExecContext(ctx, `
 INSERT INTO topic_nodes (
-  topic_key, host, root_path, representative_url, representative_title, semantic_summary,
+  topic_key, vector_space, host, root_path, representative_url, representative_title, semantic_summary,
   language, support_count, child_count, topic_depth, observed_at, updated_at, vector
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(topic_key) DO UPDATE SET
+  vector_space=excluded.vector_space,
   host=excluded.host,
   root_path=excluded.root_path,
   representative_url=excluded.representative_url,
@@ -127,12 +128,88 @@ ON CONFLICT(topic_key) DO UPDATE SET
   observed_at=excluded.observed_at,
   updated_at=excluded.updated_at,
   vector=excluded.vector
-`, row.TopicKey, row.Host, row.RootPath, row.RepresentativeURL, row.RepresentativeTitle, row.SemanticSummary, row.Language, row.SupportCount, row.ChildCount, row.TopicDepth, observedAt.UTC().Format(time.RFC3339Nano), updatedAt.UTC().Format(time.RFC3339Nano), vector)
+`, row.TopicKey, row.VectorSpace, row.Host, row.RootPath, row.RepresentativeURL, row.RepresentativeTitle, row.SemanticSummary, row.Language, row.SupportCount, row.ChildCount, row.TopicDepth, observedAt.UTC().Format(time.RFC3339Nano), updatedAt.UTC().Format(time.RFC3339Nano), vector)
 		if err != nil {
 			return fmt.Errorf("upsert topic node import: %w", err)
 		}
 		return nil
 	})
+}
+
+func importSemanticFamilies(ctx context.Context, store SQLiteStore, path string) (int, error) {
+	return readOptionalJSONL(path, func(line []byte) error {
+		var row exportSemanticFamilyRow
+		if err := json.Unmarshal(line, &row); err != nil {
+			return err
+		}
+		conn, err := store.open(ctx)
+		if err != nil {
+			return err
+		}
+		defer platform.Close(conn)
+		vector, err := encodeVector(row.Vector)
+		if err != nil {
+			return err
+		}
+		_, err = conn.ExecContext(ctx, `
+INSERT INTO semantic_families (
+  family_id, vector_space, representative_url, representative_title, semantic_summary, support_count,
+  contradiction_count, confidence, observed_at, updated_at, vector
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(family_id) DO UPDATE SET
+  vector_space=excluded.vector_space,
+  representative_url=excluded.representative_url,
+  representative_title=excluded.representative_title,
+  semantic_summary=excluded.semantic_summary,
+  support_count=excluded.support_count,
+  contradiction_count=excluded.contradiction_count,
+  confidence=excluded.confidence,
+  observed_at=excluded.observed_at,
+  updated_at=excluded.updated_at,
+  vector=excluded.vector
+`, row.FamilyID, row.VectorSpace, row.RepresentativeURL, row.RepresentativeTitle, row.SemanticSummary, row.SupportCount, row.ContradictionCount, row.Confidence, row.ObservedAt, row.UpdatedAt, vector)
+		if err != nil {
+			return fmt.Errorf("upsert semantic family import: %w", err)
+		}
+		return nil
+	})
+}
+
+func importSemanticFamilyMembers(ctx context.Context, store SQLiteStore, path string) (int, error) {
+	return readOptionalJSONL(path, func(line []byte) error {
+		var row exportSemanticFamilyMemberRow
+		if err := json.Unmarshal(line, &row); err != nil {
+			return err
+		}
+		conn, err := store.open(ctx)
+		if err != nil {
+			return err
+		}
+		defer platform.Close(conn)
+		_, err = conn.ExecContext(ctx, `
+INSERT INTO semantic_family_members (family_id, resource_url, role, evidence_kind, confidence, trace_ref, observed_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(family_id, resource_url, evidence_kind) DO UPDATE SET
+  role=excluded.role,
+  confidence=excluded.confidence,
+  trace_ref=excluded.trace_ref,
+  observed_at=excluded.observed_at
+`, row.FamilyID, row.ResourceURL, row.Role, row.EvidenceKind, row.Confidence, row.TraceRef, row.ObservedAt)
+		if err != nil {
+			return fmt.Errorf("upsert semantic family member import: %w", err)
+		}
+		return nil
+	})
+}
+
+func readOptionalJSONL(path string, consume func([]byte) error) (int, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return readJSONL(path, consume)
 }
 
 func readJSONL(path string, consume func([]byte) error) (int, error) {

@@ -55,6 +55,7 @@ type exportEmbeddingRow struct {
 
 type exportTopicNodeRow struct {
 	TopicKey            string    `json:"topic_key"`
+	VectorSpace         string    `json:"vector_space"`
 	Host                string    `json:"host"`
 	RootPath            string    `json:"root_path"`
 	RepresentativeURL   string    `json:"representative_url"`
@@ -67,6 +68,30 @@ type exportTopicNodeRow struct {
 	Vector              []float32 `json:"vector"`
 	ObservedAt          string    `json:"observed_at"`
 	UpdatedAt           string    `json:"updated_at"`
+}
+
+type exportSemanticFamilyRow struct {
+	FamilyID            string    `json:"family_id"`
+	VectorSpace         string    `json:"vector_space"`
+	RepresentativeURL   string    `json:"representative_url"`
+	RepresentativeTitle string    `json:"representative_title"`
+	SemanticSummary     string    `json:"semantic_summary"`
+	SupportCount        int       `json:"support_count"`
+	ContradictionCount  int       `json:"contradiction_count"`
+	Confidence          float64   `json:"confidence"`
+	Vector              []float32 `json:"vector"`
+	ObservedAt          string    `json:"observed_at"`
+	UpdatedAt           string    `json:"updated_at"`
+}
+
+type exportSemanticFamilyMemberRow struct {
+	FamilyID     string  `json:"family_id"`
+	ResourceURL  string  `json:"resource_url"`
+	Role         string  `json:"role"`
+	EvidenceKind string  `json:"evidence_kind"`
+	Confidence   float64 `json:"confidence"`
+	TraceRef     string  `json:"trace_ref,omitempty"`
+	ObservedAt   string  `json:"observed_at"`
 }
 
 func exportDocuments(ctx context.Context, conn *sql.DB, path string) (int, error) {
@@ -152,7 +177,7 @@ ORDER BY updated_at DESC, embedding_ref ASC
 func exportTopicNodes(ctx context.Context, conn *sql.DB, path string) (int, error) {
 	rows, err := conn.QueryContext(ctx, `
 SELECT topic_key, host, root_path, representative_url, representative_title, semantic_summary,
-       language, support_count, child_count, topic_depth, vector, observed_at, updated_at
+       language, support_count, child_count, topic_depth, vector, observed_at, updated_at, vector_space
 FROM topic_nodes
 ORDER BY updated_at DESC, topic_key ASC
 `)
@@ -177,6 +202,7 @@ ORDER BY updated_at DESC, topic_key ASC
 			&rawVector,
 			&row.ObservedAt,
 			&row.UpdatedAt,
+			&row.VectorSpace,
 		); err != nil {
 			return exportTopicNodeRow{}, err
 		}
@@ -186,6 +212,49 @@ ORDER BY updated_at DESC, topic_key ASC
 		}
 		row.Vector = vector
 		return row, nil
+	})
+}
+
+func exportSemanticFamilies(ctx context.Context, conn *sql.DB, path string) (int, error) {
+	rows, err := conn.QueryContext(ctx, `
+SELECT family_id, vector_space, representative_url, representative_title, semantic_summary,
+       support_count, contradiction_count, confidence, vector, observed_at, updated_at
+FROM semantic_families
+ORDER BY updated_at DESC, family_id ASC
+`)
+	if err != nil {
+		return 0, fmt.Errorf("query semantic families export: %w", err)
+	}
+	defer platform.Close(rows)
+	return writeJSONL(path, rows, func() (exportSemanticFamilyRow, error) {
+		var row exportSemanticFamilyRow
+		var rawVector []byte
+		if err := rows.Scan(&row.FamilyID, &row.VectorSpace, &row.RepresentativeURL, &row.RepresentativeTitle, &row.SemanticSummary, &row.SupportCount, &row.ContradictionCount, &row.Confidence, &rawVector, &row.ObservedAt, &row.UpdatedAt); err != nil {
+			return exportSemanticFamilyRow{}, err
+		}
+		vector, err := decodeVector(rawVector)
+		if err != nil {
+			return exportSemanticFamilyRow{}, err
+		}
+		row.Vector = vector
+		return row, nil
+	})
+}
+
+func exportSemanticFamilyMembers(ctx context.Context, conn *sql.DB, path string) (int, error) {
+	rows, err := conn.QueryContext(ctx, `
+SELECT family_id, resource_url, role, evidence_kind, confidence, trace_ref, observed_at
+FROM semantic_family_members
+ORDER BY observed_at DESC, family_id ASC, resource_url ASC
+`)
+	if err != nil {
+		return 0, fmt.Errorf("query semantic family members export: %w", err)
+	}
+	defer platform.Close(rows)
+	return writeJSONL(path, rows, func() (exportSemanticFamilyMemberRow, error) {
+		var row exportSemanticFamilyMemberRow
+		err := rows.Scan(&row.FamilyID, &row.ResourceURL, &row.Role, &row.EvidenceKind, &row.Confidence, &row.TraceRef, &row.ObservedAt)
+		return row, err
 	})
 }
 

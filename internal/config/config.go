@@ -65,10 +65,9 @@ type DiscoveryConfig struct {
 }
 
 type SemanticConfig struct {
-	Enabled             bool    `json:"enabled,omitempty"`
-	Backend             string  `json:"backend,omitempty"`
-	BaseURL             string  `json:"base_url,omitempty"`
-	Model               string  `json:"model,omitempty"`
+	EmbeddingURL        string  `json:"embedding_url,omitempty"`
+	ProviderModel       string  `json:"provider_model,omitempty"`
+	VectorSpace         string  `json:"vector_space,omitempty"`
 	TimeoutMS           int64   `json:"timeout_ms,omitempty"`
 	FailureCooldownMS   int64   `json:"failure_cooldown_ms,omitempty"`
 	SimilarityThreshold float64 `json:"similarity_threshold,omitempty"`
@@ -77,15 +76,13 @@ type SemanticConfig struct {
 }
 
 type MemoryConfig struct {
-	Enabled          bool   `json:"enabled,omitempty"`
-	Backend          string `json:"backend,omitempty"`
-	Path             string `json:"path,omitempty"`
-	MaxDocuments     int    `json:"max_documents,omitempty"`
-	MaxEdges         int    `json:"max_edges,omitempty"`
-	MaxEmbeddings    int    `json:"max_embeddings,omitempty"`
-	EmbeddingBackend string `json:"embedding_backend,omitempty"`
-	EmbeddingModel   string `json:"embedding_model,omitempty"`
-	VectorMode       string `json:"vector_mode,omitempty"`
-	VectorEngine     string `json:"vector_engine,omitempty"`
-	PrunePolicy      string `json:"prune_policy,omitempty"`
+	Enabled       bool   `json:"enabled,omitempty"`
+	Backend       string `json:"backend,omitempty"`
+	Path          string `json:"path,omitempty"`
+	MaxDocuments  int    `json:"max_documents,omitempty"`
+	MaxEdges      int    `json:"max_edges,omitempty"`
+	MaxEmbeddings int    `json:"max_embeddings,omitempty"`
+	VectorMode    string `json:"vector_mode,omitempty"`
+	VectorEngine  string `json:"vector_engine,omitempty"`
+	PrunePolicy   string `json:"prune_policy,omitempty"`
 }

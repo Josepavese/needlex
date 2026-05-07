@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/webdiscover"
@@ -23,7 +22,14 @@ func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
 		DiscoverCandidate{URL: "https://developers.openai.com/api/pricing", Label: "OpenAI API pricing", Score: 0.5},
 		"https://developers.openai.com/api/pricing",
 		"OpenAI API pricing",
-		core.WebIR{NodeCount: 3},
+		core.WebIR{
+			Title:     "OpenAI API pricing",
+			NodeCount: 2,
+			Nodes: []core.WebIRNode{
+				{Text: "Pricing details for the API platform."},
+				{Text: "Token usage and model costs."},
+			},
+		},
 		nil,
 	)
 	if !containsReason(candidate.Reason, "page_title_probe") || !containsReason(candidate.Reason, "web_ir_probe") {
@@ -31,6 +37,9 @@ func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
 	}
 	if containsReason(candidate.Reason, "host_page_coherence") {
 		t.Fatalf("expected surface-form host-page coherence to be absent, got %#v", candidate.Reason)
+	}
+	if candidate.Metadata["web_ir_context"] == "" {
+		t.Fatalf("expected probed web ir context metadata, got %#v", candidate.Metadata)
 	}
 }
 
@@ -72,7 +81,7 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	svc, err := New(cfg, searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -121,7 +130,7 @@ func TestDiscoverWebPromotesSameFamilyEmbeddedEndpoint(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	svc, err := New(cfg, searchServer.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
@@ -214,7 +223,7 @@ func TestDiscoverWebEndpointExtractorPromotesEmbeddedURLFromShortlist(t *testing
 	}))
 	defer modelServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	cfg.Models.Backend = "openai-compatible"
 	cfg.Models.BaseURL = modelServer.URL
 	cfg.Models.Router = "qwen-endpoint"
@@ -234,11 +243,8 @@ func TestDiscoverWebEndpointExtractorPromotesEmbeddedURLFromShortlist(t *testing
 }
 
 func TestOrderEndpointCandidatesPrefersContextualHTMLCandidate(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, nil)
 
 	ordered := svc.orderEndpointCandidates(context.Background(), "OpenAI API pricing", []DiscoverCandidate{
@@ -267,12 +273,119 @@ func TestCanonicalizeCandidateFamiliesPrefersSameHostRootWhenScoresClose(t *test
 	}
 }
 
-func TestSemanticDisambiguateCandidateFamiliesBoostsBrandAlignedFamily(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
+func TestDampenWeakCanonicalRootTrapsUsesFamilyProvenance(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://portal.example/",
+			Score: 2.80,
+			Reason: []string{
+				"structure_hint",
+				"resource_class_hint",
+				"host_compactness",
+				"same_host_canonical_root",
+			},
+		},
+		{
+			URL:   "https://origin.example/docs",
+			Score: 2.10,
+			Reason: []string{
+				"same_family_child_recovery",
+				"page_expand",
+				"page_expand_child_context",
+				"host_root_identity_probe",
+			},
+		},
+	}
+	got := webdiscover.DampenWeakCanonicalRootTraps(candidates)
+	if got[0].URL != "https://origin.example/docs" {
+		t.Fatalf("expected provenanced family to outrank weak canonical root, got %#v", got)
+	}
+	if !containsReason(got[1].Reason, "weak_canonical_root_context_penalty") {
+		t.Fatalf("expected weak root penalty reason, got %#v", got[1].Reason)
+	}
+}
 
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+func TestDampenWeakCanonicalRootTrapsKeepsVerifiedRoot(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://origin.example/",
+			Score: 1.20,
+			Reason: []string{
+				"same_host_canonical_root",
+				"host_root_candidate",
+			},
+		},
+		{
+			URL:   "https://origin.example/docs",
+			Score: 1.10,
+		},
+	}
+	got := webdiscover.DampenWeakCanonicalRootTraps(candidates)
+	if got[0].URL != "https://origin.example/" {
+		t.Fatalf("expected verified root to remain first, got %#v", got)
+	}
+	if containsReason(got[0].Reason, "weak_canonical_root_context_penalty") {
+		t.Fatalf("did not expect verified root penalty, got %#v", got[0].Reason)
+	}
+}
+
+func TestDampenWeakProvenanceTrapsPenalizesRecoveredFamilyWithoutEvidence(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://unverified.example/app",
+			Score: 2.40,
+			Reason: []string{
+				"same_family_child_recovery",
+				"page_expand",
+				"page_expand_child_context",
+			},
+		},
+		{
+			URL:   "https://origin.example/docs",
+			Score: 2.12,
+			Reason: []string{
+				"same_family_child_recovery",
+				"page_expand",
+				"page_expand_child_context",
+				"host_root_identity_probe",
+			},
+		},
+	}
+	got := webdiscover.DampenWeakProvenanceTraps(candidates)
+	if got[0].URL != "https://origin.example/docs" {
+		t.Fatalf("expected provenanced recovered family to win, got %#v", got)
+	}
+	if !containsReason(got[1].Reason, "weak_recovered_family_context_penalty") {
+		t.Fatalf("expected weak recovered family penalty, got %#v", got[1].Reason)
+	}
+}
+
+func TestExpandedRecoveryKeepsScopeRegressionSubordinate(t *testing.T) {
+	svc := newTestService(t, testConfig(), nil)
+	source := DiscoverCandidate{URL: "https://platform.example/org/project", Score: 1.0}
+	expanded := []DiscoverCandidate{
+		{URL: "https://platform.example/", Score: 1.0},
+		{URL: "https://platform.example/org/project/docs", Score: 0.8},
+	}
+
+	got := svc.selectExpandedRecoveryCandidates(context.Background(), "recover contextual resource", source, expanded)
+	if len(got) != 1 {
+		t.Fatalf("expected expanded candidates, got %#v", got)
+	}
+	if got[0].URL != "https://platform.example/org/project/docs" {
+		t.Fatalf("expected deeper same-family resource to stay above root regression, got %#v", got)
+	}
+	regressed := svc.selectExpandedRecoveryCandidates(context.Background(), "recover contextual resource", source, []DiscoverCandidate{
+		{URL: "https://platform.example/", Score: 1.0},
+	})
+	if len(regressed) != 1 || !containsReason(regressed[0].Reason, "same_family_scope_regression") {
+		t.Fatalf("expected root-only candidate to be retained as scope context, got %#v", regressed)
+	}
+}
+
+func TestSemanticDisambiguateCandidateFamiliesBoostsBrandAlignedFamily(t *testing.T) {
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, nil)
 
 	candidates := []DiscoverCandidate{
@@ -302,12 +415,36 @@ func TestSemanticDisambiguateCandidateFamiliesBoostsBrandAlignedFamily(t *testin
 	}
 }
 
-func TestApplyCandidateIntelligenceAddsSemanticGroundingMetadata(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
+func TestSemanticRerankUsesProbedWebIRContext(t *testing.T) {
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
+	svc := newTestService(t, cfg, nil)
 
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://generic.example/",
+			Score: 1.10,
+			Label: "Generic platform",
+		},
+		{
+			URL:   "https://observability.example/docs",
+			Score: 0.92,
+			Label: "Documentation",
+			Metadata: map[string]string{
+				"web_ir_context": "distributed tracing metrics dashboard panels incident response observability guide",
+			},
+		},
+	}
+
+	got := svc.semanticRerankDiscoverCandidates(context.Background(), "distributed tracing metrics dashboard", candidates)
+	if got[0].URL != "https://observability.example/docs" {
+		t.Fatalf("expected probed web ir context to drive semantic rerank, got %q", got[0].URL)
+	}
+}
+
+func TestApplyCandidateIntelligenceAddsSemanticGroundingMetadata(t *testing.T) {
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, nil)
 
 	candidates := []DiscoverCandidate{
@@ -346,9 +483,6 @@ func TestApplyCandidateIntelligenceAddsSemanticGroundingMetadata(t *testing.T) {
 }
 
 func TestDiscoverWebRecoversCanonicalFamilyFromIdentityReferences(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
 	officialServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		switch r.URL.Path {
@@ -379,8 +513,8 @@ func TestDiscoverWebRecoversCanonicalFamilyFromIdentityReferences(t *testing.T) 
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
@@ -397,9 +531,6 @@ func TestDiscoverWebRecoversCanonicalFamilyFromIdentityReferences(t *testing.T) 
 }
 
 func TestDiscoverWebSurfacesOfficialFamilyFromExternalEntityLinks(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
 	officialServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		switch r.URL.Path {
@@ -428,8 +559,8 @@ func TestDiscoverWebSurfacesOfficialFamilyFromExternalEntityLinks(t *testing.T) 
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
@@ -453,11 +584,8 @@ func TestDiscoverWebSurfacesOfficialFamilyFromExternalEntityLinks(t *testing.T) 
 }
 
 func TestApplyCandidateIntelligencePenalizesIdentityMismatchMirror(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, nil)
 
 	candidates := []DiscoverCandidate{
@@ -493,7 +621,7 @@ func TestApplyCandidateIntelligencePenalizesIdentityMismatchMirror(t *testing.T)
 }
 
 func TestOrderedDiscoveryProvidersPrefersHealthyProvider(t *testing.T) {
-	cfg := config.Defaults()
+	cfg := testConfig()
 	svc := newTestService(t, cfg, nil)
 	svc.discoveryProviders = store.NewDiscoveryProviderStateStore(t.TempDir())
 	svc.discoveryProviders.Observe(store.DiscoveryProviderObservation{
@@ -523,7 +651,7 @@ func TestDiscoverWebSkipsRemainingQueriesAfterProviderLevelFailure(t *testing.T)
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	svc := newTestService(t, cfg, searchServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 	svc.discoveryProviders = store.NewDiscoveryProviderStateStore(t.TempDir())
@@ -547,7 +675,7 @@ func TestDiscoverWebPersistsProviderOutcome(t *testing.T) {
 	}))
 	defer searchServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	svc := newTestService(t, cfg, searchServer.Client())
 	root := t.TempDir()
 	svc.discoveryProviders = store.NewDiscoveryProviderStateStore(root)
@@ -566,23 +694,31 @@ func TestDiscoverWebPersistsProviderOutcome(t *testing.T) {
 	}
 }
 
-func TestCandidateIntelligenceWindowSkipsClearLeader(t *testing.T) {
+func TestCandidateIntelligenceWindowSkipsClearLeaderWithoutProvenanceConflict(t *testing.T) {
 	candidates := []DiscoverCandidate{
-		{URL: "https://example.com/a", Score: 2.4},
+		{URL: "https://example.com/a", Score: 3.3},
 		{URL: "https://example.com/b", Score: 1.9},
 		{URL: "https://example.com/c", Score: 1.7},
 	}
 	if got := candidateIntelligenceWindow(candidates); got != 0 {
-		t.Fatalf("expected clear leader to skip candidate intelligence, got window=%d", got)
+		t.Fatalf("expected clear leader to skip semantic review, got window=%d", got)
+	}
+}
+
+func TestCandidateIntelligenceWindowKeepsProvenanceConflict(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{URL: "https://related.example/", Score: 3.3, Reason: []string{"same_family_canonical_root"}},
+		{URL: "https://origin.example/docs", Score: 2.2, Reason: []string{"host_root_identity_probe"}},
+		{URL: "https://example.com/c", Score: 1.7},
+	}
+	if got := candidateIntelligenceWindow(candidates); got != 3 {
+		t.Fatalf("expected provenance conflict to trigger semantic review, got window=%d", got)
 	}
 }
 
 func TestApplyCandidateIntelligenceChoosesClusterRepresentative(t *testing.T) {
-	semantic := newDiscoverSemanticServer()
-	defer semantic.Close()
-
-	cfg := config.Defaults()
-	enableDiscoverSemantic(&cfg, semantic.URL)
+	cfg := testConfig()
+	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, nil)
 
 	candidates := []DiscoverCandidate{

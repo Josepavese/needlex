@@ -182,10 +182,10 @@ func resourceClassIntelligenceBoost(class string) float64 {
 }
 
 func identityAlignmentBoost(pageSim, hostSim float64) (float64, string) {
-	if pageSim >= 0.24 && hostSim >= 0.16 {
+	if pageSim >= 0.24 && hostSim >= 0.22 {
 		return 0.12, "candidate_identity_alignment"
 	}
-	if pageSim >= 0.24 && hostSim > 0 && hostSim < 0.10 {
+	if pageSim >= 0.24 && hostSim > 0 && hostSim < 0.20 {
 		return -0.18, "candidate_identity_mismatch"
 	}
 	return 0, ""
@@ -239,21 +239,39 @@ func Window(candidates []discoverycore.Candidate) int {
 	if len(candidates) < 2 {
 		return 0
 	}
-	if candidates[0].Score-candidates[1].Score > 0.32 {
-		return 0
+	if shouldReviewCandidateWindow(candidates) {
+		return min(len(candidates), 8)
 	}
-	window := 0
-	topScore := candidates[0].Score
-	for i := 0; i < len(candidates) && i < 8; i++ {
-		if topScore-candidates[i].Score > 0.55 {
-			break
+	return 0
+}
+
+func shouldReviewCandidateWindow(candidates []discoverycore.Candidate) bool {
+	if candidates[0].Score-candidates[1].Score <= 0.42 {
+		return true
+	}
+	limit := min(len(candidates), 8)
+	topStrong := hasSemanticProvenance(candidates[0])
+	for i := 1; i < limit; i++ {
+		if hasSemanticProvenance(candidates[i]) && !topStrong && candidates[0].Score-candidates[i].Score <= 1.25 {
+			return true
 		}
-		window++
 	}
-	if window < 2 {
-		return 0
+	return false
+}
+
+func hasSemanticProvenance(candidate discoverycore.Candidate) bool {
+	for _, reason := range candidate.Reason {
+		switch strings.TrimSpace(reason) {
+		case "host_root_identity_probe",
+			"host_root_candidate",
+			"identity_reference",
+			"semantic_family_alignment",
+			"semantic_custodian_alignment",
+			"semantic_quorum_provider_fusion":
+			return true
+		}
 	}
-	return window
+	return false
 }
 
 func candidateSemanticText(candidate discoverycore.Candidate) string {
@@ -261,6 +279,7 @@ func candidateSemanticText(candidate discoverycore.Candidate) string {
 		candidate.Metadata["host_root_title"],
 		candidate.Metadata["page_title"],
 		candidate.Metadata["source_context"],
+		candidate.Metadata["web_ir_context"],
 		strings.TrimSpace(candidate.Label),
 		discoverycore.URLIdentityText(candidate.URL),
 		candidate.Metadata["resource_class"],
@@ -658,7 +677,10 @@ func clusterRepresentativeScore(candidate discoverycore.Candidate, cluster candi
 		score += centrality * 0.30
 	}
 	if similarity := goalSimilarity[candidate.URL]; similarity > 0 {
-		score += min(similarity*0.24, 0.18)
+		score += min(similarity*0.75, 0.45)
+	}
+	if strings.TrimSpace(candidate.Metadata["embedded_url_source"]) != "" {
+		score += 0.35
 	}
 	depth := discoverycore.URLPathDepth(candidate.URL)
 	switch {

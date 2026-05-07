@@ -1,11 +1,21 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/josepavese/needlex/internal/config/modelbaseline"
+	"github.com/josepavese/needlex/internal/platform"
+)
+
+const (
+	DefaultSemanticEmbeddingURL  = "http://127.0.0.1:11434/api/embed"
+	DefaultSemanticProviderModel = "embeddinggemma:latest"
+	DefaultSemanticVectorSpace   = "ollama-embeddinggemma-v1"
 )
 
 func Defaults() Config {
@@ -20,6 +30,17 @@ func Defaults() Config {
 		Semantic:  defaultSemanticConfig(baseline),
 		Memory:    defaultMemoryConfig(baseline),
 	}
+}
+
+func DefaultsWithEnv() (Config, error) {
+	cfg := Defaults()
+	if err := cfg.ApplyEnv(envMap()); err != nil {
+		return Config{}, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }
 
 func defaultRuntimeConfig() RuntimeConfig {
@@ -86,11 +107,13 @@ func defaultDiscoveryConfig(baseline modelbaseline.Manifest) DiscoveryConfig {
 }
 
 func defaultSemanticConfig(baseline modelbaseline.Manifest) SemanticConfig {
+	embeddingURL := firstNonEmptyConfig(baseline.Semantic.EmbeddingURL, DefaultSemanticEmbeddingURL)
+	providerModel := firstNonEmptyConfig(baseline.Semantic.ProviderModel, DefaultSemanticProviderModel)
+	vectorSpace := firstNonEmptyConfig(baseline.Semantic.VectorSpace, DefaultSemanticVectorSpace)
 	return SemanticConfig{
-		Enabled:             true,
-		Backend:             baseline.Semantic.RecommendedBackend,
-		BaseURL:             baseline.Semantic.RecommendedBaseURL,
-		Model:               baseline.Semantic.Model,
+		EmbeddingURL:        embeddingURL,
+		ProviderModel:       providerModel,
+		VectorSpace:         vectorSpace,
 		TimeoutMS:           baseline.Semantic.TimeoutMS,
 		FailureCooldownMS:   5000,
 		SimilarityThreshold: 0.55,
@@ -99,30 +122,37 @@ func defaultSemanticConfig(baseline modelbaseline.Manifest) SemanticConfig {
 	}
 }
 
+func firstNonEmptyConfig(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
 func defaultMemoryConfig(baseline modelbaseline.Manifest) MemoryConfig {
 	return MemoryConfig{
-		Enabled:          true,
-		Backend:          "sqlite",
-		Path:             "discovery/discovery.db",
-		MaxDocuments:     4000,
-		MaxEdges:         12000,
-		MaxEmbeddings:    4000,
-		EmbeddingBackend: baseline.Semantic.RecommendedBackend,
-		EmbeddingModel:   baseline.Semantic.Model,
-		VectorMode:       "fallback-linear",
-		VectorEngine:     "sqlite-vec",
-		PrunePolicy:      "lru",
+		Enabled:       true,
+		Backend:       "sqlite",
+		Path:          "discovery/discovery.db",
+		MaxDocuments:  4000,
+		MaxEdges:      12000,
+		MaxEmbeddings: 4000,
+		VectorMode:    "fallback-linear",
+		VectorEngine:  "sqlite-vec",
+		PrunePolicy:   "lru",
 	}
 }
 
 func Load(path string) (Config, error) {
 	cfg := Defaults()
-	if path != "" {
-		data, err := os.ReadFile(path)
+	if resolved := ResolvePath(path); resolved != "" {
+		data, err := os.ReadFile(resolved)
 		if err != nil {
 			return Config{}, fmt.Errorf("read config: %w", err)
 		}
-		if err := json.Unmarshal(data, &cfg); err != nil {
+		if err := decodeConfigStrict(data, &cfg); err != nil {
 			return Config{}, fmt.Errorf("decode config: %w", err)
 		}
 	}
@@ -133,4 +163,46 @@ func Load(path string) (Config, error) {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+func ResolvePath(path string) string {
+	if trimmed := strings.TrimSpace(path); trimmed != "" {
+		return trimmed
+	}
+	return strings.TrimSpace(os.Getenv(platform.EnvConfig))
+}
+
+func DefaultPath() string {
+	return platform.NewStateLayout(platform.DefaultStateRoot()).ConfigPath
+}
+
+func Write(path string, cfg Config) error {
+	resolved := strings.TrimSpace(path)
+	if resolved == "" {
+		resolved = DefaultPath()
+	}
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(resolved), 0o755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode config: %w", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(resolved, data, 0o644); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	return nil
+}
+
+func decodeConfigStrict(data []byte, cfg *Config) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(cfg); err != nil {
+		return err
+	}
+	return nil
 }

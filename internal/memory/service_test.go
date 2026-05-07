@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,7 +14,15 @@ import (
 )
 
 type stubEmbedder struct {
+	model   string
 	vectors map[string][]float32
+}
+
+func (s stubEmbedder) ModelID() string {
+	if s.model != "" {
+		return s.model
+	}
+	return "dense-test"
 }
 
 func (s stubEmbedder) Embed(_ context.Context, inputs []string) ([][]float32, error) {
@@ -31,7 +40,7 @@ func (s stubEmbedder) Embed(_ context.Context, inputs []string) ([][]float32, er
 func TestServiceObserveAndSearch(t *testing.T) {
 	root := t.TempDir()
 	store := NewSQLiteStore(root, "discovery/discovery.db")
-	svc := NewService(config.MemoryConfig{EmbeddingBackend: "openai-embeddings", EmbeddingModel: "embed-x"}, store, stubEmbedder{vectors: map[string][]float32{
+	svc := NewService(config.MemoryConfig{}, store, stubEmbedder{model: "embed-x", vectors: map[string][]float32{
 		"Playwright\nPlaywright is an end-to-end testing framework for modern apps.": {1, 0, 0},
 		"Installation\nInstall Playwright with npm and run install browsers.":        {0.9, 0.1, 0},
 		"playwright install": {1, 0, 0},
@@ -89,7 +98,7 @@ func TestServiceObserveAndSearch(t *testing.T) {
 func TestServiceSearchInfersFamilyRootFromObservedDescendants(t *testing.T) {
 	root := t.TempDir()
 	store := NewSQLiteStore(root, "discovery/discovery.db")
-	svc := NewService(config.MemoryConfig{EmbeddingBackend: "openai-embeddings", EmbeddingModel: "embed-x"}, store, stubEmbedder{vectors: map[string][]float32{
+	svc := NewService(config.MemoryConfig{}, store, stubEmbedder{model: "embed-x", vectors: map[string][]float32{
 		"JavaScript | MDN\nJavaScript overview language guide on MDN.":                               {1, 0, 0},
 		"AsyncGenerator | MDN\nAsyncGenerator reference details on MDN JavaScript reference page.":   {1, 0, 0},
 		"Enumerability | MDN\nEnumerability and ownership details for JavaScript properties on MDN.": {1, 0, 0},
@@ -132,6 +141,132 @@ func TestServiceSearchInfersFamilyRootFromObservedDescendants(t *testing.T) {
 	}
 }
 
+func TestServiceSearchUsesSemanticFamilyGraph(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	svc := NewService(config.MemoryConfig{}, store, stubEmbedder{model: "embed-x", vectors: map[string][]float32{
+		"Global Reference\nAuthoritative maintained reference for a public standard.": {1, 0, 0},
+		"Regional Mirror\nTranslated secondary copy of the same public standard.":     {0.96, 0.02, 0},
+		"authoritative public standard":                                               {1, 0, 0},
+	}})
+	now := time.Now().UTC()
+	for _, item := range []struct {
+		url   string
+		title string
+		text  string
+	}{
+		{"https://origin.example/ref", "Global Reference", "Authoritative maintained reference for a public standard."},
+		{"https://mirror.example/translated", "Regional Mirror", "Translated secondary copy of the same public standard."},
+	} {
+		if err := svc.Observe(context.Background(), Observation{
+			Document:    core.Document{URL: item.url, FinalURL: item.url, Title: item.title, FetchedAt: now, FetchMode: core.FetchModeHTTP},
+			ResultPack:  core.ResultPack{Profile: core.ProfileStandard, Chunks: []core.Chunk{{ID: item.title, DocID: item.title, Text: item.text, Confidence: 0.95}}},
+			TraceID:     item.title,
+			ObservedAt:  now,
+			SourceKind:  "read",
+			StableRatio: 0.8,
+		}); err != nil {
+			t.Fatalf("observe %s: %v", item.url, err)
+		}
+	}
+	stats, err := store.GetStats(context.Background())
+	if err != nil {
+		t.Fatalf("memory stats: %v", err)
+	}
+	if stats.SemanticFamilyCount != 1 {
+		t.Fatalf("expected semantically close pages to join one family, got %+v", stats)
+	}
+	matches, err := svc.Search(context.Background(), "authoritative public standard", SearchOptions{Limit: 5})
+	if err != nil {
+		t.Fatalf("search memory: %v", err)
+	}
+	foundFamily := false
+	for _, match := range matches {
+		if containsReason(match.Reasons, "entity_family_graph_recall") {
+			foundFamily = true
+			break
+		}
+	}
+	if !foundFamily {
+		t.Fatalf("expected semantic family graph recall, got %+v", matches)
+	}
+}
+
+func TestServiceSearchSkipsEmbeddingRowsWithDifferentDimensions(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	svc := NewService(config.MemoryConfig{}, store, stubEmbedder{model: "embed-x", vectors: map[string][]float32{
+		"Current Model\nCurrent dimension document.": {1, 0},
+		"Old Model\nOld dimension document.":         {1, 0, 0},
+		"current dimension":                          {1, 0},
+	}})
+	now := time.Now().UTC()
+	for _, item := range []struct {
+		url   string
+		title string
+		text  string
+	}{
+		{"https://current.example/doc", "Current Model", "Current dimension document."},
+		{"https://old.example/doc", "Old Model", "Old dimension document."},
+	} {
+		if err := svc.Observe(context.Background(), Observation{
+			Document:   core.Document{URL: item.url, FinalURL: item.url, Title: item.title, FetchedAt: now, FetchMode: core.FetchModeHTTP},
+			ResultPack: core.ResultPack{Profile: core.ProfileStandard, Chunks: []core.Chunk{{ID: item.title, DocID: item.title, Text: item.text, Confidence: 0.95}}},
+			TraceID:    item.title,
+			ObservedAt: now,
+			SourceKind: "read",
+		}); err != nil {
+			t.Fatalf("observe %s: %v", item.url, err)
+		}
+	}
+	matches, err := svc.Search(context.Background(), "current dimension", SearchOptions{Limit: 5})
+	if err != nil {
+		t.Fatalf("search should tolerate mixed embedding dimensions: %v", err)
+	}
+	if len(matches) == 0 || matches[0].URL != "https://current.example/doc" {
+		t.Fatalf("expected current-dimension match first, got %+v", matches)
+	}
+}
+
+func TestServiceSearchFiltersVectorSpace(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	svc := NewService(config.MemoryConfig{}, store, stubEmbedder{model: "current-space", vectors: map[string][]float32{
+		"current objective": {1, 0, 0},
+	}})
+	now := time.Now().UTC()
+	ctx := context.Background()
+	for _, item := range []struct {
+		url         string
+		vectorSpace string
+		vector      []float32
+	}{
+		{"https://old.example/doc", "old-space", []float32{1, 0, 0}},
+		{"https://current.example/doc", "current-space", []float32{1, 0, 0}},
+	} {
+		doc := Document{URL: item.url, FinalURL: item.url, Host: strings.TrimPrefix(strings.TrimSuffix(item.url, "/doc"), "https://"), Path: "/doc", Title: item.vectorSpace, SemanticSummary: item.vectorSpace, LastTraceID: item.vectorSpace, SourceKind: "read", ObservedAt: now, UpdatedAt: now}
+		if err := store.UpsertDocument(ctx, doc); err != nil {
+			t.Fatalf("upsert doc %s: %v", item.url, err)
+		}
+		emb := Embedding{EmbeddingRef: embeddingRef(item.url, item.vectorSpace, "dense-http"), DocumentURL: item.url, Model: item.vectorSpace, Backend: "dense-http", InputText: item.vectorSpace, Dimension: 3, CreatedAt: now, UpdatedAt: now}
+		if err := store.UpsertEmbedding(ctx, emb, item.vector); err != nil {
+			t.Fatalf("upsert embedding %s: %v", item.url, err)
+		}
+	}
+	matches, err := svc.Search(ctx, "current objective", SearchOptions{Limit: 5})
+	if err != nil {
+		t.Fatalf("search memory: %v", err)
+	}
+	if len(matches) == 0 {
+		t.Fatal("expected current vector-space match")
+	}
+	for _, match := range matches {
+		if match.URL == "https://old.example/doc" {
+			t.Fatalf("old vector-space row leaked into results: %+v", matches)
+		}
+	}
+}
+
 func TestSQLiteStoreExportImportAndRebuild(t *testing.T) {
 	root := t.TempDir()
 	store := NewSQLiteStore(root, "discovery/discovery.db")
@@ -165,16 +300,19 @@ func TestSQLiteStoreExportImportAndRebuild(t *testing.T) {
 	if err := store.UpsertEmbedding(ctx, Embedding{EmbeddingRef: "emb_1", DocumentURL: doc.URL, Model: "m", Backend: "b", InputText: "About Example\nExample is a studio.", Dimension: 3, CreatedAt: now, UpdatedAt: now}, []float32{1, 0, 0}); err != nil {
 		t.Fatalf("upsert embedding: %v", err)
 	}
+	if err := store.UpsertSemanticFamilyEvidence(ctx, doc, []float32{1, 0, 0}, "m"); err != nil {
+		t.Fatalf("upsert semantic family: %v", err)
+	}
 
 	exportDir := filepath.Join(root, "export")
 	exportStats, err := store.ExportJSONL(ctx, exportDir)
 	if err != nil {
 		t.Fatalf("export jsonl: %v", err)
 	}
-	if exportStats.DocumentCount != 1 || exportStats.EdgeCount != 1 || exportStats.EmbeddingCount != 1 {
+	if exportStats.DocumentCount != 1 || exportStats.EdgeCount != 1 || exportStats.EmbeddingCount != 1 || exportStats.FamilyCount != 1 || exportStats.MemberCount != 1 {
 		t.Fatalf("unexpected export stats: %+v", exportStats)
 	}
-	for _, path := range []string{exportStats.DocumentsPath, exportStats.EdgesPath, exportStats.EmbeddingsPath} {
+	for _, path := range []string{exportStats.DocumentsPath, exportStats.EdgesPath, exportStats.EmbeddingsPath, exportStats.FamiliesPath, exportStats.FamilyMembersPath} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected exported file %s: %v", path, err)
 		}
@@ -186,7 +324,7 @@ func TestSQLiteStoreExportImportAndRebuild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("import jsonl: %v", err)
 	}
-	if importStats.DocumentCount != 1 || importStats.EdgeCount != 1 || importStats.EmbeddingCount != 1 {
+	if importStats.DocumentCount != 1 || importStats.EdgeCount != 1 || importStats.EmbeddingCount != 1 || importStats.FamilyCount != 1 || importStats.MemberCount != 1 {
 		t.Fatalf("unexpected import stats: %+v", importStats)
 	}
 	if err := importStore.RebuildIndex(ctx); err != nil {
@@ -196,7 +334,15 @@ func TestSQLiteStoreExportImportAndRebuild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get stats after import: %v", err)
 	}
-	if stats.DocumentCount != 1 || stats.EdgeCount != 1 || stats.EmbeddingCount != 1 || stats.LastRebuildAt.IsZero() {
+	if stats.DocumentCount != 1 ||
+		stats.EdgeCount != 1 ||
+		stats.EmbeddingCount != 1 ||
+		stats.SemanticFamilyCount != 1 ||
+		stats.SemanticMemberCount != 1 ||
+		stats.VectorEngine != "exact" ||
+		len(stats.VectorDimensions) != 1 ||
+		stats.VectorDimensions[0] != 3 ||
+		stats.LastRebuildAt.IsZero() {
 		t.Fatalf("unexpected imported stats: %+v", stats)
 	}
 }

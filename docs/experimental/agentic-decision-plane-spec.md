@@ -7,9 +7,6 @@ Phase: Post-wave benchmark / future macrostep
 Related docs:
 - [project-context.md](../project-context.md)
 - [vademecum.md](../vademecum.md)
-- [slm-strategic-revision.md](../archive/slm-strategic-revision.md)
-- [slm-execution-plan.md](../archive/slm-execution-plan.md)
-- [first-real-slm-test.md](../archive/first-real-slm-test.md)
 - [spec.md](../../spec.md)
 
 ## Purpose

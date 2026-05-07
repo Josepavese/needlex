@@ -5,9 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"hash/fnv"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -131,9 +128,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	embeddingServer := newEmbeddingServer()
-	defer embeddingServer.Close()
-
 	binaryPath, cleanup, err := buildNeedleBinary()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "build needle: %v\n", err)
@@ -144,7 +138,7 @@ func main() {
 	results := make([]caseResult, 0, len(cases))
 	for i, item := range cases {
 		fmt.Printf("[memory-bench] %s case %d/%d start id=%s family=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID, item.Family)
-		row := runCase(binaryPath, embeddingServer.URL, item)
+		row := runCase(binaryPath, item)
 		results = append(results, row)
 		fmt.Printf("[memory-bench] %s case %d/%d done id=%s cold_pass=%t warm_pass=%t warm_provider=%s\n", time.Now().Format("15:04:05"), i+1, len(cases), item.ID, row.Cold.SelectedPass, row.Warm.SelectedPass, row.Warm.Provider)
 	}
@@ -177,14 +171,14 @@ func benchmarkCases(all []seededCase) []seededCase {
 	return out
 }
 
-func runCase(binaryPath, embeddingURL string, item seededCase) caseResult {
+func runCase(binaryPath string, item seededCase) caseResult {
 	coldDir, _ := os.MkdirTemp("", "needlex-memory-cold-*")
 	defer func() { _ = os.RemoveAll(coldDir) }()
 	warmDir, _ := os.MkdirTemp("", "needlex-memory-warm-*")
 	defer func() { _ = os.RemoveAll(warmDir) }()
 
-	coldConfig := mustWriteConfig(coldDir, embeddingURL)
-	warmConfig := mustWriteConfig(warmDir, embeddingURL)
+	coldConfig := mustWriteConfig(coldDir)
+	warmConfig := mustWriteConfig(warmDir)
 
 	cold := runQueryStage(binaryPath, coldDir, coldConfig, item)
 	_ = runWarmup(binaryPath, warmDir, warmConfig, item.ExpectedURL)
@@ -293,15 +287,18 @@ func buildNeedleBinary() (string, func(), error) {
 	return binaryPath, func() { _ = os.RemoveAll(tempDir) }, nil
 }
 
-func mustWriteConfig(workDir, embeddingURL string) string {
+func mustWriteConfig(workDir string) string {
 	cfg := config.Defaults()
 	cfg.Memory.Enabled = true
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Backend = "openai-embeddings"
-	cfg.Semantic.BaseURL = embeddingURL
-	cfg.Semantic.Model = "memory-benchmark-embed"
-	cfg.Memory.EmbeddingBackend = cfg.Semantic.Backend
-	cfg.Memory.EmbeddingModel = cfg.Semantic.Model
+	if endpoint := strings.TrimSpace(os.Getenv("NEEDLEX_SEMANTIC_EMBEDDING_URL")); endpoint != "" {
+		cfg.Semantic.EmbeddingURL = endpoint
+	}
+	if providerModel := strings.TrimSpace(os.Getenv("NEEDLEX_SEMANTIC_PROVIDER_MODEL")); providerModel != "" {
+		cfg.Semantic.ProviderModel = providerModel
+	}
+	if vectorSpace := strings.TrimSpace(os.Getenv("NEEDLEX_SEMANTIC_VECTOR_SPACE")); vectorSpace != "" {
+		cfg.Semantic.VectorSpace = vectorSpace
+	}
 	path := filepath.Join(workDir, "needlex-memory-benchmark.json")
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
@@ -439,64 +436,4 @@ func isPublicDiscoveryProvider(provider string) bool {
 		}
 	}
 	return false
-}
-
-func newEmbeddingServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/embeddings" {
-			http.NotFound(w, r)
-			return
-		}
-		var payload struct {
-			Input any `json:"input"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		inputs := embeddingInputs(payload.Input)
-		data := make([]map[string]any, 0, len(inputs))
-		for i, input := range inputs {
-			data = append(data, map[string]any{
-				"object":    "embedding",
-				"index":     i,
-				"embedding": embeddingVector(input),
-			})
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": data, "model": "memory-benchmark-embed"})
-	}))
-}
-
-func embeddingInputs(raw any) []string {
-	switch typed := raw.(type) {
-	case string:
-		return []string{typed}
-	case []any:
-		out := make([]string, 0, len(typed))
-		for _, item := range typed {
-			if value, ok := item.(string); ok {
-				out = append(out, value)
-			}
-		}
-		return out
-	default:
-		return nil
-	}
-}
-
-func embeddingVector(text string) []float64 {
-	const dims = 64
-	vector := make([]float64, dims)
-	fields := strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
-		return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'))
-	})
-	for _, token := range fields {
-		if token == "" {
-			continue
-		}
-		h := fnv.New32a()
-		_, _ = h.Write([]byte(token))
-		vector[int(h.Sum32()%dims)] += 1
-	}
-	return vector
 }

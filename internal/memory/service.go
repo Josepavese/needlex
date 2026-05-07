@@ -9,37 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/intel"
 )
-
-type Store interface {
-	UpsertDocument(ctx context.Context, doc Document) error
-	UpsertEdges(ctx context.Context, edges []Edge) error
-	UpsertEmbedding(ctx context.Context, emb Embedding, vector []float32) error
-	RefreshTopicNodes(ctx context.Context, doc Document) error
-	SearchTopicNodes(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error)
-	SearchByVector(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error)
-	ExpandAncestorRoots(ctx context.Context, urls []string, limit int) ([]Candidate, error)
-	ExpandNeighbors(ctx context.Context, urls []string, limit int) ([]Candidate, error)
-	ExpandHosts(ctx context.Context, hosts []string, limit int) ([]Candidate, error)
-	GetStats(ctx context.Context) (Stats, error)
-	Prune(ctx context.Context, policy PrunePolicy) error
-	RebuildIndex(ctx context.Context) error
-	ExportJSONL(ctx context.Context, dir string) (ExportStats, error)
-	ImportJSONL(ctx context.Context, dir string) (ImportStats, error)
-}
-
-type Service struct {
-	cfg      config.MemoryConfig
-	store    Store
-	embedder intel.TextEmbedder
-	now      func() time.Time
-}
-
-func NewService(cfg config.MemoryConfig, store Store, embedder intel.TextEmbedder) Service {
-	return Service{cfg: cfg, store: store, embedder: embedder, now: time.Now}
-}
 
 func (s Service) Observe(ctx context.Context, obs Observation) error {
 	if s.store == nil {
@@ -72,12 +43,8 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 		ObservedAt:      observedAt,
 		UpdatedAt:       observedAt,
 	}
-	if err := s.store.UpsertDocument(ctx, doc); err != nil {
-		return err
-	}
-	edges := buildEdges(doc.FinalURL, obs.ResultPack.Links, obs.TraceID, observedAt)
-	if err := s.store.UpsertEdges(ctx, edges); err != nil {
-		return err
+	if s.embedder == nil {
+		return fmt.Errorf("memory embedder is required")
 	}
 	input := buildEmbeddingInput(doc)
 	vectors, err := s.embedder.Embed(ctx, []string{input})
@@ -85,13 +52,24 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 		return err
 	}
 	if len(vectors) == 0 {
-		return nil
+		return fmt.Errorf("memory embedding endpoint returned no vectors")
 	}
+	if len(vectors[0]) == 0 {
+		return fmt.Errorf("memory embedding endpoint returned an empty vector")
+	}
+	if err := s.store.UpsertDocument(ctx, doc); err != nil {
+		return err
+	}
+	edges := buildEdges(doc.FinalURL, obs.ResultPack.Links, obs.TraceID, observedAt)
+	if err := s.store.UpsertEdges(ctx, edges); err != nil {
+		return err
+	}
+	vectorSpace := firstNonEmpty(s.embedder.ModelID(), intel.DenseSemanticVectorSpace)
 	emb := Embedding{
-		EmbeddingRef: embeddingRef(doc.FinalURL, s.cfg.EmbeddingModel, s.cfg.EmbeddingBackend),
+		EmbeddingRef: embeddingRef(doc.FinalURL, vectorSpace, intel.DenseEmbeddingSource),
 		DocumentURL:  doc.URL,
-		Model:        s.cfg.EmbeddingModel,
-		Backend:      s.cfg.EmbeddingBackend,
+		Model:        vectorSpace,
+		Backend:      intel.DenseEmbeddingSource,
 		InputText:    input,
 		Dimension:    len(vectors[0]),
 		CreatedAt:    observedAt,
@@ -100,7 +78,10 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 	if err := s.store.UpsertEmbedding(ctx, emb, vectors[0]); err != nil {
 		return err
 	}
-	return s.store.RefreshTopicNodes(ctx, doc)
+	if err := s.store.UpsertSemanticFamilyEvidence(ctx, doc, vectors[0], vectorSpace); err != nil {
+		return err
+	}
+	return s.store.RefreshTopicNodes(ctx, doc, vectorSpace)
 }
 
 func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([]Candidate, error) {
@@ -112,7 +93,11 @@ func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([
 		return nil, err
 	}
 	merged := map[string]Candidate{}
-	if err := s.mergeVectorMatches(ctx, merged, vectors, opts); err != nil {
+	vectorSpace := strings.TrimSpace(s.embedder.ModelID())
+	if vectorSpace == "" {
+		return nil, nil
+	}
+	if err := s.mergeVectorMatches(ctx, merged, vectors, vectorSpace, opts); err != nil {
 		return nil, err
 	}
 	if err := s.expandSearchCandidates(ctx, merged, opts); err != nil {
@@ -133,20 +118,23 @@ func semanticSearchInputs(goal string, variants []string) []string {
 	return inputs
 }
 
-func (s Service) mergeVectorMatches(ctx context.Context, merged map[string]Candidate, vectors [][]float32, opts SearchOptions) error {
+func (s Service) mergeVectorMatches(ctx context.Context, merged map[string]Candidate, vectors [][]float32, vectorSpace string, opts SearchOptions) error {
 	for _, vector := range vectors {
-		if err := s.mergeTopicMatches(ctx, merged, vector, opts); err != nil {
+		if err := s.mergeTopicMatches(ctx, merged, vector, vectorSpace, opts); err != nil {
 			return err
 		}
-		if err := s.mergePageMatches(ctx, merged, vector, opts); err != nil {
+		if err := s.mergePageMatches(ctx, merged, vector, vectorSpace, opts); err != nil {
+			return err
+		}
+		if err := s.mergeFamilyMatches(ctx, merged, vector, vectorSpace, opts); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s Service) mergeTopicMatches(ctx context.Context, merged map[string]Candidate, vector []float32, opts SearchOptions) error {
-	matches, err := s.store.SearchTopicNodes(ctx, vector, opts.Limit, opts.DomainHints)
+func (s Service) mergeTopicMatches(ctx context.Context, merged map[string]Candidate, vector []float32, vectorSpace string, opts SearchOptions) error {
+	matches, err := s.store.SearchTopicNodes(ctx, vector, vectorSpace, opts.Limit, opts.DomainHints)
 	if err != nil {
 		return err
 	}
@@ -156,8 +144,19 @@ func (s Service) mergeTopicMatches(ctx context.Context, merged map[string]Candid
 	return nil
 }
 
-func (s Service) mergePageMatches(ctx context.Context, merged map[string]Candidate, vector []float32, opts SearchOptions) error {
-	matches, err := s.store.SearchByVector(ctx, vector, opts.Limit, opts.DomainHints)
+func (s Service) mergePageMatches(ctx context.Context, merged map[string]Candidate, vector []float32, vectorSpace string, opts SearchOptions) error {
+	matches, err := s.store.SearchByVector(ctx, vector, vectorSpace, opts.Limit, opts.DomainHints)
+	if err != nil {
+		return err
+	}
+	for _, match := range matches {
+		mergeCandidate(merged, match)
+	}
+	return nil
+}
+
+func (s Service) mergeFamilyMatches(ctx context.Context, merged map[string]Candidate, vector []float32, vectorSpace string, opts SearchOptions) error {
+	matches, err := s.store.SearchSemanticFamilies(ctx, vector, vectorSpace, opts.Limit, opts.DomainHints)
 	if err != nil {
 		return err
 	}

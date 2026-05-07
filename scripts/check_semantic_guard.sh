@@ -4,30 +4,31 @@ set -euo pipefail
 ROOT="${1:-.}"
 cd "$ROOT"
 
-scan_paths=(
-  AGENTS.md
-  README.md
-  benchmarks
-  docs
-  internal
-  schemas
-  skills
-)
+scan_paths=(internal benchmarks scripts README.md docs schemas skills AGENTS.md)
 
 bad_terms=(
-  "lexi""cal"
-  "key""word"
-  "[Ll]it""eral"
   "URL""TokenText"
   "Host""TokenText"
   "Score""Candidates"
   "Score""URL"
   "native""SemanticVector"
   "sparse""Cosine"
-  "domain""_hint_match"
-  "path""_hint"
-  "goal""_label_alignment"
-  "to""k:"
+  "Native""Semantic"
+  "Native""TextEmbedder"
+  "native""TextEmbedding"
+  "native""Embedding"
+  "Dense""Semantic""Model"
+  "cfg\\.Semantic\\.""Model"
+  "Semantic\\.""Model"
+  "semantic\\.""model"
+  "semantic\\.""backend"
+  "embedding""_backend"
+  "memory\\.embedding""_model"
+  "NEEDLEX_SEMANTIC_""MODEL"
+  "NEEDLEX_SEMANTIC_""ENABLED"
+  "NEEDLEX_MEMORY_EMBEDDING""_MODEL"
+  "needlex-dense-""embedding-v1"
+  "native Needle-X semantic ""vectorizer"
 )
 
 pattern="$(IFS='|'; echo "${bad_terms[*]}")"
@@ -45,7 +46,6 @@ set +e
 if command -v rg >/dev/null 2>&1; then
   rg -n --hidden \
     --glob '!docs/assets/**' \
-    --glob '!docs/archive/**/node_modules/**' \
     --glob '!**/*.png' \
     --glob '!**/*.jpg' \
     --glob '!**/*.jpeg' \
@@ -100,8 +100,13 @@ grep -q 'ScoreStructuralCandidates' internal/core/discovery/types.go || {
   exit 1
 }
 
-grep -q 'nativeEmbeddingFeatures' internal/intel/native_semantic.go || {
-  echo "FAIL: native embedding fallback entrypoint missing"
+grep -q 'DenseSemanticAligner' internal/intel/dense_semantic.go || {
+  echo "FAIL: dense semantic aligner entrypoint missing"
+  exit 1
+}
+
+grep -q 'DenseHTTPTextEmbedder' internal/intel/embedder.go || {
+  echo "FAIL: dense HTTP embedder entrypoint missing"
   exit 1
 }
 

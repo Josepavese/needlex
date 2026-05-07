@@ -11,14 +11,14 @@ import (
 	"github.com/josepavese/needlex/internal/platform"
 )
 
-func loadTopicNodeRow(ctx context.Context, conn *sql.DB, host, rootPath string) (topicNodeRow, bool, error) {
+func loadTopicNodeRow(ctx context.Context, conn *sql.DB, vectorSpace, host, rootPath string) (topicNodeRow, bool, error) {
 	rows, err := conn.QueryContext(ctx, `
 SELECT d.url, d.title, d.path, d.semantic_summary, d.language, d.observed_at, e.vector
 FROM documents d
 JOIN embeddings e ON e.document_url = d.url
-WHERE d.host = ? AND (d.path = ? OR d.path LIKE ?)
+WHERE e.model = ? AND d.host = ? AND (d.path = ? OR d.path LIKE ?)
 ORDER BY LENGTH(d.path) ASC, d.observed_at DESC, d.url ASC
-`, host, rootPath, rootPath+"/%")
+`, vectorSpace, host, rootPath, rootPath+"/%")
 	if err != nil {
 		return topicNodeRow{}, false, fmt.Errorf("load topic node descendants: %w", err)
 	}
@@ -54,7 +54,8 @@ ORDER BY LENGTH(d.path) ASC, d.observed_at DESC, d.url ASC
 		}
 	}
 	return topicNodeRow{
-		TopicKey:            topicNodeKey(host, rootPath),
+		TopicKey:            topicNodeKey(vectorSpace, host, rootPath),
+		VectorSpace:         vectorSpace,
 		Host:                host,
 		RootPath:            rootPath,
 		RepresentativeURL:   rep.URL,
@@ -73,10 +74,11 @@ ORDER BY LENGTH(d.path) ASC, d.observed_at DESC, d.url ASC
 func upsertTopicNodeRow(ctx context.Context, conn *sql.DB, row topicNodeRow) error {
 	_, err := conn.ExecContext(ctx, `
 INSERT INTO topic_nodes (
-  topic_key, host, root_path, representative_url, representative_title, semantic_summary,
+  topic_key, vector_space, host, root_path, representative_url, representative_title, semantic_summary,
   language, support_count, child_count, topic_depth, observed_at, updated_at, vector
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(topic_key) DO UPDATE SET
+  vector_space=excluded.vector_space,
   host=excluded.host,
   root_path=excluded.root_path,
   representative_url=excluded.representative_url,
@@ -89,7 +91,7 @@ ON CONFLICT(topic_key) DO UPDATE SET
   observed_at=excluded.observed_at,
   updated_at=excluded.updated_at,
   vector=excluded.vector
-`, row.TopicKey, row.Host, row.RootPath, row.RepresentativeURL, row.RepresentativeTitle, row.SemanticSummary, row.Language, row.SupportCount, row.ChildCount, row.TopicDepth, row.ObservedAt, row.UpdatedAt, row.Vector)
+`, row.TopicKey, row.VectorSpace, row.Host, row.RootPath, row.RepresentativeURL, row.RepresentativeTitle, row.SemanticSummary, row.Language, row.SupportCount, row.ChildCount, row.TopicDepth, row.ObservedAt, row.UpdatedAt, row.Vector)
 	if err != nil {
 		return fmt.Errorf("upsert topic node: %w", err)
 	}
@@ -111,8 +113,8 @@ func topicRootPaths(path string) []string {
 	return out
 }
 
-func topicNodeKey(host, rootPath string) string {
-	return strings.ToLower(strings.TrimSpace(host)) + "|" + strings.TrimSpace(rootPath)
+func topicNodeKey(vectorSpace, host, rootPath string) string {
+	return strings.TrimSpace(vectorSpace) + "|" + strings.ToLower(strings.TrimSpace(host)) + "|" + strings.TrimSpace(rootPath)
 }
 
 func buildTopicSummary(rootPath string, docs []topicDoc) string {

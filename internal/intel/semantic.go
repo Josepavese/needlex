@@ -1,9 +1,7 @@
 package intel
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -39,45 +37,10 @@ type SemanticScore struct {
 	Similarity float64
 }
 
-type NoopSemanticAligner struct{}
-
-func (NoopSemanticAligner) Align(context.Context, string, []SemanticCandidate) (SemanticAlignment, error) {
-	return SemanticAlignment{}, nil
-}
-
-func (NoopSemanticAligner) Score(context.Context, string, []SemanticCandidate) ([]SemanticScore, error) {
-	return nil, nil
-}
-
-type OllamaSemanticAligner struct {
-	BaseURL string
-	Model   string
-	Client  *http.Client
-	Config  config.SemanticConfig
-}
-
-type OpenAISemanticAligner struct {
-	BaseURL string
-	Model   string
-	Client  *http.Client
-	Config  config.SemanticConfig
-}
-
 func NewSemanticAligner(cfg config.Config, client *http.Client) SemanticAligner {
-	if !cfg.Semantic.Enabled || strings.TrimSpace(cfg.Semantic.Model) == "" {
-		return NoopSemanticAligner{}
-	}
-	var aligner SemanticAligner
-	switch strings.TrimSpace(cfg.Semantic.Backend) {
-	case "ollama-embed":
-		aligner = OllamaSemanticAligner{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: cfg.Semantic.Model, Client: client, Config: cfg.Semantic}
-	case "openai-embeddings":
-		aligner = OpenAISemanticAligner{BaseURL: strings.TrimRight(cfg.Semantic.BaseURL, "/"), Model: cfg.Semantic.Model, Client: client, Config: cfg.Semantic}
-	default:
-		return NoopSemanticAligner{}
-	}
+	embedder := NewTextEmbedder(cfg, client)
 	return &resilientSemanticAligner{
-		inner:    aligner,
+		inner:    DenseSemanticAligner{VectorSpace: cfg.Semantic.VectorSpace, Config: cfg.Semantic, Embedder: embedder},
 		now:      time.Now,
 		cooldown: time.Duration(cfg.Semantic.FailureCooldownMS) * time.Millisecond,
 	}
@@ -98,7 +61,7 @@ func (a *resilientSemanticAligner) Align(ctx context.Context, objective string, 
 	alignment, err := a.inner.Align(ctx, objective, candidates)
 	if err != nil {
 		a.trip()
-		return SemanticAlignment{}, nil
+		return SemanticAlignment{}, fmt.Errorf("semantic alignment failed: %w", err)
 	}
 	a.clear()
 	return alignment, nil
@@ -111,7 +74,7 @@ func (a *resilientSemanticAligner) Score(ctx context.Context, objective string, 
 	scores, err := a.inner.Score(ctx, objective, candidates)
 	if err != nil {
 		a.trip()
-		return nil, nil
+		return nil, fmt.Errorf("semantic scoring failed: %w", err)
 	}
 	a.clear()
 	return scores, nil
@@ -140,121 +103,6 @@ func (a *resilientSemanticAligner) clear() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.cooldownUntil = time.Time{}
-}
-
-func (a OllamaSemanticAligner) Align(ctx context.Context, objective string, candidates []SemanticCandidate) (SemanticAlignment, error) {
-	scores, err := a.Score(ctx, objective, candidates)
-	if err != nil {
-		return SemanticAlignment{}, err
-	}
-	return reduceSemanticScores(a.Model, a.Config, scores), nil
-}
-
-func (a OllamaSemanticAligner) Score(ctx context.Context, objective string, candidates []SemanticCandidate) ([]SemanticScore, error) {
-	if strings.TrimSpace(objective) == "" || len(candidates) == 0 {
-		return nil, nil
-	}
-	ctx, cancel := contextWithTimeoutMS(ctx, a.Config.TimeoutMS)
-	defer cancel()
-	input := []string{strings.TrimSpace(objective)}
-	for _, candidate := range candidates {
-		input = append(input, semanticCandidateText(candidate))
-	}
-	body, _ := json.Marshal(map[string]any{"model": a.Model, "input": input})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.BaseURL+"/api/embed", bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := httpClientOrDefault(a.Client, time.Duration(a.Config.TimeoutMS)*time.Millisecond)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("semantic embed upstream returned %d", resp.StatusCode)
-	}
-	var payload struct {
-		Embeddings [][]float64 `json:"embeddings"`
-	}
-	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "semantic embed", &payload); err != nil {
-		return nil, err
-	}
-	if len(payload.Embeddings) != len(input) {
-		return nil, fmt.Errorf("semantic embed returned %d vectors for %d inputs", len(payload.Embeddings), len(input))
-	}
-	return scoreSemanticCandidates(candidates, payload.Embeddings)
-}
-
-func (a OpenAISemanticAligner) Align(ctx context.Context, objective string, candidates []SemanticCandidate) (SemanticAlignment, error) {
-	scores, err := a.Score(ctx, objective, candidates)
-	if err != nil {
-		return SemanticAlignment{}, err
-	}
-	return reduceSemanticScores(a.Model, a.Config, scores), nil
-}
-
-func (a OpenAISemanticAligner) Score(ctx context.Context, objective string, candidates []SemanticCandidate) ([]SemanticScore, error) {
-	if strings.TrimSpace(objective) == "" || len(candidates) == 0 {
-		return nil, nil
-	}
-	ctx, cancel := contextWithTimeoutMS(ctx, a.Config.TimeoutMS)
-	defer cancel()
-	input := []string{strings.TrimSpace(objective)}
-	for _, candidate := range candidates {
-		input = append(input, semanticCandidateText(candidate))
-	}
-	body, _ := json.Marshal(map[string]any{"model": a.Model, "input": input})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.BaseURL+"/v1/embeddings", bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := httpClientOrDefault(a.Client, time.Duration(a.Config.TimeoutMS)*time.Millisecond)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("semantic embeddings upstream returned %d", resp.StatusCode)
-	}
-	var payload struct {
-		Data []struct {
-			Embedding []float64 `json:"embedding"`
-			Index     int       `json:"index"`
-		} `json:"data"`
-	}
-	if err := decodeJSONLimited(resp.Body, maxEmbeddingResponseBytes, "semantic embeddings", &payload); err != nil {
-		return nil, err
-	}
-	if len(payload.Data) != len(input) {
-		return nil, fmt.Errorf("semantic embeddings returned %d vectors for %d inputs", len(payload.Data), len(input))
-	}
-	vectors := make([][]float64, len(payload.Data))
-	for _, row := range payload.Data {
-		if row.Index < 0 || row.Index >= len(payload.Data) {
-			return nil, fmt.Errorf("semantic embeddings index %d out of range", row.Index)
-		}
-		vectors[row.Index] = row.Embedding
-	}
-	return scoreSemanticCandidates(candidates, vectors)
-}
-
-func scoreSemanticCandidates(candidates []SemanticCandidate, embeddings [][]float64) ([]SemanticScore, error) {
-	if len(embeddings) != len(candidates)+1 {
-		return nil, fmt.Errorf("semantic embeddings mismatch: got %d vectors for %d candidates", len(embeddings), len(candidates))
-	}
-	objectiveVec := embeddings[0]
-	scores := make([]SemanticScore, 0, len(candidates))
-	for i := 1; i < len(embeddings); i++ {
-		scores = append(scores, SemanticScore{
-			ID:         candidates[i-1].ID,
-			Similarity: cosineSimilarity(objectiveVec, embeddings[i]),
-		})
-	}
-	return scores, nil
 }
 
 func reduceSemanticScores(model string, cfg config.SemanticConfig, scores []SemanticScore) SemanticAlignment {

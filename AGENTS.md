@@ -55,6 +55,15 @@ Queries, candidates, and pages should be interpreted through:
 Do not optimize around “matching the right word”.
 Optimize around identifying the right entity, family, document, or endpoint.
 
+### No simulated semantics
+
+A semantic ranking decision requires dense embedding vectors.
+
+Needle-X has no valid production mode without dense embeddings.
+The installed runtime must read a PAL-home SSOT config that points to a local/no-key embedding endpoint and a durable vector-space identity.
+If semantic config is missing or disabled, operational commands must fail rather than silently degrading into lexical retrieval.
+Do not replace missing embeddings with character n-grams, token overlap, edit distance, language-specific word lists, or any other surface-similarity substitute.
+
 ## Discovery Principles
 
 ### Seedless discovery is a first-class product concern

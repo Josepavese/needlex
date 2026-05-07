@@ -175,7 +175,7 @@ Il dataset deve coprire almeno:
 1. `docs`
 2. `corporate`
 3. `multilingual`
-4. `legacy_homepage`
+4. `classic_homepage`
 5. `same_site_query`
 6. `list_like_content`
 
@@ -450,7 +450,7 @@ Current seeded corpus path:
 
 Current shape:
 1. `100` casi
-2. famiglie bilanciate tra same-site routing, docs/read, corporate, legacy e multilingual
+2. famiglie bilanciate tra same-site routing, docs/read, corporate, classic e multilingual
 3. same-site query coverage presente
 4. multilingual coverage presente
 

@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 )
 
@@ -29,7 +28,7 @@ func TestAmbiguitySuite(t *testing.T) {
 			html:             `<html><head><title>Replay Guide</title></head><body><article><h1>Replay Guide</h1><p>Proof replay deterministic context for operators.</p></article></body></html>`,
 			objective:        "proof replay deterministic",
 			profile:          core.ProfileTiny,
-			threshold:        config.Defaults().Policy.ThresholdAmbiguity,
+			threshold:        testConfig().Policy.ThresholdAmbiguity,
 			minMaxLane:       0,
 			minInvocations:   0,
 			expectedContains: "Proof replay deterministic context",
@@ -50,7 +49,7 @@ func TestAmbiguitySuite(t *testing.T) {
 			objective:        "company profile",
 			profile:          core.ProfileTiny,
 			forceLane:        3,
-			threshold:        config.Defaults().Policy.ThresholdAmbiguity,
+			threshold:        testConfig().Policy.ThresholdAmbiguity,
 			minMaxLane:       3,
 			minInvocations:   4,
 			expectedContains: "Needle-X compiles noisy public pages",
@@ -65,7 +64,7 @@ func TestAmbiguitySuite(t *testing.T) {
 			}))
 			defer server.Close()
 
-			cfg := config.Defaults()
+			cfg := testConfig()
 			cfg.Policy.ThresholdAmbiguity = tc.threshold
 			svc, err := New(cfg, server.Client())
 			if err != nil {

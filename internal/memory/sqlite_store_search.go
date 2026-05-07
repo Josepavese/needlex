@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
+	"github.com/josepavese/needlex/internal/core/vectorindex"
 	"github.com/josepavese/needlex/internal/platform"
 )
 
-func (s SQLiteStore) SearchTopicNodes(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error) {
-	if len(vector) == 0 {
+func (s SQLiteStore) SearchTopicNodes(ctx context.Context, vector []float32, vectorSpace string, limit int, domainHints []string) ([]Candidate, error) {
+	vectorSpace = strings.TrimSpace(vectorSpace)
+	if len(vector) == 0 || vectorSpace == "" {
 		return nil, nil
 	}
 	limit = normalizedCandidateLimit(limit)
@@ -20,9 +23,10 @@ func (s SQLiteStore) SearchTopicNodes(ctx context.Context, vector []float32, lim
 	defer platform.Close(conn)
 	rows, err := conn.QueryContext(ctx, `
 SELECT topic_key, host, root_path, representative_url, representative_title, semantic_summary,
-       language, support_count, child_count, topic_depth, observed_at, updated_at, vector
+       language, support_count, child_count, topic_depth, observed_at, updated_at, vector, vector_space
 FROM topic_nodes
-`)
+WHERE vector_space = ?
+`, vectorSpace)
 	if err != nil {
 		return nil, fmt.Errorf("query topic nodes: %w", err)
 	}
@@ -49,8 +53,9 @@ FROM topic_nodes
 	return rankMemoryCandidates(out, limit), nil
 }
 
-func (s SQLiteStore) SearchByVector(ctx context.Context, vector []float32, limit int, domainHints []string) ([]Candidate, error) {
-	if len(vector) == 0 {
+func (s SQLiteStore) SearchByVector(ctx context.Context, vector []float32, vectorSpace string, limit int, domainHints []string) ([]Candidate, error) {
+	vectorSpace = strings.TrimSpace(vectorSpace)
+	if len(vector) == 0 || vectorSpace == "" {
 		return nil, nil
 	}
 	limit = normalizedCandidateLimit(limit)
@@ -64,29 +69,48 @@ SELECT d.url, d.title, d.host, d.proof_refs_json, d.last_trace_id, e.vector
      , d.source_kind, d.stable_ratio, d.novelty_ratio, d.changed_recently, d.observed_at
 FROM documents d
 JOIN embeddings e ON e.document_url = d.url
-`)
+WHERE e.model = ?
+`, vectorSpace)
 	if err != nil {
 		return nil, fmt.Errorf("query discovery embeddings: %w", err)
 	}
 	defer platform.Close(rows)
 	hints := normalizeDomainHints(domainHints)
-	out := make([]Candidate, 0, limit)
+	rowsByURL := map[string]embeddingCandidateRow{}
+	items := []vectorindex.Item{}
 	for rows.Next() {
 		row, err := scanEmbeddingCandidateRow(rows)
 		if err != nil {
 			return nil, fmt.Errorf("scan discovery embedding row: %w", err)
 		}
-		candidate, ok, err := vectorMemoryCandidate(row, vector, hints)
+		storedVector, err := decodeVector(row.RawVector)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode discovery vector: %w", err)
 		}
-		if !ok {
+		if len(storedVector) != len(vector) {
 			continue
 		}
-		out = append(out, candidate)
+		rowsByURL[row.URL] = row
+		items = append(items, vectorindex.Item{ID: row.URL, Vector: storedVector})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate discovery embeddings: %w", err)
+	}
+	index, err := vectorindex.NewExact(items)
+	if err != nil {
+		return nil, fmt.Errorf("build exact vector index: %w", err)
+	}
+	hits, err := index.Search(ctx, vector, vectorindex.SearchOptions{Limit: 0})
+	if err != nil {
+		return nil, fmt.Errorf("search exact vector index: %w", err)
+	}
+	out := make([]Candidate, 0, min(len(hits), limit))
+	for _, hit := range hits {
+		row := rowsByURL[hit.ID]
+		candidate := vectorMemoryCandidateWithSimilarity(row, hit.Similarity, hints)
+		if candidate.URL != "" {
+			out = append(out, candidate)
+		}
 	}
 	return rankMemoryCandidates(out, limit), nil
 }
@@ -114,6 +138,7 @@ func scanTopicNodeRow(scanner rowScanner) (topicNodeRow, error) {
 		&row.ObservedAt,
 		&row.UpdatedAt,
 		&row.Vector,
+		&row.VectorSpace,
 	)
 	return row, err
 }
@@ -179,19 +204,14 @@ func topicNodeCandidate(row topicNodeRow, vector []float32, hints []string) (Can
 	}, true, nil
 }
 
-func vectorMemoryCandidate(row embeddingCandidateRow, vector []float32, hints []string) (Candidate, bool, error) {
-	storedVector, err := decodeVector(row.RawVector)
-	if err != nil {
-		return Candidate{}, false, fmt.Errorf("decode discovery vector: %w", err)
-	}
-	similarity := cosineSimilarity(vector, storedVector)
+func vectorMemoryCandidateWithSimilarity(row embeddingCandidateRow, similarity float64, hints []string) Candidate {
 	if similarity <= 0 {
-		return Candidate{}, false, nil
+		return Candidate{}
 	}
 	score, reasons := applyDocumentEvidence(similarity*3, []string{"semantic_goal_alignment", "local_memory_hit"}, row.memoryDocumentRow, hints, 0.08, true)
 	candidate := baseDocumentCandidate(row.memoryDocumentRow, score, reasons, firstNonEmpty(row.SourceKind, "discovery_memory"))
 	candidate.Distance = 1 - similarity
-	return candidate, true, nil
+	return candidate
 }
 
 func baseDocumentCandidate(row memoryDocumentRow, score float64, reasons []string, source string) Candidate {

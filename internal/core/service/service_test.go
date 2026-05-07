@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
@@ -37,7 +36,7 @@ const testHTML = `
 
 func TestNewWithStateRootUsesProvidedPALRoot(t *testing.T) {
 	root := t.TempDir()
-	svc, err := NewWithStateRoot(config.Defaults(), nil, root)
+	svc, err := NewWithStateRoot(testConfig(), nil, root)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -62,7 +61,7 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -111,7 +110,7 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 }
 
 func TestReadRejectsEmptyURL(t *testing.T) {
-	svc, err := New(config.Defaults(), nil)
+	svc, err := New(testConfig(), nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -128,7 +127,7 @@ func TestReadSynthesizesMinimalDOMWhenReducerYieldsNoTextNodes(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -155,7 +154,7 @@ func TestReadEscalatesLaneForAmbiguousObjective(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	cfg.Policy.ThresholdAmbiguity = 0.20
 
 	svc, err := New(cfg, server.Client())
@@ -202,7 +201,7 @@ func TestReadAppliesExtractorAndFormatterAtHigherLanes(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	cfg.Policy.ThresholdAmbiguity = 0.10
 
 	svc, err := New(cfg, server.Client())
@@ -240,7 +239,7 @@ func TestReadTinyCompactionIsTraced(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -332,7 +331,7 @@ func TestReadTraceSkipsModelInterventionWhenCoverageGateSuppressesRoute(t *testi
 	}))
 	defer modelServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	cfg.Models.Backend = "openai-compatible"
 	cfg.Models.BaseURL = modelServer.URL
 	cfg.Models.Router = "qwen-ambiguity"
@@ -376,7 +375,7 @@ func TestReadPackTraceIncludesFingerprintStability(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -425,7 +424,7 @@ func TestReadUsesBrowserLikeUserAgentWhenRenderHintIsSet(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -452,7 +451,7 @@ func TestReadAppliesAggressivePruningProfile(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
@@ -482,7 +481,7 @@ func TestReadRecoversFromAppShellEmbeddedPayload(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc, err := New(config.Defaults(), server.Client())
+	svc, err := New(testConfig(), server.Client())
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}

@@ -15,6 +15,7 @@ type SQLiteStore struct {
 
 type topicNodeRow struct {
 	TopicKey            string
+	VectorSpace         string
 	Host                string
 	RootPath            string
 	RepresentativeURL   string

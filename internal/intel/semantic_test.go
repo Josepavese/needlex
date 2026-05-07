@@ -31,8 +31,8 @@ func TestResilientSemanticAlignerTripsCooldownOnFailure(t *testing.T) {
 	}
 
 	scores, err := aligner.Score(context.Background(), "goal", []SemanticCandidate{{ID: "a", Text: "alpha"}})
-	if err != nil {
-		t.Fatalf("expected error to be swallowed, got %v", err)
+	if err == nil {
+		t.Fatal("expected upstream semantic error to be returned")
 	}
 	if scores != nil {
 		t.Fatalf("expected nil scores on failure, got %#v", scores)

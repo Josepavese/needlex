@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/proof"
@@ -223,7 +222,7 @@ func TestExecuteIntelTasksAcceptsAmbiguityPatch(t *testing.T) {
 	}))
 	defer modelServer.Close()
 
-	cfg := config.Defaults()
+	cfg := testConfig()
 	cfg.Models.Backend = "openai-compatible"
 	cfg.Models.BaseURL = modelServer.URL
 	cfg.Models.Router = "qwen-ambiguity"
@@ -232,6 +231,7 @@ func TestExecuteIntelTasksAcceptsAmbiguityPatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	svc.semantic = fakeSemanticAligner{}
 	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
 
 	selected := []rankedSegment{
@@ -263,9 +263,9 @@ func TestExecuteIntelTasksAcceptsAmbiguityPatch(t *testing.T) {
 }
 
 func TestBuildPlannedIntelTasksSuppressesAmbiguityWhenSemanticGateFires(t *testing.T) {
-	cfg := config.Defaults()
-	cfg.Semantic.Enabled = true
-	cfg.Semantic.Model = "embed-x"
+	cfg := testConfig()
+	cfg.Semantic.EmbeddingURL = "http://127.0.0.1:1/embed"
+	cfg.Semantic.VectorSpace = "embed-x"
 	svc, err := New(cfg, nil)
 	if err != nil {
 		t.Fatalf("new service: %v", err)

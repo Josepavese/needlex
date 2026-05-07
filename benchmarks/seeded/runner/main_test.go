@@ -88,7 +88,7 @@ func TestDefaultCorpusV2HasHundredUniqueCases(t *testing.T) {
 			t.Fatalf("case %s must require proof", item.ID)
 		}
 	}
-	for _, family := range []string{"same_site_query", "docs", "multilingual", "corporate", "legacy_homepage"} {
+	for _, family := range []string{"same_site_query", "docs", "multilingual", "corporate", "classic_homepage"} {
 		if families[family] == 0 {
 			t.Fatalf("expected at least one %s case, got %#v", family, families)
 		}

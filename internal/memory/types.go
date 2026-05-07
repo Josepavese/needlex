@@ -66,6 +66,7 @@ type Candidate struct {
 
 type TopicNode struct {
 	TopicKey            string
+	VectorSpace         string
 	Host                string
 	RootPath            string
 	RepresentativeURL   string
@@ -80,13 +81,17 @@ type TopicNode struct {
 }
 
 type Stats struct {
-	DocumentCount  int
-	EdgeCount      int
-	EmbeddingCount int
-	TopicNodeCount int
-	LastObservedAt time.Time
-	LastRebuildAt  time.Time
-	DBPath         string
+	DocumentCount       int
+	EdgeCount           int
+	EmbeddingCount      int
+	TopicNodeCount      int
+	SemanticFamilyCount int
+	SemanticMemberCount int
+	VectorEngine        string
+	VectorDimensions    []int
+	LastObservedAt      time.Time
+	LastRebuildAt       time.Time
+	DBPath              string
 }
 
 type PrunePolicy struct {
@@ -120,14 +125,18 @@ type Observation struct {
 }
 
 type ExportStats struct {
-	DocumentsPath  string `json:"documents_path"`
-	EdgesPath      string `json:"edges_path"`
-	EmbeddingsPath string `json:"embeddings_path"`
-	TopicNodesPath string `json:"topic_nodes_path"`
-	DocumentCount  int    `json:"document_count"`
-	EdgeCount      int    `json:"edge_count"`
-	EmbeddingCount int    `json:"embedding_count"`
-	TopicNodeCount int    `json:"topic_node_count"`
+	DocumentsPath     string `json:"documents_path"`
+	EdgesPath         string `json:"edges_path"`
+	EmbeddingsPath    string `json:"embeddings_path"`
+	TopicNodesPath    string `json:"topic_nodes_path"`
+	FamiliesPath      string `json:"families_path,omitempty"`
+	FamilyMembersPath string `json:"family_members_path,omitempty"`
+	DocumentCount     int    `json:"document_count"`
+	EdgeCount         int    `json:"edge_count"`
+	EmbeddingCount    int    `json:"embedding_count"`
+	TopicNodeCount    int    `json:"topic_node_count"`
+	FamilyCount       int    `json:"family_count,omitempty"`
+	MemberCount       int    `json:"member_count,omitempty"`
 }
 
 type ImportStats struct {
@@ -135,4 +144,6 @@ type ImportStats struct {
 	EdgeCount      int `json:"edge_count"`
 	EmbeddingCount int `json:"embedding_count"`
 	TopicNodeCount int `json:"topic_node_count"`
+	FamilyCount    int `json:"family_count,omitempty"`
+	MemberCount    int `json:"member_count,omitempty"`
 }
