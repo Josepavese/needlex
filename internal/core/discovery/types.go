@@ -218,13 +218,6 @@ func structuralPriorScore(rawURL string, isSeed bool, domainHints []string) (flo
 		score += 1.10
 		reasons = append(reasons, "domain_identity_match")
 	}
-	if compactness := HostCompactnessBoost(rawURL); compactness != 0 {
-		score += compactness
-		if compactness > 0 {
-			reasons = append(reasons, "host_compactness")
-		}
-	}
-
 	return score, reasons
 }
 
@@ -448,50 +441,6 @@ func compactDiscoveryText(value string, maxRunes int) string {
 	return strings.TrimSpace(string(runes[:maxRunes]))
 }
 
-func URLIdentityText(rawURL string) string {
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return rawURL
-	}
-	return strings.Join([]string{parsed.Hostname(), parsed.Path, path.Base(parsed.Path)}, " ")
-}
-
-func HostIdentityText(rawURL string) string {
-	host, ok := Hostname(rawURL)
-	if !ok {
-		return rawURL
-	}
-	hostParts := strings.FieldsFunc(host, func(r rune) bool {
-		return !(unicode.IsLetter(r) || unicode.IsNumber(r))
-	})
-	if len(hostParts) == 0 {
-		return host
-	}
-	return strings.Join(hostParts, " ")
-}
-
-func HostCompactnessBoost(rawURL string) float64 {
-	host, ok := Hostname(rawURL)
-	if !ok {
-		return 0
-	}
-	registrable, err := RegistrableDomain(rawURL)
-	if err != nil {
-		return 0
-	}
-	hostLabels := strings.Split(host, ".")
-	baseLabels := strings.Split(registrable, ".")
-	extra := len(hostLabels) - len(baseLabels)
-	switch {
-	case extra <= 0:
-		return 0.20
-	case extra == 1:
-		return 0.02
-	default:
-		return -0.06
-	}
-}
-
 func RegistrableDomain(rawURL string) (string, error) {
 	host, ok := Hostname(rawURL)
 	if !ok {
@@ -637,7 +586,6 @@ func urlStructureBoost(rawURL string) float64 {
 		score += 0.03
 	}
 	score += fragmentPenalty
-	score += terminalRoutePenalty(segments[len(segments)-1])
 	for _, segment := range segments {
 		score += routeSegmentStructurePenalty(segment)
 	}
@@ -654,20 +602,6 @@ func pathDepthStructureBoost(depth int) float64 {
 		return -0.04
 	case depth >= 4:
 		return -0.20
-	default:
-		return 0
-	}
-}
-
-func terminalRoutePenalty(segment string) float64 {
-	last := strings.ToLower(strings.TrimSpace(segment))
-	switch {
-	case strings.HasPrefix(last, "class-"):
-		return -0.10
-	case strings.HasPrefix(last, "tag-"):
-		return -0.10
-	case strings.HasPrefix(last, "category-"):
-		return -0.10
 	default:
 		return 0
 	}

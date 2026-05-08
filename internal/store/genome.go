@@ -24,7 +24,6 @@ type DomainGenome struct {
 	PruningProfile    string    `json:"pruning_profile,omitempty"`
 	RenderNeeded      bool      `json:"render_needed,omitempty"`
 	NoiseLevel        string    `json:"noise_level,omitempty"`
-	LastPageType      string    `json:"last_page_type,omitempty"`
 	SeenCount         int       `json:"seen_count"`
 	LastSeenAt        time.Time `json:"last_seen_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -40,7 +39,6 @@ type GenomeObservation struct {
 	RenderNeeded      bool
 	FetchMode         string
 	NoiseLevel        string
-	PageType          string
 }
 
 type GenomeStore struct {
@@ -126,9 +124,6 @@ func (s GenomeStore) Observe(observation GenomeObservation) (DomainGenome, strin
 	if strings.TrimSpace(observation.NoiseLevel) != "" {
 		genome.NoiseLevel = observation.NoiseLevel
 	}
-	if strings.TrimSpace(observation.PageType) != "" {
-		genome.LastPageType = observation.PageType
-	}
 
 	if err := genome.Validate(); err != nil {
 		return DomainGenome{}, "", err
@@ -199,8 +194,6 @@ func resolvePruningProfile(observation GenomeObservation) string {
 		return observation.PruningProfile
 	}
 	switch {
-	case strings.EqualFold(observation.PageType, "forum"):
-		return "forum"
 	case strings.EqualFold(observation.NoiseLevel, "high"):
 		return "aggressive"
 	default:

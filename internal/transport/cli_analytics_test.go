@@ -59,7 +59,7 @@ func TestRunnerAnalyticsStatsAndValueReport(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("analytics stats exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Runs: 1") || !strings.Contains(stdout.String(), "Estimated Tokens Saved: 225") || !strings.Contains(stdout.String(), "DB Path:") {
+	if !strings.Contains(stdout.String(), "Runs: 1") || !strings.Contains(stdout.String(), "Estimated Tokens Saved: 225") || !strings.Contains(stdout.String(), "Embedding Cache Hits:") || !strings.Contains(stdout.String(), "DB Path:") {
 		t.Fatalf("unexpected analytics stats output: %q", stdout.String())
 	}
 
@@ -151,7 +151,7 @@ func TestRunnerDoctorReportsStateRootAndDatabases(t *testing.T) {
 		t.Fatalf("doctor exit=%d stderr=%q", code, stderr.String())
 	}
 	out := stdout.String()
-	if !strings.Contains(out, "Needle-X Doctor") || !strings.Contains(out, "State Root: "+root) || !strings.Contains(out, "Analytics DB:") || !strings.Contains(out, "Discovery DB:") {
+	if !strings.Contains(out, "Needle-X Doctor") || !strings.Contains(out, "State Root: "+root) || !strings.Contains(out, "Analytics DB:") || !strings.Contains(out, "Discovery DB:") || !strings.Contains(out, "Embedding Cache:") {
 		t.Fatalf("unexpected doctor output: %q", out)
 	}
 
@@ -161,7 +161,7 @@ func TestRunnerDoctorReportsStateRootAndDatabases(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("doctor json exit=%d stderr=%q", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), `"state_root":`) || !strings.Contains(stdout.String(), `"analytics_db_path":`) {
+	if !strings.Contains(stdout.String(), `"state_root":`) || !strings.Contains(stdout.String(), `"analytics_db_path":`) || !strings.Contains(stdout.String(), `"embedding_cache":`) {
 		t.Fatalf("unexpected doctor json: %q", stdout.String())
 	}
 }

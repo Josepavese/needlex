@@ -2,6 +2,8 @@ package memory
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -156,6 +158,35 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		return fmt.Errorf("upsert discovery embedding: %w", err)
 	}
 	return nil
+}
+
+func (s SQLiteStore) ReusableEmbeddingVector(ctx context.Context, emb Embedding) ([]float32, bool, error) {
+	conn, err := s.open(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	defer platform.Close(conn)
+	var raw []byte
+	var dimension int
+	err = conn.QueryRowContext(ctx, `
+SELECT vector, dimension
+FROM embeddings
+WHERE embedding_ref = ? AND document_url = ? AND model = ? AND backend = ? AND input_text = ?
+	`, emb.EmbeddingRef, emb.DocumentURL, emb.Model, emb.Backend, emb.InputText).Scan(&raw, &dimension)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, fmt.Errorf("query reusable embedding: %w", err)
+	}
+	vector, err := decodeVector(raw)
+	if err != nil {
+		return nil, false, fmt.Errorf("decode reusable embedding: %w", err)
+	}
+	if len(vector) != dimension {
+		return nil, false, nil
+	}
+	return vector, true, nil
 }
 
 func (s SQLiteStore) RefreshTopicNodes(ctx context.Context, doc Document, vectorSpace string) error {

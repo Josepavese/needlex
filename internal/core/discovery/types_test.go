@@ -44,14 +44,6 @@ func TestURLStructureBoostPenalizesArticleLikeDeepPaths(t *testing.T) {
 	}
 }
 
-func TestHostCompactnessBoostPrefersCanonicalHostOverSubdomain(t *testing.T) {
-	canonical := HostCompactnessBoost("https://playwright.dev/")
-	subdomain := HostCompactnessBoost("https://try.playwright.tech/")
-	if canonical <= subdomain {
-		t.Fatalf("expected canonical host compactness to beat subdomain, canonical=%f subdomain=%f", canonical, subdomain)
-	}
-}
-
 func TestCanonicalURLKeyTreatsIndexHomeAsRoot(t *testing.T) {
 	if !SameCanonicalURL("https://www.sqlite.org/", "https://sqlite.org/index.html") {
 		t.Fatalf("expected root and index page to share canonical URL key")

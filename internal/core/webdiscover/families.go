@@ -70,6 +70,9 @@ func DampenWeakProvenanceTraps(candidates []discoverycore.Candidate) []discovery
 	}
 	out := append([]discoverycore.Candidate{}, candidates...)
 	for i := range out {
+		if hasAnyReason(out[i], "weak_canonical_root_context_penalty", "weak_recovered_family_context_penalty") {
+			continue
+		}
 		switch {
 		case weakCanonicalRootTrap(out[i], strongFamilies):
 			out[i].Score -= weakCanonicalRootPenalty(out[i])
@@ -85,10 +88,6 @@ func DampenWeakProvenanceTraps(candidates []discoverycore.Candidate) []discovery
 	return out
 }
 
-func DampenWeakCanonicalRootTraps(candidates []discoverycore.Candidate) []discoverycore.Candidate {
-	return DampenWeakProvenanceTraps(candidates)
-}
-
 func DampenCrossFamilyMirrorRoutes(candidates []discoverycore.Candidate) []discoverycore.Candidate {
 	if len(candidates) < 2 {
 		return candidates
@@ -101,6 +100,28 @@ func DampenCrossFamilyMirrorRoutes(candidates []discoverycore.Candidate) []disco
 		}
 		out[i].Score -= penalty
 		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "cross_family_mirror_route_penalty")
+	}
+	discoverycore.SortCandidates(out)
+	return out
+}
+
+func PromoteRecoveredCanonicalOrigins(candidates []discoverycore.Candidate) []discoverycore.Candidate {
+	if len(candidates) < 2 {
+		return candidates
+	}
+	out := append([]discoverycore.Candidate{}, candidates...)
+	for i := range out {
+		if !discoverycore.IsCanonicalHomeURL(out[i].URL) {
+			continue
+		}
+		if !hasAnyReason(out[i], "external_family_recovery") || !hasAnyReason(out[i], "page_expand") {
+			continue
+		}
+		if !hasAnyReason(out[i], "semantic_goal_alignment", "semantic_evidence_probe", "host_root_identity_probe", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment") {
+			continue
+		}
+		out[i].Score += 0.22
+		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "recovered_canonical_origin")
 	}
 	discoverycore.SortCandidates(out)
 	return out
@@ -222,7 +243,7 @@ func CrossFamilyRouteDescendant(candidateURL, anchorURL string) bool {
 		return false
 	}
 	if anchorPath == "/" {
-		return discoverycore.URLPathDepth(candidateURL) >= 3
+		return false
 	}
 	return strings.HasPrefix(candidatePath, strings.TrimRight(anchorPath, "/")+"/")
 }

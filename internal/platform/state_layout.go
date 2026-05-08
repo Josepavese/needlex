@@ -16,6 +16,8 @@ type StateLayout struct {
 	ConfigPath          string `json:"config_path"`
 	DiscoveryDir        string `json:"discovery_dir"`
 	DiscoveryDB         string `json:"discovery_db"`
+	EmbeddingsDir       string `json:"embeddings_dir"`
+	EmbeddingCacheDir   string `json:"embedding_cache_dir"`
 	DomainGraphDir      string `json:"domain_graph_dir"`
 	FingerprintGraphDir string `json:"fingerprint_graph_dir"`
 	FingerprintsDir     string `json:"fingerprints_dir"`
@@ -40,6 +42,8 @@ func NewStateLayout(root string) StateLayout {
 		ConfigPath:          filepath.Join(cleanRoot, "configs", "needlex.json"),
 		DiscoveryDir:        filepath.Join(cleanRoot, "discovery"),
 		DiscoveryDB:         filepath.Join(cleanRoot, DefaultDiscoveryDBRelativePath),
+		EmbeddingsDir:       filepath.Join(cleanRoot, "data", "embeddings"),
+		EmbeddingCacheDir:   filepath.Join(cleanRoot, "data", "embeddings", "cache"),
 		DomainGraphDir:      filepath.Join(cleanRoot, "domain_graph"),
 		FingerprintGraphDir: filepath.Join(cleanRoot, "fingerprint_graph"),
 		FingerprintsDir:     filepath.Join(cleanRoot, "fingerprints"),
@@ -58,6 +62,8 @@ func (l StateLayout) Paths() map[string]string {
 		"configs":           l.ConfigsDir,
 		"config":            l.ConfigPath,
 		"discovery":         l.DiscoveryDir,
+		"embeddings":        l.EmbeddingsDir,
+		"embedding_cache":   l.EmbeddingCacheDir,
 		"domain_graph":      l.DomainGraphDir,
 		"fingerprint_graph": l.FingerprintGraphDir,
 		"fingerprints":      l.FingerprintsDir,

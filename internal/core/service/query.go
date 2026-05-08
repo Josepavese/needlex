@@ -57,21 +57,29 @@ type QueryPlan struct {
 }
 
 type QueryCandidateDiagnostic struct {
-	URL                         string   `json:"url"`
-	Score                       float64  `json:"score,omitempty"`
-	ResourceClass               string   `json:"resource_class,omitempty"`
-	SemanticRole                string   `json:"semantic_role,omitempty"`
-	SemanticRoleConfidence      float64  `json:"semantic_role_confidence,omitempty"`
-	SemanticRoleIntent          float64  `json:"semantic_role_intent,omitempty"`
-	SemanticOriginAlignment     float64  `json:"semantic_origin_alignment,omitempty"`
-	SemanticDerivativeAlignment float64  `json:"semantic_derivative_alignment,omitempty"`
-	ClusterID                   string   `json:"cluster_id,omitempty"`
-	ClusterSize                 int      `json:"cluster_size,omitempty"`
-	LateInteractionScore        float64  `json:"late_interaction_score,omitempty"`
-	LateInteractionConfidence   float64  `json:"late_interaction_confidence,omitempty"`
-	SemanticQuorumProviderCount int      `json:"semantic_quorum_provider_count,omitempty"`
-	SemanticCalibrationScore    float64  `json:"semantic_calibration_score,omitempty"`
-	Reasons                     []string `json:"reasons,omitempty"`
+	URL                          string   `json:"url"`
+	Score                        float64  `json:"score,omitempty"`
+	ResourceClass                string   `json:"resource_class,omitempty"`
+	SemanticRole                 string   `json:"semantic_role,omitempty"`
+	SemanticRoleConfidence       float64  `json:"semantic_role_confidence,omitempty"`
+	SemanticRoleIntent           float64  `json:"semantic_role_intent,omitempty"`
+	SemanticOriginAlignment      float64  `json:"semantic_origin_alignment,omitempty"`
+	SemanticDerivativeAlignment  float64  `json:"semantic_derivative_alignment,omitempty"`
+	ClusterID                    string   `json:"cluster_id,omitempty"`
+	ClusterSize                  int      `json:"cluster_size,omitempty"`
+	LateInteractionScore         float64  `json:"late_interaction_score,omitempty"`
+	LateInteractionConfidence    float64  `json:"late_interaction_confidence,omitempty"`
+	SemanticEvidenceSimilarity   float64  `json:"semantic_evidence_similarity,omitempty"`
+	SemanticEvidenceBoost        float64  `json:"semantic_evidence_boost,omitempty"`
+	SemanticOriginSimilarity     float64  `json:"semantic_origin_similarity,omitempty"`
+	SemanticDerivativeSimilarity float64  `json:"semantic_derivative_similarity,omitempty"`
+	SemanticCommunitySimilarity  float64  `json:"semantic_community_similarity,omitempty"`
+	SemanticAuthorityBoost       float64  `json:"semantic_authority_boost,omitempty"`
+	SemanticAuthorityPenalty     float64  `json:"semantic_authority_penalty,omitempty"`
+	SemanticCommunityPenalty     float64  `json:"semantic_community_penalty,omitempty"`
+	SemanticQuorumProviderCount  int      `json:"semantic_quorum_provider_count,omitempty"`
+	SemanticCalibrationScore     float64  `json:"semantic_calibration_score,omitempty"`
+	Reasons                      []string `json:"reasons,omitempty"`
 }
 
 type QueryResponse struct {
@@ -158,6 +166,12 @@ func recoverableQueryReadErrorKind(err error) (string, bool) {
 		return "status_403", true
 	case strings.Contains(text, "unexpected status code 410"):
 		return "status_410", true
+	case strings.Contains(text, "tls:") || strings.Contains(text, "x509:") || strings.Contains(text, "certificate"):
+		return "tls_certificate", true
+	case strings.Contains(text, "context deadline exceeded") || strings.Contains(text, "client.timeout") || strings.Contains(text, "timeout"):
+		return "fetch_timeout", true
+	case strings.Contains(text, "connection refused") || strings.Contains(text, "no such host") || strings.Contains(text, "server misbehaving"):
+		return "fetch_unavailable", true
 	case strings.Contains(text, "no segments produced"):
 		return "empty_segments", true
 	default:

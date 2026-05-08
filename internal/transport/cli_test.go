@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -734,6 +735,30 @@ func TestRunnerPruneAll(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), `"removed_files": 4`) {
 		t.Fatalf("expected 4 removed files, got %q", stdout.String())
+	}
+}
+
+func TestRunnerPruneEmbeddingCacheDryRun(t *testing.T) {
+	root := t.TempDir()
+	cacheDir := filepath.Join(root, "data", "embeddings", "cache")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatalf("create embedding cache dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(cacheDir, "entry.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatalf("seed embedding cache: %v", err)
+	}
+	runner := Runner{storeRoot: root}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := runner.Run([]string{"prune", "--embedding-cache", "--dry-run", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("embedding cache prune failed: %d %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"matched_files": 1`) || !strings.Contains(stdout.String(), `"dry_run": true`) {
+		t.Fatalf("unexpected embedding cache prune output: %q", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(cacheDir, "entry.json")); err != nil {
+		t.Fatalf("dry-run must not remove cache file: %v", err)
 	}
 }
 

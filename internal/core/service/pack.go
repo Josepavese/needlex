@@ -134,7 +134,6 @@ func packStageMetadata(req ReadRequest, webIR core.WebIR, chunks []core.Chunk, s
 		"source_count":              fmt.Sprintf("%d", sourceCount),
 		"link_count":                fmt.Sprintf("%d", linkCount),
 		"proof_ref_count":           fmt.Sprintf("%d", proofRefCount),
-		"page_type":                 summary.PageType,
 		"substrate_class":           webIR.Signals.SubstrateClass,
 		"difficulty":                summary.Difficulty,
 		"noise_level":               summary.NoiseLevel,

@@ -94,7 +94,6 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 			candidate.Metadata["page_title"],
 			candidate.Metadata["web_ir_context"],
 			strings.TrimSpace(candidate.Label),
-			discoverycore.URLIdentityText(candidate.URL),
 			candidate.Metadata["resource_class"],
 		)
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{

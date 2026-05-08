@@ -94,6 +94,13 @@ type Stats struct {
 	DBPath              string
 }
 
+type EmbeddingRefreshStats struct {
+	DocumentCount int `json:"document_count"`
+	EmbeddedCount int `json:"embedded_count"`
+	ReusedCount   int `json:"reused_count"`
+	FailedCount   int `json:"failed_count"`
+}
+
 type PrunePolicy struct {
 	MaxDocuments  int
 	MaxEdges      int
@@ -109,19 +116,20 @@ type SearchOptions struct {
 }
 
 type Observation struct {
-	Document        core.Document
-	ResultPack      core.ResultPack
-	ProofRecords    []proof.ProofRecord
-	TraceID         string
-	SourceKind      string
-	ObservedAt      time.Time
-	Language        string
-	LocalityHints   []string
-	EntityHints     []string
-	CategoryHints   []string
-	StableRatio     float64
-	NoveltyRatio    float64
-	ChangedRecently bool
+	Document              core.Document
+	ResultPack            core.ResultPack
+	ProofRecords          []proof.ProofRecord
+	TraceID               string
+	SourceKind            string
+	ObservedAt            time.Time
+	Language              string
+	LocalityHints         []string
+	EntityHints           []string
+	CategoryHints         []string
+	StableRatio           float64
+	NoveltyRatio          float64
+	ChangedRecently       bool
+	ForceEmbeddingRefresh bool
 }
 
 type ExportStats struct {

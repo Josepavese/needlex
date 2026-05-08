@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/config"
-	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
 )
 
@@ -38,7 +37,8 @@ type memoryImportResult struct {
 }
 
 type memoryRebuildResult struct {
-	Stats compactMemoryStats `json:"stats"`
+	Stats            compactMemoryStats           `json:"stats"`
+	EmbeddingRefresh memory.EmbeddingRefreshStats `json:"embedding_refresh,omitempty"`
 }
 
 type compactMemoryStats struct {
@@ -70,7 +70,7 @@ type compactMemoryCandidate struct {
 }
 
 func writeMemoryUsage(w io.Writer) {
-	writeUsage(w, "needlex memory <stats|search|prune|export|import|rebuild-index> [args]", "subcommands: stats, search, prune, export, import, rebuild-index")
+	writeUsage(w, "needlex memory <stats|search|prune|export|import|rebuild-index> [args]", "subcommands: stats, search, prune, export, import, rebuild-index", "maintenance: rebuild-index accepts --force-embeddings")
 }
 
 func (r Runner) runMemory(args []string, stdout, stderr io.Writer) int {
@@ -303,27 +303,40 @@ func (r Runner) runMemoryRebuildIndex(args []string, stdout, stderr io.Writer) i
 	fs.SetOutput(stderr)
 	var configPath string
 	var jsonOut bool
+	var forceEmbeddings bool
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
+	fs.BoolVar(&forceEmbeddings, "force-embeddings", false, "recompute memory embeddings before rebuilding acceleration state")
 	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex memory rebuild-index [--json] [--config path]")
+		writeUsage(stderr, "needlex memory rebuild-index [--json] [--config path] [--force-embeddings]")
 		return 2
 	}
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)
 	if !ok {
 		return 1
 	}
+	refresh := memory.EmbeddingRefreshStats{}
+	var err error
+	if forceEmbeddings {
+		refresh, err = r.refreshMemoryEmbeddings(cfg, true)
+		if err != nil {
+			return r.reportCLIError(stderr, "memory_refresh_embeddings", err, nil)
+		}
+	}
 	stats, err := r.rebuildMemoryIndex(cfg)
 	if err != nil {
 		return r.reportCLIError(stderr, "memory_rebuild_index", err, nil)
 	}
 	if jsonOut {
-		return r.writeJSON(stdout, stderr, "memory_rebuild_index", memoryRebuildResult{Stats: compactStats(stats)})
+		return r.writeJSON(stdout, stderr, "memory_rebuild_index", memoryRebuildResult{Stats: compactStats(stats), EmbeddingRefresh: refresh})
 	}
 	fmt.Fprintf(stdout, "Rebuilt discovery memory acceleration state.\n")
+	if forceEmbeddings {
+		fmt.Fprintf(stdout, "Embedding Refresh: documents=%d embedded=%d reused=%d failed=%d\n", refresh.DocumentCount, refresh.EmbeddedCount, refresh.ReusedCount, refresh.FailedCount)
+	}
 	if !stats.LastRebuildAt.IsZero() {
 		fmt.Fprintf(stdout, "Last Rebuild At: %s\n", stats.LastRebuildAt.Format(time.RFC3339))
 	}
@@ -353,7 +366,7 @@ func (r Runner) loadMemoryStats(cfg config.Config) (memory.Stats, error) {
 
 func (r Runner) searchMemory(cfg config.Config, query string, limit int, domainHints []string) ([]memory.Candidate, error) {
 	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
-	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
+	service := memory.NewService(cfg.Memory, store, r.textEmbedder(cfg))
 	return service.Search(context.Background(), query, memory.SearchOptions{
 		Limit:       limit,
 		ExpandLimit: 2,
@@ -399,6 +412,12 @@ func (r Runner) rebuildMemoryIndex(cfg config.Config) (memory.Stats, error) {
 		return memory.Stats{}, err
 	}
 	return store.GetStats(context.Background())
+}
+
+func (r Runner) refreshMemoryEmbeddings(cfg config.Config, force bool) (memory.EmbeddingRefreshStats, error) {
+	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
+	service := memory.NewService(cfg.Memory, store, r.textEmbedder(cfg))
+	return service.RefreshEmbeddings(context.Background(), force)
 }
 
 func compactStats(stats memory.Stats) compactMemoryStats {

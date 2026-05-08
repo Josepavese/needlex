@@ -65,14 +65,25 @@ type DiscoveryConfig struct {
 }
 
 type SemanticConfig struct {
-	EmbeddingURL        string  `json:"embedding_url,omitempty"`
-	ProviderModel       string  `json:"provider_model,omitempty"`
-	VectorSpace         string  `json:"vector_space,omitempty"`
-	TimeoutMS           int64   `json:"timeout_ms,omitempty"`
-	FailureCooldownMS   int64   `json:"failure_cooldown_ms,omitempty"`
-	SimilarityThreshold float64 `json:"similarity_threshold,omitempty"`
-	DominanceDelta      float64 `json:"dominance_delta,omitempty"`
-	MaxCandidates       int     `json:"max_candidates,omitempty"`
+	EmbeddingURL        string                       `json:"embedding_url,omitempty"`
+	ProviderModel       string                       `json:"provider_model,omitempty"`
+	VectorSpace         string                       `json:"vector_space,omitempty"`
+	TimeoutMS           int64                        `json:"timeout_ms,omitempty"`
+	FailureCooldownMS   int64                        `json:"failure_cooldown_ms,omitempty"`
+	SimilarityThreshold float64                      `json:"similarity_threshold,omitempty"`
+	DominanceDelta      float64                      `json:"dominance_delta,omitempty"`
+	MaxCandidates       int                          `json:"max_candidates,omitempty"`
+	EmbeddingCache      SemanticEmbeddingCacheConfig `json:"embedding_cache,omitempty"`
+}
+
+type SemanticEmbeddingCacheConfig struct {
+	Enabled      *bool  `json:"enabled,omitempty"`
+	Dir          string `json:"dir,omitempty"`
+	MaxEntries   int    `json:"max_entries,omitempty"`
+	MaxBytes     int64  `json:"max_bytes,omitempty"`
+	TTL          string `json:"ttl,omitempty"`
+	NegativeTTL  string `json:"negative_ttl,omitempty"`
+	StaleIfError *bool  `json:"stale_if_error,omitempty"`
 }
 
 type MemoryConfig struct {

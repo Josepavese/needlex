@@ -103,3 +103,91 @@ func TestDampenCrossFamilyMirrorRoutesPenalizesDescendantRouteMirror(t *testing.
 		t.Fatalf("expected origin route to beat descendant mirror, got %#v", got)
 	}
 }
+
+func TestDampenCrossFamilyMirrorRoutesDoesNotPenalizeDeepPageForUnrelatedRoot(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:    "https://origin.example/en-US/docs/guide",
+			Score:  2.50,
+			Reason: []string{"page_title_probe", "web_ir_probe"},
+		},
+		{
+			URL:    "https://other.example/",
+			Score:  2.10,
+			Reason: []string{"host_root_identity_probe"},
+		},
+	}
+
+	got := DampenCrossFamilyMirrorRoutes(candidates)
+	if hasTestReason(got[0].Reason, "cross_family_mirror_route_penalty") {
+		t.Fatalf("expected unrelated root not to penalize deep official page, got %#v", got)
+	}
+}
+
+func TestPromoteRecoveredCanonicalOriginsBoostsRecoveredRoot(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:    "https://community.example/wiki/",
+			Score:  2.70,
+			Reason: []string{"host_root_identity_probe"},
+		},
+		{
+			URL:    "https://origin.example/",
+			Score:  2.55,
+			Reason: []string{"external_family_recovery", "page_expand", "semantic_evidence_probe"},
+		},
+	}
+
+	got := PromoteRecoveredCanonicalOrigins(candidates)
+	if got[0].URL != "https://origin.example/" {
+		t.Fatalf("expected recovered canonical origin to win, got %#v", got)
+	}
+	if !hasTestReason(got[0].Reason, "recovered_canonical_origin") {
+		t.Fatalf("expected recovered canonical origin reason, got %#v", got[0].Reason)
+	}
+}
+
+func TestPromoteRecoveredCanonicalOriginsRequiresSemanticGrounding(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:    "https://unrelated.example/",
+			Score:  2.70,
+			Reason: []string{"external_family_recovery", "page_expand"},
+		},
+		{
+			URL:    "https://origin.example/docs",
+			Score:  2.60,
+			Reason: []string{"host_root_identity_probe"},
+		},
+	}
+
+	got := PromoteRecoveredCanonicalOrigins(candidates)
+	if got[0].URL != "https://unrelated.example/" && hasTestReason(got[0].Reason, "recovered_canonical_origin") {
+		t.Fatalf("unexpected recovered canonical origin boost without semantic grounding: %#v", got)
+	}
+	for _, candidate := range got {
+		if candidate.URL == "https://unrelated.example/" && hasTestReason(candidate.Reason, "recovered_canonical_origin") {
+			t.Fatalf("unexpected recovered canonical origin reason without semantic grounding: %#v", candidate)
+		}
+	}
+}
+
+func TestDampenWeakProvenanceTrapsIsIdempotent(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:    "https://weak.example/path",
+			Score:  2.70,
+			Reason: []string{"same_family_child_recovery", "page_expand_child_context", "weak_recovered_family_context_penalty"},
+		},
+		{
+			URL:    "https://origin.example/docs",
+			Score:  2.50,
+			Reason: []string{"host_root_identity_probe"},
+		},
+	}
+
+	got := DampenWeakProvenanceTraps(candidates)
+	if got[0].URL != "https://weak.example/path" || got[0].Score != 2.70 {
+		t.Fatalf("expected existing penalty not to be applied twice, got %#v", got)
+	}
+}

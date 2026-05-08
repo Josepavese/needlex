@@ -65,22 +65,34 @@ type StageEvent struct {
 	Metadata    map[string]string
 }
 
+type EmbeddingCacheCounters struct {
+	Hits         uint64  `json:"hits"`
+	Misses       uint64  `json:"misses"`
+	Writes       uint64  `json:"writes"`
+	NegativeHits uint64  `json:"negative_hits"`
+	StaleHits    uint64  `json:"stale_hits"`
+	Evictions    uint64  `json:"evictions"`
+	EvictedBytes uint64  `json:"evicted_bytes"`
+	HitRate      float64 `json:"hit_rate,omitempty"`
+}
+
 type Stats struct {
-	RunCount               int            `json:"run_count"`
-	SuccessfulRuns         int            `json:"successful_runs"`
-	QueryRuns              int            `json:"query_runs"`
-	ReadRuns               int            `json:"read_runs"`
-	CrawlRuns              int            `json:"crawl_runs"`
-	StageEventCount        int            `json:"stage_event_count"`
-	TotalRawCharsProcessed int64          `json:"total_raw_chars_processed"`
-	TotalAgentCharsSaved   int64          `json:"total_agent_chars_saved"`
-	TokenEstimateMethod    string         `json:"token_estimate_method"`
-	CharsPerTokenEstimate  float64        `json:"chars_per_token_estimate"`
-	TotalAgentTokensSaved  int64          `json:"total_agent_tokens_saved_estimated"`
-	EstimatedCostSavedUSD  CostSavingsUSD `json:"estimated_cost_saved_usd"`
-	LastRunAt              time.Time      `json:"last_run_at,omitempty"`
-	DBPath                 string         `json:"db_path"`
-	DBSizeBytes            int64          `json:"db_size_bytes"`
+	RunCount               int                    `json:"run_count"`
+	SuccessfulRuns         int                    `json:"successful_runs"`
+	QueryRuns              int                    `json:"query_runs"`
+	ReadRuns               int                    `json:"read_runs"`
+	CrawlRuns              int                    `json:"crawl_runs"`
+	StageEventCount        int                    `json:"stage_event_count"`
+	TotalRawCharsProcessed int64                  `json:"total_raw_chars_processed"`
+	TotalAgentCharsSaved   int64                  `json:"total_agent_chars_saved"`
+	TokenEstimateMethod    string                 `json:"token_estimate_method"`
+	CharsPerTokenEstimate  float64                `json:"chars_per_token_estimate"`
+	TotalAgentTokensSaved  int64                  `json:"total_agent_tokens_saved_estimated"`
+	EstimatedCostSavedUSD  CostSavingsUSD         `json:"estimated_cost_saved_usd"`
+	EmbeddingCache         EmbeddingCacheCounters `json:"embedding_cache"`
+	LastRunAt              time.Time              `json:"last_run_at,omitempty"`
+	DBPath                 string                 `json:"db_path"`
+	DBSizeBytes            int64                  `json:"db_size_bytes"`
 }
 
 type ValueReport struct {
@@ -378,8 +390,51 @@ FROM analytics_runs
 	out.CharsPerTokenEstimate = CharsPerToken
 	out.TotalAgentTokensSaved = TokenEstimateFromChars(out.TotalAgentCharsSaved)
 	out.EstimatedCostSavedUSD = CostSavingsFromTokens(out.TotalAgentTokensSaved)
+	cacheCounters, err := s.embeddingCacheCounters(ctx, conn)
+	if err != nil {
+		return Stats{}, err
+	}
+	out.EmbeddingCache = cacheCounters
 	if stat, err := os.Stat(s.dbPath); err == nil {
 		out.DBSizeBytes = stat.Size()
+	}
+	return out, nil
+}
+
+func (s SQLiteStore) embeddingCacheCounters(ctx context.Context, conn *sql.DB) (EmbeddingCacheCounters, error) {
+	rows, err := conn.QueryContext(ctx, `
+SELECT metadata_json
+FROM analytics_stage_events
+WHERE stage = 'embedding.cache'
+`)
+	if err != nil {
+		return EmbeddingCacheCounters{}, fmt.Errorf("query embedding cache analytics: %w", err)
+	}
+	defer platform.Close(rows)
+	var out EmbeddingCacheCounters
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return EmbeddingCacheCounters{}, fmt.Errorf("scan embedding cache analytics: %w", err)
+		}
+		var meta map[string]string
+		if err := json.Unmarshal([]byte(raw), &meta); err != nil {
+			continue
+		}
+		out.Hits += uint64(atoi(meta["hits"]))
+		out.Misses += uint64(atoi(meta["misses"]))
+		out.Writes += uint64(atoi(meta["writes"]))
+		out.NegativeHits += uint64(atoi(meta["negative_hits"]))
+		out.StaleHits += uint64(atoi(meta["stale_hits"]))
+		out.Evictions += uint64(atoi(meta["evictions"]))
+		out.EvictedBytes += uint64(atoi(meta["evicted_bytes"]))
+	}
+	if err := rows.Err(); err != nil {
+		return EmbeddingCacheCounters{}, fmt.Errorf("iterate embedding cache analytics: %w", err)
+	}
+	totalLookups := out.Hits + out.Misses
+	if totalLookups > 0 {
+		out.HitRate = float64(out.Hits) / float64(totalLookups)
 	}
 	return out, nil
 }

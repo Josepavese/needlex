@@ -12,10 +12,6 @@ func (s *Service) applyCandidateIntelligence(ctx context.Context, goal string, c
 	return candidateintel.Apply(ctx, s.semantic, goal, candidates)
 }
 
-func candidateIntelligenceWindow(candidates []DiscoverCandidate) int {
-	return candidateintel.Window(candidates)
-}
-
 func (s *Service) scoreCandidateSetToGoal(ctx context.Context, goal string, candidates []intel.SemanticCandidate) map[string]float64 {
 	if len(candidates) == 0 || strings.TrimSpace(goal) == "" {
 		return nil

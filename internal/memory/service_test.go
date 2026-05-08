@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,6 +27,32 @@ func (s stubEmbedder) ModelID() string {
 }
 
 func (s stubEmbedder) Embed(_ context.Context, inputs []string) ([][]float32, error) {
+	out := make([][]float32, 0, len(inputs))
+	for _, input := range inputs {
+		if vector, ok := s.vectors[input]; ok {
+			out = append(out, vector)
+			continue
+		}
+		out = append(out, []float32{0, 0, 0})
+	}
+	return out, nil
+}
+
+type countingEmbedder struct {
+	calls   int32
+	model   string
+	vectors map[string][]float32
+}
+
+func (s *countingEmbedder) ModelID() string {
+	if s.model != "" {
+		return s.model
+	}
+	return "dense-test"
+}
+
+func (s *countingEmbedder) Embed(_ context.Context, inputs []string) ([][]float32, error) {
+	atomic.AddInt32(&s.calls, 1)
 	out := make([][]float32, 0, len(inputs))
 	for _, input := range inputs {
 		if vector, ok := s.vectors[input]; ok {
@@ -92,6 +119,99 @@ func TestServiceObserveAndSearch(t *testing.T) {
 	}
 	if stats.DocumentCount != 2 || stats.EmbeddingCount != 2 || stats.EdgeCount != 1 {
 		t.Fatalf("unexpected memory stats: %+v", stats)
+	}
+}
+
+func TestServiceObserveReusesUnchangedEmbeddingVector(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	embedder := &countingEmbedder{model: "embed-x", vectors: map[string][]float32{
+		"Reusable\nStable semantic page.": {1, 0, 0},
+	}}
+	svc := NewService(config.MemoryConfig{}, store, embedder)
+	now := time.Now().UTC()
+	obs := Observation{
+		Document:   core.Document{URL: "https://example.com/doc", FinalURL: "https://example.com/doc", Title: "Reusable", FetchedAt: now, FetchMode: core.FetchModeHTTP},
+		ResultPack: core.ResultPack{Profile: core.ProfileStandard, Chunks: []core.Chunk{{ID: "chunk", DocID: "doc", Text: "Stable semantic page.", Confidence: 0.9}}},
+		TraceID:    "trace-reuse",
+		SourceKind: "read",
+		ObservedAt: now,
+	}
+	if err := svc.Observe(context.Background(), obs); err != nil {
+		t.Fatalf("first observe: %v", err)
+	}
+	if err := svc.Observe(context.Background(), obs); err != nil {
+		t.Fatalf("second observe: %v", err)
+	}
+	if got := atomic.LoadInt32(&embedder.calls); got != 1 {
+		t.Fatalf("expected unchanged observation to reuse embedding vector, got %d provider calls", got)
+	}
+	stats, err := store.GetStats(context.Background())
+	if err != nil {
+		t.Fatalf("memory stats: %v", err)
+	}
+	if stats.EmbeddingCount != 1 {
+		t.Fatalf("expected one embedding row after refresh, got %+v", stats)
+	}
+}
+
+func TestServiceObserveCanForceEmbeddingRefresh(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	embedder := &countingEmbedder{model: "embed-x", vectors: map[string][]float32{
+		"Reusable\nStable semantic page.": {1, 0, 0},
+	}}
+	svc := NewService(config.MemoryConfig{}, store, embedder)
+	now := time.Now().UTC()
+	obs := Observation{
+		Document:   core.Document{URL: "https://example.com/doc", FinalURL: "https://example.com/doc", Title: "Reusable", FetchedAt: now, FetchMode: core.FetchModeHTTP},
+		ResultPack: core.ResultPack{Profile: core.ProfileStandard, Chunks: []core.Chunk{{ID: "chunk", DocID: "doc", Text: "Stable semantic page.", Confidence: 0.9}}},
+		TraceID:    "trace-refresh",
+		SourceKind: "read",
+		ObservedAt: now,
+	}
+	if err := svc.Observe(context.Background(), obs); err != nil {
+		t.Fatalf("first observe: %v", err)
+	}
+	obs.ForceEmbeddingRefresh = true
+	if err := svc.Observe(context.Background(), obs); err != nil {
+		t.Fatalf("forced observe: %v", err)
+	}
+	if got := atomic.LoadInt32(&embedder.calls); got != 2 {
+		t.Fatalf("expected force refresh to bypass reusable vector, got %d provider calls", got)
+	}
+}
+
+func TestServiceRefreshEmbeddingsForceRecomputesDocuments(t *testing.T) {
+	root := t.TempDir()
+	store := NewSQLiteStore(root, "discovery/discovery.db")
+	embedder := &countingEmbedder{model: "embed-x", vectors: map[string][]float32{
+		"Reusable\nStable semantic page.": {1, 0, 0},
+	}}
+	svc := NewService(config.MemoryConfig{}, store, embedder)
+	now := time.Now().UTC()
+	if err := svc.Observe(context.Background(), Observation{
+		Document:   core.Document{URL: "https://example.com/doc", FinalURL: "https://example.com/doc", Title: "Reusable", FetchedAt: now, FetchMode: core.FetchModeHTTP},
+		ResultPack: core.ResultPack{Profile: core.ProfileStandard, Chunks: []core.Chunk{{ID: "chunk", DocID: "doc", Text: "Stable semantic page.", Confidence: 0.9}}},
+		TraceID:    "trace-refresh",
+		SourceKind: "read",
+		ObservedAt: now,
+	}); err != nil {
+		t.Fatalf("observe: %v", err)
+	}
+	stats, err := svc.RefreshEmbeddings(context.Background(), false)
+	if err != nil {
+		t.Fatalf("refresh embeddings: %v", err)
+	}
+	if stats.ReusedCount != 1 || stats.EmbeddedCount != 0 {
+		t.Fatalf("expected non-forced refresh to reuse vector, got %+v", stats)
+	}
+	stats, err = svc.RefreshEmbeddings(context.Background(), true)
+	if err != nil {
+		t.Fatalf("force refresh embeddings: %v", err)
+	}
+	if stats.DocumentCount != 1 || stats.EmbeddedCount != 1 || stats.ReusedCount != 0 {
+		t.Fatalf("expected forced refresh to recompute vector, got %+v", stats)
 	}
 }
 

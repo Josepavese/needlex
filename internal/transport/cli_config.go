@@ -24,7 +24,7 @@ func writeConfigUsage(w io.Writer) {
 		"needlex config show [--json] [--path path]",
 		"needlex config init [--force] [--path path]",
 		"needlex config set <key> <value> [--path path]",
-		"keys: semantic.embedding_url, semantic.provider_model, semantic.vector_space, semantic.timeout_ms, semantic.max_candidates, models.base_url, models.backend",
+		"keys: semantic.embedding_url, semantic.provider_model, semantic.vector_space, semantic.timeout_ms, semantic.max_candidates, semantic.embedding_cache.*, models.base_url, models.backend",
 	)
 }
 
@@ -205,9 +205,53 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 	case "models.formatter":
 		cfg.Models.Formatter = value
 	default:
+		if strings.HasPrefix(key, "semantic.embedding_cache.") {
+			if err := setEmbeddingCacheConfigValue(&cfg.Semantic.EmbeddingCache, key, value); err != nil {
+				return err
+			}
+			return cfg.Validate()
+		}
 		return fmt.Errorf("unsupported config key %q", key)
 	}
 	return cfg.Validate()
+}
+
+func setEmbeddingCacheConfigValue(cache *config.SemanticEmbeddingCacheConfig, key, value string) error {
+	switch key {
+	case "semantic.embedding_cache.enabled":
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("%s must be a boolean", key)
+		}
+		cache.Enabled = &parsed
+	case "semantic.embedding_cache.dir":
+		cache.Dir = value
+	case "semantic.embedding_cache.max_entries":
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cache.MaxEntries = parsed
+	case "semantic.embedding_cache.max_bytes":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cache.MaxBytes = parsed
+	case "semantic.embedding_cache.ttl":
+		cache.TTL = value
+	case "semantic.embedding_cache.negative_ttl":
+		cache.NegativeTTL = value
+	case "semantic.embedding_cache.stale_if_error":
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("%s must be a boolean", key)
+		}
+		cache.StaleIfError = &parsed
+	default:
+		return fmt.Errorf("unsupported config key %q", key)
+	}
+	return nil
 }
 
 func renderConfigText(w io.Writer, path string, cfg config.Config) {
@@ -216,6 +260,13 @@ func renderConfigText(w io.Writer, path string, cfg config.Config) {
 	fmt.Fprintf(w, "Embedding URL: %s\n", cfg.Semantic.EmbeddingURL)
 	fmt.Fprintf(w, "Embedding Model: %s\n", cfg.Semantic.ProviderModel)
 	fmt.Fprintf(w, "Vector Space: %s\n", cfg.Semantic.VectorSpace)
+	if cfg.Semantic.EmbeddingCache.Enabled != nil {
+		fmt.Fprintf(w, "Embedding Cache Enabled: %t\n", *cfg.Semantic.EmbeddingCache.Enabled)
+	} else {
+		fmt.Fprintf(w, "Embedding Cache Enabled: auto-local\n")
+	}
+	fmt.Fprintf(w, "Embedding Cache TTL: %s\n", cfg.Semantic.EmbeddingCache.TTL)
+	fmt.Fprintf(w, "Embedding Cache Max Entries: %d\n", cfg.Semantic.EmbeddingCache.MaxEntries)
 	fmt.Fprintf(w, "Model Backend: %s\n", cfg.Models.Backend)
 	fmt.Fprintf(w, "Model Base URL: %s\n", cfg.Models.BaseURL)
 	fmt.Fprintf(w, "State Config Env: %s\n", os.Getenv(platform.EnvConfig))

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/candidateintel"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/webdiscover"
 	"github.com/josepavese/needlex/internal/pipeline"
@@ -48,7 +49,7 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		switch r.URL.Path {
 		case "/":
-			_, _ = fmt.Fprint(w, `<html><head><title>OpenAI Platform</title></head><body><h1>OpenAI</h1></body></html>`)
+			_, _ = fmt.Fprint(w, `<html><head><title>OpenAI Platform</title></head><body><h1>OpenAI</h1><p>Official maintained API platform documentation.</p></body></html>`)
 		case "/api/pricing":
 			_, _ = fmt.Fprint(w, `<html><head><title>API pricing</title></head><body><h1>Pricing</h1></body></html>`)
 		default:
@@ -100,6 +101,9 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 	}
 	if len(resp.Candidates) == 0 || resp.Candidates[0].Metadata["host_root_title"] != "OpenAI Platform" {
 		t.Fatalf("expected host root identity metadata on top candidate, got %#v", resp.Candidates)
+	}
+	if resp.Candidates[0].Metadata["host_root_context"] == "" {
+		t.Fatalf("expected host root semantic context on top candidate, got %#v", resp.Candidates[0].Metadata)
 	}
 }
 
@@ -296,7 +300,7 @@ func TestDampenWeakCanonicalRootTrapsUsesFamilyProvenance(t *testing.T) {
 			},
 		},
 	}
-	got := webdiscover.DampenWeakCanonicalRootTraps(candidates)
+	got := webdiscover.DampenWeakProvenanceTraps(candidates)
 	if got[0].URL != "https://origin.example/docs" {
 		t.Fatalf("expected provenanced family to outrank weak canonical root, got %#v", got)
 	}
@@ -320,7 +324,7 @@ func TestDampenWeakCanonicalRootTrapsKeepsVerifiedRoot(t *testing.T) {
 			Score: 1.10,
 		},
 	}
-	got := webdiscover.DampenWeakCanonicalRootTraps(candidates)
+	got := webdiscover.DampenWeakProvenanceTraps(candidates)
 	if got[0].URL != "https://origin.example/" {
 		t.Fatalf("expected verified root to remain first, got %#v", got)
 	}
@@ -700,7 +704,7 @@ func TestCandidateIntelligenceWindowSkipsClearLeaderWithoutProvenanceConflict(t 
 		{URL: "https://example.com/b", Score: 1.9},
 		{URL: "https://example.com/c", Score: 1.7},
 	}
-	if got := candidateIntelligenceWindow(candidates); got != 0 {
+	if got := candidateintel.Window(candidates); got != 0 {
 		t.Fatalf("expected clear leader to skip semantic review, got window=%d", got)
 	}
 }
@@ -711,7 +715,7 @@ func TestCandidateIntelligenceWindowKeepsProvenanceConflict(t *testing.T) {
 		{URL: "https://origin.example/docs", Score: 2.2, Reason: []string{"host_root_identity_probe"}},
 		{URL: "https://example.com/c", Score: 1.7},
 	}
-	if got := candidateIntelligenceWindow(candidates); got != 3 {
+	if got := candidateintel.Window(candidates); got != 3 {
 		t.Fatalf("expected provenance conflict to trigger semantic review, got window=%d", got)
 	}
 }

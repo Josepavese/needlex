@@ -68,6 +68,30 @@ func TestRunnerMCPInitializeAndToolsList(t *testing.T) {
 	}
 }
 
+func TestRunnerMCPPruneEmbeddingCacheDryRun(t *testing.T) {
+	root := t.TempDir()
+	cacheDir := filepath.Join(root, "data", "embeddings", "cache")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatalf("create embedding cache dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(cacheDir, "entry.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatalf("seed embedding cache: %v", err)
+	}
+	runner := Runner{storeRoot: root}
+	result, err := runner.callMCPPruneTool(map[string]any{"embedding_cache": true, "dry_run": true})
+	if err != nil {
+		t.Fatalf("mcp prune embedding cache: %v", err)
+	}
+	structured := result["structuredContent"].(map[string]any)
+	report := structured["prune_report"].(intel.EmbeddingCachePruneReport)
+	if report.MatchedFiles != 1 || !report.DryRun {
+		t.Fatalf("unexpected mcp prune report: %+v", report)
+	}
+	if _, err := os.Stat(filepath.Join(cacheDir, "entry.json")); err != nil {
+		t.Fatalf("dry-run must not remove cache file: %v", err)
+	}
+}
+
 func TestRunnerMCPInitializeAndToolsListRawJSON(t *testing.T) {
 	input := rawMessages(
 		t,

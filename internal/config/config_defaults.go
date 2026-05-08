@@ -119,7 +119,18 @@ func defaultSemanticConfig(baseline modelbaseline.Manifest) SemanticConfig {
 		SimilarityThreshold: 0.55,
 		DominanceDelta:      0.08,
 		MaxCandidates:       4,
+		EmbeddingCache: SemanticEmbeddingCacheConfig{
+			MaxEntries:   200000,
+			MaxBytes:     2147483648,
+			TTL:          "720h",
+			NegativeTTL:  "2m",
+			StaleIfError: boolPtr(true),
+		},
 	}
+}
+
+func boolPtr(value bool) *bool {
+	return &value
 }
 
 func firstNonEmptyConfig(values ...string) string {

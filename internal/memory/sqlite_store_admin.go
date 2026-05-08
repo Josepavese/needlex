@@ -134,6 +134,66 @@ ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated
 	return nil
 }
 
+func (s SQLiteStore) DocumentsForEmbeddingRefresh(ctx context.Context) ([]Document, error) {
+	conn, err := s.open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer platform.Close(conn)
+	rows, err := conn.QueryContext(ctx, `
+SELECT url, final_url, host, path, title, semantic_summary, language,
+       locality_hints_json, entity_hints_json, category_hints_json, proof_refs_json,
+       last_trace_id, source_kind, stable_ratio, novelty_ratio, changed_recently,
+       observed_at, updated_at
+FROM documents
+ORDER BY observed_at DESC, url ASC
+`)
+	if err != nil {
+		return nil, fmt.Errorf("query documents for embedding refresh: %w", err)
+	}
+	defer platform.Close(rows)
+	out := []Document{}
+	for rows.Next() {
+		var doc Document
+		var localityHints, entityHints, categoryHints, proofRefs, observedAt, updatedAt string
+		var changedRecently int
+		if err := rows.Scan(
+			&doc.URL,
+			&doc.FinalURL,
+			&doc.Host,
+			&doc.Path,
+			&doc.Title,
+			&doc.SemanticSummary,
+			&doc.Language,
+			&localityHints,
+			&entityHints,
+			&categoryHints,
+			&proofRefs,
+			&doc.LastTraceID,
+			&doc.SourceKind,
+			&doc.StableRatio,
+			&doc.NoveltyRatio,
+			&changedRecently,
+			&observedAt,
+			&updatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan document for embedding refresh: %w", err)
+		}
+		doc.LocalityHints = decodeStringSlice(localityHints)
+		doc.EntityHints = decodeStringSlice(entityHints)
+		doc.CategoryHints = decodeStringSlice(categoryHints)
+		doc.ProofRefs = decodeStringSlice(proofRefs)
+		doc.ChangedRecently = changedRecently == 1
+		doc.ObservedAt = parseObservedAtOrZero(observedAt)
+		doc.UpdatedAt = parseObservedAtOrZero(updatedAt)
+		out = append(out, doc)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate documents for embedding refresh: %w", err)
+	}
+	return out, nil
+}
+
 func distinctEmbeddingDimensions(ctx context.Context, conn *sql.DB) ([]int, error) {
 	rows, err := conn.QueryContext(ctx, `SELECT DISTINCT dimension FROM embeddings ORDER BY dimension ASC`)
 	if err != nil {

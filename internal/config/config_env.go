@@ -21,6 +21,12 @@ func (c *Config) ApplyEnv(env map[string]string) error {
 	if err := applyBool(env, "NEEDLEX_MEMORY_ENABLED", &c.Memory.Enabled); err != nil {
 		return err
 	}
+	if err := applyBoolPtr(env, "NEEDLEX_EMBEDDING_CACHE", &c.Semantic.EmbeddingCache.Enabled); err != nil {
+		return err
+	}
+	if err := applyBoolPtr(env, "NEEDLEX_EMBEDDING_CACHE_STALE_IF_ERROR", &c.Semantic.EmbeddingCache.StaleIfError); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -34,6 +40,7 @@ func (c *Config) applyIntEnv(env map[string]string) error {
 		{"NEEDLEX_RUNTIME_LANE_MAX", &c.Runtime.LaneMax},
 		{"NEEDLEX_BUDGET_MAX_TOKENS", &c.Budget.MaxTokens},
 		{"NEEDLEX_SEMANTIC_MAX_CANDIDATES", &c.Semantic.MaxCandidates},
+		{"NEEDLEX_EMBEDDING_CACHE_MAX_ENTRIES", &c.Semantic.EmbeddingCache.MaxEntries},
 		{"NEEDLEX_MEMORY_MAX_DOCUMENTS", &c.Memory.MaxDocuments},
 		{"NEEDLEX_MEMORY_MAX_EDGES", &c.Memory.MaxEdges},
 		{"NEEDLEX_MEMORY_MAX_EMBEDDINGS", &c.Memory.MaxEmbeddings},
@@ -59,6 +66,7 @@ func (c *Config) applyInt64Env(env map[string]string) error {
 		{"NEEDLEX_MODELS_SPECIALIST_TIMEOUT_MS", &c.Models.SpecialistTimeoutMS},
 		{"NEEDLEX_SEMANTIC_TIMEOUT_MS", &c.Semantic.TimeoutMS},
 		{"NEEDLEX_SEMANTIC_FAILURE_COOLDOWN_MS", &c.Semantic.FailureCooldownMS},
+		{"NEEDLEX_EMBEDDING_CACHE_MAX_BYTES", &c.Semantic.EmbeddingCache.MaxBytes},
 		{"NEEDLEX_DISCOVERY_PROVIDER_FAILURE_COOLDOWN_MS", &c.Discovery.ProviderFailureCooldownMS},
 		{"NEEDLEX_DISCOVERY_PROVIDER_BLOCKED_COOLDOWN_MS", &c.Discovery.ProviderBlockedCooldownMS},
 		{"NEEDLEX_DISCOVERY_PROVIDER_TIMEOUT_COOLDOWN_MS", &c.Discovery.ProviderTimeoutCooldownMS},
@@ -99,6 +107,9 @@ func (c *Config) applyStringEnv(env map[string]string) {
 		{"NEEDLEX_SEMANTIC_EMBEDDING_URL", &c.Semantic.EmbeddingURL},
 		{"NEEDLEX_SEMANTIC_PROVIDER_MODEL", &c.Semantic.ProviderModel},
 		{"NEEDLEX_SEMANTIC_VECTOR_SPACE", &c.Semantic.VectorSpace},
+		{"NEEDLEX_EMBEDDING_CACHE_DIR", &c.Semantic.EmbeddingCache.Dir},
+		{"NEEDLEX_EMBEDDING_CACHE_TTL", &c.Semantic.EmbeddingCache.TTL},
+		{"NEEDLEX_EMBEDDING_CACHE_NEGATIVE_TTL", &c.Semantic.EmbeddingCache.NegativeTTL},
 		{"NEEDLEX_MEMORY_BACKEND", &c.Memory.Backend},
 		{"NEEDLEX_MEMORY_PATH", &c.Memory.Path},
 		{"NEEDLEX_MEMORY_VECTOR_MODE", &c.Memory.VectorMode},
@@ -161,12 +172,36 @@ func applyBool(env map[string]string, key string, target *bool) error {
 	if !ok || strings.TrimSpace(value) == "" {
 		return nil
 	}
-	parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+	parsed, err := parseEnvBool(strings.TrimSpace(value))
 	if err != nil {
 		return fmt.Errorf("parse %s: %w", key, err)
 	}
 	*target = parsed
 	return nil
+}
+
+func applyBoolPtr(env map[string]string, key string, target **bool) error {
+	value, ok := env[key]
+	if !ok || strings.TrimSpace(value) == "" {
+		return nil
+	}
+	parsed, err := parseEnvBool(strings.TrimSpace(value))
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", key, err)
+	}
+	*target = &parsed
+	return nil
+}
+
+func parseEnvBool(raw string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true", "t", "yes", "y", "on", "enabled":
+		return true, nil
+	case "0", "false", "f", "no", "n", "off", "disabled":
+		return false, nil
+	default:
+		return strconv.ParseBool(strings.TrimSpace(raw))
+	}
 }
 
 func envMap() map[string]string {

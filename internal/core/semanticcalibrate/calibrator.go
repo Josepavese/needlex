@@ -1,17 +1,13 @@
 package semanticcalibrate
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 )
 
-const (
-	ReasonSemanticCalibration       = "trace_semantic_calibration"
-	ReasonSemanticCalibrationShadow = "trace_semantic_calibration_shadow"
-)
+const ReasonSemanticCalibration = "trace_semantic_calibration"
 
 type FeatureWeight struct {
 	Name   string
@@ -31,8 +27,13 @@ func DefaultModel() Model {
 		Features: []FeatureWeight{
 			{Name: "late_interaction_score", Weight: 0.16},
 			{Name: "late_interaction_confidence", Weight: 0.10},
+			{Name: "semantic_evidence_similarity", Weight: 0.04},
+			{Name: "semantic_origin_similarity", Weight: 0.08},
+			{Name: "semantic_authority_boost", Weight: 0.20},
+			{Name: "semantic_authority_penalty", Weight: -0.42},
+			{Name: "semantic_community_penalty", Weight: -0.30},
 			{Name: "semantic_origin_alignment", Weight: 0.18},
-			{Name: "semantic_derivative_alignment", Weight: -0.14},
+			{Name: "semantic_derivative_alignment", Weight: -0.20},
 			{Name: "cluster_coherence", Weight: 0.08},
 			{Name: "cluster_centrality", Weight: 0.08},
 			{Name: "semantic_role_intent", Weight: 0.06},
@@ -41,40 +42,15 @@ func DefaultModel() Model {
 	}
 }
 
-func ValidateModel(model Model) error {
-	if strings.TrimSpace(model.ID) == "" {
-		return fmt.Errorf("semantic calibration model id is required")
-	}
-	for _, feature := range model.Features {
-		if err := ValidateFeatureName(feature.Name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func ValidateFeatureName(name string) error {
-	clean := strings.TrimSpace(strings.ToLower(name))
-	if clean == "" {
-		return fmt.Errorf("semantic calibration feature name is required")
-	}
-	for _, forbidden := range []string{"key" + "word", "lit" + "eral", "token" + "_overlap", "surface" + "_form", "path" + "_word", "domain" + "_match", "exact" + "_match"} {
-		if strings.Contains(clean, forbidden) {
-			return fmt.Errorf("semantic calibration feature %q is surface-primary", name)
-		}
-	}
-	return nil
-}
-
 func Apply(candidates []discoverycore.Candidate, model Model) []discoverycore.Candidate {
 	if len(candidates) < 2 {
 		return candidates
 	}
-	if err := ValidateModel(model); err != nil {
-		return candidates
-	}
 	if model.MaxBoost <= 0 {
 		model.MaxBoost = DefaultModel().MaxBoost
+	}
+	if strings.TrimSpace(model.ID) == "" {
+		model.ID = DefaultModel().ID
 	}
 	out := append([]discoverycore.Candidate{}, candidates...)
 	for i := range out {
@@ -92,29 +68,6 @@ func Apply(candidates []discoverycore.Candidate, model Model) []discoverycore.Ca
 		})
 	}
 	discoverycore.SortCandidates(out)
-	return out
-}
-
-func ApplyShadow(candidates []discoverycore.Candidate, model Model) []discoverycore.Candidate {
-	if len(candidates) < 2 {
-		return candidates
-	}
-	if err := ValidateModel(model); err != nil {
-		return candidates
-	}
-	out := append([]discoverycore.Candidate{}, candidates...)
-	for i := range out {
-		score := calibrationScore(out[i].Metadata, model)
-		if score == 0 {
-			continue
-		}
-		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, ReasonSemanticCalibrationShadow)
-		out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
-			"semantic_calibration_model": model.ID,
-			"semantic_calibration_score": formatFloat(score),
-			"semantic_calibration_boost": "0.000",
-		})
-	}
 	return out
 }
 

@@ -11,9 +11,11 @@ import (
 type Store interface {
 	UpsertDocument(ctx context.Context, doc Document) error
 	UpsertEdges(ctx context.Context, edges []Edge) error
+	ReusableEmbeddingVector(ctx context.Context, emb Embedding) ([]float32, bool, error)
 	UpsertEmbedding(ctx context.Context, emb Embedding, vector []float32) error
 	UpsertSemanticFamilyEvidence(ctx context.Context, doc Document, vector []float32, vectorSpace string) error
 	RefreshTopicNodes(ctx context.Context, doc Document, vectorSpace string) error
+	DocumentsForEmbeddingRefresh(ctx context.Context) ([]Document, error)
 	SearchTopicNodes(ctx context.Context, vector []float32, vectorSpace string, limit int, domainHints []string) ([]Candidate, error)
 	SearchByVector(ctx context.Context, vector []float32, vectorSpace string, limit int, domainHints []string) ([]Candidate, error)
 	SearchSemanticFamilies(ctx context.Context, vector []float32, vectorSpace string, limit int, domainHints []string) ([]Candidate, error)

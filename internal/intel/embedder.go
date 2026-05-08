@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/josepavese/needlex/internal/config"
@@ -20,6 +21,7 @@ import (
 const (
 	DenseSemanticVectorSpace = "needlex-dense-vector-space-v1"
 	DenseEmbeddingSource     = "dense-http"
+	denseEmbeddingCacheMax   = 4096
 )
 
 type TextEmbedder interface {
@@ -34,21 +36,36 @@ func SemanticConfigured(cfg config.Config) bool {
 }
 
 func NewTextEmbedder(cfg config.Config, client *http.Client) TextEmbedder {
+	return newDenseHTTPTextEmbedder(cfg, client, "")
+}
+
+func NewTextEmbedderWithCacheDir(cfg config.Config, client *http.Client, cacheDir string) TextEmbedder {
+	return newDenseHTTPTextEmbedder(cfg, client, cacheDir)
+}
+
+func newDenseHTTPTextEmbedder(cfg config.Config, client *http.Client, cacheDir string) DenseHTTPTextEmbedder {
+	policy := EmbeddingCachePolicyFromConfigEnv(cfg.Semantic.EmbeddingURL, cacheDir, cfg.Semantic.EmbeddingCache)
 	return DenseHTTPTextEmbedder{
-		Endpoint:      cfg.Semantic.EmbeddingURL,
-		ProviderModel: cfg.Semantic.ProviderModel,
-		VectorSpace:   cfg.Semantic.VectorSpace,
-		TimeoutMS:     cfg.Semantic.TimeoutMS,
-		Client:        client,
+		Endpoint:       cfg.Semantic.EmbeddingURL,
+		ProviderModel:  cfg.Semantic.ProviderModel,
+		VectorSpace:    cfg.Semantic.VectorSpace,
+		TimeoutMS:      cfg.Semantic.TimeoutMS,
+		Client:         client,
+		CacheDir:       strings.TrimSpace(cacheDir),
+		CachePolicy:    policy,
+		CachePolicySet: true,
 	}
 }
 
 type DenseHTTPTextEmbedder struct {
-	Endpoint      string
-	ProviderModel string
-	VectorSpace   string
-	TimeoutMS     int64
-	Client        *http.Client
+	Endpoint       string
+	ProviderModel  string
+	VectorSpace    string
+	TimeoutMS      int64
+	Client         *http.Client
+	CacheDir       string
+	CachePolicy    EmbeddingCachePolicy
+	CachePolicySet bool
 }
 
 func (e DenseHTTPTextEmbedder) ModelID() string {
@@ -67,7 +84,45 @@ func (e DenseHTTPTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]
 	if endpoint == "" {
 		return nil, nil
 	}
-	payload := map[string]any{"input": clean}
+	vectors := make([][]float32, len(clean))
+	missingInputs, missingKeys, _ := e.embeddingCacheMisses(clean, vectors)
+	if len(missingInputs) == 0 {
+		return vectors, nil
+	}
+	unlock := denseEmbeddingFlights.lock(missingKeys)
+	defer unlock()
+	missingInputs, missingKeys, missingIndexes := e.embeddingCacheMisses(clean, vectors)
+	if len(missingInputs) == 0 {
+		return vectors, nil
+	}
+	if err := e.firstNegativeCacheHit(missingKeys); err != nil {
+		return nil, err
+	}
+	fetched, err := e.fetchMissingEmbeddings(ctx, endpoint, missingInputs)
+	if err != nil {
+		if e.staleVectors(missingKeys, missingIndexes, vectors) {
+			return vectors, nil
+		}
+		if ctx.Err() == nil {
+			e.setNegativeCache(missingKeys, err)
+		}
+		return nil, err
+	}
+	e.mergeFetchedEmbeddings(vectors, fetched, missingKeys, missingIndexes)
+	return vectors, nil
+}
+
+func (e DenseHTTPTextEmbedder) firstNegativeCacheHit(keys []string) error {
+	for _, key := range keys {
+		if err := e.negativeCacheHit(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e DenseHTTPTextEmbedder) fetchMissingEmbeddings(ctx context.Context, endpoint string, inputs []string) ([][]float32, error) {
+	payload := map[string]any{"input": inputs}
 	if providerModel := strings.TrimSpace(e.ProviderModel); providerModel != "" {
 		payload["model"] = providerModel
 	}
@@ -100,17 +155,47 @@ func (e DenseHTTPTextEmbedder) Embed(ctx context.Context, inputs []string) ([][]
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("embedding endpoint status %d", resp.StatusCode)
 	}
-	vectors, err := decodeEmbeddingResponse(io.LimitReader(resp.Body, 16<<20))
+	fetched, err := decodeEmbeddingResponse(io.LimitReader(resp.Body, 16<<20))
 	if err != nil {
 		return nil, err
 	}
-	if len(vectors) != len(clean) {
-		return nil, fmt.Errorf("embedding endpoint returned %d vectors for %d inputs", len(vectors), len(clean))
+	if len(fetched) != len(inputs) {
+		return nil, fmt.Errorf("embedding endpoint returned %d vectors for %d inputs", len(fetched), len(inputs))
 	}
-	for i := range vectors {
-		normalizeFloat32(vectors[i])
+	return fetched, nil
+}
+
+func (e DenseHTTPTextEmbedder) mergeFetchedEmbeddings(vectors [][]float32, fetched [][]float32, keys []string, indexes map[string][]int) {
+	for i := range fetched {
+		normalizeFloat32(fetched[i])
+		e.cacheSet(keys[i], fetched[i])
+		for _, idx := range indexes[keys[i]] {
+			vectors[idx] = cloneFloat32Vector(fetched[i])
+		}
 	}
-	return vectors, nil
+}
+
+func (e DenseHTTPTextEmbedder) embeddingCacheMisses(clean []string, vectors [][]float32) ([]string, []string, map[string][]int) {
+	missingInputs := []string{}
+	missingKeys := []string{}
+	missingIndexes := map[string][]int{}
+	for i, input := range clean {
+		key := e.embeddingCacheKey(input)
+		if vector, ok := e.cacheGet(key); ok {
+			vectors[i] = vector
+			continue
+		}
+		if _, ok := missingIndexes[key]; !ok {
+			missingInputs = append(missingInputs, input)
+			missingKeys = append(missingKeys, key)
+		}
+		missingIndexes[key] = append(missingIndexes[key], i)
+	}
+	return missingInputs, missingKeys, missingIndexes
+}
+
+func (e DenseHTTPTextEmbedder) embeddingCacheKey(input string) string {
+	return embeddingCacheIdentityKey(e.embeddingCacheIdentity(0), embeddingInputDigest(input))
 }
 
 func derivedDenseVectorSpace(endpoint, providerModel string) string {
@@ -131,6 +216,75 @@ func compactEmbedInputs(inputs []string) []string {
 		}
 		out = append(out, input)
 	}
+	return out
+}
+
+type embeddingCacheEntry struct {
+	Vector   []float32
+	Tick     uint64
+	StoredAt time.Time
+}
+
+type embeddingCache struct {
+	mu    sync.Mutex
+	tick  uint64
+	items map[string]embeddingCacheEntry
+}
+
+var denseEmbeddingCache = &embeddingCache{items: map[string]embeddingCacheEntry{}}
+
+func (c *embeddingCache) get(key string, ttl time.Duration) ([]float32, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry, ok := c.items[key]
+	if !ok {
+		return nil, false
+	}
+	if ttl > 0 && time.Since(entry.StoredAt) > ttl {
+		delete(c.items, key)
+		return nil, false
+	}
+	c.tick++
+	entry.Tick = c.tick
+	c.items[key] = entry
+	return cloneFloat32Vector(entry.Vector), true
+}
+
+func (c *embeddingCache) set(key string, vector []float32) {
+	if strings.TrimSpace(key) == "" || len(vector) == 0 {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.tick++
+	c.items[key] = embeddingCacheEntry{Vector: cloneFloat32Vector(vector), Tick: c.tick, StoredAt: time.Now().UTC()}
+	if len(c.items) > denseEmbeddingCacheMax {
+		c.evictOldest()
+	}
+}
+
+func (c *embeddingCache) evictOldest() {
+	var oldestKey string
+	var oldestTick uint64
+	first := true
+	for key, entry := range c.items {
+		if first || entry.Tick < oldestTick {
+			first = false
+			oldestKey = key
+			oldestTick = entry.Tick
+		}
+	}
+	if oldestKey != "" {
+		delete(c.items, oldestKey)
+	}
+}
+
+func cloneFloat32Vector(vector []float32) []float32 {
+	if len(vector) == 0 {
+		return nil
+	}
+	out := make([]float32, len(vector))
+	copy(out, vector)
 	return out
 }
 

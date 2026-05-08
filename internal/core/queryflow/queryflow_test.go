@@ -51,6 +51,21 @@ func TestShouldEscalateRewriteAcceptsCandidateSimilarityMetadata(t *testing.T) {
 	}
 }
 
+func TestShouldEscalateRewriteSkipsCloseGroundedLeaderWithEvidence(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:      "https://example.com/entity",
+			Score:    1.20,
+			Reason:   []string{"semantic_goal_alignment", "page_title_probe"},
+			Metadata: map[string]string{"semantic_goal_similarity": "0.620"},
+		},
+		{URL: "https://example.com/other", Score: 1.05, Reason: []string{"structure_hint"}},
+	}
+	if ShouldEscalateRewrite(candidates[0].URL, candidates) {
+		t.Fatal("expected evidenced semantic leader to skip rewrite even with close margin")
+	}
+}
+
 func TestShouldEscalateRewriteDoesNotTrustReasonOnlyGrounding(t *testing.T) {
 	candidates := []discoverycore.Candidate{
 		{URL: "https://example.com/entity", Score: 1.5, Reason: []string{"candidate_identity_alignment"}},

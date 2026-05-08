@@ -19,14 +19,3 @@ func TestApplyPromotesSemanticEvidence(t *testing.T) {
 		t.Fatalf("expected calibration metadata, got %#v", got[0].Metadata)
 	}
 }
-
-func TestValidateFeatureNameRejectsSurfacePrimaryFeatures(t *testing.T) {
-	for _, name := range []string{"key" + "word_overlap", "lit" + "eral_entity", "path" + "_word_boost", "domain" + "_match"} {
-		if err := ValidateFeatureName(name); err == nil {
-			t.Fatalf("expected surface-primary feature %q to be rejected", name)
-		}
-	}
-	if err := ValidateFeatureName("semantic_origin_alignment"); err != nil {
-		t.Fatalf("expected semantic feature to pass: %v", err)
-	}
-}

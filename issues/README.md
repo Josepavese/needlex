@@ -15,3 +15,7 @@ Semantic-jump projects:
 3. [Trace-driven semantic calibration](2026-05-04-03-trace-driven-semantic-calibration.md)
 4. [Local HNSW vector index](2026-05-04-04-local-hnsw-vector-index.md)
 5. [Semantic quorum provider fusion](2026-05-04-05-semantic-quorum-provider-fusion.md)
+
+Runtime infrastructure projects:
+1. [Core embeddings runtime](2026-05-07-core-embeddings-runtime.md)
+2. [PAL embedding cache](2026-05-08-pal-embedding-cache.md)

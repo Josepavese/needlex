@@ -69,7 +69,7 @@ func NewWithStateRoot(cfg config.Config, client *http.Client, storeRoot string) 
 			MaxSegmentChars: 1200,
 		},
 		runtime:            intel.NewRuntime(cfg, client),
-		semantic:           intel.NewSemanticAligner(cfg, client),
+		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, platform.NewStateLayout(cleanRoot).EmbeddingCacheDir),
 		now:                time.Now,
 		storeRoot:          cleanRoot,
 		webDiscoverBaseURL: strings.TrimSpace(cfg.Discovery.ProviderChain),

@@ -50,27 +50,6 @@ func TestRerankPromotesSemanticLateInteractionWinner(t *testing.T) {
 	}
 }
 
-func TestRerankShadowAnnotatesWithoutChangingScores(t *testing.T) {
-	candidates := []discoverycore.Candidate{
-		{URL: "https://first.example", Score: 1.00, Metadata: map[string]string{"source_context": "first"}},
-		{URL: "https://second.example", Score: 0.90, Metadata: map[string]string{"source_context": "second"}},
-	}
-	spans, _ := candidateSpans(candidates)
-	scores := map[string]float64{}
-	for _, span := range spans {
-		scores[span.ID] = 0.60
-	}
-	cfg := DefaultConfig()
-	cfg.Mode = ModeShadow
-	got := Reranker{Semantic: stubSemantic{scores: scores}, Config: cfg}.Rerank(context.Background(), "goal", candidates)
-	if got[0].URL != "https://first.example" || got[0].Score != 1.00 {
-		t.Fatalf("shadow mode must not alter ordering or scores: %#v", got)
-	}
-	if !contains(got[0].Reason, ReasonLateInteractionShadow) {
-		t.Fatalf("expected shadow reason, got %#v", got[0].Reason)
-	}
-}
-
 func contains(items []string, target string) bool {
 	for _, item := range items {
 		if item == target {

@@ -11,6 +11,7 @@ import (
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/store"
 )
@@ -27,7 +28,7 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 		defer cancel()
 		if cfg.Memory.Enabled {
 			memoryStore := memory.NewSQLiteStore(storeRoot, cfg.Memory.Path)
-			memoryService := memory.NewService(cfg.Memory, memoryStore, intel.NewTextEmbedder(cfg, nil))
+			memoryService := memory.NewService(cfg.Memory, memoryStore, intel.NewTextEmbedderWithCacheDir(cfg, nil, platform.NewStateLayout(storeRoot).EmbeddingCacheDir))
 			if matches, err := memoryService.Search(ctx, req.Goal, memory.SearchOptions{
 				Limit:         3,
 				ExpandLimit:   2,

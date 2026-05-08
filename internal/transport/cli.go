@@ -178,7 +178,7 @@ func writeRootUsage(w io.Writer) {
   needlex config <path|show|init|set> [args]
   needlex logs <path|stats|tail> [args]
   needlex support bundle --out DIR [args]
-  needlex prune (--all | --older-than-hours N) [--json]
+  needlex prune (--all | --older-than-hours N | --embedding-cache) [--dry-run] [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
   needlex doctor [--json]

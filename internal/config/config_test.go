@@ -189,11 +189,14 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 	if cfg.Models.MicroTimeoutMS != 8000 || cfg.Models.StructuredTimeoutMS != 20000 || cfg.Models.SpecialistTimeoutMS != 8000 {
 		t.Fatalf("unexpected SSOT timeout defaults: %+v", cfg.Models)
 	}
-	if cfg.Semantic.EmbeddingURL != DefaultSemanticEmbeddingURL || cfg.Semantic.ProviderModel != DefaultSemanticProviderModel || cfg.Semantic.VectorSpace != DefaultSemanticVectorSpace || cfg.Semantic.TimeoutMS != 1200 {
+	if cfg.Semantic.EmbeddingURL != DefaultSemanticEmbeddingURL || cfg.Semantic.ProviderModel != DefaultSemanticProviderModel || cfg.Semantic.VectorSpace != DefaultSemanticVectorSpace || cfg.Semantic.TimeoutMS != 2000 {
 		t.Fatalf("unexpected semantic SSOT defaults: %+v", cfg.Semantic)
 	}
 	if cfg.Semantic.FailureCooldownMS != 5000 {
 		t.Fatalf("unexpected semantic cooldown default: %+v", cfg.Semantic)
+	}
+	if cfg.Semantic.EmbeddingCache.MaxEntries != 200000 || cfg.Semantic.EmbeddingCache.MaxBytes != 2147483648 || cfg.Semantic.EmbeddingCache.TTL != "720h" || cfg.Semantic.EmbeddingCache.NegativeTTL != "2m" || cfg.Semantic.EmbeddingCache.StaleIfError == nil || !*cfg.Semantic.EmbeddingCache.StaleIfError {
+		t.Fatalf("unexpected semantic embedding cache defaults: %+v", cfg.Semantic.EmbeddingCache)
 	}
 	if cfg.Discovery.ProviderChain != "https://lite.duckduckgo.com/lite/,https://html.duckduckgo.com/html/,https://www.bing.com/search" {
 		t.Fatalf("unexpected discovery SSOT defaults: %+v", cfg.Discovery)
@@ -209,20 +212,30 @@ func TestDefaultsUseModelBaselineSSOT(t *testing.T) {
 func TestApplyEnvOverridesSemanticValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
-		"NEEDLEX_SEMANTIC_EMBEDDING_URL":        "http://127.0.0.1:18080/embed",
-		"NEEDLEX_SEMANTIC_PROVIDER_MODEL":       "provider-embed-x",
-		"NEEDLEX_SEMANTIC_VECTOR_SPACE":         "vector-space-x",
-		"NEEDLEX_SEMANTIC_TIMEOUT_MS":           "1500",
-		"NEEDLEX_SEMANTIC_FAILURE_COOLDOWN_MS":  "2500",
-		"NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD": "0.66",
-		"NEEDLEX_SEMANTIC_DOMINANCE_DELTA":      "0.11",
-		"NEEDLEX_SEMANTIC_MAX_CANDIDATES":       "5",
+		"NEEDLEX_SEMANTIC_EMBEDDING_URL":         "http://127.0.0.1:18080/embed",
+		"NEEDLEX_SEMANTIC_PROVIDER_MODEL":        "provider-embed-x",
+		"NEEDLEX_SEMANTIC_VECTOR_SPACE":          "vector-space-x",
+		"NEEDLEX_SEMANTIC_TIMEOUT_MS":            "1500",
+		"NEEDLEX_SEMANTIC_FAILURE_COOLDOWN_MS":   "2500",
+		"NEEDLEX_SEMANTIC_SIMILARITY_THRESHOLD":  "0.66",
+		"NEEDLEX_SEMANTIC_DOMINANCE_DELTA":       "0.11",
+		"NEEDLEX_SEMANTIC_MAX_CANDIDATES":        "5",
+		"NEEDLEX_EMBEDDING_CACHE":                "false",
+		"NEEDLEX_EMBEDDING_CACHE_DIR":            "/tmp/needlex-emb",
+		"NEEDLEX_EMBEDDING_CACHE_TTL":            "24h",
+		"NEEDLEX_EMBEDDING_CACHE_NEGATIVE_TTL":   "30s",
+		"NEEDLEX_EMBEDDING_CACHE_MAX_ENTRIES":    "7",
+		"NEEDLEX_EMBEDDING_CACHE_MAX_BYTES":      "1024",
+		"NEEDLEX_EMBEDDING_CACHE_STALE_IF_ERROR": "false",
 	}
 	if err := cfg.ApplyEnv(env); err != nil {
 		t.Fatalf("apply env: %v", err)
 	}
 	if cfg.Semantic.EmbeddingURL != "http://127.0.0.1:18080/embed" || cfg.Semantic.ProviderModel != "provider-embed-x" || cfg.Semantic.VectorSpace != "vector-space-x" || cfg.Semantic.MaxCandidates != 5 || cfg.Semantic.FailureCooldownMS != 2500 {
 		t.Fatalf("unexpected semantic config override: %+v", cfg.Semantic)
+	}
+	if cfg.Semantic.EmbeddingCache.Enabled == nil || *cfg.Semantic.EmbeddingCache.Enabled || cfg.Semantic.EmbeddingCache.Dir != "/tmp/needlex-emb" || cfg.Semantic.EmbeddingCache.TTL != "24h" || cfg.Semantic.EmbeddingCache.NegativeTTL != "30s" || cfg.Semantic.EmbeddingCache.MaxEntries != 7 || cfg.Semantic.EmbeddingCache.MaxBytes != 1024 || cfg.Semantic.EmbeddingCache.StaleIfError == nil || *cfg.Semantic.EmbeddingCache.StaleIfError {
+		t.Fatalf("unexpected embedding cache override: %+v", cfg.Semantic.EmbeddingCache)
 	}
 }
 

@@ -37,6 +37,9 @@ Current MCP tool set:
 5. `web_replay`
 6. `web_diff`
 7. `web_prune`
+
+`web_prune` is an operator maintenance tool. For disposable PAL embedding cache
+cleanup, call it with `embedding_cache=true`; use `dry_run=true` before deletion.
 8. `memory`
 9. `analytics`
 
@@ -50,6 +53,9 @@ Memory actions:
 4. `export`
 5. `import`
 6. `rebuild_index`
+
+Use `force_embeddings=true` with `action="rebuild_index"` only for explicit
+semantic memory maintenance after embedding model or vector-space changes.
 
 Analytics actions:
 1. `stats`

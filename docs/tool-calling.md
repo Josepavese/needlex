@@ -65,7 +65,7 @@ If you wire Needle-X into an AI tool-calling stack:
 2. prefer `web_query` for goal-oriented retrieval
 3. use `web_proof` to convert claims into source-backed evidence
 4. keep `web_replay` and `web_diff` for audit/debug flows, not default agent loops
-5. keep `web_prune` as an operator tool, not a model-default tool
+5. keep `web_prune` as an operator tool, not a model-default tool; use `embedding_cache=true` only for explicit PAL embedding cache maintenance
 6. use `memory` only for advanced local semantic memory inspection or maintenance
 7. use `analytics` only for diagnostics, value reporting, or maintainer rollups
 
@@ -79,6 +79,10 @@ Memory actions:
 4. `export`
 5. `import`
 6. `rebuild_index`
+
+For `memory` with `action="rebuild_index"`, set `force_embeddings=true` only
+when explicitly maintaining local semantic memory after a model/vector-space
+change. Normal retrieval already refreshes memory automatically.
 
 Analytics actions:
 1. `stats`

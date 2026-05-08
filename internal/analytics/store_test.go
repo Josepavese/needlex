@@ -62,6 +62,16 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 			Status:      "completed",
 			Metadata:    map[string]string{"raw_chars": "2400"},
 		},
+		{
+			RunID:       "run_1",
+			Stage:       "embedding.cache",
+			StartedAt:   startedAt,
+			CompletedAt: completedAt,
+			LatencyMS:   1500,
+			ItemCount:   4,
+			Status:      "completed",
+			Metadata:    map[string]string{"hits": "3", "misses": "1", "writes": "1", "negative_hits": "0", "stale_hits": "0", "evictions": "0", "evicted_bytes": "0"},
+		},
 	})
 	if err != nil {
 		t.Fatalf("append run: %v", err)
@@ -71,8 +81,11 @@ func TestSQLiteStoreAppendRunAndReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stats: %v", err)
 	}
-	if stats.RunCount != 1 || stats.QueryRuns != 1 || stats.StageEventCount != 1 {
+	if stats.RunCount != 1 || stats.QueryRuns != 1 || stats.StageEventCount != 2 {
 		t.Fatalf("unexpected stats: %+v", stats)
+	}
+	if stats.EmbeddingCache.Hits != 3 || stats.EmbeddingCache.Misses != 1 || stats.EmbeddingCache.Writes != 1 || stats.EmbeddingCache.HitRate != 0.75 {
+		t.Fatalf("unexpected embedding cache stats: %+v", stats.EmbeddingCache)
 	}
 	if stats.TotalAgentCharsSaved != 2000 || stats.TotalAgentTokensSaved != 500 || stats.EstimatedCostSavedUSD.At5USDPerMillionTokens != 0.0025 {
 		t.Fatalf("unexpected value stats: %+v", stats)

@@ -25,6 +25,11 @@ func TestConfigInitShowAndSetUsePALSSOT(t *testing.T) {
 	if code := runner.Run([]string{"config", "set", "semantic.provider_model", "nomic-embed-text:latest"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("config set exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"config", "set", "semantic.embedding_cache.ttl", "12h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("config set cache ttl exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
 	loaded, err := config.Load("")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -32,12 +37,15 @@ func TestConfigInitShowAndSetUsePALSSOT(t *testing.T) {
 	if loaded.Semantic.ProviderModel != "nomic-embed-text:latest" {
 		t.Fatalf("expected updated provider model, got %q", loaded.Semantic.ProviderModel)
 	}
+	if loaded.Semantic.EmbeddingCache.TTL != "12h" {
+		t.Fatalf("expected updated embedding cache ttl, got %q", loaded.Semantic.EmbeddingCache.TTL)
+	}
 	stdout.Reset()
 	stderr.Reset()
 	if code := runner.Run([]string{"config", "show"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("config show exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "nomic-embed-text:latest") {
+	if !strings.Contains(stdout.String(), "nomic-embed-text:latest") || !strings.Contains(stdout.String(), "Embedding Cache TTL: 12h") {
 		t.Fatalf("expected config show to include updated model, got %q", stdout.String())
 	}
 }

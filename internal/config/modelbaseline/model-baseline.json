@@ -10,7 +10,7 @@
     "embedding_url": "http://127.0.0.1:11434/api/embed",
     "provider_model": "embeddinggemma:latest",
     "vector_space": "ollama-embeddinggemma-v1",
-    "timeout_ms": 1200
+    "timeout_ms": 2000
   },
   "models": {
     "router": "gemma3:1b-it-q8_0",

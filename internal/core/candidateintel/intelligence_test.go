@@ -45,6 +45,39 @@ func TestApplyPromotesSemanticCustodianRoleOverDerivativeSurface(t *testing.T) {
 	}
 }
 
+func TestApplyPenalizesDistributionSurfaceForCustodianIntent(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{
+			URL:   "https://packages.example/project",
+			Label: "Project package registry",
+			Score: 1.00,
+			Metadata: map[string]string{
+				"resource_class":  discoverycore.ResourceClassHTMLLike,
+				"source_context":  "package registry artifact catalog distribution node",
+				"host_root_title": "Package index",
+			},
+		},
+		{
+			URL:   "https://custodian.example/project",
+			Label: "Project official maintained documentation",
+			Score: 0.92,
+			Metadata: map[string]string{
+				"resource_class":  discoverycore.ResourceClassHTMLLike,
+				"source_context":  "primary custodian maintained official documentation",
+				"host_root_title": "Project documentation",
+			},
+		},
+	}
+
+	ranked := Apply(context.Background(), roleSemanticAligner{}, "official maintained documentation for project", candidates)
+	if ranked[0].URL != "https://custodian.example/project" {
+		t.Fatalf("expected custodian candidate to beat distribution surface, got %#v", ranked)
+	}
+	if !hasReason(ranked[1].Reason, "semantic_distribution_surface_penalty") {
+		t.Fatalf("expected distribution penalty on package surface, got %#v", ranked[1].Reason)
+	}
+}
+
 func TestWindowKeepsExpandedSemanticCandidatePool(t *testing.T) {
 	candidates := make([]discoverycore.Candidate, 0, 8)
 	for i := 0; i < 8; i++ {
@@ -77,6 +110,17 @@ func TestWindowKeepsSemanticReviewForProvenanceConflict(t *testing.T) {
 	}
 	if got := Window(candidates); got != 3 {
 		t.Fatalf("expected provenance conflict to trigger semantic review, got %d", got)
+	}
+}
+
+func TestWindowReviewsCompetingStrongProvenanceFamilies(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://distribution.example/project", Score: 3.1, Reason: []string{"host_root_identity_probe"}},
+		{URL: "https://custodian.example/docs", Score: 2.0, Reason: []string{"host_root_identity_probe"}},
+		{URL: "https://other.example/docs", Score: 1.8},
+	}
+	if got := Window(candidates); got != 3 {
+		t.Fatalf("expected semantic review for competing strong provenance families, got %d", got)
 	}
 }
 
@@ -119,6 +163,10 @@ func semanticRoleTestScore(objective string, candidate intel.SemanticCandidate) 
 		return 0.05
 	case objectiveRole == roleDerivative && candidateRole == roleCustodianRecord:
 		return 0.10
+	case objectiveRole == roleCustodianRecord && candidateRole == roleDistributionNode:
+		return 0.04
+	case objectiveRole == roleDistributionNode && candidateRole == roleCustodianRecord:
+		return 0.04
 	default:
 		return 0.34
 	}
@@ -131,7 +179,7 @@ func roleClassForTest(text string) string {
 		return roleDerivative
 	case strings.Contains(text, "custodian") || strings.Contains(text, "maintained") || strings.Contains(text, "primary") || strings.Contains(text, "reference"):
 		return roleCustodianRecord
-	case strings.Contains(text, "distribution"):
+	case strings.Contains(text, "distribution") || strings.Contains(text, "package registry") || strings.Contains(text, "artifact catalog"):
 		return roleDistributionNode
 	default:
 		return ""

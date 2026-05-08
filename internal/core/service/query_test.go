@@ -151,6 +151,38 @@ func TestReadQuerySelectedCandidateFallsBackFromUnsupportedContent(t *testing.T)
 	}
 }
 
+func TestReadQuerySelectedCandidateFallsBackFromTLSError(t *testing.T) {
+	badTLS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, testHTML)
+	}))
+	defer badTLS.Close()
+	docs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, testHTML)
+	}))
+	defer docs.Close()
+
+	svc := newSemanticService(t, nil)
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "runtime fallback", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+	plan.SelectedURL = badTLS.URL
+	plan.CandidateURLs = []string{badTLS.URL, docs.URL}
+
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback"}, core.ProfileTiny, QueryDiscoveryWeb, &plan)
+	if err != nil {
+		t.Fatalf("expected TLS fallback read to succeed: %v", err)
+	}
+	if plan.SelectedURL != docs.URL || resp.Document.FinalURL != docs.URL {
+		t.Fatalf("expected fallback docs selection, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	decision := requireCompilerDecision(t, plan.Compiler.Decisions, QueryPlanReasonSelection, func(decision QueryPlanDecision) bool {
+		return decision.Stage == "select.candidate_runtime_fallback"
+	})
+	if decision.Metadata["runtime_error_class"] != "tls_certificate" {
+		t.Fatalf("expected tls_certificate fallback metadata, got %#v", decision.Metadata)
+	}
+}
+
 func TestQueryCompilerRecordsForcedLanePolicy(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -47,23 +47,6 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 		return fmt.Errorf("memory embedder is required")
 	}
 	input := buildEmbeddingInput(doc)
-	vectors, err := s.embedder.Embed(ctx, []string{input})
-	if err != nil {
-		return err
-	}
-	if len(vectors) == 0 {
-		return fmt.Errorf("memory embedding endpoint returned no vectors")
-	}
-	if len(vectors[0]) == 0 {
-		return fmt.Errorf("memory embedding endpoint returned an empty vector")
-	}
-	if err := s.store.UpsertDocument(ctx, doc); err != nil {
-		return err
-	}
-	edges := buildEdges(doc.FinalURL, obs.ResultPack.Links, obs.TraceID, observedAt)
-	if err := s.store.UpsertEdges(ctx, edges); err != nil {
-		return err
-	}
 	vectorSpace := firstNonEmpty(s.embedder.ModelID(), intel.DenseSemanticVectorSpace)
 	emb := Embedding{
 		EmbeddingRef: embeddingRef(doc.FinalURL, vectorSpace, intel.DenseEmbeddingSource),
@@ -71,17 +54,102 @@ func (s Service) Observe(ctx context.Context, obs Observation) error {
 		Model:        vectorSpace,
 		Backend:      intel.DenseEmbeddingSource,
 		InputText:    input,
-		Dimension:    len(vectors[0]),
 		CreatedAt:    observedAt,
 		UpdatedAt:    observedAt,
 	}
-	if err := s.store.UpsertEmbedding(ctx, emb, vectors[0]); err != nil {
+	vector, reused, err := s.embeddingVector(ctx, emb, input, obs.ForceEmbeddingRefresh)
+	if err != nil {
 		return err
 	}
-	if err := s.store.UpsertSemanticFamilyEvidence(ctx, doc, vectors[0], vectorSpace); err != nil {
+	emb.Dimension = len(vector)
+	if err := s.store.UpsertDocument(ctx, doc); err != nil {
+		return err
+	}
+	edges := buildEdges(doc.FinalURL, obs.ResultPack.Links, obs.TraceID, observedAt)
+	if err := s.store.UpsertEdges(ctx, edges); err != nil {
+		return err
+	}
+	if !reused {
+		if err := s.store.UpsertEmbedding(ctx, emb, vector); err != nil {
+			return err
+		}
+	}
+	if err := s.store.UpsertSemanticFamilyEvidence(ctx, doc, vector, vectorSpace); err != nil {
 		return err
 	}
 	return s.store.RefreshTopicNodes(ctx, doc, vectorSpace)
+}
+
+func (s Service) embeddingVector(ctx context.Context, emb Embedding, input string, force bool) ([]float32, bool, error) {
+	if !force {
+		if vector, ok, err := s.store.ReusableEmbeddingVector(ctx, emb); err != nil || ok {
+			return vector, ok, err
+		}
+	}
+	vectors, err := s.embedder.Embed(ctx, []string{input})
+	if err != nil {
+		return nil, false, err
+	}
+	if len(vectors) == 0 {
+		return nil, false, fmt.Errorf("memory embedding endpoint returned no vectors")
+	}
+	if len(vectors[0]) == 0 {
+		return nil, false, fmt.Errorf("memory embedding endpoint returned an empty vector")
+	}
+	return vectors[0], false, nil
+}
+
+func (s Service) RefreshEmbeddings(ctx context.Context, force bool) (EmbeddingRefreshStats, error) {
+	if s.store == nil {
+		return EmbeddingRefreshStats{}, fmt.Errorf("memory store is required")
+	}
+	if s.embedder == nil {
+		return EmbeddingRefreshStats{}, fmt.Errorf("memory embedder is required")
+	}
+	docs, err := s.store.DocumentsForEmbeddingRefresh(ctx)
+	if err != nil {
+		return EmbeddingRefreshStats{}, err
+	}
+	stats := EmbeddingRefreshStats{DocumentCount: len(docs)}
+	vectorSpace := firstNonEmpty(s.embedder.ModelID(), intel.DenseSemanticVectorSpace)
+	now := s.now().UTC()
+	for _, doc := range docs {
+		input := buildEmbeddingInput(doc)
+		docURL := firstNonEmpty(doc.FinalURL, doc.URL)
+		emb := Embedding{
+			EmbeddingRef: embeddingRef(docURL, vectorSpace, intel.DenseEmbeddingSource),
+			DocumentURL:  doc.URL,
+			Model:        vectorSpace,
+			Backend:      intel.DenseEmbeddingSource,
+			InputText:    input,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		vector, reused, err := s.embeddingVector(ctx, emb, input, force)
+		if err != nil {
+			stats.FailedCount++
+			return stats, err
+		}
+		if reused {
+			stats.ReusedCount++
+		} else {
+			emb.Dimension = len(vector)
+			if err := s.store.UpsertEmbedding(ctx, emb, vector); err != nil {
+				stats.FailedCount++
+				return stats, err
+			}
+			stats.EmbeddedCount++
+		}
+		if err := s.store.UpsertSemanticFamilyEvidence(ctx, doc, vector, vectorSpace); err != nil {
+			stats.FailedCount++
+			return stats, err
+		}
+		if err := s.store.RefreshTopicNodes(ctx, doc, vectorSpace); err != nil {
+			stats.FailedCount++
+			return stats, err
+		}
+	}
+	return stats, nil
 }
 
 func (s Service) Search(ctx context.Context, goal string, opts SearchOptions) ([]Candidate, error) {

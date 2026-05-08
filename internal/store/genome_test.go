@@ -19,7 +19,6 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 		FetchRetryProfile: "hardened",
 		FetchMode:         "http",
 		NoiseLevel:        "medium",
-		PageType:          "docs",
 	})
 	if err != nil {
 		t.Fatalf("observe genome: %v", err)
@@ -38,15 +37,12 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load genome: %v", err)
 	}
-	if loaded.LastPageType != "docs" {
-		t.Fatalf("expected docs page type, got %q", loaded.LastPageType)
-	}
 	if loaded.FetchProfile != "browser_like" || loaded.FetchRetryProfile != "hardened" {
 		t.Fatalf("expected fetch profiles persisted, got %+v", loaded)
 	}
 }
 
-func TestGenomeStoreDerivesAggressiveForumAndRenderHints(t *testing.T) {
+func TestGenomeStoreDerivesAggressiveNoiseAndRenderHints(t *testing.T) {
 	root := t.TempDir()
 	store := NewGenomeStore(root)
 	store.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
@@ -57,13 +53,12 @@ func TestGenomeStoreDerivesAggressiveForumAndRenderHints(t *testing.T) {
 		PreferredProfile: "tiny",
 		RenderNeeded:     true,
 		NoiseLevel:       "high",
-		PageType:         "forum",
 	})
 	if err != nil {
 		t.Fatalf("observe genome: %v", err)
 	}
-	if genome.PruningProfile != "forum" {
-		t.Fatalf("expected forum pruning profile, got %q", genome.PruningProfile)
+	if genome.PruningProfile != "aggressive" {
+		t.Fatalf("expected aggressive pruning profile, got %q", genome.PruningProfile)
 	}
 	if !genome.RenderNeeded {
 		t.Fatal("expected render hint to be persisted")

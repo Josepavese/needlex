@@ -161,7 +161,7 @@ func TestObserveAnalyticsReadLogsPersistenceFailure(t *testing.T) {
 	runner.observeAnalyticsRead(config.Defaults(), "cli", coreservice.ReadRequest{
 		URL:     "https://example.com",
 		Profile: "standard",
-	}, fakeResponse())
+	}, fakeResponse(), analytics.EmbeddingCacheCounters{})
 
 	events, err := runner.runtimeLogger().Tail(1)
 	if err != nil {

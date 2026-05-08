@@ -24,26 +24,27 @@ import (
 )
 
 type doctorReport struct {
-	Version         string                 `json:"version"`
-	GOOS            string                 `json:"goos"`
-	GOARCH          string                 `json:"goarch"`
-	ExecutablePath  string                 `json:"executable_path,omitempty"`
-	PathCommand     string                 `json:"path_command,omitempty"`
-	NeedlexHomeEnv  string                 `json:"needlex_home_env,omitempty"`
-	StateRoot       string                 `json:"state_root"`
-	AnalyticsDBPath string                 `json:"analytics_db_path"`
-	DiscoveryDBPath string                 `json:"discovery_db_path"`
-	LogsDir         string                 `json:"logs_dir"`
-	RuntimeLogPath  string                 `json:"runtime_log_path"`
-	ConfigPath      string                 `json:"config_path"`
-	StorePaths      map[string]string      `json:"store_paths"`
-	Semantic        doctorSemantic         `json:"semantic"`
-	AnalyticsStats  analytics.Stats        `json:"analytics_stats,omitempty"`
-	MemoryStats     memory.Stats           `json:"memory_stats,omitempty"`
-	LogStats        observability.LogStats `json:"log_stats,omitempty"`
-	Diagnostics     doctorDiagnostics      `json:"diagnostics,omitempty"`
-	MCPProcesses    []doctorMCPProcess     `json:"mcp_processes,omitempty"`
-	Warnings        []string               `json:"warnings,omitempty"`
+	Version         string                    `json:"version"`
+	GOOS            string                    `json:"goos"`
+	GOARCH          string                    `json:"goarch"`
+	ExecutablePath  string                    `json:"executable_path,omitempty"`
+	PathCommand     string                    `json:"path_command,omitempty"`
+	NeedlexHomeEnv  string                    `json:"needlex_home_env,omitempty"`
+	StateRoot       string                    `json:"state_root"`
+	AnalyticsDBPath string                    `json:"analytics_db_path"`
+	DiscoveryDBPath string                    `json:"discovery_db_path"`
+	LogsDir         string                    `json:"logs_dir"`
+	RuntimeLogPath  string                    `json:"runtime_log_path"`
+	ConfigPath      string                    `json:"config_path"`
+	StorePaths      map[string]string         `json:"store_paths"`
+	Semantic        doctorSemantic            `json:"semantic"`
+	EmbeddingCache  intel.EmbeddingCacheStats `json:"embedding_cache"`
+	AnalyticsStats  analytics.Stats           `json:"analytics_stats,omitempty"`
+	MemoryStats     memory.Stats              `json:"memory_stats,omitempty"`
+	LogStats        observability.LogStats    `json:"log_stats,omitempty"`
+	Diagnostics     doctorDiagnostics         `json:"diagnostics,omitempty"`
+	MCPProcesses    []doctorMCPProcess        `json:"mcp_processes,omitempty"`
+	Warnings        []string                  `json:"warnings,omitempty"`
 }
 
 type doctorDiagnostics struct {
@@ -132,6 +133,7 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 		ConfigPath:      effectiveConfigPath(configPath),
 		StorePaths:      layout.Paths(),
 		Semantic:        probeDoctorSemantic(context.Background(), cfg),
+		EmbeddingCache:  doctorEmbeddingCache(cfg, layout),
 		Diagnostics:     diagnostics,
 		MCPProcesses:    processes,
 	}
@@ -176,6 +178,7 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 	fmt.Fprintf(w, "Runtime Log: %s\n", report.RuntimeLogPath)
 	fmt.Fprintf(w, "Config: %s\n", report.ConfigPath)
 	fmt.Fprintf(w, "Semantic: ready=%t provider=%s vector_space=%s endpoint=%s\n", report.Semantic.Ready, report.Semantic.ProviderModel, report.Semantic.VectorSpace, report.Semantic.EmbeddingURL)
+	fmt.Fprintf(w, "Embedding Cache: enabled=%t files=%d negative=%d bytes=%d dir=%s\n", report.EmbeddingCache.Enabled, report.EmbeddingCache.PositiveFiles, report.EmbeddingCache.NegativeFiles, report.EmbeddingCache.Bytes, report.EmbeddingCache.Dir)
 	if report.Semantic.Error != "" {
 		fmt.Fprintf(w, "Semantic Error: %s\n", report.Semantic.Error)
 	}
@@ -207,6 +210,11 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 			fmt.Fprintf(w, "  - %s\n", warning)
 		}
 	}
+}
+
+func doctorEmbeddingCache(cfg config.Config, layout platform.StateLayout) intel.EmbeddingCacheStats {
+	policy := intel.EmbeddingCachePolicyFromConfigEnv(cfg.Semantic.EmbeddingURL, layout.EmbeddingCacheDir, cfg.Semantic.EmbeddingCache)
+	return intel.EmbeddingCacheStatsForDir(policy.Dir, policy)
 }
 
 func probeDoctorSemantic(ctx context.Context, cfg config.Config) doctorSemantic {

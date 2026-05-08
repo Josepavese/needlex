@@ -9,15 +9,11 @@ import (
 )
 
 const (
-	ReasonAmbiguityTriggered   = "NX_AMBIGUITY_TRIGGERED"
-	ReasonCoverageTriggered    = "NX_COVERAGE_TRIGGERED"
-	ReasonDomainForceLane      = "NX_DOMAIN_FORCE_LANE"
-	ReasonEmbeddedWorthiness   = "NX_EMBEDDED_WORTHINESS_TRIGGERED"
-	ReasonExtractorTriggered   = "NX_EXTRACTOR_TRIGGERED"
-	ReasonFormatterTriggered   = "NX_FORMATTER_TRIGGERED"
-	ReasonDriftTriggered       = "NX_DRIFT_TRIGGERED"
-	ReasonGraphTriggered       = "NX_GRAPH_TRIGGERED"
-	ReasonCompressionTriggered = "NX_COMPRESSION_TRIGGERED"
+	ReasonAmbiguityTriggered = "NX_AMBIGUITY_TRIGGERED"
+	ReasonCoverageTriggered  = "NX_COVERAGE_TRIGGERED"
+	ReasonDomainForceLane    = "NX_DOMAIN_FORCE_LANE"
+	ReasonExtractorTriggered = "NX_EXTRACTOR_TRIGGERED"
+	ReasonFormatterTriggered = "NX_FORMATTER_TRIGGERED"
 )
 
 type Input struct {
@@ -47,7 +43,6 @@ type Hints struct {
 }
 
 type Summary struct {
-	PageType        string
 	Difficulty      string
 	NoiseLevel      string
 	MaxLane         int
@@ -66,7 +61,6 @@ func New(cfg config.Config) Analyzer {
 func (a Analyzer) Analyze(inputs []Input, hints Hints) Summary {
 	decisions, maxLane, escalations := a.analyzeInputs(inputs, hints)
 	return Summary{
-		PageType:        classifyPageType(inputs),
 		Difficulty:      classifyDifficulty(decisions),
 		NoiseLevel:      classifyNoise(inputs),
 		MaxLane:         maxLane,
@@ -203,22 +197,6 @@ func buildRiskFlags(input Input, coverageLoss, ambiguity float64) []string {
 		flags = append(flags, "short_segment")
 	}
 	return flags
-}
-
-func classifyPageType(inputs []Input) string {
-	joined := ""
-	for _, input := range inputs {
-		joined += " " + strings.Join(input.HeadingPath, " ") + " " + input.Text
-	}
-	haystack := strings.ToLower(joined)
-	switch {
-	case strings.Contains(haystack, "forum") || strings.Contains(haystack, "thread"):
-		return "forum"
-	case strings.Contains(haystack, "api") || strings.Contains(haystack, "docs"):
-		return "docs"
-	default:
-		return "article"
-	}
 }
 
 func classifyDifficulty(decisions map[string]Decision) string {

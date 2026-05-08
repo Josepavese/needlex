@@ -238,16 +238,28 @@
     },
     {
       "name": "web_prune",
-      "description": "Prune local traces, proofs, fingerprints, and genome files.",
+      "description": "Operator maintenance. Prune local traces/proofs/fingerprints/genome files, or set embedding_cache=true to dry-run/remove disposable PAL embedding cache files.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [
           {
             "older_than_hours": 24
+          },
+          {
+            "dry_run": true,
+            "embedding_cache": true
           }
         ],
         "properties": {
           "all": {
+            "type": "boolean"
+          },
+          "dry_run": {
+            "description": "When used with embedding_cache=true, report matching/reclaimable files without deleting them.",
+            "type": "boolean"
+          },
+          "embedding_cache": {
+            "description": "When true, target only PAL embedding cache files under NEEDLEX_HOME/data/embeddings/cache.",
             "type": "boolean"
           },
           "older_than_hours": {
@@ -259,7 +271,7 @@
     },
     {
       "name": "memory",
-      "description": "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state.",
+      "description": "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state and can force semantic re-embedding.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [
@@ -299,6 +311,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "force_embeddings": {
+            "description": "For action=rebuild_index only: recompute memory embeddings before rebuilding acceleration state.",
+            "type": "boolean"
           },
           "in_dir": {
             "description": "Source directory for action=import.",

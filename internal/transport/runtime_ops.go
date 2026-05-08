@@ -13,6 +13,7 @@ import (
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/store"
 )
@@ -21,6 +22,7 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 	req = coreservice.PrepareCrawlRequestWithLocalState(r.storeRoot, req)
 
 	startedAt := time.Now().UTC()
+	cacheStart := intel.SnapshotEmbeddingCacheCounters()
 	ctx, cancel := runtimeOperationContext(cfg, "crawl", req.MaxPages)
 	defer cancel()
 	resp, err := r.callCrawl(ctx, cfg, req)
@@ -58,7 +60,7 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 			SourceKind:   "crawl",
 		}))
 	}
-	r.observeAnalyticsCrawl(cfg, surface, req, resp, storedRuns)
+	r.observeAnalyticsCrawl(cfg, surface, req, resp, storedRuns, analyticsEmbeddingCacheDelta(cacheStart))
 	r.observeRuntimeCrawlDiagnostics(surface, req, resp, storedRuns)
 	coreservice.ObserveCrawlResponseWithLocalState(r.storeRoot, req, resp)
 
@@ -69,6 +71,7 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 	req = coreservice.PrepareReadRequestWithLocalState(r.storeRoot, req)
 
 	startedAt := time.Now().UTC()
+	cacheStart := intel.SnapshotEmbeddingCacheCounters()
 	ctx, cancel := runtimeOperationContext(cfg, "read", 1)
 	defer cancel()
 	resp, err := r.callRead(ctx, cfg, req)
@@ -110,7 +113,7 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 		TraceID:      resp.Trace.TraceID,
 		SourceKind:   "read",
 	}))
-	r.observeAnalyticsRead(cfg, surface, req, resp)
+	r.observeAnalyticsRead(cfg, surface, req, resp, analyticsEmbeddingCacheDelta(cacheStart))
 	r.observeRuntimeReadDiagnostics(surface, req, resp)
 
 	return resp, artifactPaths{
@@ -124,6 +127,7 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 	req = coreservice.PrepareQueryRequestWithLocalState(r.storeRoot, req, cfg, r.semanticAligner(cfg))
 	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(r.storeRoot)
 	startedAt := time.Now().UTC()
+	cacheStart := intel.SnapshotEmbeddingCacheCounters()
 	ctx, cancel := runtimeOperationContext(cfg, "query", 1)
 	defer cancel()
 	resp, err := r.callQuery(ctx, cfg, req)
@@ -171,7 +175,7 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 		LocalityHints: localityHints,
 		CategoryHints: categoryHints,
 	}))
-	r.observeAnalyticsQuery(cfg, surface, req, resp)
+	r.observeAnalyticsQuery(cfg, surface, req, resp, analyticsEmbeddingCacheDelta(cacheStart))
 	r.observeRuntimeQueryDiagnostics(surface, req, resp)
 
 	return resp, artifactPaths{
@@ -185,7 +189,11 @@ func (r Runner) semanticAligner(cfg config.Config) intel.SemanticAligner {
 	if r.newSemanticAligner != nil {
 		return r.newSemanticAligner(cfg)
 	}
-	return intel.NewSemanticAligner(cfg, nil)
+	return intel.NewSemanticAlignerWithCacheDir(cfg, nil, platform.NewStateLayout(r.storeRoot).EmbeddingCacheDir)
+}
+
+func (r Runner) textEmbedder(cfg config.Config) intel.TextEmbedder {
+	return intel.NewTextEmbedderWithCacheDir(cfg, nil, platform.NewStateLayout(r.storeRoot).EmbeddingCacheDir)
 }
 
 func (r Runner) callRead(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
@@ -226,7 +234,7 @@ func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Obs
 		return
 	}
 	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
-	service := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
+	service := memory.NewService(cfg.Memory, store, r.textEmbedder(cfg))
 	ctx, cancel := persistenceOperationContext(cfg)
 	defer cancel()
 	if err := service.Observe(ctx, observation); err != nil {
@@ -239,12 +247,12 @@ func (r Runner) observeDiscoveryMemory(cfg config.Config, observation memory.Obs
 	}
 }
 
-func (r Runner) observeAnalyticsRead(cfg config.Config, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse) {
+func (r Runner) observeAnalyticsRead(cfg config.Config, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse, cacheCounters analytics.EmbeddingCacheCounters) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactReadResponse(resp))
 	ctx, cancel := persistenceOperationContext(cfg)
 	defer cancel()
-	if err := analytics.ObserveRead(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats); err != nil {
+	if err := analytics.ObserveRead(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats, cacheCounters); err != nil {
 		r.logRuntimeWarning("analytics", "analytics.observe_failed", "analytics read observation failed", map[string]any{
 			"operation": "read",
 			"surface":   surface,
@@ -255,12 +263,12 @@ func (r Runner) observeAnalyticsRead(cfg config.Config, surface string, req core
 	}
 }
 
-func (r Runner) observeAnalyticsQuery(cfg config.Config, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse) {
+func (r Runner) observeAnalyticsQuery(cfg config.Config, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse, cacheCounters analytics.EmbeddingCacheCounters) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactQueryResponse(resp))
 	ctx, cancel := persistenceOperationContext(cfg)
 	defer cancel()
-	if err := analytics.ObserveQuery(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats); err != nil {
+	if err := analytics.ObserveQuery(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats, cacheCounters); err != nil {
 		r.logRuntimeWarning("analytics", "analytics.observe_failed", "analytics query observation failed", map[string]any{
 			"operation":  "query",
 			"surface":    surface,
@@ -315,12 +323,12 @@ func (r Runner) observeRuntimeQueryDiagnostics(surface string, req coreservice.Q
 	})
 }
 
-func (r Runner) observeAnalyticsCrawl(cfg config.Config, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int) {
+func (r Runner) observeAnalyticsCrawl(cfg config.Config, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, storedRuns int, cacheCounters analytics.EmbeddingCacheCounters) {
 	stats := r.analyticsMemoryStats(cfg)
 	packetBytes := compactJSONSize(compactCrawlResponse(resp, crawlArtifacts{StoredRuns: storedRuns}))
 	ctx, cancel := persistenceOperationContext(cfg)
 	defer cancel()
-	if err := analytics.ObserveCrawl(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats); err != nil {
+	if err := analytics.ObserveCrawl(ctx, analytics.NewSQLiteStore(r.storeRoot), surface, req, resp, packetBytes, stats, cacheCounters); err != nil {
 		r.logRuntimeWarning("analytics", "analytics.observe_failed", "analytics crawl observation failed", map[string]any{
 			"operation": "crawl",
 			"surface":   surface,
@@ -356,6 +364,19 @@ func (r Runner) observeAnalyticsFailure(cfg config.Config, failure analytics.Fai
 			"surface":   failure.Surface,
 			"error":     err.Error(),
 		})
+	}
+}
+
+func analyticsEmbeddingCacheDelta(before intel.EmbeddingCacheCounters) analytics.EmbeddingCacheCounters {
+	delta := intel.DiffEmbeddingCacheCounters(before, intel.SnapshotEmbeddingCacheCounters())
+	return analytics.EmbeddingCacheCounters{
+		Hits:         delta.Hits,
+		Misses:       delta.Misses,
+		Writes:       delta.Writes,
+		NegativeHits: delta.NegativeHits,
+		StaleHits:    delta.StaleHits,
+		Evictions:    delta.Evictions,
+		EvictedBytes: delta.EvictedBytes,
 	}
 }
 

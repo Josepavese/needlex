@@ -17,8 +17,14 @@ func TestNewStateLayoutBuildsCanonicalPaths(t *testing.T) {
 	if layout.DiscoveryDB != filepath.Join(root, DefaultDiscoveryDBRelativePath) {
 		t.Fatalf("unexpected discovery db: %q", layout.DiscoveryDB)
 	}
+	if layout.EmbeddingCacheDir != filepath.Join(root, "data", "embeddings", "cache") {
+		t.Fatalf("unexpected embedding cache dir: %q", layout.EmbeddingCacheDir)
+	}
 	if got := layout.Paths()["proofs"]; got != filepath.Join(root, "proofs") {
 		t.Fatalf("unexpected proofs path: %q", got)
+	}
+	if got := layout.Paths()["embedding_cache"]; got != layout.EmbeddingCacheDir {
+		t.Fatalf("unexpected embedding cache path: %q", got)
 	}
 	if got := layout.Paths()["logs"]; got != filepath.Join(root, "logs") {
 		t.Fatalf("unexpected logs path: %q", got)

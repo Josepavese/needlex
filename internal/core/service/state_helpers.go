@@ -69,6 +69,5 @@ func genomeObservation(document core.Document, trace proof.RunTrace, pack core.R
 		RenderNeeded:      renderHint,
 		FetchMode:         document.FetchMode,
 		NoiseLevel:        packMetadata(trace, "noise_level"),
-		PageType:          packMetadata(trace, "page_type"),
 	}
 }

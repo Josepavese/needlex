@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func (c Config) Validate() error {
@@ -126,12 +127,35 @@ func validateSemantic(semantic SemanticConfig) []error {
 	if semantic.MaxCandidates <= 0 {
 		errs = append(errs, fmt.Errorf("semantic.max_candidates must be > 0"))
 	}
+	errs = append(errs, validateSemanticEmbeddingCache(semantic.EmbeddingCache)...)
 	for field, value := range map[string]float64{
 		"semantic.similarity_threshold": semantic.SimilarityThreshold,
 		"semantic.dominance_delta":      semantic.DominanceDelta,
 	} {
 		if err := validateRatio(field, value); err != nil {
 			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func validateSemanticEmbeddingCache(cache SemanticEmbeddingCacheConfig) []error {
+	errs := []error{}
+	if cache.MaxEntries < 0 {
+		errs = append(errs, fmt.Errorf("semantic.embedding_cache.max_entries must be >= 0"))
+	}
+	if cache.MaxBytes < 0 {
+		errs = append(errs, fmt.Errorf("semantic.embedding_cache.max_bytes must be >= 0"))
+	}
+	for field, value := range map[string]string{
+		"semantic.embedding_cache.ttl":          cache.TTL,
+		"semantic.embedding_cache.negative_ttl": cache.NegativeTTL,
+	} {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		if _, err := time.ParseDuration(strings.TrimSpace(value)); err != nil {
+			errs = append(errs, fmt.Errorf("%s must be a Go duration such as 720h or 2m", field))
 		}
 	}
 	return errs

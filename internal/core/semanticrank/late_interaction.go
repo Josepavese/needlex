@@ -11,16 +11,12 @@ import (
 	"github.com/josepavese/needlex/internal/intel"
 )
 
-const (
-	ReasonLateInteraction       = "semantic_late_interaction"
-	ReasonLateInteractionShadow = "semantic_late_interaction_shadow"
-)
+const ReasonLateInteraction = "semantic_late_interaction"
 
 type Mode string
 
 const (
 	ModeOff    Mode = "off"
-	ModeShadow Mode = "shadow"
 	ModeActive Mode = "active"
 )
 
@@ -45,7 +41,6 @@ type Score struct {
 	Confidence float64
 	SpanCount  int
 	Boost      float64
-	Shadow     bool
 }
 
 func DefaultConfig() Config {
@@ -93,10 +88,6 @@ func (r Reranker) Rerank(ctx context.Context, goal string, candidates []discover
 			"late_interaction_span_count": strconv.Itoa(score.SpanCount),
 			"late_interaction_boost":      formatFloat(score.Boost),
 		})
-		if cfg.Mode == ModeShadow {
-			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, ReasonLateInteractionShadow)
-			continue
-		}
 		if score.Boost == 0 {
 			continue
 		}
@@ -131,7 +122,7 @@ func normalizeConfig(cfg Config) Config {
 		cfg.ReasonName = def.ReasonName
 	}
 	switch cfg.Mode {
-	case ModeOff, ModeShadow, ModeActive:
+	case ModeOff, ModeActive:
 	default:
 		cfg.Mode = def.Mode
 	}
@@ -179,7 +170,7 @@ func semanticSpans(candidate discoverycore.Candidate) []semanticSpan {
 	meta := candidate.Metadata
 	spans := []semanticSpan{
 		{Kind: "context", Text: discoverycore.JoinNonEmpty(meta["source_context"], meta["page_title"], strings.TrimSpace(candidate.Label))},
-		{Kind: "identity", Text: discoverycore.JoinNonEmpty(meta["host_root_title"], meta["page_title"], strings.TrimSpace(candidate.Label))},
+		{Kind: "identity", Text: discoverycore.JoinNonEmpty(meta["host_root_title"], meta["host_root_context"], meta["page_title"], strings.TrimSpace(candidate.Label))},
 	}
 	if role := strings.TrimSpace(meta["semantic_role"]); role != "" {
 		spans = append(spans, semanticSpan{Kind: "role", Text: semanticRoleText(role)})

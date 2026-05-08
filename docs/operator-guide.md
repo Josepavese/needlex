@@ -279,8 +279,18 @@ Important paths:
 6. `<state-root>/discovery/discovery.db`
 7. `<state-root>/discovery/providers/`
 8. `<state-root>/logs/needlex.jsonl`
+9. `<state-root>/data/embeddings/cache/`
 
-This is local-first product state, not disposable cache.
+Most paths are local-first product state. `<state-root>/data/embeddings/cache/`
+is disposable generated embedding cache; deleting it must not corrupt traces,
+analytics, or discovery memory.
+
+Embedding cache maintenance:
+1. inspect cache health with `needlex doctor`
+2. dry-run cleanup with `needlex prune --embedding-cache --dry-run --json`
+3. remove reclaimable cache files with `needlex prune --embedding-cache --json`
+4. tune policy in the PAL config under `semantic.embedding_cache`
+5. force memory re-embedding with `needlex memory rebuild-index --force-embeddings`
 
 ## Runtime Logs
 

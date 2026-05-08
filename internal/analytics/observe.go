@@ -29,17 +29,17 @@ type FailureObservation struct {
 	MemoryStats   memory.Stats
 }
 
-func ObserveRead(ctx context.Context, store SQLiteStore, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse, packetBytes int, memoryStats memory.Stats) error {
-	run, stages := buildRunRecord("read", surface, strings.TrimSpace(req.Objective), "", req.Profile, "", false, "", resp.Trace, packetBytes, resp.Document.FinalURL, "", resp.ResultPack, len(resp.AgentContext.Candidates), memoryStats)
+func ObserveRead(ctx context.Context, store SQLiteStore, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
+	run, stages := buildRunRecord("read", surface, strings.TrimSpace(req.Objective), "", req.Profile, "", false, "", resp.Trace, packetBytes, resp.Document.FinalURL, "", resp.ResultPack, len(resp.AgentContext.Candidates), memoryStats, cacheCounters)
 	return store.AppendRun(ctx, run, stages)
 }
 
-func ObserveQuery(ctx context.Context, store SQLiteStore, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse, packetBytes int, memoryStats memory.Stats) error {
-	run, stages := buildRunRecord("query", surface, req.Goal, req.SeedURL, req.Profile, resp.Plan.DiscoveryMode, strings.TrimSpace(req.SeedURL) != "", resp.Plan.DiscoveryProvider, resp.Trace, packetBytes, resp.Document.FinalURL, resp.Plan.SelectedURL, resp.ResultPack, len(resp.AgentContext.Candidates), memoryStats)
+func ObserveQuery(ctx context.Context, store SQLiteStore, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
+	run, stages := buildRunRecord("query", surface, req.Goal, req.SeedURL, req.Profile, resp.Plan.DiscoveryMode, strings.TrimSpace(req.SeedURL) != "", resp.Plan.DiscoveryProvider, resp.Trace, packetBytes, resp.Document.FinalURL, resp.Plan.SelectedURL, resp.ResultPack, len(resp.AgentContext.Candidates), memoryStats, cacheCounters)
 	return store.AppendRun(ctx, run, stages)
 }
 
-func ObserveCrawl(ctx context.Context, store SQLiteStore, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, packetBytes int, memoryStats memory.Stats) error {
+func ObserveCrawl(ctx context.Context, store SQLiteStore, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
 	startedAt, completedAt := crawlWindow(resp)
 	trace := proof.RunTrace{
 		RunID:      prefixedHash("analytics", req.SeedURL, "crawl"),
@@ -83,7 +83,7 @@ func ObserveCrawl(ctx context.Context, store SQLiteStore, surface string, req co
 		MemoryEmbeddingCount: memoryStats.EmbeddingCount,
 		MemoryTopicNodeCount: memoryStats.TopicNodeCount,
 	}
-	return store.AppendRun(ctx, run, nil)
+	return store.AppendRun(ctx, run, embeddingCacheStageEvents(run.RunID, startedAt, completedAt, cacheCounters))
 }
 
 func ObserveFailure(ctx context.Context, store SQLiteStore, obs FailureObservation) error {
@@ -164,10 +164,11 @@ func crawlWindow(resp coreservice.CrawlResponse) (time.Time, time.Time) {
 	return startedAt, completedAt
 }
 
-func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode string, seedPresent bool, provider string, trace proof.RunTrace, packetBytes int, documentURL, selectedURL string, pack core.ResultPack, candidateCount int, memoryStats memory.Stats) (RunRecord, []StageEvent) {
+func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode string, seedPresent bool, provider string, trace proof.RunTrace, packetBytes int, documentURL, selectedURL string, pack core.ResultPack, candidateCount int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) (RunRecord, []StageEvent) {
 	rawFetchChars, rawFetchBytes := traceMetrics(trace, "acquire", "raw_chars", "raw_bytes")
 	reducedChars, reducedNodes := traceMetrics(trace, "reduce", "reduced_chars", "reduced_nodes")
 	stages := stageEventsFromTrace(trace)
+	stages = append(stages, embeddingCacheStageEvents(trace.RunID, trace.StartedAt, trace.FinishedAt, cacheCounters)...)
 	selected := strings.TrimSpace(documentURL)
 	if strings.TrimSpace(selectedURL) != "" {
 		selected = strings.TrimSpace(selectedURL)
@@ -213,6 +214,42 @@ func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode st
 		MemoryEmbeddingCount: memoryStats.EmbeddingCount,
 		MemoryTopicNodeCount: memoryStats.TopicNodeCount,
 	}, stages
+}
+
+func embeddingCacheStageEvents(runID string, startedAt, completedAt time.Time, counters EmbeddingCacheCounters) []StageEvent {
+	if counters.Hits == 0 &&
+		counters.Misses == 0 &&
+		counters.Writes == 0 &&
+		counters.NegativeHits == 0 &&
+		counters.StaleHits == 0 &&
+		counters.Evictions == 0 &&
+		counters.EvictedBytes == 0 {
+		return nil
+	}
+	if completedAt.IsZero() {
+		completedAt = time.Now().UTC()
+	}
+	if startedAt.IsZero() || startedAt.After(completedAt) {
+		startedAt = completedAt
+	}
+	return []StageEvent{{
+		RunID:       runID,
+		Stage:       "embedding.cache",
+		StartedAt:   startedAt,
+		CompletedAt: completedAt,
+		LatencyMS:   completedAt.Sub(startedAt).Milliseconds(),
+		ItemCount:   int(counters.Hits + counters.Misses + counters.Writes),
+		Status:      "completed",
+		Metadata: map[string]string{
+			"hits":          strconv.FormatUint(counters.Hits, 10),
+			"misses":        strconv.FormatUint(counters.Misses, 10),
+			"writes":        strconv.FormatUint(counters.Writes, 10),
+			"negative_hits": strconv.FormatUint(counters.NegativeHits, 10),
+			"stale_hits":    strconv.FormatUint(counters.StaleHits, 10),
+			"evictions":     strconv.FormatUint(counters.Evictions, 10),
+			"evicted_bytes": strconv.FormatUint(counters.EvictedBytes, 10),
+		},
+	}}
 }
 
 func stageEventsFromTrace(trace proof.RunTrace) []StageEvent {

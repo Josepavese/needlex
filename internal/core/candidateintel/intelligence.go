@@ -72,6 +72,7 @@ func Apply(ctx context.Context, semantic intel.SemanticAligner, goal string, can
 			ID: annotated[i].URL,
 			Text: discoverycore.JoinNonEmpty(
 				annotated[i].Metadata["host_root_title"],
+				annotated[i].Metadata["host_root_context"],
 				annotated[i].Metadata["page_title"],
 				annotated[i].Label,
 			),
@@ -137,7 +138,7 @@ func scoreCandidateIntelligence(
 		Centrality:     cluster.Centrality[idx],
 		Role:           roleEvidence[candidate.URL],
 	}
-	card.Boost = min(card.Similarity*0.28, 0.20)
+	card.Boost = min(card.Similarity*0.20, 0.14)
 	card.Boost += clusterIntelligenceBoost(cluster, card.Centrality)
 	card.Boost += resourceClassIntelligenceBoost(candidate.Metadata["resource_class"])
 	card.Boost += card.Role.Boost
@@ -255,6 +256,9 @@ func shouldReviewCandidateWindow(candidates []discoverycore.Candidate) bool {
 		if hasSemanticProvenance(candidates[i]) && !topStrong && candidates[0].Score-candidates[i].Score <= 1.25 {
 			return true
 		}
+		if hasSemanticProvenance(candidates[i]) && topStrong && candidates[0].Score-candidates[i].Score <= 1.40 {
+			return true
+		}
 	}
 	return false
 }
@@ -277,11 +281,11 @@ func hasSemanticProvenance(candidate discoverycore.Candidate) bool {
 func candidateSemanticText(candidate discoverycore.Candidate) string {
 	return discoverycore.JoinNonEmpty(
 		candidate.Metadata["host_root_title"],
+		candidate.Metadata["host_root_context"],
 		candidate.Metadata["page_title"],
 		candidate.Metadata["source_context"],
 		candidate.Metadata["web_ir_context"],
 		strings.TrimSpace(candidate.Label),
-		discoverycore.URLIdentityText(candidate.URL),
 		candidate.Metadata["resource_class"],
 	)
 }
@@ -301,7 +305,7 @@ func semanticRoleProfiles() []semanticRoleProfile {
 		{
 			ID: roleDerivative,
 			Text: "Derivative representation of another entity: mirror, aggregator, republished copy, commentary, comparison, directory, index, review, summary, translation, curated or secondary explanation about a different source. " +
-				"Raccolta di terze parti, réplica, resumen externo, índice derivado, 非一次情報.",
+				"Documentation browser that collects references from many projects, generated knowledge base, raccolta di terze parti, réplica, resumen externo, índice derivado, 非一次情報.",
 		},
 		{
 			ID:   roleDistributionNode,
@@ -366,30 +370,54 @@ func candidateRoleScore(candidateID string, roleIntent map[string]float64, roleS
 	originIntent := max(roleIntent[roleCustodianOrigin], roleIntent[roleCustodianRecord])
 	derivativeRoleScore := max(roleScores[roleDerivative][candidateID], roleScores[roleSocialContext][candidateID])
 	derivativeIntent := max(roleIntent[roleDerivative], roleIntent[roleSocialContext])
-	distributionAlignment := roleScores[roleDistributionNode][candidateID] * roleIntent[roleDistributionNode]
+	distributionIntent := roleIntent[roleDistributionNode]
+	distributionAlignment := roleScores[roleDistributionNode][candidateID] * distributionIntent
 
 	evidence.OriginAlignment = originRoleScore * originIntent
 	evidence.DerivativeAlignment = derivativeRoleScore * derivativeIntent
-	evidence.Boost, evidence.Reasons = semanticRoleBoost(evidence, originIntent, derivativeIntent, distributionAlignment)
+	evidence.Boost, evidence.Reasons = semanticRoleBoost(evidence, originIntent, derivativeIntent, distributionIntent, distributionAlignment)
 	return evidence
 }
 
-func semanticRoleBoost(evidence candidateRoleEvidence, originIntent, derivativeIntent, distributionAlignment float64) (float64, []string) {
+func semanticRoleBoost(evidence candidateRoleEvidence, originIntent, derivativeIntent, distributionIntent, distributionAlignment float64) (float64, []string) {
 	boost := 0.0
 	reasons := []string{}
-	if evidence.OriginAlignment > 0 && evidence.OriginAlignment >= evidence.DerivativeAlignment-0.015 {
-		boost += min(evidence.OriginAlignment*0.55, 0.22)
-		reasons = append(reasons, "semantic_custodian_alignment")
+	switch evidence.Role {
+	case roleCustodianOrigin, roleCustodianRecord:
+		if evidence.OriginAlignment > 0 && evidence.OriginAlignment >= evidence.DerivativeAlignment+0.006 {
+			boost += min(evidence.OriginAlignment*1.25+originIntent*0.08, 0.46)
+			reasons = append(reasons, "semantic_custodian_alignment")
+		}
+	case roleDerivative, roleSocialContext:
+		if originIntent >= derivativeIntent-0.02 || evidence.DerivativeAlignment >= evidence.OriginAlignment {
+			boost -= min((evidence.Confidence*0.45)+(max(0, evidence.DerivativeAlignment-evidence.OriginAlignment)*1.20), 0.38)
+			reasons = append(reasons, "semantic_derivative_surface_penalty")
+		}
 	}
-	if evidence.DerivativeAlignment > evidence.OriginAlignment+0.025 && originIntent > derivativeIntent+0.015 {
+	if evidence.Role != roleCustodianOrigin && evidence.Role != roleCustodianRecord &&
+		evidence.DerivativeAlignment > evidence.OriginAlignment+0.025 && originIntent > derivativeIntent+0.015 {
 		boost -= min((evidence.DerivativeAlignment-evidence.OriginAlignment)*0.80+originIntent*0.04, 0.24)
-		reasons = append(reasons, "semantic_derivative_surface_penalty")
+		if !containsReason(reasons, "semantic_derivative_surface_penalty") {
+			reasons = append(reasons, "semantic_derivative_surface_penalty")
+		}
 	}
-	if distributionAlignment > evidence.OriginAlignment+0.025 && distributionAlignment > evidence.DerivativeAlignment {
+	if distributionAlignment > evidence.OriginAlignment+0.025 && distributionAlignment > evidence.DerivativeAlignment && distributionIntent >= originIntent-0.01 {
 		boost += min(distributionAlignment*0.35, 0.12)
 		reasons = append(reasons, "semantic_distribution_alignment")
+	} else if distributionAlignment > evidence.OriginAlignment+0.02 && originIntent > distributionIntent+0.015 {
+		boost -= min((distributionAlignment-evidence.OriginAlignment)*0.80+originIntent*0.05, 0.24)
+		reasons = append(reasons, "semantic_distribution_surface_penalty")
 	}
 	return boost, reasons
+}
+
+func containsReason(reasons []string, want string) bool {
+	for _, reason := range reasons {
+		if reason == want {
+			return true
+		}
+	}
+	return false
 }
 
 func scoreCandidateSetToGoal(ctx context.Context, semantic intel.SemanticAligner, goal string, candidates []intel.SemanticCandidate) map[string]float64 {

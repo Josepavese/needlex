@@ -38,7 +38,11 @@ type SemanticScore struct {
 }
 
 func NewSemanticAligner(cfg config.Config, client *http.Client) SemanticAligner {
-	embedder := NewTextEmbedder(cfg, client)
+	return NewSemanticAlignerWithCacheDir(cfg, client, "")
+}
+
+func NewSemanticAlignerWithCacheDir(cfg config.Config, client *http.Client, cacheDir string) SemanticAligner {
+	embedder := NewTextEmbedderWithCacheDir(cfg, client, cacheDir)
 	return &resilientSemanticAligner{
 		inner:    DenseSemanticAligner{VectorSpace: cfg.Semantic.VectorSpace, Config: cfg.Semantic, Embedder: embedder},
 		now:      time.Now,

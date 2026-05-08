@@ -16,6 +16,7 @@ import (
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/providerfusion"
 	"github.com/josepavese/needlex/internal/core/semanticcalibrate"
+	"github.com/josepavese/needlex/internal/core/semanticevidence"
 	"github.com/josepavese/needlex/internal/core/semanticrank"
 	"github.com/josepavese/needlex/internal/core/webdiscover"
 	"github.com/josepavese/needlex/internal/intel"
@@ -156,15 +157,23 @@ func (c webBootstrapCollection) NoCandidateError() error {
 func (s *Service) finalizeWebCandidates(ctx context.Context, req DiscoverWebRequest, candidates []DiscoverCandidate) []DiscoverCandidate {
 	bootstrapped := s.semanticRerankDiscoverCandidates(ctx, req.Goal, candidates)
 	expanded := s.expandAndRerankWebCandidates(ctx, req.Goal, req.UserAgent, req.DomainHints, bootstrapped, req.MaxCandidates)
+	expanded = s.applySemanticEvidenceProbe(ctx, req.Goal, expanded)
 	filtered := discoverycore.NewSet(s.semanticRerankDiscoverCandidates(ctx, req.Goal, expanded)).Sorted()
 	filtered = webdiscover.CanonicalizeCandidateFamilies(filtered)
 	filtered = webdiscover.DampenWeakProvenanceTraps(filtered)
 	filtered = webdiscover.DampenCrossFamilyMirrorRoutes(filtered)
+	filtered = webdiscover.PromoteRecoveredCanonicalOrigins(filtered)
 	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
 	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
 	filtered = s.applySemanticSelectionStack(ctx, req.Goal, filtered)
+	filtered = webdiscover.DampenWeakProvenanceTraps(filtered)
 	filtered = discoverycore.NewSet(filtered).Limited(req.MaxCandidates)
 	return s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
+}
+
+func (s *Service) applySemanticEvidenceProbe(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
+	semantic := intel.NewSemanticAligner(s.cfg, s.httpClient)
+	return semanticevidence.Reranker{Semantic: semantic, Config: semanticevidence.DefaultConfig()}.Rerank(ctx, goal, candidates)
 }
 
 func (s *Service) applySemanticSelectionStack(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
@@ -209,11 +218,10 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 		for i := 0; i < limit; i++ {
 			texts = append(texts, discoverycore.JoinNonEmpty(
 				group[i].Metadata["host_root_title"],
+				group[i].Metadata["host_root_context"],
 				group[i].Metadata["page_title"],
 				group[i].Metadata["web_ir_context"],
 				group[i].Label,
-				discoverycore.HostIdentityText(group[i].URL),
-				family,
 			))
 		}
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
@@ -439,6 +447,7 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, _ string, userAgent
 	if err != nil {
 		return hostRootIdentityProbe{}, err
 	}
+	rootContext := webdiscover.IRContext(buildWebIR(dom), 900)
 	if strings.TrimSpace(dom.Title) == "" {
 		return hostRootIdentityProbe{
 			URL: strings.TrimSpace(rawPage.FinalURL),
@@ -451,8 +460,9 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, _ string, userAgent
 			URL:   strings.TrimSpace(rawPage.FinalURL),
 			Title: strings.TrimSpace(dom.Title),
 			Metadata: map[string]string{
-				"host_root_url":   strings.TrimSpace(rawPage.FinalURL),
-				"host_root_title": strings.TrimSpace(dom.Title),
+				"host_root_url":     strings.TrimSpace(rawPage.FinalURL),
+				"host_root_title":   strings.TrimSpace(dom.Title),
+				"host_root_context": rootContext,
 			},
 		}, nil
 	}
@@ -466,8 +476,9 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, _ string, userAgent
 			"host_root_identity_probe",
 		),
 		Metadata: map[string]string{
-			"host_root_url":   strings.TrimSpace(rawPage.FinalURL),
-			"host_root_title": strings.TrimSpace(dom.Title),
+			"host_root_url":     strings.TrimSpace(rawPage.FinalURL),
+			"host_root_title":   strings.TrimSpace(dom.Title),
+			"host_root_context": rootContext,
 		},
 	}, nil
 }
@@ -503,12 +514,12 @@ func expandedRecoverySemanticCandidates(source DiscoverCandidate, ordered []Disc
 			ID: candidate.URL,
 			Text: discoverycore.JoinNonEmpty(
 				source.Metadata["host_root_title"],
+				source.Metadata["host_root_context"],
 				source.Metadata["page_title"],
 				source.Metadata["web_ir_context"],
 				source.Label,
 				candidate.Metadata["source_context"],
 				candidate.Label,
-				discoverycore.URLIdentityText(candidate.URL),
 				candidate.Metadata["resource_class"],
 			),
 		})
@@ -668,7 +679,6 @@ func (s *Service) orderEndpointCandidates(ctx context.Context, goal string, cand
 				candidate.Metadata["source_context"],
 				candidate.Metadata["page_title"],
 				candidate.Label,
-				discoverycore.URLIdentityText(candidate.URL),
 				candidate.Metadata["resource_class"],
 			),
 		})

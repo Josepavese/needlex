@@ -42,6 +42,9 @@ func ShouldEscalateRewrite(selectedURL string, candidates []discoverycore.Candid
 	if len(candidates) < 2 {
 		return !candidateSemanticallyGrounded(top)
 	}
+	if candidateSemanticallyGrounded(top) && candidateHasDiscoveryEvidence(top) {
+		return false
+	}
 	if SelectionDelta(candidates) <= 0.25 {
 		return true
 	}
@@ -123,6 +126,22 @@ func candidateSemanticallyGrounded(candidate discoverycore.Candidate) bool {
 	for _, reason := range candidate.Reason {
 		switch strings.TrimSpace(reason) {
 		case "local_memory_hit":
+			return true
+		}
+	}
+	return false
+}
+
+func candidateHasDiscoveryEvidence(candidate discoverycore.Candidate) bool {
+	for _, reason := range candidate.Reason {
+		switch strings.TrimSpace(reason) {
+		case "page_title_probe",
+			"web_ir_probe",
+			"host_root_identity_probe",
+			"semantic_evidence_probe",
+			"semantic_origin_probe",
+			"recovered_canonical_origin",
+			"local_memory_hit":
 			return true
 		}
 	}

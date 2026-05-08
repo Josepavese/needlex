@@ -46,17 +46,26 @@ type queryResponse struct {
 }
 
 type candidateDiagnostic struct {
-	URL                         string   `json:"url"`
-	Score                       float64  `json:"score"`
-	ResourceClass               string   `json:"resource_class"`
-	SemanticRole                string   `json:"semantic_role"`
-	SemanticRoleConfidence      float64  `json:"semantic_role_confidence"`
-	SemanticRoleIntent          float64  `json:"semantic_role_intent"`
-	SemanticOriginAlignment     float64  `json:"semantic_origin_alignment"`
-	SemanticDerivativeAlignment float64  `json:"semantic_derivative_alignment"`
-	ClusterID                   string   `json:"cluster_id"`
-	ClusterSize                 int      `json:"cluster_size"`
-	Reasons                     []string `json:"reasons"`
+	URL                          string   `json:"url"`
+	Score                        float64  `json:"score"`
+	ResourceClass                string   `json:"resource_class"`
+	SemanticRole                 string   `json:"semantic_role"`
+	SemanticRoleConfidence       float64  `json:"semantic_role_confidence"`
+	SemanticRoleIntent           float64  `json:"semantic_role_intent"`
+	SemanticOriginAlignment      float64  `json:"semantic_origin_alignment"`
+	SemanticDerivativeAlignment  float64  `json:"semantic_derivative_alignment"`
+	SemanticEvidenceSimilarity   float64  `json:"semantic_evidence_similarity"`
+	SemanticEvidenceBoost        float64  `json:"semantic_evidence_boost"`
+	SemanticOriginSimilarity     float64  `json:"semantic_origin_similarity"`
+	SemanticDerivativeSimilarity float64  `json:"semantic_derivative_similarity"`
+	SemanticCommunitySimilarity  float64  `json:"semantic_community_similarity"`
+	SemanticAuthorityBoost       float64  `json:"semantic_authority_boost"`
+	SemanticAuthorityPenalty     float64  `json:"semantic_authority_penalty"`
+	SemanticCommunityPenalty     float64  `json:"semantic_community_penalty"`
+	SemanticCalibrationScore     float64  `json:"semantic_calibration_score"`
+	ClusterID                    string   `json:"cluster_id"`
+	ClusterSize                  int      `json:"cluster_size"`
+	Reasons                      []string `json:"reasons"`
 }
 
 type runResult struct {
@@ -505,35 +514,12 @@ func runCase(binaryPath, configPath, profile, caseID, goal, expectedDomain strin
 	attempts := make([]runAttempt, 0, runs)
 	passCount := 0
 	runtimePassCount := 0
-	best := runResult{Profile: profile, ExpectedDomain: expectedDomain}
-	bestScore := -1
+	tracker := newRepresentativeAttemptTracker(profile, expectedDomain)
 	errorKinds := map[string]int{}
 	selectedURLCounts := map[string]int{}
 	for i := 0; i < runs; i++ {
 		attempt := runCaseOnce(binaryPath, configPath, profile, caseID, fmt.Sprintf("attempt-%d", i+1), goal, expectedDomain, timeoutMS, keepState)
-		attempts = append(attempts, runAttempt{
-			Attempt:         i + 1,
-			RuntimeOK:       attempt.RuntimeOK,
-			SelectedURL:     attempt.SelectedURL,
-			SelectedDomain:  attempt.SelectedDomain,
-			SelectedPass:    attempt.SelectedPass,
-			DiscoverySource: attempt.DiscoverySource,
-			CandidateCount:  attempt.CandidateCount,
-			SelectedRole:    attempt.SelectedRole,
-			SelectedScore:   attempt.SelectedScore,
-			ExpectedRank:    attempt.ExpectedRank,
-			ExpectedURL:     attempt.ExpectedURL,
-			ExpectedRole:    attempt.ExpectedRole,
-			ExpectedScore:   attempt.ExpectedScore,
-			DocumentFetch:   attempt.DocumentFetch,
-			RetryCount:      attempt.RetryCount,
-			RetrySleepMS:    attempt.RetrySleepMS,
-			HostPacingMS:    attempt.HostPacingMS,
-			RetryReason:     attempt.RetryReason,
-			ErrorKind:       attempt.ErrorKind,
-			LatencyMS:       attempt.LatencyMS,
-			Error:           attempt.Error,
-		})
+		attempts = append(attempts, runAttemptFromResult(i+1, attempt))
 		if attempt.SelectedPass {
 			passCount++
 		}
@@ -546,16 +532,15 @@ func runCase(binaryPath, configPath, profile, caseID, goal, expectedDomain strin
 		if attempt.SelectedURL != "" {
 			selectedURLCounts[attempt.SelectedURL]++
 		}
-		if score := boolScore(attempt); score > bestScore {
-			bestScore = score
-			best = attempt
-		}
+		tracker.Observe(attempt)
 	}
+	majorityPass := passCount*2 >= runs
+	best := tracker.Representative(majorityPass)
 	best.AttemptCount = runs
 	best.PassCount = passCount
 	best.RuntimePassCount = runtimePassCount
 	best.RuntimeOK = runtimePassCount*2 >= runs
-	best.SelectedPass = passCount*2 >= runs
+	best.SelectedPass = majorityPass
 	best.Attempts = attempts
 	if best.SelectedURL == "" {
 		best.SelectedURL = mostCommonKey(selectedURLCounts)
@@ -565,6 +550,69 @@ func runCase(binaryPath, configPath, profile, caseID, goal, expectedDomain strin
 		best.ErrorKind = mostCommonKey(errorKinds)
 	}
 	return best
+}
+
+func runAttemptFromResult(index int, result runResult) runAttempt {
+	return runAttempt{
+		Attempt:         index,
+		RuntimeOK:       result.RuntimeOK,
+		SelectedURL:     result.SelectedURL,
+		SelectedDomain:  result.SelectedDomain,
+		SelectedPass:    result.SelectedPass,
+		DiscoverySource: result.DiscoverySource,
+		CandidateCount:  result.CandidateCount,
+		SelectedRole:    result.SelectedRole,
+		SelectedScore:   result.SelectedScore,
+		ExpectedRank:    result.ExpectedRank,
+		ExpectedURL:     result.ExpectedURL,
+		ExpectedRole:    result.ExpectedRole,
+		ExpectedScore:   result.ExpectedScore,
+		DocumentFetch:   result.DocumentFetch,
+		RetryCount:      result.RetryCount,
+		RetrySleepMS:    result.RetrySleepMS,
+		HostPacingMS:    result.HostPacingMS,
+		RetryReason:     result.RetryReason,
+		ErrorKind:       result.ErrorKind,
+		LatencyMS:       result.LatencyMS,
+		Error:           result.Error,
+	}
+}
+
+type representativeAttemptTracker struct {
+	bestAny, bestPassing, bestFailing                runResult
+	bestAnyScore, bestPassingScore, bestFailingScore int
+}
+
+func newRepresentativeAttemptTracker(profile, expectedDomain string) representativeAttemptTracker {
+	return representativeAttemptTracker{
+		bestAny:          runResult{Profile: profile, ExpectedDomain: expectedDomain},
+		bestAnyScore:     -1,
+		bestPassingScore: -1,
+		bestFailingScore: -1,
+	}
+}
+
+func (t *representativeAttemptTracker) Observe(result runResult) {
+	score := boolScore(result)
+	if score > t.bestAnyScore {
+		t.bestAnyScore, t.bestAny = score, result
+	}
+	if result.SelectedPass && score > t.bestPassingScore {
+		t.bestPassingScore, t.bestPassing = score, result
+	}
+	if !result.SelectedPass && score > t.bestFailingScore {
+		t.bestFailingScore, t.bestFailing = score, result
+	}
+}
+
+func (t representativeAttemptTracker) Representative(majorityPass bool) runResult {
+	if majorityPass && strings.TrimSpace(t.bestPassing.Profile) != "" {
+		return t.bestPassing
+	}
+	if !majorityPass && strings.TrimSpace(t.bestFailing.Profile) != "" {
+		return t.bestFailing
+	}
+	return t.bestAny
 }
 
 func runCaseOnce(binaryPath, configPath, profile, caseID, attemptID, goal, expectedDomain string, timeoutMS int64, keepState bool) runResult {
@@ -583,10 +631,10 @@ func runCaseOnce(binaryPath, configPath, profile, caseID, attemptID, goal, expec
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			result.ErrorKind = "benchmark_timeout"
-			result.Error = "timeout"
+			result.Error = appendStateLogExcerpt("timeout", stateRoot)
 			return result
 		}
-		result.Error = strings.TrimSpace(string(out))
+		result.Error = appendStateLogExcerpt(strings.TrimSpace(string(out)), stateRoot)
 		result.ErrorKind = classifyRunError(result.Error)
 		return result
 	}
@@ -597,6 +645,28 @@ func runCaseOnce(binaryPath, configPath, profile, caseID, attemptID, goal, expec
 		return result
 	}
 	return finalizeRunResult(result, resp, expectedDomain)
+}
+
+func appendStateLogExcerpt(message, stateRoot string) string {
+	message = strings.TrimSpace(message)
+	raw, err := os.ReadFile(filepath.Join(stateRoot, "logs", "needlex.jsonl"))
+	if err != nil || len(raw) == 0 {
+		return message
+	}
+	excerpt := compactErrorText(string(raw), 2400)
+	if message == "" {
+		return excerpt
+	}
+	return message + "\nstate_log_excerpt:\n" + excerpt
+}
+
+func compactErrorText(text string, maxRunes int) string {
+	text = strings.TrimSpace(text)
+	runes := []rune(text)
+	if len(runes) <= maxRunes {
+		return text
+	}
+	return strings.TrimSpace(string(runes[len(runes)-maxRunes:]))
 }
 
 func seedlessStateRoot(configPath, caseID, profile, attemptID string) string {

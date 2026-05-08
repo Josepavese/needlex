@@ -8,6 +8,9 @@ import (
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/intel"
+	"github.com/josepavese/needlex/internal/memory"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/store"
 )
 
@@ -70,6 +73,20 @@ func (r Runner) callMCPProofTool(args map[string]any) (map[string]any, error) {
 }
 
 func (r Runner) callMCPPruneTool(args map[string]any) (map[string]any, error) {
+	if boolArg(args, "embedding_cache") {
+		cfg, err := config.Load("")
+		if err != nil {
+			cfg = config.Defaults()
+		}
+		layout := platform.NewStateLayout(r.storeRoot)
+		policy := intel.EmbeddingCachePolicyFromConfigEnv(cfg.Semantic.EmbeddingURL, layout.EmbeddingCacheDir, cfg.Semantic.EmbeddingCache)
+		report, err := intel.PruneEmbeddingCache(policy.Dir, boolArg(args, "dry_run"), timeNowUTC(), policy)
+		if err != nil {
+			return nil, err
+		}
+		payload := map[string]any{"prune_report": report}
+		return mcpToolResult(payload, payload), nil
+	}
 	pruneAll := boolArg(args, "all")
 	olderThanHours, _ := intArg(args, "older_than_hours")
 	report, err := store.Prune(r.storeRoot, durationHours(olderThanHours), pruneAll, timeNowUTC())
@@ -308,11 +325,13 @@ func mcpProofTool() mcpTool {
 func mcpPruneTool() mcpTool {
 	return mcpTool{
 		Name:        "web_prune",
-		Description: "Prune local traces, proofs, fingerprints, and genome files.",
+		Description: "Operator maintenance. Prune local traces/proofs/fingerprints/genome files, or set embedding_cache=true to dry-run/remove disposable PAL embedding cache files.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"all":              map[string]any{"type": "boolean"},
 			"older_than_hours": map[string]any{"type": "integer"},
-		}), map[string]any{"older_than_hours": 24}),
+			"embedding_cache":  map[string]any{"type": "boolean", "description": "When true, target only PAL embedding cache files under NEEDLEX_HOME/data/embeddings/cache."},
+			"dry_run":          map[string]any{"type": "boolean", "description": "When used with embedding_cache=true, report matching/reclaimable files without deleting them."},
+		}), map[string]any{"older_than_hours": 24}, map[string]any{"embedding_cache": true, "dry_run": true}),
 	}
 }
 
@@ -338,19 +357,20 @@ func (r Runner) callMCPMemoryTool(args map[string]any) (map[string]any, error) {
 func mcpMemoryTool() mcpTool {
 	return mcpTool{
 		Name:        "memory",
-		Description: "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state.",
+		Description: "Advanced non-core Discovery Memory control. Use only when explicitly inspecting or maintaining Needle-X local semantic memory; normal web retrieval already uses memory automatically. Actions: stats shows counts/freshness; search checks local semantic recall; prune applies retention policy; export/import move canonical JSONL rows; rebuild_index refreshes acceleration state and can force semantic re-embedding.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"action": map[string]any{
 				"type":        "string",
 				"enum":        []string{"stats", "search", "prune", "export", "import", "rebuild_index"},
 				"description": "Required operation. Prefer stats or search for debugging; prune/export/import/rebuild_index are maintenance actions.",
 			},
-			"query":        map[string]any{"type": "string", "description": "Semantic query for action=search."},
-			"limit":        map[string]any{"type": "integer", "description": "Maximum rows for action=search."},
-			"domain_hints": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional host/domain hints for action=search."},
-			"out_dir":      map[string]any{"type": "string", "description": "Destination directory for action=export."},
-			"in_dir":       map[string]any{"type": "string", "description": "Source directory for action=import."},
-			"config_path":  map[string]any{"type": "string", "description": "Optional Needle-X JSON config path."},
+			"query":            map[string]any{"type": "string", "description": "Semantic query for action=search."},
+			"limit":            map[string]any{"type": "integer", "description": "Maximum rows for action=search."},
+			"domain_hints":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional host/domain hints for action=search."},
+			"out_dir":          map[string]any{"type": "string", "description": "Destination directory for action=export."},
+			"in_dir":           map[string]any{"type": "string", "description": "Source directory for action=import."},
+			"force_embeddings": map[string]any{"type": "boolean", "description": "For action=rebuild_index only: recompute memory embeddings before rebuilding acceleration state."},
+			"config_path":      map[string]any{"type": "string", "description": "Optional Needle-X JSON config path."},
 		}, "action"),
 			map[string]any{"action": "stats"},
 			map[string]any{"action": "search", "query": "playwright installation", "limit": 5},
@@ -469,13 +489,22 @@ func (r Runner) callMCPMemoryRebuildIndexTool(args map[string]any) (map[string]a
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
+	refresh := memory.EmbeddingRefreshStats{}
+	if boolArg(args, "force_embeddings") {
+		var err error
+		refresh, err = r.refreshMemoryEmbeddings(cfg, true)
+		if err != nil {
+			return nil, err
+		}
+	}
 	stats, err := r.rebuildMemoryIndex(cfg)
 	if err != nil {
 		return nil, err
 	}
 	compact := map[string]any{
-		"kind":  "memory_rebuild_index",
-		"stats": compactStats(stats),
+		"kind":              "memory_rebuild_index",
+		"stats":             compactStats(stats),
+		"embedding_refresh": refresh,
 	}
 	return mcpToolResult(compactPayload(compact), compact), nil
 }

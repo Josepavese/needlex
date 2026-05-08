@@ -328,13 +328,32 @@ func (s *Service) discoverQueryWeb(ctx context.Context, req QueryRequest, maxCan
 			return queryWebDiscoveryResult{finalized: true}, nil
 		}
 	}
+	original := cloneQueryDiscoveryResult(*result)
 	if ok := s.applyQueryDiscoveryRewrite(ctx, req, maxCandidates, result); ok {
+		if err == nil && sameQueryDiscoverySelection(original.selected, result.selected) {
+			*result = original
+		}
 		return queryWebDiscoveryResult{finalized: true}, nil
 	}
 	if err != nil {
 		return queryWebDiscoveryResult{}, err
 	}
 	return queryWebDiscoveryResult{}, nil
+}
+
+func cloneQueryDiscoveryResult(in queryDiscoveryResult) queryDiscoveryResult {
+	in.candidates = append([]DiscoverCandidate{}, in.candidates...)
+	in.rewriteQueries = append([]string{}, in.rewriteQueries...)
+	return in
+}
+
+func sameQueryDiscoverySelection(left, right string) bool {
+	left = strings.TrimSpace(left)
+	right = strings.TrimSpace(right)
+	if left == "" || right == "" {
+		return left == right
+	}
+	return left == right || discoverycore.SameCanonicalURL(left, right)
 }
 
 func (s *Service) applyQueryDiscoveryRewrite(ctx context.Context, req QueryRequest, maxCandidates int, result *queryDiscoveryResult) bool {
