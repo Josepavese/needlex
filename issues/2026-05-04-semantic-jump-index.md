@@ -12,11 +12,21 @@ Latest accepted 100-case seedless no-key browser-like semantic lane:
 2. runtime rate: `0.98`
 3. failure taxonomy: `right_family_not_selected = 34`, `wrong_family_selected = 8`, `runtime_error = 2`
 
+Latest implementation checkpoint from `2026-05-09`:
+
+1. pass rate: `0.68`
+2. runtime rate: `0.96`
+3. timeout rate: `0.04`
+4. failure taxonomy: `benchmark_timeout = 4`, `right_family_not_selected = 26`, `wrong_family_selected = 2`
+5. command: `go run ./benchmarks/seedless_ddg/runner -cases benchmarks/corpora/unique-sources-corpus-v1.json -profiles browser_like_semantic -runs 1 -timeout-ms 30000 -out /tmp/needlex-seedless-100-near-tie-restricted.json`
+6. implemented components: semantic family evidence mass, restricted near-tie provenance review, compact semantic payloads, batch cross-similarity scoring
+
 Interpretation:
 
 1. provider blocking is no longer the dominant measured issue on this lane
 2. many failures are selection failures inside an already visible family
-3. the next large jump should come from semantic representative selection, not from lexical query hacks
+3. semantic representative selection has produced a measurable jump, but the remaining dominant class is still `right_family_not_selected`
+4. the next large jump should come from stronger semantic family recovery and calibration, not from lexical query hacks
 
 ## Non-Negotiable Product Constraints
 

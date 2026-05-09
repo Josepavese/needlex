@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,9 +14,36 @@ import (
 	"github.com/josepavese/needlex/internal/core/candidateintel"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/webdiscover"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/store"
 )
+
+type semanticProvenanceTestAligner struct{}
+
+func (semanticProvenanceTestAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (semanticProvenanceTestAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.05
+		text := strings.ToLower(candidate.Text)
+		switch {
+		case strings.Contains(text, "svelte framework maintained project"):
+			score = 0.82
+		case strings.Contains(text, "svelte example"):
+			score = 0.78
+		case strings.Contains(text, "svelte documentation") || strings.Contains(text, "svelte component reference"):
+			score = 0.72
+		case strings.Contains(text, "documentation browser") || strings.Contains(text, "collected documentation"):
+			score = 0.07
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
 
 func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
 	candidate := webdiscover.RefineCandidate(
@@ -443,6 +471,220 @@ func TestSemanticRerankUsesProbedWebIRContext(t *testing.T) {
 	got := svc.semanticRerankDiscoverCandidates(context.Background(), "distributed tracing metrics dashboard", candidates)
 	if got[0].URL != "https://observability.example/docs" {
 		t.Fatalf("expected probed web ir context to drive semantic rerank, got %q", got[0].URL)
+	}
+}
+
+func TestSemanticProvenanceBalancePromotesIdentityGroundedSource(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = semanticProvenanceTestAligner{}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://devdocs.example/svelte/",
+			Score: 2.70,
+			Label: "Svelte documentation",
+			Metadata: map[string]string{
+				"host_root_title":   "Universal documentation browser",
+				"host_root_context": "Collected documentation for many external projects.",
+				"page_title":        "Svelte documentation",
+				"web_ir_context":    "Svelte component reference.",
+			},
+		},
+		{
+			URL:   "https://svelte.example/docs",
+			Score: 2.46,
+			Label: "Svelte documentation",
+			Metadata: map[string]string{
+				"host_root_title":   "Svelte",
+				"host_root_context": "Svelte framework maintained project documentation.",
+				"page_title":        "Svelte documentation",
+				"web_ir_context":    "Svelte component reference.",
+			},
+		},
+	}
+
+	got := svc.applySemanticProvenanceBalance(context.Background(), "Svelte documentation overview", candidates)
+	if got[0].URL != "https://svelte.example/docs" {
+		t.Fatalf("expected identity-grounded candidate first, got %#v", got)
+	}
+	if !containsReason(got[0].Reason, "semantic_provenance_identity") {
+		t.Fatalf("expected semantic provenance identity reason, got %#v", got[0].Reason)
+	}
+	if !containsReason(got[1].Reason, "semantic_topic_without_identity_penalty") {
+		t.Fatalf("expected topic-without-identity penalty on derivative surface, got %#v", got[1].Reason)
+	}
+}
+
+func TestSemanticProvenanceBalanceUsesFamilyIdentityFallback(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = semanticProvenanceTestAligner{}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://devdocs.example/svelte/",
+			Score: 2.70,
+			Label: "Svelte documentation",
+			Metadata: map[string]string{
+				"page_title":     "Svelte documentation",
+				"web_ir_context": "Svelte component reference.",
+			},
+		},
+		{
+			URL:   "https://svelte.example/docs",
+			Score: 2.46,
+			Label: "Svelte documentation",
+			Metadata: map[string]string{
+				"page_title":     "Svelte documentation",
+				"web_ir_context": "Svelte component reference.",
+			},
+		},
+	}
+
+	got := svc.applySemanticProvenanceBalance(context.Background(), "Svelte documentation overview", candidates)
+	if got[0].URL != "https://svelte.example/docs" {
+		t.Fatalf("expected family identity fallback to promote semantic source identity, got %#v", got)
+	}
+	if got[0].Metadata["semantic_provenance_identity"] == "" {
+		t.Fatalf("expected semantic provenance metadata, got %#v", got[0].Metadata)
+	}
+}
+
+func TestSemanticProvenanceBalanceKeepsOrderWithoutIdentityLeader(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = semanticProvenanceTestAligner{}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://alpha.example/svelte",
+			Score: 2.70,
+			Metadata: map[string]string{
+				"host_root_title": "Universal documentation browser",
+				"page_title":      "Svelte documentation",
+			},
+		},
+		{
+			URL:   "https://beta.example/svelte",
+			Score: 2.40,
+			Metadata: map[string]string{
+				"host_root_title": "Collected documentation",
+				"page_title":      "Svelte component reference",
+			},
+		},
+	}
+
+	got := svc.applySemanticProvenanceBalance(context.Background(), "Svelte documentation overview", candidates)
+	if got[0].URL != "https://alpha.example/svelte" {
+		t.Fatalf("expected order unchanged without identity-grounded leader, got %#v", got)
+	}
+}
+
+func TestSemanticFamilyEvidenceBalancePromotesCoherentFamily(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://derived.example/topic",
+			Score:  2.80,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.720",
+			},
+		},
+		{
+			URL:    "https://origin.example/docs",
+			Score:  2.74,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.690",
+			},
+		},
+		{
+			URL:    "https://origin.example/docs/overview",
+			Score:  2.61,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.710",
+			},
+		},
+		{
+			URL:    "https://origin.example/docs/start",
+			Score:  2.45,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.650",
+			},
+		},
+	}
+
+	got := applySemanticFamilyEvidenceBalance(candidates)
+	if got[0].URL != "https://origin.example/docs" {
+		t.Fatalf("expected semantically coherent family to win, got %#v", got)
+	}
+	if got[0].Metadata["semantic_family_evidence_support"] == "" {
+		t.Fatalf("expected family evidence metadata, got %#v", got[0].Metadata)
+	}
+	if !containsReason(got[0].Reason, "semantic_family_evidence_mass") {
+		t.Fatalf("expected family evidence reason, got %#v", got[0].Reason)
+	}
+}
+
+func TestSemanticNearTieProvenanceReviewPromotesVerifiedCompetitor(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://aggregator.example/playwright",
+			Score:  2.60,
+			Reason: []string{"semantic_goal_alignment", "semantic_derivative_surface_penalty"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.610",
+			},
+		},
+		{
+			URL:    "https://origin.example/",
+			Score:  2.51,
+			Reason: []string{"semantic_goal_alignment", "host_root_candidate", "same_host_canonical_root", "web_ir_probe", "semantic_family_evidence_mass"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity":         "0.580",
+				"semantic_family_evidence_support": "0.520",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://origin.example/" {
+		t.Fatalf("expected verified near-tie candidate to win, got %#v", got)
+	}
+	if !containsReason(got[0].Reason, "semantic_near_tie_provenance_review") {
+		t.Fatalf("expected near-tie review reason, got %#v", got[0].Reason)
+	}
+	if got[0].Metadata["semantic_near_tie_boost"] == "" {
+		t.Fatalf("expected near-tie metadata, got %#v", got[0].Metadata)
+	}
+}
+
+func TestSemanticNearTieProvenanceReviewKeepsLargeGapLeader(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://leader.example/topic",
+			Score:  3.20,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.610",
+			},
+		},
+		{
+			URL:    "https://origin.example/",
+			Score:  2.60,
+			Reason: []string{"semantic_goal_alignment", "host_root_candidate", "same_host_canonical_root", "web_ir_probe"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.580",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://leader.example/topic" {
+		t.Fatalf("expected large-gap leader to remain first, got %#v", got)
 	}
 }
 

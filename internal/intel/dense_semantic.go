@@ -61,6 +61,66 @@ func (a DenseSemanticAligner) Score(ctx context.Context, objective string, candi
 	return scores, nil
 }
 
+func (a DenseSemanticAligner) ScoreCross(ctx context.Context, left, right []SemanticCandidate) (map[string]map[string]float64, error) {
+	left = nonEmptySemanticCandidates(left)
+	right = nonEmptySemanticCandidates(right)
+	if len(left) == 0 || len(right) == 0 {
+		return nil, nil
+	}
+	embedder := a.Embedder
+	if embedder == nil {
+		return nil, nil
+	}
+	inputs := make([]string, 0, len(left)+len(right))
+	for _, candidate := range left {
+		inputs = append(inputs, semanticCandidateText(candidate))
+	}
+	for _, candidate := range right {
+		inputs = append(inputs, semanticCandidateText(candidate))
+	}
+	vectors, err := embedder.Embed(ctx, inputs)
+	if err != nil {
+		return nil, err
+	}
+	if len(vectors) != len(inputs) {
+		return nil, nil
+	}
+	out := make(map[string]map[string]float64, len(left))
+	rightOffset := len(left)
+	for i, leftCandidate := range left {
+		if zeroFloat32Vector(vectors[i]) {
+			continue
+		}
+		row := map[string]float64{}
+		for j, rightCandidate := range right {
+			rightVector := vectors[rightOffset+j]
+			if zeroFloat32Vector(rightVector) {
+				continue
+			}
+			similarity := cosineSimilarityFloat32(vectors[i], rightVector)
+			if similarity < 0 {
+				similarity = 0
+			}
+			row[rightCandidate.ID] = similarity
+		}
+		if len(row) > 0 {
+			out[leftCandidate.ID] = row
+		}
+	}
+	return out, nil
+}
+
+func nonEmptySemanticCandidates(candidates []SemanticCandidate) []SemanticCandidate {
+	out := make([]SemanticCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		if strings.TrimSpace(candidate.ID) == "" || semanticCandidateText(candidate) == "" {
+			continue
+		}
+		out = append(out, candidate)
+	}
+	return out
+}
+
 func (a DenseSemanticAligner) model() string {
 	if a.Embedder != nil {
 		if model := strings.TrimSpace(a.Embedder.ModelID()); model != "" {

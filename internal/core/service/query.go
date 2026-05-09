@@ -79,6 +79,16 @@ type QueryCandidateDiagnostic struct {
 	SemanticCommunityPenalty     float64  `json:"semantic_community_penalty,omitempty"`
 	SemanticQuorumProviderCount  int      `json:"semantic_quorum_provider_count,omitempty"`
 	SemanticCalibrationScore     float64  `json:"semantic_calibration_score,omitempty"`
+	SemanticProvenanceIdentity   float64  `json:"semantic_provenance_identity,omitempty"`
+	SemanticProvenanceTopic      float64  `json:"semantic_provenance_topic,omitempty"`
+	SemanticProvenanceBoost      float64  `json:"semantic_provenance_boost,omitempty"`
+	SemanticProvenancePenalty    float64  `json:"semantic_provenance_penalty,omitempty"`
+	SemanticFamilyEvidenceCount  int      `json:"semantic_family_evidence_count,omitempty"`
+	SemanticFamilyEvidenceStrong int      `json:"semantic_family_evidence_strong,omitempty"`
+	SemanticFamilyProvenance     int      `json:"semantic_family_evidence_provenance,omitempty"`
+	SemanticFamilyEvidence       float64  `json:"semantic_family_evidence_support,omitempty"`
+	SemanticNearTieMerit         float64  `json:"semantic_near_tie_merit,omitempty"`
+	SemanticNearTieBoost         float64  `json:"semantic_near_tie_boost,omitempty"`
 	Reasons                      []string `json:"reasons,omitempty"`
 }
 

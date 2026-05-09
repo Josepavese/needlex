@@ -167,6 +167,9 @@ func (s *Service) finalizeWebCandidates(ctx context.Context, req DiscoverWebRequ
 	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
 	filtered = s.applySemanticSelectionStack(ctx, req.Goal, filtered)
 	filtered = s.applyTargetKindRerank(ctx, req.Goal, filtered)
+	filtered = s.applySemanticProvenanceBalance(ctx, req.Goal, filtered)
+	filtered = applySemanticFamilyEvidenceBalance(filtered)
+	filtered = applySemanticNearTieProvenanceReview(filtered)
 	filtered = webdiscover.DampenWeakProvenanceTraps(filtered)
 	filtered = discoverycore.NewSet(filtered).Limited(req.MaxCandidates)
 	return s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
@@ -218,11 +221,11 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 		limit := min(len(group), 3)
 		for i := 0; i < limit; i++ {
 			texts = append(texts, discoverycore.JoinNonEmpty(
-				group[i].Metadata["host_root_title"],
-				group[i].Metadata["host_root_context"],
-				group[i].Metadata["page_title"],
-				group[i].Metadata["web_ir_context"],
-				group[i].Label,
+				compactSemanticCandidateText(group[i].Metadata["host_root_title"], 160),
+				compactSemanticCandidateText(group[i].Metadata["host_root_context"], 260),
+				compactSemanticCandidateText(group[i].Metadata["page_title"], 160),
+				compactSemanticCandidateText(group[i].Metadata["web_ir_context"], 320),
+				compactSemanticCandidateText(group[i].Label, 160),
 			))
 		}
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
@@ -251,6 +254,352 @@ func (s *Service) semanticDisambiguateCandidateFamilies(ctx context.Context, goa
 	}
 	discoverycore.SortCandidates(out)
 	return out
+}
+
+func (s *Service) applySemanticProvenanceBalance(ctx context.Context, goal string, candidates []DiscoverCandidate) []DiscoverCandidate {
+	if len(candidates) < 2 || strings.TrimSpace(goal) == "" {
+		return candidates
+	}
+	window := min(len(candidates), webCandidateLimit)
+	identityScores, topicScores := semanticProvenanceExistingScores(candidates[:window])
+	if len(identityScores) < 2 {
+		identityScores = mergeSemanticScoreMaps(identityScores, s.scoreCandidateSetToGoal(ctx, goal, semanticProvenanceIdentityCandidates(candidates[:window])))
+	}
+	if len(topicScores) < 2 {
+		topicScores = mergeSemanticScoreMaps(topicScores, s.scoreCandidateSetToGoal(ctx, goal, semanticProvenanceTopicCandidates(candidates[:window])))
+	}
+	if len(identityScores) == 0 && len(topicScores) == 0 {
+		return candidates
+	}
+	maxIdentity := maxSemanticScore(identityScores)
+	if maxIdentity < 0.04 {
+		return candidates
+	}
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := 0; i < window; i++ {
+		identity := identityScores[out[i].URL]
+		topic := topicScores[out[i].URL]
+		boost, penalty := semanticProvenanceAdjustment(identity, topic, maxIdentity)
+		if boost == 0 && penalty == 0 {
+			continue
+		}
+		out[i].Score += boost - penalty
+		if boost > 0 {
+			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_provenance_identity")
+		}
+		if penalty > 0 {
+			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_topic_without_identity_penalty")
+		}
+		out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
+			"semantic_provenance_identity": strconv.FormatFloat(identity, 'f', 3, 64),
+			"semantic_provenance_topic":    strconv.FormatFloat(topic, 'f', 3, 64),
+			"semantic_provenance_boost":    strconv.FormatFloat(boost, 'f', 3, 64),
+			"semantic_provenance_penalty":  strconv.FormatFloat(penalty, 'f', 3, 64),
+		})
+	}
+	discoverycore.SortCandidates(out)
+	return out
+}
+
+func semanticProvenanceExistingScores(candidates []DiscoverCandidate) (map[string]float64, map[string]float64) {
+	identityScores := map[string]float64{}
+	topicScores := map[string]float64{}
+	for _, candidate := range candidates {
+		if value := maxMetadataFloat(candidate.Metadata, "candidate_host_similarity", "semantic_origin_alignment"); value > 0 {
+			identityScores[candidate.URL] = value
+		}
+		if value := maxMetadataFloat(candidate.Metadata, "candidate_page_similarity", "candidate_goal_similarity", "semantic_evidence_similarity"); value > 0 {
+			topicScores[candidate.URL] = value
+		}
+	}
+	return identityScores, topicScores
+}
+
+func mergeSemanticScoreMaps(existing, incoming map[string]float64) map[string]float64 {
+	if len(existing) == 0 {
+		existing = map[string]float64{}
+	}
+	for key, value := range incoming {
+		existing[key] = max(existing[key], value)
+	}
+	return existing
+}
+
+func maxMetadataFloat(metadata map[string]string, keys ...string) float64 {
+	best := 0.0
+	for _, key := range keys {
+		value, err := strconv.ParseFloat(strings.TrimSpace(metadata[key]), 64)
+		if err == nil {
+			best = max(best, value)
+		}
+	}
+	return best
+}
+
+func semanticProvenanceAdjustment(identity, topic, maxIdentity float64) (float64, float64) {
+	boost := 0.0
+	if identity >= 0.04 {
+		boost = min(identity*0.85, 0.40)
+		if topic >= 0.08 {
+			boost += min(topic*0.10, 0.07)
+		}
+		if identity >= maxIdentity-0.03 {
+			boost += 0.10
+		}
+	}
+	penalty := 0.0
+	if topic >= 0.08 && identity < maxIdentity-0.025 {
+		identityGap := maxIdentity - identity
+		topicGap := max(0, topic-identity)
+		penalty = min(identityGap*0.95+topicGap*0.25, 0.52)
+	}
+	return boost, penalty
+}
+
+func semanticProvenanceIdentityCandidates(candidates []DiscoverCandidate) []intel.SemanticCandidate {
+	out := make([]intel.SemanticCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		text := semanticProvenanceIdentityText(candidate)
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		out = append(out, intel.SemanticCandidate{ID: candidate.URL, Text: text})
+	}
+	return out
+}
+
+func semanticProvenanceIdentityText(candidate DiscoverCandidate) string {
+	identityParts := []string{
+		compactSemanticCandidateText(candidate.Metadata["host_root_title"], 160),
+		compactSemanticCandidateText(candidate.Metadata["host_root_context"], 260),
+	}
+	if rootURL := strings.TrimSpace(candidate.Metadata["host_root_url"]); rootURL != "" {
+		identityParts = append(identityParts, "root identity "+rootURL)
+	}
+	if family, ok := webdiscover.CandidateFamily(candidate.URL); ok && strings.TrimSpace(family) != "" {
+		identityParts = append(identityParts, "registrable family identity "+semanticHostIdentityPhrase(family))
+	}
+	if host, ok := discoverycore.Hostname(candidate.URL); ok && strings.TrimSpace(host) != "" {
+		identityParts = append(identityParts, "host identity "+semanticHostIdentityPhrase(host))
+	}
+	return discoverycore.JoinNonEmpty(identityParts...)
+}
+
+func semanticHostIdentityPhrase(value string) string {
+	clean := strings.Trim(strings.TrimSpace(strings.ToLower(value)), ".")
+	if clean == "" {
+		return ""
+	}
+	parts := strings.FieldsFunc(clean, func(r rune) bool {
+		return r == '.' || r == '-' || r == '_'
+	})
+	return discoverycore.JoinNonEmpty(clean, strings.Join(parts, " "))
+}
+
+func semanticProvenanceTopicCandidates(candidates []DiscoverCandidate) []intel.SemanticCandidate {
+	out := make([]intel.SemanticCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		text := discoverycore.JoinNonEmpty(
+			compactSemanticCandidateText(candidate.Metadata["page_title"], 160),
+			compactSemanticCandidateText(candidate.Metadata["web_ir_context"], 320),
+			compactSemanticCandidateText(candidate.Metadata["source_context"], 220),
+			compactSemanticCandidateText(candidate.Label, 160),
+		)
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		out = append(out, intel.SemanticCandidate{ID: candidate.URL, Text: text})
+	}
+	return out
+}
+
+func maxSemanticScore(scores map[string]float64) float64 {
+	best := 0.0
+	for _, score := range scores {
+		best = max(best, score)
+	}
+	return best
+}
+
+type semanticFamilyEvidence struct {
+	Count       int
+	Strong      int
+	Provenance  int
+	SemanticSum float64
+	Support     float64
+}
+
+func applySemanticFamilyEvidenceBalance(candidates []DiscoverCandidate) []DiscoverCandidate {
+	if len(candidates) < 2 {
+		return candidates
+	}
+	window := min(len(candidates), webCandidateLimit)
+	families := map[string]semanticFamilyEvidence{}
+	for i := 0; i < window; i++ {
+		family, ok := webdiscover.CandidateFamily(candidates[i].URL)
+		if !ok || strings.TrimSpace(family) == "" {
+			continue
+		}
+		evidence := semanticCandidateEvidence(candidates[i])
+		if evidence == 0 && !candidateHasAnyReason(candidates[i], "semantic_goal_alignment", "semantic_evidence_probe", "page_expand_semantic_grounding") {
+			continue
+		}
+		item := families[family]
+		item.Count++
+		item.SemanticSum += evidence
+		if evidence >= 0.40 || candidateHasAnyReason(candidates[i], "semantic_evidence_probe", "semantic_family_alignment") {
+			item.Strong++
+		}
+		if candidateHasAnyReason(candidates[i], "host_root_candidate", "identity_reference", "same_host_canonical_root", "same_family_canonical_root") {
+			item.Provenance++
+		}
+		families[family] = item
+	}
+	bestSupport := 0.0
+	for family, item := range families {
+		if item.Count < 2 || (item.Count < 3 && item.Provenance == 0) {
+			continue
+		}
+		avg := item.SemanticSum / float64(item.Count)
+		item.Support = min(float64(item.Count), 4)*0.10 + min(avg*0.16, 0.14) + min(float64(item.Strong), 3)*0.04 + min(float64(item.Provenance), 2)*0.03
+		families[family] = item
+		bestSupport = max(bestSupport, item.Support)
+	}
+	if bestSupport == 0 {
+		return candidates
+	}
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := 0; i < window; i++ {
+		family, ok := webdiscover.CandidateFamily(out[i].URL)
+		if !ok {
+			continue
+		}
+		item := families[family]
+		if item.Support == 0 {
+			continue
+		}
+		out[i].Score += item.Support
+		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_family_evidence_mass")
+		out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
+			"semantic_family_evidence_count":      strconv.Itoa(item.Count),
+			"semantic_family_evidence_strong":     strconv.Itoa(item.Strong),
+			"semantic_family_evidence_provenance": strconv.Itoa(item.Provenance),
+			"semantic_family_evidence_support":    strconv.FormatFloat(item.Support, 'f', 3, 64),
+		})
+	}
+	discoverycore.SortCandidates(out)
+	return out
+}
+
+func semanticCandidateEvidence(candidate DiscoverCandidate) float64 {
+	return maxMetadataFloat(candidate.Metadata,
+		"semantic_goal_similarity",
+		"candidate_goal_similarity",
+		"semantic_evidence_similarity",
+		"late_interaction_score",
+		"semantic_provenance_topic",
+	)
+}
+
+func applySemanticNearTieProvenanceReview(candidates []DiscoverCandidate) []DiscoverCandidate {
+	if len(candidates) < 2 {
+		return candidates
+	}
+	window := min(len(candidates), webCandidateLimit)
+	topMerit := semanticNearTieMerit(candidates[0])
+	out := append([]DiscoverCandidate{}, candidates...)
+	for i := 1; i < window; i++ {
+		gap := candidates[0].Score - out[i].Score
+		if !semanticNearTieEligible(out[i]) {
+			continue
+		}
+		if gap <= 0 || gap > semanticNearTieGapLimit(out[i]) {
+			continue
+		}
+		merit := semanticNearTieMerit(out[i])
+		meritDelta := merit - topMerit
+		if meritDelta < 0.04 {
+			continue
+		}
+		boost := min(meritDelta*0.90+0.06, 0.48)
+		boost = min(boost, gap+0.04)
+		if boost <= 0 {
+			continue
+		}
+		out[i].Score += boost
+		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_near_tie_provenance_review")
+		out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
+			"semantic_near_tie_merit":       strconv.FormatFloat(merit, 'f', 3, 64),
+			"semantic_near_tie_top_merit":   strconv.FormatFloat(topMerit, 'f', 3, 64),
+			"semantic_near_tie_margin":      strconv.FormatFloat(gap, 'f', 3, 64),
+			"semantic_near_tie_boost":       strconv.FormatFloat(boost, 'f', 3, 64),
+			"semantic_near_tie_merit_delta": strconv.FormatFloat(meritDelta, 'f', 3, 64),
+		})
+	}
+	discoverycore.SortCandidates(out)
+	return out
+}
+
+func semanticNearTieGapLimit(candidate DiscoverCandidate) float64 {
+	if candidateHasAnyReason(candidate, "host_root_candidate", "identity_reference", "embedded_url_provenance") {
+		return 0.46
+	}
+	if candidateHasAnyReason(candidate, "semantic_family_evidence_mass") {
+		return 0.34
+	}
+	return 0
+}
+
+func semanticNearTieEligible(candidate DiscoverCandidate) bool {
+	if candidateHasAnyReason(candidate, "target_kind_topology_mismatch") {
+		return false
+	}
+	if candidateHasAnyReason(candidate, "host_root_candidate", "identity_reference", "embedded_url_provenance") {
+		return true
+	}
+	if candidateHasAnyReason(candidate, "semantic_family_evidence_mass") && discoverycore.URLPathDepth(candidate.URL) > 0 {
+		return true
+	}
+	return false
+}
+
+func semanticNearTieMerit(candidate DiscoverCandidate) float64 {
+	merit := 0.0
+	if candidateHasAnyReason(candidate, "host_root_candidate", "identity_reference", "embedded_url_provenance") {
+		merit += 0.28
+	}
+	if candidateHasAnyReason(candidate, "same_host_canonical_root", "same_family_canonical_root") && semanticNearTieEligible(candidate) {
+		merit += 0.10
+	}
+	if candidateHasAnyReason(candidate, "semantic_family_evidence_mass") {
+		merit += min(maxMetadataFloat(candidate.Metadata, "semantic_family_evidence_support")*0.50, 0.30)
+	}
+	if candidateHasAnyReason(candidate, "semantic_origin_probe", "semantic_custodian_alignment") {
+		merit += 0.14
+	}
+	if candidateHasAnyReason(candidate, "same_family_shallow_preference") {
+		merit += 0.08
+	}
+	if candidateHasAnyReason(candidate, "web_ir_probe") {
+		merit += 0.05
+	}
+	if candidateHasAnyReason(candidate, "page_expand_child_context", "embedded_url_contextual_evidence") {
+		merit += 0.05
+	}
+	merit += min(semanticCandidateEvidence(candidate)*0.12, 0.10)
+	if candidateHasAnyReason(candidate, "semantic_derivative_surface_penalty") {
+		merit -= 0.08
+	}
+	if candidateHasAnyReason(candidate, "web_ir_embedded") {
+		merit -= 0.08
+	}
+	if candidateHasAnyReason(candidate, "weak_canonical_root_context_penalty", "weak_recovered_family_context_penalty", "cross_family_mirror_route_penalty") {
+		merit -= 0.12
+	}
+	if candidateHasAnyReason(candidate, "target_kind_topology_mismatch") {
+		merit -= 0.24
+	}
+	return merit
 }
 
 func (s *Service) discoverWebLocalFirst(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, bool) {
@@ -564,13 +913,13 @@ func expandedRecoverySemanticCandidates(source DiscoverCandidate, ordered []Disc
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
 			ID: candidate.URL,
 			Text: discoverycore.JoinNonEmpty(
-				source.Metadata["host_root_title"],
-				source.Metadata["host_root_context"],
-				source.Metadata["page_title"],
-				source.Metadata["web_ir_context"],
-				source.Label,
-				candidate.Metadata["source_context"],
-				candidate.Label,
+				compactSemanticCandidateText(source.Metadata["host_root_title"], 160),
+				compactSemanticCandidateText(source.Metadata["host_root_context"], 260),
+				compactSemanticCandidateText(source.Metadata["page_title"], 160),
+				compactSemanticCandidateText(source.Metadata["web_ir_context"], 320),
+				compactSemanticCandidateText(source.Label, 160),
+				compactSemanticCandidateText(candidate.Metadata["source_context"], 220),
+				compactSemanticCandidateText(candidate.Label, 160),
 				candidate.Metadata["resource_class"],
 			),
 		})

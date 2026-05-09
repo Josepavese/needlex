@@ -17,6 +17,10 @@ type SemanticAligner interface {
 	Score(ctx context.Context, objective string, candidates []SemanticCandidate) ([]SemanticScore, error)
 }
 
+type SemanticCrossScorer interface {
+	ScoreCross(ctx context.Context, left, right []SemanticCandidate) (map[string]map[string]float64, error)
+}
+
 type SemanticCandidate struct {
 	ID      string
 	Heading []string
@@ -79,6 +83,23 @@ func (a *resilientSemanticAligner) Score(ctx context.Context, objective string, 
 	if err != nil {
 		a.trip()
 		return nil, fmt.Errorf("semantic scoring failed: %w", err)
+	}
+	a.clear()
+	return scores, nil
+}
+
+func (a *resilientSemanticAligner) ScoreCross(ctx context.Context, left, right []SemanticCandidate) (map[string]map[string]float64, error) {
+	if a.coolingDown() {
+		return nil, nil
+	}
+	scorer, ok := a.inner.(SemanticCrossScorer)
+	if !ok {
+		return nil, nil
+	}
+	scores, err := scorer.ScoreCross(ctx, left, right)
+	if err != nil {
+		a.trip()
+		return nil, fmt.Errorf("semantic cross scoring failed: %w", err)
 	}
 	a.clear()
 	return scores, nil

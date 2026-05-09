@@ -71,21 +71,21 @@ func Apply(ctx context.Context, semantic intel.SemanticAligner, goal string, can
 		identityTexts = append(identityTexts, intel.SemanticCandidate{
 			ID: annotated[i].URL,
 			Text: discoverycore.JoinNonEmpty(
-				annotated[i].Metadata["host_root_title"],
-				annotated[i].Metadata["host_root_context"],
-				annotated[i].Metadata["page_title"],
-				annotated[i].Label,
+				compactSemanticText(annotated[i].Metadata["host_root_title"], 160),
+				compactSemanticText(annotated[i].Metadata["host_root_context"], 260),
+				compactSemanticText(annotated[i].Metadata["page_title"], 160),
+				compactSemanticText(annotated[i].Label, 160),
 			),
 		})
 		hostTexts = append(hostTexts, intel.SemanticCandidate{
 			ID:   annotated[i].URL,
-			Text: discoverycore.JoinNonEmpty(annotated[i].Metadata["host_root_title"]),
+			Text: discoverycore.JoinNonEmpty(compactSemanticText(annotated[i].Metadata["host_root_title"], 160)),
 		})
 		pageTexts = append(pageTexts, intel.SemanticCandidate{
 			ID: annotated[i].URL,
 			Text: discoverycore.JoinNonEmpty(
-				annotated[i].Metadata["page_title"],
-				annotated[i].Label,
+				compactSemanticText(annotated[i].Metadata["page_title"], 160),
+				compactSemanticText(annotated[i].Label, 160),
 			),
 		})
 	}
@@ -280,14 +280,23 @@ func hasSemanticProvenance(candidate discoverycore.Candidate) bool {
 
 func candidateSemanticText(candidate discoverycore.Candidate) string {
 	return discoverycore.JoinNonEmpty(
-		candidate.Metadata["host_root_title"],
-		candidate.Metadata["host_root_context"],
-		candidate.Metadata["page_title"],
-		candidate.Metadata["source_context"],
-		candidate.Metadata["web_ir_context"],
-		strings.TrimSpace(candidate.Label),
+		compactSemanticText(candidate.Metadata["host_root_title"], 160),
+		compactSemanticText(candidate.Metadata["host_root_context"], 260),
+		compactSemanticText(candidate.Metadata["page_title"], 160),
+		compactSemanticText(candidate.Metadata["source_context"], 220),
+		compactSemanticText(candidate.Metadata["web_ir_context"], 320),
+		compactSemanticText(candidate.Label, 160),
 		candidate.Metadata["resource_class"],
 	)
+}
+
+func compactSemanticText(value string, maxRunes int) string {
+	clean := strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+	if maxRunes <= 0 || len([]rune(clean)) <= maxRunes {
+		return clean
+	}
+	runes := []rune(clean)
+	return strings.TrimSpace(string(runes[:maxRunes]))
 }
 
 func semanticRoleProfiles() []semanticRoleProfile {
@@ -322,7 +331,7 @@ func semanticRoleCandidates() []intel.SemanticCandidate {
 	profiles := semanticRoleProfiles()
 	out := make([]intel.SemanticCandidate, 0, len(profiles))
 	for _, profile := range profiles {
-		out = append(out, intel.SemanticCandidate{ID: profile.ID, Text: profile.Text})
+		out = append(out, intel.SemanticCandidate{ID: profile.ID, Text: compactSemanticText(profile.Text, 520)})
 	}
 	return out
 }
@@ -337,10 +346,17 @@ func classifyCandidateSemanticRoles(ctx context.Context, semantic intel.Semantic
 		return nil
 	}
 	roleScores := map[string]map[string]float64{}
-	for _, role := range roleCandidates {
-		scores := scoreCandidateSetToGoal(ctx, semantic, role.Text, candidates)
-		if len(scores) > 0 {
-			roleScores[role.ID] = scores
+	if cross, ok := semantic.(intel.SemanticCrossScorer); ok {
+		if scores, err := cross.ScoreCross(ctx, roleCandidates, candidates); err == nil {
+			roleScores = scores
+		}
+	}
+	if len(roleScores) == 0 {
+		for _, role := range roleCandidates {
+			scores := scoreCandidateSetToGoal(ctx, semantic, role.Text, candidates)
+			if len(scores) > 0 {
+				roleScores[role.ID] = scores
+			}
 		}
 	}
 	if len(roleScores) == 0 {
@@ -444,24 +460,7 @@ func buildCandidateSemanticGraph(ctx context.Context, semantic intel.SemanticAli
 	if len(texts) < 2 {
 		return graph
 	}
-	raw := make([][]float64, len(texts))
-	for i := range texts {
-		scores, err := semantic.Score(ctx, texts[i].Text, texts)
-		if err != nil || len(scores) == 0 {
-			continue
-		}
-		row := make([]float64, len(texts))
-		indexByID := map[string]int{}
-		for idx, candidate := range texts {
-			indexByID[candidate.ID] = idx
-		}
-		for _, score := range scores {
-			if idx, ok := indexByID[score.ID]; ok {
-				row[idx] = max(score.Similarity, 0)
-			}
-		}
-		raw[i] = row
-	}
+	raw := candidateSemanticSimilarityMatrix(ctx, semantic, texts)
 	for i := 0; i < len(texts); i++ {
 		for j := i + 1; j < len(texts); j++ {
 			similarity := mutualSemanticSimilarity(raw, i, j)
@@ -481,6 +480,47 @@ func buildCandidateSemanticGraph(ctx context.Context, semantic intel.SemanticAli
 		}
 	}
 	return graph
+}
+
+func candidateSemanticSimilarityMatrix(ctx context.Context, semantic intel.SemanticAligner, texts []intel.SemanticCandidate) [][]float64 {
+	raw := make([][]float64, len(texts))
+	indexByID := map[string]int{}
+	for idx, candidate := range texts {
+		indexByID[candidate.ID] = idx
+	}
+	if cross, ok := semantic.(intel.SemanticCrossScorer); ok {
+		scores, err := cross.ScoreCross(ctx, texts, texts)
+		if err == nil && len(scores) > 0 {
+			for leftID, rowScores := range scores {
+				leftIdx, ok := indexByID[leftID]
+				if !ok {
+					continue
+				}
+				row := make([]float64, len(texts))
+				for rightID, score := range rowScores {
+					if rightIdx, ok := indexByID[rightID]; ok {
+						row[rightIdx] = max(score, 0)
+					}
+				}
+				raw[leftIdx] = row
+			}
+			return raw
+		}
+	}
+	for i := range texts {
+		scores, err := semantic.Score(ctx, texts[i].Text, texts)
+		if err != nil || len(scores) == 0 {
+			continue
+		}
+		row := make([]float64, len(texts))
+		for _, score := range scores {
+			if idx, ok := indexByID[score.ID]; ok {
+				row[idx] = max(score.Similarity, 0)
+			}
+		}
+		raw[i] = row
+	}
+	return raw
 }
 
 func mutualSemanticSimilarity(raw [][]float64, left, right int) float64 {

@@ -93,7 +93,7 @@ Read it correctly:
 
 ## Semantic-First Validation
 
-Latest local validation run: `2026-05-04`.
+Latest local validation run: `2026-05-09`.
 
 Deterministic suites:
 1. `discovery_eval`: `8/8` pass
@@ -106,18 +106,24 @@ Live 100-case seedless no-key provider run:
 3. `runner_profiles = ["browser_like_semantic"]`
 4. `runner_provider_chains = ["ddg-bing"]`
 5. provider chain: `lite.duckduckgo.com`, `html.duckduckgo.com`, `www.bing.com`
-6. accepted command: `go run ./benchmarks/seedless_ddg/runner -cases benchmarks/corpora/unique-sources-corpus-v1.json -profiles browser_like_semantic -runs 1 -timeout-ms 30000 -out /tmp/needlex-seedless-100-semantic-role.json`
-7. previous measured pass rate on this lane: `0.31`
-8. accepted `profile_pass_rates = {"browser_like_semantic": 0.56}`
-9. accepted `profile_runtime_rates = {"browser_like_semantic": 0.98}`
-10. accepted `error_kinds = {"right_family_not_selected": 34, "wrong_family_selected": 8, "runtime_error": 2}`
+6. accepted command: `go run ./benchmarks/seedless_ddg/runner -cases benchmarks/corpora/unique-sources-corpus-v1.json -profiles browser_like_semantic -runs 1 -timeout-ms 30000 -out /tmp/needlex-seedless-100-near-tie-restricted.json`
+7. previous accepted pass rate on this lane: `0.56`
+8. current pre-run pass rate before this ranking work: `0.51`
+9. accepted `profile_pass_rates = {"browser_like_semantic": 0.68}`
+10. accepted `profile_runtime_rates = {"browser_like_semantic": 0.96}`
+11. accepted `timeout_rate_by_profile = {"browser_like_semantic": 0.04}`
+12. accepted `avg_latency_ms_by_profile = {"browser_like_semantic": 20612.5}`
+13. accepted `p95_latency_ms_by_profile = {"browser_like_semantic": 29398}`
+14. accepted `error_kinds = {"benchmark_timeout": 4, "right_family_not_selected": 26, "wrong_family_selected": 2}`
 
 Interpretation:
 1. semantic-first changes did not regress deterministic discovery quality
 2. seedless runtime reliability is mostly stable with only no-key public HTML providers
-3. the semantic role/family recovery layer improved cold seedless quality by `+25` percentage points on the 100-source lane
-4. the seedless runner now supports explicit profile selection and multiple named provider chains
-5. remaining open-web seedless failures are mostly selection failures where the expected family is already in the candidate pool
+3. semantic role, family-evidence mass, and near-tie provenance review moved the accepted cold seedless lane from `0.56` to `0.68`
+4. compared with the current pre-run `0.51`, this is a `+17` percentage-point recovery on the same 100-source lane
+5. the seedless runner supports explicit profile selection and multiple named provider chains
+6. remaining open-web seedless failures are mostly selection failures where the expected family is already in the candidate pool
+7. this is still a noisy no-key public-provider benchmark and should not be marketed as guaranteed seedless success
 6. this points to family representative selection and candidate promotion, not provider blocking, as the next improvement front
 7. broad cold-state seedless quality is not yet a market claim; the next measured target is converting `right_family_not_selected` into selected-pass without domain-specific rules
 

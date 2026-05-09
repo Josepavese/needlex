@@ -78,6 +78,39 @@ func TestApplyPenalizesDistributionSurfaceForCustodianIntent(t *testing.T) {
 	}
 }
 
+func TestApplyUsesCrossSemanticScoringForRolesAndGraph(t *testing.T) {
+	aligner := &crossRoleSemanticAligner{}
+	candidates := []discoverycore.Candidate{
+		{
+			URL:    "https://secondary.example/project",
+			Label:  "Project collection",
+			Score:  1.00,
+			Reason: []string{"host_root_identity_probe"},
+			Metadata: map[string]string{
+				"resource_class":  discoverycore.ResourceClassHTMLLike,
+				"source_context":  "secondary commentary collection",
+				"host_root_title": "Collection",
+			},
+		},
+		{
+			URL:    "https://custodian.example/project",
+			Label:  "Project primary reference",
+			Score:  0.98,
+			Reason: []string{"host_root_identity_probe"},
+			Metadata: map[string]string{
+				"resource_class":  discoverycore.ResourceClassHTMLLike,
+				"source_context":  "primary custodian maintained reference",
+				"host_root_title": "Project custodian",
+			},
+		},
+	}
+
+	_ = Apply(context.Background(), aligner, "official maintained documentation for project", candidates)
+	if aligner.crossCalls < 2 {
+		t.Fatalf("expected batch cross scoring for roles and graph, got %d calls", aligner.crossCalls)
+	}
+}
+
 func TestWindowKeepsExpandedSemanticCandidatePool(t *testing.T) {
 	candidates := make([]discoverycore.Candidate, 0, 8)
 	for i := 0; i < 8; i++ {
@@ -134,6 +167,24 @@ func (roleSemanticAligner) Score(_ context.Context, objective string, candidates
 	out := make([]intel.SemanticScore, 0, len(candidates))
 	for _, candidate := range candidates {
 		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: semanticRoleTestScore(objective, candidate)})
+	}
+	return out, nil
+}
+
+type crossRoleSemanticAligner struct {
+	roleSemanticAligner
+	crossCalls int
+}
+
+func (a *crossRoleSemanticAligner) ScoreCross(_ context.Context, left, right []intel.SemanticCandidate) (map[string]map[string]float64, error) {
+	a.crossCalls++
+	out := make(map[string]map[string]float64, len(left))
+	for _, leftCandidate := range left {
+		row := make(map[string]float64, len(right))
+		for _, rightCandidate := range right {
+			row[rightCandidate.ID] = semanticRoleTestScore(leftCandidate.Text+" "+leftCandidate.ID, rightCandidate)
+		}
+		out[leftCandidate.ID] = row
 	}
 	return out, nil
 }

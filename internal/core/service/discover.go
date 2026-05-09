@@ -89,11 +89,11 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 	semanticCandidates := make([]intel.SemanticCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
 		text := discoverycore.JoinNonEmpty(
-			candidate.Metadata["source_context"],
-			candidate.Metadata["host_root_title"],
-			candidate.Metadata["page_title"],
-			candidate.Metadata["web_ir_context"],
-			strings.TrimSpace(candidate.Label),
+			compactSemanticCandidateText(candidate.Metadata["source_context"], 220),
+			compactSemanticCandidateText(candidate.Metadata["host_root_title"], 160),
+			compactSemanticCandidateText(candidate.Metadata["page_title"], 160),
+			compactSemanticCandidateText(candidate.Metadata["web_ir_context"], 320),
+			compactSemanticCandidateText(candidate.Label, 160),
 			candidate.Metadata["resource_class"],
 		)
 		semanticCandidates = append(semanticCandidates, intel.SemanticCandidate{
@@ -122,4 +122,13 @@ func (s *Service) semanticRerankDiscoverCandidates(ctx context.Context, goal str
 	}
 	discoverycore.SortCandidates(out)
 	return out
+}
+
+func compactSemanticCandidateText(value string, maxRunes int) string {
+	clean := strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+	if maxRunes <= 0 || len([]rune(clean)) <= maxRunes {
+		return clean
+	}
+	runes := []rune(clean)
+	return strings.TrimSpace(string(runes[:maxRunes]))
 }

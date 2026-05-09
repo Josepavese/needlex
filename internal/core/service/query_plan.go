@@ -114,6 +114,16 @@ func queryCandidateDiagnostics(candidates []DiscoverCandidate) []QueryCandidateD
 			SemanticCommunityPenalty:     parseDiagnosticFloat(candidate.Metadata["semantic_community_penalty"]),
 			SemanticQuorumProviderCount:  parseDiagnosticInt(candidate.Metadata["semantic_quorum_provider_count"]),
 			SemanticCalibrationScore:     parseDiagnosticFloat(candidate.Metadata["semantic_calibration_score"]),
+			SemanticProvenanceIdentity:   parseDiagnosticFloat(candidate.Metadata["semantic_provenance_identity"]),
+			SemanticProvenanceTopic:      parseDiagnosticFloat(candidate.Metadata["semantic_provenance_topic"]),
+			SemanticProvenanceBoost:      parseDiagnosticFloat(candidate.Metadata["semantic_provenance_boost"]),
+			SemanticProvenancePenalty:    parseDiagnosticFloat(candidate.Metadata["semantic_provenance_penalty"]),
+			SemanticFamilyEvidenceCount:  parseDiagnosticInt(candidate.Metadata["semantic_family_evidence_count"]),
+			SemanticFamilyEvidenceStrong: parseDiagnosticInt(candidate.Metadata["semantic_family_evidence_strong"]),
+			SemanticFamilyProvenance:     parseDiagnosticInt(candidate.Metadata["semantic_family_evidence_provenance"]),
+			SemanticFamilyEvidence:       parseDiagnosticFloat(candidate.Metadata["semantic_family_evidence_support"]),
+			SemanticNearTieMerit:         parseDiagnosticFloat(candidate.Metadata["semantic_near_tie_merit"]),
+			SemanticNearTieBoost:         parseDiagnosticFloat(candidate.Metadata["semantic_near_tie_boost"]),
 			Reasons:                      append([]string{}, candidate.Reason...),
 		})
 	}

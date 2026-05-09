@@ -44,6 +44,58 @@ func TestDenseSemanticAlignerRanksByEmbeddingSimilarity(t *testing.T) {
 	}
 }
 
+func TestDenseSemanticAlignerScoresCrossSimilarityInOneBatch(t *testing.T) {
+	resetDenseEmbeddingCacheForTest()
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		var req struct {
+			Input []string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode embedding request: %v", err)
+		}
+		vectorsByInput := map[string][]float32{
+			"origin source":     {1, 0, 0},
+			"derivative mirror": {0, 1, 0},
+			"official docs":     {0.98, 0.02, 0},
+			"mirror docs":       {0.02, 0.98, 0},
+		}
+		out := make([][]float32, 0, len(req.Input))
+		for _, input := range req.Input {
+			out = append(out, vectorsByInput[input])
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": out})
+	}))
+	defer server.Close()
+
+	cfg := config.Defaults()
+	cfg.Semantic.EmbeddingURL = server.URL
+	cfg.Semantic.ProviderModel = "provider-dense-test"
+	cfg.Semantic.VectorSpace = "dense-cross-test-space"
+	aligner := NewSemanticAligner(cfg, server.Client())
+	cross, ok := aligner.(SemanticCrossScorer)
+	if !ok {
+		t.Fatal("expected dense semantic aligner to expose cross scoring")
+	}
+	scores, err := cross.ScoreCross(context.Background(),
+		[]SemanticCandidate{{ID: "origin", Text: "origin source"}, {ID: "derivative", Text: "derivative mirror"}},
+		[]SemanticCandidate{{ID: "official", Text: "official docs"}, {ID: "mirror", Text: "mirror docs"}},
+	)
+	if err != nil {
+		t.Fatalf("cross score failed: %v", err)
+	}
+	if scores["origin"]["official"] <= scores["origin"]["mirror"] {
+		t.Fatalf("expected origin profile to prefer official docs, got %#v", scores["origin"])
+	}
+	if scores["derivative"]["mirror"] <= scores["derivative"]["official"] {
+		t.Fatalf("expected derivative profile to prefer mirror docs, got %#v", scores["derivative"])
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("expected one embedding batch call, got %d", got)
+	}
+}
+
 func TestSemanticConfigRequiresEmbeddingEndpoint(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Semantic.EmbeddingURL = ""
