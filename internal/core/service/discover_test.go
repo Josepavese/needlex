@@ -29,8 +29,33 @@ func (a targetKindTestAligner) Score(_ context.Context, _ string, candidates []i
 			out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
 			continue
 		}
-		if candidate.ID == a.target {
+		if targetKindFromPrototypeID(candidate.ID) == a.target {
 			score = 0.92
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
+
+type localFirstSeedTestAligner struct {
+	prototypeScores map[string]float64
+	candidateScores map[string]float64
+}
+
+func (a localFirstSeedTestAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (a localFirstSeedTestAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.10
+		if value, ok := a.candidateScores[candidate.ID]; ok {
+			score = value
+		} else if kind := targetKindFromPrototypeID(candidate.ID); kind != "" {
+			if value, ok := a.prototypeScores[kind]; ok {
+				score = value
+			}
 		}
 		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
 	}
@@ -509,6 +534,113 @@ func TestDiscoverWebUsesLocalSubstrateBeforeWebBootstrap(t *testing.T) {
 	}
 	if resp.SelectedURL != seedServer.URL+"/docs/replay" {
 		t.Fatalf("expected local docs selection, got %q", resp.SelectedURL)
+	}
+	if searchHits != 0 {
+		t.Fatalf("expected web bootstrap not used, got hits=%d", searchHits)
+	}
+}
+
+func TestDiscoverWebLocalFirstPreservesNonRootSeedForWeakHomeIntent(t *testing.T) {
+	var seedURL string
+	seedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/docs/Web/JavaScript":
+			_, _ = fmt.Fprintf(w, `<html><head><title>JavaScript | MDN</title></head><body><article><h1>JavaScript</h1><a href="%s/docs/Web/JavaScript/Reference/Classes/Private_elements">Private elements</a></article></body></html>`, seedURL)
+		case "/docs/Web/JavaScript/Reference/Classes/Private_elements":
+			_, _ = fmt.Fprint(w, `<html><head><title>Private elements</title></head><body><article><h1>Private elements</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer seedServer.Close()
+	seedURL = seedServer.URL
+
+	searchHits := 0
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><body><a class="result__a" href="https://external.example/javascript">JavaScript</a></body></html>`)
+	}))
+	defer searchServer.Close()
+
+	cfg := testConfig()
+	svc := newTestService(t, cfg, seedServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	svc.semantic = localFirstSeedTestAligner{
+		prototypeScores: map[string]float64{
+			targetKindCanonicalHome: 0.48,
+			targetKindLearningPath:  0.44,
+		},
+		candidateScores: map[string]float64{
+			seedServer.URL + "/docs/Web/JavaScript":                                    0.62,
+			seedServer.URL + "/docs/Web/JavaScript/Reference/Classes/Private_elements": 0.62,
+		},
+	}
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "understand the JavaScript landing page",
+		SeedURL:       seedServer.URL + "/docs/Web/JavaScript",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != seedServer.URL+"/docs/Web/JavaScript" {
+		t.Fatalf("expected weak home-like intent to preserve non-root seed, got %q", resp.SelectedURL)
+	}
+	if len(resp.Candidates) == 0 || !containsReason(resp.Candidates[0].Reason, "semantic_seed_preserved") {
+		t.Fatalf("expected semantic seed preservation reason, got %#v", resp.Candidates)
+	}
+	if searchHits != 0 {
+		t.Fatalf("expected web bootstrap not used, got hits=%d", searchHits)
+	}
+}
+
+func TestDiscoverWebLocalFirstPromotesSemanticallyStrongerChild(t *testing.T) {
+	var seedURL string
+	seedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/docs":
+			_, _ = fmt.Fprintf(w, `<html><head><title>Docs</title></head><body><article><h1>Docs</h1><a href="%s/docs/replay">Replay Guide</a></article></body></html>`, seedURL)
+		case "/docs/replay":
+			_, _ = fmt.Fprint(w, `<html><head><title>Replay Guide</title></head><body><article><h1>Replay Guide</h1></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer seedServer.Close()
+	seedURL = seedServer.URL
+
+	searchHits := 0
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><body><a class="result__a" href="https://external.example/replay">Replay</a></body></html>`)
+	}))
+	defer searchServer.Close()
+
+	cfg := testConfig()
+	svc := newTestService(t, cfg, seedServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	svc.semantic = localFirstSeedTestAligner{
+		candidateScores: map[string]float64{
+			seedServer.URL + "/docs":        0.22,
+			seedServer.URL + "/docs/replay": 0.74,
+		},
+	}
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "proof replay deterministic",
+		SeedURL:       seedServer.URL + "/docs",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != seedServer.URL+"/docs/replay" {
+		t.Fatalf("expected semantically stronger child to win, got %q", resp.SelectedURL)
 	}
 	if searchHits != 0 {
 		t.Fatalf("expected web bootstrap not used, got hits=%d", searchHits)

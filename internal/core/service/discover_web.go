@@ -166,6 +166,7 @@ func (s *Service) finalizeWebCandidates(ctx context.Context, req DiscoverWebRequ
 	filtered = s.semanticDisambiguateCandidateFamilies(ctx, req.Goal, filtered)
 	filtered = s.applyCandidateIntelligence(ctx, req.Goal, filtered)
 	filtered = s.applySemanticSelectionStack(ctx, req.Goal, filtered)
+	filtered = s.applyTargetKindRerank(ctx, req.Goal, filtered)
 	filtered = webdiscover.DampenWeakProvenanceTraps(filtered)
 	filtered = discoverycore.NewSet(filtered).Limited(req.MaxCandidates)
 	return s.maybePromoteEndpointCandidate(ctx, req.Goal, req.UserAgent, req.DomainHints, filtered)
@@ -261,8 +262,58 @@ func (s *Service) discoverWebLocalFirst(ctx context.Context, req DiscoverWebRequ
 	if top.URL == discovery.SeedURL || !webdiscover.LocalSubstrateResolved(top) {
 		return DiscoverWebResponse{}, false
 	}
+	if seed, ok := s.preservedLocalFirstSeed(ctx, req, discovery, top); ok {
+		return DiscoverWebResponse{SeedURL: req.SeedURL, Provider: "local_same_site", SelectedURL: seed.URL, DiscoveryURL: discovery.DiscoveryURL, Candidates: []DiscoverCandidate{seed}}, true
+	}
 	top.Reason = discoverycore.AppendUniqueReason(top.Reason, "native_substrate")
 	return DiscoverWebResponse{SeedURL: req.SeedURL, Provider: "local_same_site", SelectedURL: top.URL, DiscoveryURL: discovery.DiscoveryURL, Candidates: []DiscoverCandidate{top}}, true
+}
+
+func (s *Service) preservedLocalFirstSeed(ctx context.Context, req DiscoverWebRequest, discovery DiscoverResponse, top DiscoverCandidate) (DiscoverCandidate, bool) {
+	if urlPathDepth(discovery.SeedURL) == 0 {
+		return DiscoverCandidate{}, false
+	}
+	seed, ok := discoverCandidateByURL(discovery.Candidates, discovery.SeedURL)
+	if !ok {
+		return DiscoverCandidate{}, false
+	}
+	if weakCanonicalHomeProfile(s.inferTargetKindProfile(ctx, req.Goal)) {
+		seed.Reason = discoverycore.AppendUniqueReason(seed.Reason, "semantic_seed_preserved")
+		return seed, true
+	}
+	seedSemantic := localFirstSemanticScore(seed)
+	topSemantic := localFirstSemanticScore(top)
+	if seedSemantic > 0 || topSemantic > 0 {
+		if topSemantic <= seedSemantic+0.08 {
+			seed.Reason = discoverycore.AppendUniqueReason(seed.Reason, "semantic_seed_preserved")
+			return seed, true
+		}
+		return DiscoverCandidate{}, false
+	}
+	if top.Score-seed.Score <= 0.25 && candidateHasAnyReason(seed, "seed_fallback") {
+		seed.Reason = discoverycore.AppendUniqueReason(seed.Reason, "seed_context_preserved")
+		return seed, true
+	}
+	return DiscoverCandidate{}, false
+}
+
+func discoverCandidateByURL(candidates []DiscoverCandidate, rawURL string) (DiscoverCandidate, bool) {
+	for _, candidate := range candidates {
+		if sameNormalizedURL(candidate.URL, rawURL) {
+			return candidate, true
+		}
+	}
+	return DiscoverCandidate{}, false
+}
+
+func localFirstSemanticScore(candidate DiscoverCandidate) float64 {
+	for _, key := range []string{"semantic_goal_similarity", "candidate_goal_similarity", "semantic_evidence_similarity"} {
+		value, err := strconv.ParseFloat(strings.TrimSpace(candidate.Metadata[key]), 64)
+		if err == nil && value > 0 {
+			return value
+		}
+	}
+	return 0
 }
 
 func (s *Service) discoverWebBootstrap(ctx context.Context, baseURL string, req DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {

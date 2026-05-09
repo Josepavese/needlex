@@ -98,6 +98,7 @@ func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest)
 	if strings.TrimSpace(seed.URL) == "" {
 		return DiscoverResponse{}, false
 	}
+	profile := s.inferTargetKindProfile(ctx, req.Goal)
 	discovery, err := s.Discover(ctx, DiscoverRequest{
 		Goal:          req.Goal,
 		SeedURL:       seed.URL,
@@ -109,7 +110,7 @@ func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest)
 	if err != nil || strings.TrimSpace(discovery.SelectedURL) == "" || len(discovery.Candidates) == 0 {
 		return DiscoverResponse{}, false
 	}
-	discovery.SelectedURL = preferredRecoveredMemoryURL(seed.URL, discovery)
+	discovery.SelectedURL = preferredRecoveredMemoryURL(seed.URL, discovery, profile)
 	if discovery.SelectedURL != "" {
 		discovery.Candidates = ensureRecoveredCandidatePresent(discovery.Candidates, discovery.SelectedURL, seed)
 		discovery.Candidates = promoteRecoveredCandidate(discovery.Candidates, discovery.SelectedURL)
@@ -170,16 +171,22 @@ func urlPathDepth(raw string) int {
 	return len(strings.Split(path, "/"))
 }
 
-func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse) string {
+func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse, profile targetKindProfile) string {
 	best := strings.TrimSpace(seedURL)
 	seedHost := hostFromURLString(seedURL)
 	if seedHost == "" {
 		return strings.TrimSpace(discovery.SelectedURL)
 	}
+	if urlPathDepth(seedURL) > 0 && weakCanonicalHomeProfile(profile) {
+		return best
+	}
 	if recoveredSelectedTargetKind(discovery, targetKindCanonicalHome, targetKindOrganizationAbout) {
 		return strings.TrimSpace(discovery.SelectedURL)
 	}
 	if urlPathDepth(seedURL) == 0 {
+		if profile.Kind == targetKindCanonicalHome {
+			return best
+		}
 		best = strings.TrimSpace(discovery.SelectedURL)
 		bestDepth := urlPathDepth(best)
 		for _, candidate := range discovery.Candidates {
@@ -201,6 +208,10 @@ func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse) str
 		}
 	}
 	return best
+}
+
+func weakCanonicalHomeProfile(profile targetKindProfile) bool {
+	return profile.Kind == targetKindCanonicalHome && profile.Margin < 0.06 && profile.Similarity < 0.62
 }
 
 func recoveredSelectedTargetKind(discovery DiscoverResponse, kinds ...string) bool {
