@@ -211,7 +211,7 @@ func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse, pro
 }
 
 func weakCanonicalHomeProfile(profile targetKindProfile) bool {
-	return profile.Kind == targetKindCanonicalHome && profile.Margin < 0.06 && profile.Similarity < 0.62
+	return profile.Kind == targetKindCanonicalHome && profile.Similarity >= 0.36 && profile.Margin < 0.06 && profile.Similarity < 0.62
 }
 
 func recoveredSelectedTargetKind(discovery DiscoverResponse, kinds ...string) bool {
