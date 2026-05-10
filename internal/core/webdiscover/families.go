@@ -117,7 +117,7 @@ func PromoteRecoveredCanonicalOrigins(candidates []discoverycore.Candidate) []di
 		if !hasAnyReason(out[i], "external_family_recovery") || !hasAnyReason(out[i], "page_expand") {
 			continue
 		}
-		if !hasAnyReason(out[i], "semantic_goal_alignment", "semantic_evidence_probe", "host_root_identity_probe", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment") {
+		if !hasAnyReason(out[i], "semantic_goal_alignment", "semantic_evidence_probe", "semantic_root_identity_probe", "host_root_identity_probe", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment") {
 			continue
 		}
 		out[i].Score += 0.22
@@ -130,7 +130,7 @@ func PromoteRecoveredCanonicalOrigins(candidates []discoverycore.Candidate) []di
 func strongEvidenceFamilies(candidates []discoverycore.Candidate) map[string]struct{} {
 	out := map[string]struct{}{}
 	for _, candidate := range candidates {
-		if !hasAnyReason(candidate, "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
+		if !hasAnyReason(candidate, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
 			continue
 		}
 		family, ok := CandidateFamily(candidate.URL)
@@ -149,7 +149,7 @@ func weakCanonicalRootTrap(candidate discoverycore.Candidate, strongFamilies map
 	if !hasAnyReason(candidate, "same_host_canonical_root", "same_family_canonical_root") {
 		return false
 	}
-	if hasAnyReason(candidate, "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
+	if hasAnyReason(candidate, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
 		return false
 	}
 	family, ok := CandidateFamily(candidate.URL)
@@ -174,7 +174,7 @@ func weakRecoveredFamilyTrap(candidate discoverycore.Candidate, strongFamilies m
 	if !hasAnyReason(candidate, "same_family_child_recovery", "page_expand_child_context") {
 		return false
 	}
-	if hasAnyReason(candidate, "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
+	if hasAnyReason(candidate, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
 		return false
 	}
 	family, ok := CandidateFamily(candidate.URL)
@@ -204,7 +204,7 @@ func crossFamilyMirrorRoutePenalty(candidate discoverycore.Candidate, candidates
 		if !ok || anchorFamily == "" || anchorFamily == candidateFamily {
 			continue
 		}
-		if !hasAnyReason(anchor, "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
+		if !hasAnyReason(anchor, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "semantic_family_alignment", "semantic_custodian_alignment", "semantic_quorum_provider_fusion") {
 			continue
 		}
 		switch {

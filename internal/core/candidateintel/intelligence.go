@@ -266,7 +266,8 @@ func shouldReviewCandidateWindow(candidates []discoverycore.Candidate) bool {
 func hasSemanticProvenance(candidate discoverycore.Candidate) bool {
 	for _, reason := range candidate.Reason {
 		switch strings.TrimSpace(reason) {
-		case "host_root_identity_probe",
+		case "semantic_root_identity_probe",
+			"host_root_identity_probe",
 			"host_root_candidate",
 			"identity_reference",
 			"semantic_family_alignment",

@@ -50,6 +50,35 @@ func TestRerankPromotesSemanticLateInteractionWinner(t *testing.T) {
 	}
 }
 
+func TestRerankUsesSemanticFamilyMassForNearTie(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://mirror.example/topic", Score: 1.00, Label: "Mirror", Metadata: map[string]string{"source_context": "related secondary surface"}},
+		{URL: "https://origin.example/docs", Score: 0.94, Label: "Origin docs", Reason: []string{"host_root_candidate"}, Metadata: map[string]string{"source_context": "maintained origin reference"}},
+		{URL: "https://origin.example/guide", Score: 0.92, Label: "Origin guide", Metadata: map[string]string{"source_context": "maintained origin guide"}},
+	}
+	spans, _ := candidateSpans(candidates)
+	scores := map[string]float64{}
+	for _, span := range spans {
+		switch span.Text {
+		case "related secondary surface Mirror":
+			scores[span.ID] = 0.80
+		case "maintained origin reference Origin docs":
+			scores[span.ID] = 0.78
+		case "maintained origin guide Origin guide":
+			scores[span.ID] = 0.76
+		default:
+			scores[span.ID] = 0.01
+		}
+	}
+	got := Reranker{Semantic: stubSemantic{scores: scores}, Config: DefaultConfig()}.Rerank(context.Background(), "authoritative origin", candidates)
+	if got[0].URL != "https://origin.example/docs" {
+		t.Fatalf("expected semantic family mass to promote origin family, got %#v", got)
+	}
+	if !contains(got[0].Reason, "semantic_family_late_interaction") {
+		t.Fatalf("expected semantic family reason, got %#v", got[0].Reason)
+	}
+}
+
 func contains(items []string, target string) bool {
 	for _, item := range items {
 		if item == target {

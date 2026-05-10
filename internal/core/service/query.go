@@ -142,6 +142,9 @@ func (s *Service) readQuerySelectedCandidate(ctx context.Context, req QueryReque
 	if err == nil || discoveryMode == QueryDiscoveryOff || !recoverable {
 		return readResp, err
 	}
+	if hardenedResp, ok := s.retryQueryReadWithResilientFetch(ctx, req, profile, selected); ok {
+		return hardenedResp, nil
+	}
 	for _, candidateURL := range plan.CandidateURLs {
 		candidateURL = strings.TrimSpace(candidateURL)
 		if candidateURL == "" || candidateURL == selected {
@@ -160,6 +163,23 @@ func (s *Service) readQuerySelectedCandidate(ctx context.Context, req QueryReque
 		return nextResp, nil
 	}
 	return ReadResponse{}, err
+}
+
+func (s *Service) retryQueryReadWithResilientFetch(ctx context.Context, req QueryRequest, profile, selectedURL string) (ReadResponse, bool) {
+	if strings.TrimSpace(selectedURL) == "" {
+		return ReadResponse{}, false
+	}
+	if strings.TrimSpace(req.FetchProfile) == "browser_like" && strings.TrimSpace(req.FetchRetryProfile) == "hardened" {
+		return ReadResponse{}, false
+	}
+	readReq := s.readRequestForQuery(req, profile, selectedURL)
+	readReq.FetchProfile = "browser_like"
+	readReq.FetchRetryProfile = "hardened"
+	resp, err := s.Read(ctx, readReq)
+	if err != nil {
+		return ReadResponse{}, false
+	}
+	return resp, true
 }
 
 func recoverableQueryReadErrorKind(err error) (string, bool) {

@@ -34,6 +34,20 @@ func TestAnnotateProviderMergesThroughDiscoverySet(t *testing.T) {
 	}
 }
 
+func TestApplyBoostsProviderConsensusWithoutClusterID(t *testing.T) {
+	candidates := []discoverycore.Candidate{
+		{URL: "https://origin.example/docs", Score: 0.90, Metadata: map[string]string{"provider_observations": "provider_a,provider_b"}},
+		{URL: "https://other.example/docs", Score: 0.92, Metadata: map[string]string{"provider_observations": "provider_a"}},
+	}
+	got := Apply(candidates)
+	if got[0].URL != "https://origin.example/docs" {
+		t.Fatalf("expected provider consensus candidate to win, got %#v", got)
+	}
+	if !containsReason(got[0].Reason, ReasonProviderConsensus) {
+		t.Fatalf("expected provider consensus reason, got %#v", got[0].Reason)
+	}
+}
+
 func containsReason(items []string, target string) bool {
 	for _, item := range items {
 		if item == target {

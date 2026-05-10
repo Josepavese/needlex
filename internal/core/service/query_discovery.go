@@ -127,6 +127,7 @@ func selectMemoryFamilySeed(candidates []DiscoverCandidate) DiscoverCandidate {
 		Host      string
 		Score     float64
 		BestScore float64
+		Evidence  float64
 	}
 	byHost := map[string]familyScore{}
 	for _, candidate := range candidates {
@@ -137,6 +138,9 @@ func selectMemoryFamilySeed(candidates []DiscoverCandidate) DiscoverCandidate {
 		current := byHost[host]
 		current.Host = host
 		current.Score += candidate.Score
+		if candidateHasAnyReason(candidate, "entity_family_graph_recall", "semantic_family_memory", "topic_node_retrieval", "proof_backed_page") {
+			current.Evidence += 0.28
+		}
 		if current.URL == "" || candidate.Score > current.BestScore {
 			current.URL = candidate.URL
 			current.BestScore = candidate.Score
@@ -149,7 +153,7 @@ func selectMemoryFamilySeed(candidates []DiscoverCandidate) DiscoverCandidate {
 		host := hostFromURLString(candidate.URL)
 		score := candidate.Score
 		if family, ok := byHost[host]; ok {
-			score += family.Score * 0.35
+			score += family.Score*0.35 + family.Evidence
 		}
 		if score > bestScore {
 			bestScore = score

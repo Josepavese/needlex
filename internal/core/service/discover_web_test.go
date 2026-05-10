@@ -77,7 +77,7 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		switch r.URL.Path {
 		case "/":
-			_, _ = fmt.Fprint(w, `<html><head><title>OpenAI Platform</title></head><body><h1>OpenAI</h1><p>Official maintained API platform documentation.</p></body></html>`)
+			_, _ = fmt.Fprint(w, `<html><head><title>OpenAI Platform</title></head><body><h1>OpenAI</h1><p>Maintained origin surface for developers.openai.com API platform documentation.</p></body></html>`)
 		case "/api/pricing":
 			_, _ = fmt.Fprint(w, `<html><head><title>API pricing</title></head><body><h1>Pricing</h1></body></html>`)
 		default:
@@ -115,6 +115,7 @@ func TestDiscoverWebHostRootIdentityPrefersFirstPartyDocs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new service: %v", err)
 	}
+	svc.semantic = hostRootGateSemantic{score: 0.72}
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
@@ -415,6 +416,71 @@ func TestExpandedRecoveryKeepsScopeRegressionSubordinate(t *testing.T) {
 	}
 }
 
+func TestExpandedRecoveryDoesNotReplaceGroundedSourceWithContextOnlyExternal(t *testing.T) {
+	source := DiscoverCandidate{
+		URL:    "https://pandas.example/docs/",
+		Score:  2.0,
+		Reason: []string{"semantic_evidence_probe"},
+		Metadata: map[string]string{
+			"semantic_goal_similarity": "0.650",
+		},
+	}
+	ordered := []DiscoverCandidate{{URL: "https://python.example/", Score: 1.0}}
+
+	applyExpandedRecoveryScores(source, ordered, map[string]float64{
+		"https://python.example/": 0.66,
+	})
+	got := selectExpandedRecoveryLeaders(ordered)
+	if len(got) != 0 {
+		t.Fatalf("expected context-only external expansion to stay out of leaders, got %#v", got)
+	}
+	if !containsReason(ordered[0].Reason, "external_family_context_only") {
+		t.Fatalf("expected context-only external reason, got %#v", ordered[0].Reason)
+	}
+}
+
+func TestExpandedRecoveryKeepsClearlyStrongerExternalRecovery(t *testing.T) {
+	source := DiscoverCandidate{
+		URL:    "https://mirror.example/docs/",
+		Score:  2.0,
+		Reason: []string{"semantic_evidence_probe"},
+		Metadata: map[string]string{
+			"semantic_goal_similarity": "0.320",
+		},
+	}
+	ordered := []DiscoverCandidate{{URL: "https://origin.example/", Score: 1.0}}
+
+	applyExpandedRecoveryScores(source, ordered, map[string]float64{
+		"https://origin.example/": 0.55,
+	})
+	got := selectExpandedRecoveryLeaders(ordered)
+	if len(got) != 1 || got[0].URL != "https://origin.example/" {
+		t.Fatalf("expected stronger external recovery to stay eligible, got %#v", got)
+	}
+	if !containsReason(got[0].Reason, "external_family_recovery") {
+		t.Fatalf("expected external recovery reason, got %#v", got[0].Reason)
+	}
+}
+
+func TestSemanticProbeCandidatesKeepsFamilyDiversityInsideProbeBudget(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{URL: "https://mirror.example/a", Score: 1.00},
+		{URL: "https://mirror.example/b", Score: 0.99},
+		{URL: "https://mirror.example/c", Score: 0.98},
+		{URL: "https://origin.example/docs", Score: 0.97},
+	}
+	got := semanticProbeCandidates(candidates, 3)
+	if len(got) != len(candidates) {
+		t.Fatalf("expected reordered full candidate list, got %#v", got)
+	}
+	if got[1].URL != "https://origin.example/docs" {
+		t.Fatalf("expected distinct semantic family inside probe budget, got %#v", got[:3])
+	}
+	if !containsReason(got[1].Reason, "semantic_family_probe_diversity") {
+		t.Fatalf("expected probe diversity reason, got %#v", got[1].Reason)
+	}
+}
+
 func TestSemanticDisambiguateCandidateFamiliesBoostsBrandAlignedFamily(t *testing.T) {
 	cfg := testConfig()
 	enableDiscoverSemantic(&cfg, "")
@@ -688,6 +754,84 @@ func TestSemanticNearTieProvenanceReviewKeepsLargeGapLeader(t *testing.T) {
 	}
 }
 
+func TestSemanticNearTieProvenanceReviewPromotesClusterRepresentative(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://mirror.example/topic",
+			Score:  5.28,
+			Reason: []string{"semantic_goal_alignment", "semantic_derivative_surface_penalty", "same_family_shallow_preference", "candidate_cluster_redundant"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.620",
+			},
+		},
+		{
+			URL:    "https://origin.example/docs",
+			Score:  5.14,
+			Reason: []string{"semantic_goal_alignment", "semantic_derivative_surface_penalty", "candidate_cluster_representative"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.600",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://origin.example/docs" {
+		t.Fatalf("expected semantic cluster representative to win, got %#v", got)
+	}
+}
+
+func TestSemanticNearTieProvenanceReviewDemotesDerivativeShallowTrap(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://derived.example/guides",
+			Score:  2.84,
+			Reason: []string{"semantic_goal_alignment", "semantic_derivative_surface_penalty", "same_family_shallow_preference", "semantic_provider_consensus"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.570",
+			},
+		},
+		{
+			URL:    "https://origin.example/guide",
+			Score:  2.42,
+			Reason: []string{"semantic_goal_alignment", "semantic_evidence_probe", "semantic_provider_consensus"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.560",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://origin.example/guide" {
+		t.Fatalf("expected semantic evidence candidate to beat derivative shallow trap, got %#v", got)
+	}
+}
+
+func TestSemanticNearTieProvenanceReviewBreaksEqualScoreAwayFromUntypedEmbeddedTrap(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://repo.example/project",
+			Score:  4.50,
+			Reason: []string{"semantic_goal_alignment", "embedded_url_provenance", "embedded_url_untyped_resource", "semantic_derivative_surface_penalty", "semantic_provider_consensus"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.610",
+			},
+		},
+		{
+			URL:    "https://docs.example/overview",
+			Score:  4.50,
+			Reason: []string{"semantic_goal_alignment", "semantic_evidence_probe", "semantic_provider_consensus"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.610",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://docs.example/overview" {
+		t.Fatalf("expected semantic evidence candidate to break equal-score tie, got %#v", got)
+	}
+}
+
 func TestApplyCandidateIntelligenceAddsSemanticGroundingMetadata(t *testing.T) {
 	cfg := testConfig()
 	enableDiscoverSemantic(&cfg, "")
@@ -762,6 +906,7 @@ func TestDiscoverWebRecoversCanonicalFamilyFromIdentityReferences(t *testing.T) 
 	cfg := testConfig()
 	enableDiscoverSemantic(&cfg, "")
 	svc := newTestService(t, cfg, searchServer.Client())
+	svc.semantic = textMatchSemanticAligner{needle: "official site for comitato olimpico"}
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
@@ -792,7 +937,7 @@ func TestDiscoverWebSurfacesOfficialFamilyFromExternalEntityLinks(t *testing.T) 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		switch r.URL.Path {
 		case "/entity":
-			_, _ = fmt.Fprintf(w, `<html><head><title>Comitato Olimpico Nazionale Italiano</title></head><body><h1>CONI</h1><a href="%s">sito istituzionale</a></body></html>`, officialServer.URL)
+			_, _ = fmt.Fprintf(w, `<html><head><title>Comitato Olimpico Nazionale Italiano</title><link rel="canonical" href="%s"></head><body><h1>CONI</h1><a href="%s">official site for Comitato Olimpico Nazionale Italiano</a></body></html>`, officialServer.URL, officialServer.URL)
 		default:
 			http.NotFound(w, r)
 		}
@@ -912,6 +1057,164 @@ func TestDiscoverWebSkipsRemainingQueriesAfterProviderLevelFailure(t *testing.T)
 	}
 	if searchHits >= 6 {
 		t.Fatalf("expected provider-level failure to reduce provider hits, got %d", searchHits)
+	}
+}
+
+type hostRootGateSemantic struct {
+	score float64
+}
+
+func (s hostRootGateSemantic) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (s hostRootGateSemantic) Score(_ context.Context, objective string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.0
+		if strings.Contains(strings.ToLower(candidate.Text), "maintained origin surface") {
+			switch {
+			case strings.Contains(objective, "Root surface of the responsible entity"):
+				score = s.score
+			case strings.Contains(objective, "General secondary collection"):
+				score = 0.02
+			default:
+				score = s.score
+			}
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
+
+func TestProbeHostRootIdentityRequiresSemanticGate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if r.URL.Path == "/" {
+			_, _ = fmt.Fprint(w, `<html><head><title>General Collection</title></head><body><p>Generic catalogue for many topics.</p></body></html>`)
+			return
+		}
+		_, _ = fmt.Fprint(w, `<html><head><title>Topic</title></head><body><p>Topic page.</p></body></html>`)
+	}))
+	defer server.Close()
+
+	svc := newTestService(t, testConfig(), server.Client())
+	svc.semantic = hostRootGateSemantic{score: 0.05}
+
+	got, err := svc.probeHostRootIdentity(context.Background(), "target project docs", "", server.URL+"/topic")
+	if err != nil {
+		t.Fatalf("probe host root identity: %v", err)
+	}
+	if got.Score != 0 {
+		t.Fatalf("expected semantic gate to suppress structural host-root boost, got %+v", got)
+	}
+	if containsReason(got.Reasons, "host_root_identity_probe") {
+		t.Fatalf("expected no identity reason below semantic gate, got %#v", got.Reasons)
+	}
+}
+
+func TestProbeHostRootIdentityAddsSemanticGatedBoost(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if r.URL.Path == "/" {
+			_, _ = fmt.Fprint(w, `<html><head><title>Maintained Origin Surface</title></head><body><p>Maintained origin surface for target project.</p></body></html>`)
+			return
+		}
+		_, _ = fmt.Fprint(w, `<html><head><title>Docs</title></head><body><p>Docs page.</p></body></html>`)
+	}))
+	defer server.Close()
+
+	svc := newTestService(t, testConfig(), server.Client())
+	svc.semantic = hostRootGateSemantic{score: 0.72}
+
+	got, err := svc.probeHostRootIdentity(context.Background(), "target project docs", "", server.URL+"/docs")
+	if err != nil {
+		t.Fatalf("probe host root identity: %v", err)
+	}
+	if got.Score <= 0 {
+		t.Fatalf("expected semantic-gated host-root boost, got %+v", got)
+	}
+	if !containsReason(got.Reasons, "host_root_identity_probe") {
+		t.Fatalf("expected identity reason above semantic gate, got %#v", got.Reasons)
+	}
+	if got.Metadata["host_root_goal_similarity"] == "" {
+		t.Fatalf("expected semantic gate metadata, got %#v", got.Metadata)
+	}
+}
+
+type fakeDiscoveryProvider struct {
+	name           string
+	candidateCount int
+	calls          *[]string
+	err            error
+}
+
+func (p fakeDiscoveryProvider) Name() string {
+	return p.name
+}
+
+func (p fakeDiscoveryProvider) BaseURL() string {
+	return "https://" + p.name + ".example/search"
+}
+
+func (p fakeDiscoveryProvider) Bootstrap(_ context.Context, _ DiscoverWebRequest, query string) ([]DiscoverCandidate, string, error) {
+	*p.calls = append(*p.calls, p.name+":"+query)
+	if p.err != nil {
+		return nil, "", p.err
+	}
+	out := make([]DiscoverCandidate, 0, p.candidateCount)
+	familyKey := strings.NewReplacer(" ", "-", "/", "-", "_", "-").Replace(strings.ToLower(query))
+	for i := 0; i < p.candidateCount; i++ {
+		out = append(out, DiscoverCandidate{
+			URL:   fmt.Sprintf("https://%s-%s-%02d.com/doc", p.name, familyKey, i),
+			Label: p.name + " " + query,
+			Score: 0.1,
+		})
+	}
+	return out, p.BaseURL(), nil
+}
+
+func TestCollectWebBootstrapCandidatesUsesRoundRobinProviderPortfolio(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	var calls []string
+
+	collection := svc.collectWebBootstrapCandidatesFromProviders(context.Background(), DiscoverWebRequest{
+		Goal:    "goal",
+		Queries: []string{"variant one"},
+	}, []discoveryProviderAdapter{
+		fakeDiscoveryProvider{name: "p1", calls: &calls},
+		fakeDiscoveryProvider{name: "p2", calls: &calls},
+	})
+
+	want := []string{"p1:variant one", "p2:variant one", "p1:goal", "p2:goal"}
+	if fmt.Sprint(calls) != fmt.Sprint(want) {
+		t.Fatalf("expected round-robin provider/query order %v, got %v", want, calls)
+	}
+	if len(collection.Candidates.Sorted()) != 0 {
+		t.Fatalf("expected no candidates from empty fake providers, got %#v", collection.Candidates.Sorted())
+	}
+}
+
+func TestCollectWebBootstrapCandidatesStopsAfterSemanticFamilyMass(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	var calls []string
+
+	collection := svc.collectWebBootstrapCandidatesFromProviders(context.Background(), DiscoverWebRequest{
+		Goal:    "goal",
+		Queries: []string{"variant-one", "variant-two"},
+	}, []discoveryProviderAdapter{
+		fakeDiscoveryProvider{name: "p1", calls: &calls, candidateCount: 3},
+		fakeDiscoveryProvider{name: "p2", calls: &calls, candidateCount: 3},
+	})
+
+	want := []string{"p1:variant-one", "p2:variant-one", "p1:variant-two", "p2:variant-two"}
+	if fmt.Sprint(calls) != fmt.Sprint(want) {
+		t.Fatalf("expected collection to stop after multi-provider family mass %v, got %v", want, calls)
+	}
+	if got := semanticBootstrapFamilyCount(collection.Candidates.Sorted()); got < 5 {
+		t.Fatalf("expected semantic bootstrap family diversity, got %d", got)
 	}
 }
 

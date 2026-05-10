@@ -21,13 +21,14 @@ const (
 )
 
 type Config struct {
-	Mode       Mode
-	Window     int
-	MaxBoost   float64
-	Scale      float64
-	MinScore   float64
-	MinMargin  float64
-	ReasonName string
+	Mode           Mode
+	Window         int
+	MaxBoost       float64
+	Scale          float64
+	MinScore       float64
+	MinMargin      float64
+	FamilyMaxBoost float64
+	ReasonName     string
 }
 
 type Reranker struct {
@@ -36,22 +37,26 @@ type Reranker struct {
 }
 
 type Score struct {
-	URL        string
-	Score      float64
-	Confidence float64
-	SpanCount  int
-	Boost      float64
+	URL         string
+	Score       float64
+	Confidence  float64
+	SpanCount   int
+	Boost       float64
+	Family      string
+	FamilyMass  float64
+	FamilyBoost float64
 }
 
 func DefaultConfig() Config {
 	return Config{
-		Mode:       ModeActive,
-		Window:     6,
-		MaxBoost:   0.28,
-		Scale:      1.10,
-		MinScore:   0.05,
-		MinMargin:  0.015,
-		ReasonName: ReasonLateInteraction,
+		Mode:           ModeActive,
+		Window:         6,
+		MaxBoost:       0.28,
+		Scale:          1.10,
+		MinScore:       0.05,
+		MinMargin:      0.015,
+		FamilyMaxBoost: 0.18,
+		ReasonName:     ReasonLateInteraction,
 	}
 }
 
@@ -83,16 +88,22 @@ func (r Reranker) Rerank(ctx context.Context, goal string, candidates []discover
 			continue
 		}
 		out[i].Metadata = discoverycore.MergeMetadata(out[i].Metadata, map[string]string{
-			"late_interaction_score":      formatFloat(score.Score),
-			"late_interaction_confidence": formatFloat(score.Confidence),
-			"late_interaction_span_count": strconv.Itoa(score.SpanCount),
-			"late_interaction_boost":      formatFloat(score.Boost),
+			"late_interaction_score":        formatFloat(score.Score),
+			"late_interaction_confidence":   formatFloat(score.Confidence),
+			"late_interaction_span_count":   strconv.Itoa(score.SpanCount),
+			"late_interaction_boost":        formatFloat(score.Boost),
+			"late_interaction_family":       score.Family,
+			"late_interaction_family_mass":  formatFloat(score.FamilyMass),
+			"late_interaction_family_boost": formatFloat(score.FamilyBoost),
 		})
 		if score.Boost == 0 {
 			continue
 		}
 		out[i].Score += score.Boost
 		out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, cfg.ReasonName)
+		if score.FamilyBoost > 0 {
+			out[i].Reason = discoverycore.AppendUniqueReason(out[i].Reason, "semantic_family_late_interaction")
+		}
 	}
 	discoverycore.SortCandidates(out)
 	return out
@@ -117,6 +128,9 @@ func normalizeConfig(cfg Config) Config {
 	}
 	if cfg.MinMargin <= 0 {
 		cfg.MinMargin = def.MinMargin
+	}
+	if cfg.FamilyMaxBoost <= 0 {
+		cfg.FamilyMaxBoost = def.FamilyMaxBoost
 	}
 	if strings.TrimSpace(cfg.ReasonName) == "" {
 		cfg.ReasonName = def.ReasonName
@@ -169,7 +183,7 @@ type preliminarySpanScore struct {
 func semanticSpans(candidate discoverycore.Candidate) []semanticSpan {
 	meta := candidate.Metadata
 	spans := []semanticSpan{
-		{Kind: "context", Text: discoverycore.JoinNonEmpty(meta["source_context"], meta["page_title"], strings.TrimSpace(candidate.Label))},
+		{Kind: "topic", Text: discoverycore.JoinNonEmpty(meta["page_title"], meta["web_ir_context"], meta["source_context"], strings.TrimSpace(candidate.Label))},
 		{Kind: "identity", Text: discoverycore.JoinNonEmpty(meta["host_root_title"], meta["host_root_context"], meta["page_title"], strings.TrimSpace(candidate.Label))},
 	}
 	if role := strings.TrimSpace(meta["semantic_role"]); role != "" {
@@ -194,6 +208,7 @@ func reduceSpanScores(raw []intel.SemanticScore, refs map[string]candidateSpanRe
 			out[item.url] = score
 		}
 	}
+	applyFamilyMass(out, candidates, cfg)
 	return out
 }
 
@@ -271,6 +286,86 @@ func finalSpanScore(item preliminarySpanScore, mean float64, cfg Config) (Score,
 		return Score{}, false
 	}
 	return Score{URL: item.url, Score: item.maxScore, Confidence: item.confidence, SpanCount: item.spanCount, Boost: boost}, true
+}
+
+type familyMass struct {
+	count      int
+	best       float64
+	sum        float64
+	provenance int
+}
+
+func applyFamilyMass(scores map[string]Score, candidates []discoverycore.Candidate, cfg Config) {
+	families := map[string]familyMass{}
+	for _, candidate := range candidates {
+		score, ok := scores[candidate.URL]
+		if !ok {
+			continue
+		}
+		family := candidateFamily(candidate.URL)
+		if family == "" {
+			continue
+		}
+		item := families[family]
+		item.count++
+		item.best = max(item.best, score.Score)
+		item.sum += score.Score
+		if hasSemanticProvenance(candidate) {
+			item.provenance++
+		}
+		families[family] = item
+	}
+	for _, candidate := range candidates {
+		score, ok := scores[candidate.URL]
+		if !ok {
+			continue
+		}
+		family := candidateFamily(candidate.URL)
+		item := families[family]
+		if family == "" || item.count < 2 || item.best < cfg.MinScore {
+			continue
+		}
+		mean := item.sum / float64(item.count)
+		boost := min(cfg.FamilyMaxBoost, mean*0.08+float64(min(item.count, 4))*0.025+float64(min(item.provenance, 3))*0.025)
+		if boost <= 0 {
+			continue
+		}
+		score.Family = family
+		score.FamilyMass = mean
+		score.FamilyBoost = boost
+		score.Boost = min(max(score.Boost+boost, -cfg.MaxBoost), cfg.MaxBoost+cfg.FamilyMaxBoost)
+		scores[candidate.URL] = score
+	}
+}
+
+func candidateFamily(rawURL string) string {
+	if family, err := discoverycore.RegistrableDomain(rawURL); err == nil {
+		return strings.TrimSpace(family)
+	}
+	if host, ok := discoverycore.Hostname(rawURL); ok {
+		return strings.TrimSpace(host)
+	}
+	return ""
+}
+
+func hasSemanticProvenance(candidate discoverycore.Candidate) bool {
+	for _, reason := range candidate.Reason {
+		switch strings.TrimSpace(reason) {
+		case "semantic_root_identity_probe",
+			"host_root_candidate",
+			"host_root_identity_probe",
+			"identity_reference",
+			"semantic_family_alignment",
+			"semantic_custodian_alignment",
+			"semantic_quorum_provider_fusion",
+			"semantic_provider_consensus",
+			"semantic_family_evidence_mass",
+			"entity_family_graph_recall",
+			"semantic_family_memory":
+			return true
+		}
+	}
+	return false
 }
 
 func spanCoverage(values []float64, minScore float64) float64 {

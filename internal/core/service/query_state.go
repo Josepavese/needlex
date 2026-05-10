@@ -30,8 +30,8 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 			memoryStore := memory.NewSQLiteStore(storeRoot, cfg.Memory.Path)
 			memoryService := memory.NewService(cfg.Memory, memoryStore, intel.NewTextEmbedderWithCacheDir(cfg, nil, platform.NewStateLayout(storeRoot).EmbeddingCacheDir))
 			if matches, err := memoryService.Search(ctx, req.Goal, memory.SearchOptions{
-				Limit:         3,
-				ExpandLimit:   2,
+				Limit:         5,
+				ExpandLimit:   3,
 				MinScore:      0.15,
 				DomainHints:   req.DomainHints,
 				QueryVariants: append([]string{}, req.SearchQueries...),
@@ -111,6 +111,18 @@ func memoryCandidatesToDiscover(matches []memory.Candidate) []DiscoverCandidate 
 		}
 		if match.Distance > 0 {
 			metadata["memory_distance"] = strconv.FormatFloat(match.Distance, 'f', 4, 64)
+		}
+		if strings.TrimSpace(match.TraceRef) != "" {
+			metadata["memory_trace_ref"] = match.TraceRef
+		}
+		if strings.TrimSpace(match.ProofRef) != "" {
+			metadata["memory_proof_ref"] = match.ProofRef
+		}
+		if match.StableRatio > 0 {
+			metadata["memory_stable_ratio"] = strconv.FormatFloat(match.StableRatio, 'f', 3, 64)
+		}
+		if match.NoveltyRatio > 0 {
+			metadata["memory_novelty_ratio"] = strconv.FormatFloat(match.NoveltyRatio, 'f', 3, 64)
 		}
 		out = append(out, DiscoverCandidate{
 			URL:      match.URL,

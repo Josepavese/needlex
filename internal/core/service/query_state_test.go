@@ -333,6 +333,17 @@ func TestRunQueryDiscoveryUsesMemoryFamilyRecoveryBeforeWebBootstrap(t *testing.
 	}
 }
 
+func TestSelectMemoryFamilySeedUsesSemanticFamilyEvidence(t *testing.T) {
+	got := selectMemoryFamilySeed([]DiscoverCandidate{
+		{URL: "https://single.example/docs", Score: 2.20, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+		{URL: "https://family.example/", Score: 1.45, Reason: []string{"semantic_goal_alignment", "local_memory_hit", "entity_family_graph_recall"}},
+		{URL: "https://family.example/docs", Score: 1.40, Reason: []string{"semantic_goal_alignment", "local_memory_hit", "semantic_family_memory"}},
+	})
+	if got.URL != "https://family.example/" {
+		t.Fatalf("expected semantic family evidence seed, got %#v", got)
+	}
+}
+
 func TestRunQueryDiscoveryTrustsProofBackedMemoryBeforePublicBootstrap(t *testing.T) {
 	searchHits := 0
 	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

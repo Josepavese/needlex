@@ -137,6 +137,7 @@ func candidateHasDiscoveryEvidence(candidate discoverycore.Candidate) bool {
 		switch strings.TrimSpace(reason) {
 		case "page_title_probe",
 			"web_ir_probe",
+			"semantic_root_identity_probe",
 			"host_root_identity_probe",
 			"semantic_evidence_probe",
 			"semantic_origin_probe",

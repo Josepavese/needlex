@@ -8,7 +8,10 @@ import (
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 )
 
-const ReasonSemanticQuorum = "semantic_quorum_provider_fusion"
+const (
+	ReasonSemanticQuorum    = "semantic_quorum_provider_fusion"
+	ReasonProviderConsensus = "semantic_provider_consensus"
+)
 
 type clusterEvidence struct {
 	Members   []int
@@ -20,9 +23,6 @@ func Apply(candidates []discoverycore.Candidate) []discoverycore.Candidate {
 		return candidates
 	}
 	clusters := semanticClusters(candidates)
-	if len(clusters) == 0 {
-		return candidates
-	}
 	out := append([]discoverycore.Candidate{}, candidates...)
 	for _, cluster := range clusters {
 		providerCount := len(cluster.Providers)
@@ -40,6 +40,7 @@ func Apply(candidates []discoverycore.Candidate) []discoverycore.Candidate {
 			})
 		}
 	}
+	applyProviderConsensus(out)
 	discoverycore.SortCandidates(out)
 	return out
 }
@@ -81,6 +82,57 @@ func semanticClusters(candidates []discoverycore.Candidate) map[string]clusterEv
 		}
 	}
 	return clusters
+}
+
+func applyProviderConsensus(candidates []discoverycore.Candidate) {
+	families := providerFamilies(candidates)
+	for i := range candidates {
+		providers := splitProviders(candidates[i].Metadata["provider_observations"])
+		family, _ := candidateFamily(candidates[i].URL)
+		familyProviders := families[family]
+		providerCount := max(len(providers), len(familyProviders))
+		if providerCount < 2 {
+			continue
+		}
+		boost := min(0.14, 0.045*float64(providerCount))
+		if len(providers) >= 2 {
+			boost += 0.04
+		}
+		boost = min(boost, 0.18)
+		candidates[i].Score += boost
+		candidates[i].Reason = discoverycore.AppendUniqueReason(candidates[i].Reason, ReasonProviderConsensus)
+		candidates[i].Metadata = discoverycore.MergeMetadata(candidates[i].Metadata, map[string]string{
+			"semantic_provider_consensus_count": strconv.Itoa(providerCount),
+			"semantic_provider_consensus_boost": formatFloat(boost),
+		})
+	}
+}
+
+func providerFamilies(candidates []discoverycore.Candidate) map[string]map[string]struct{} {
+	out := map[string]map[string]struct{}{}
+	for _, candidate := range candidates {
+		family, ok := candidateFamily(candidate.URL)
+		if !ok {
+			continue
+		}
+		if out[family] == nil {
+			out[family] = map[string]struct{}{}
+		}
+		for _, provider := range splitProviders(candidate.Metadata["provider_observations"]) {
+			out[family][provider] = struct{}{}
+		}
+	}
+	return out
+}
+
+func candidateFamily(rawURL string) (string, bool) {
+	if family, err := discoverycore.RegistrableDomain(rawURL); err == nil && strings.TrimSpace(family) != "" {
+		return strings.TrimSpace(family), true
+	}
+	if host, ok := discoverycore.Hostname(rawURL); ok && strings.TrimSpace(host) != "" {
+		return strings.TrimSpace(host), true
+	}
+	return "", false
 }
 
 func splitProviders(raw string) []string {

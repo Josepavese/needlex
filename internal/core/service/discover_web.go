@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/providerfusion"
 	"github.com/josepavese/needlex/internal/core/semanticcalibrate"
@@ -42,8 +43,11 @@ type DiscoverWebResponse struct {
 }
 
 const (
-	webCandidateLimit = 8
-	webProbeLimit     = 6
+	webCandidateLimit             = 8
+	webProbeLimit                 = 6
+	hostRootSemanticMinSimilarity = 0.24
+	hostRootOriginMinSimilarity   = 0.16
+	hostRootDerivativeMargin      = 0.015
 )
 
 func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, error) {
@@ -95,41 +99,99 @@ func normalizeDiscoverWebRequest(req DiscoverWebRequest) (DiscoverWebRequest, er
 
 func (s *Service) collectWebBootstrapCandidates(ctx context.Context, req DiscoverWebRequest) webBootstrapCollection {
 	providers := s.discoveryProviderAdapters(discoverycore.WebSearchProviders(s.webDiscoverBaseURL))
-	queries := req.Queries
-	if len(queries) == 0 {
-		queries = []string{req.Goal}
-	}
+	return s.collectWebBootstrapCandidatesFromProviders(ctx, req, providers)
+}
+
+func (s *Service) collectWebBootstrapCandidatesFromProviders(ctx context.Context, req DiscoverWebRequest, providers []discoveryProviderAdapter) webBootstrapCollection {
+	queries := semanticBootstrapQueryPortfolio(req)
 	collection := webBootstrapCollection{Candidates: discoverycore.NewSet(nil)}
-	for _, provider := range providers {
-		collection.MergeProviderResult(s.bootstrapProviderQueries(ctx, provider, req, queries, true))
+	if len(providers) == 0 || len(queries) == 0 {
+		return collection
 	}
-	if len(collection.Candidates.Sorted()) == 0 && len(queries) > 1 {
+
+	disabled := make(map[string]struct{}, len(providers))
+	for queryIndex, query := range queries {
 		for _, provider := range providers {
-			collection.MergeProviderResult(s.bootstrapProviderQueries(ctx, provider, req, []string{req.Goal}, false))
+			providerName := provider.Name()
+			if _, ok := disabled[providerName]; ok {
+				continue
+			}
+			result := s.bootstrapProviderQuery(ctx, provider, req, query)
+			collection.MergeProviderResult(result)
+			if result.LastErr != nil && webdiscover.ProviderLevelFailure(result.LastErr) {
+				disabled[providerName] = struct{}{}
+			}
+		}
+		if semanticBootstrapCollectionSufficient(collection, queryIndex+1, len(queries), len(providers)) {
+			break
 		}
 	}
 	return collection
 }
 
-func (s *Service) bootstrapProviderQueries(ctx context.Context, provider discoveryProviderAdapter, req DiscoverWebRequest, queries []string, stopOnProviderFailure bool) webBootstrapCollection {
+func (s *Service) bootstrapProviderQuery(ctx context.Context, provider discoveryProviderAdapter, req DiscoverWebRequest, query string) webBootstrapCollection {
 	out := webBootstrapCollection{Candidates: discoverycore.NewSet(nil)}
 	providerName := provider.Name()
-	for _, query := range queries {
-		bootstrapped, bootURL, err := provider.Bootstrap(ctx, req, query)
-		if err != nil {
-			s.observeDiscoveryProvider(providerName, webdiscover.ProviderOutcome(err))
-			out.LastErr = err
-			if webdiscover.IsProviderUnavailable(err) || (stopOnProviderFailure && webdiscover.ProviderLevelFailure(err)) {
-				break
-			}
-			continue
-		}
-		s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
-		out.DiscoveryURL = bootURL
-		out.Candidates.Merge(providerfusion.AnnotateProvider(bootstrapped, providerName))
-		out.ProviderNames = append(out.ProviderNames, providerName)
+	bootstrapped, bootURL, err := provider.Bootstrap(ctx, req, query)
+	if err != nil {
+		s.observeDiscoveryProvider(providerName, webdiscover.ProviderOutcome(err))
+		out.LastErr = err
+		return out
 	}
+	s.observeDiscoveryProvider(providerName, store.DiscoveryProviderOutcomeSuccess)
+	out.DiscoveryURL = bootURL
+	out.Candidates.Merge(providerfusion.AnnotateProvider(bootstrapped, providerName))
+	out.ProviderNames = append(out.ProviderNames, providerName)
 	return out
+}
+
+func semanticBootstrapQueryPortfolio(req DiscoverWebRequest) []string {
+	queries := make([]string, 0, len(req.Queries)+1)
+	add := func(query string) {
+		query = strings.TrimSpace(query)
+		if query == "" || slices.Contains(queries, query) {
+			return
+		}
+		queries = append(queries, query)
+	}
+	if len(req.Queries) == 0 {
+		add(req.Goal)
+		return queries
+	}
+	for _, query := range req.Queries {
+		add(query)
+	}
+	add(req.Goal)
+	return queries
+}
+
+func semanticBootstrapCollectionSufficient(collection webBootstrapCollection, roundsCompleted, totalQueries, providerCount int) bool {
+	candidates := collection.Candidates.Sorted()
+	if len(candidates) < max(webProbeLimit, webCandidateLimit) {
+		return false
+	}
+	if providerCount > 1 && len(collection.ProviderNames) < 2 {
+		return false
+	}
+	minRounds := 1
+	if totalQueries > 1 {
+		minRounds = 2
+	}
+	if roundsCompleted < minRounds {
+		return false
+	}
+	families := semanticBootstrapFamilyCount(candidates)
+	return families >= min(5, len(candidates))
+}
+
+func semanticBootstrapFamilyCount(candidates []DiscoverCandidate) int {
+	families := map[string]struct{}{}
+	for _, candidate := range candidates {
+		if family, ok := webdiscover.CandidateFamily(candidate.URL); ok && strings.TrimSpace(family) != "" {
+			families[family] = struct{}{}
+		}
+	}
+	return len(families)
 }
 
 func (c *webBootstrapCollection) MergeProviderResult(in webBootstrapCollection) {
@@ -450,7 +512,7 @@ func applySemanticFamilyEvidenceBalance(candidates []DiscoverCandidate) []Discov
 		if evidence >= 0.40 || candidateHasAnyReason(candidates[i], "semantic_evidence_probe", "semantic_family_alignment") {
 			item.Strong++
 		}
-		if candidateHasAnyReason(candidates[i], "host_root_candidate", "identity_reference", "same_host_canonical_root", "same_family_canonical_root") {
+		if candidateHasAnyReason(candidates[i], "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "same_host_canonical_root", "same_family_canonical_root") {
 			item.Provenance++
 		}
 		families[family] = item
@@ -513,7 +575,7 @@ func applySemanticNearTieProvenanceReview(candidates []DiscoverCandidate) []Disc
 		if !semanticNearTieEligible(out[i]) {
 			continue
 		}
-		if gap <= 0 || gap > semanticNearTieGapLimit(out[i]) {
+		if gap < 0 || gap > semanticNearTieGapLimit(out[i]) {
 			continue
 		}
 		merit := semanticNearTieMerit(out[i])
@@ -521,7 +583,7 @@ func applySemanticNearTieProvenanceReview(candidates []DiscoverCandidate) []Disc
 		if meritDelta < 0.04 {
 			continue
 		}
-		boost := min(meritDelta*0.90+0.06, 0.48)
+		boost := min(meritDelta*0.90+0.07, 0.48)
 		boost = min(boost, gap+0.04)
 		if boost <= 0 {
 			continue
@@ -541,11 +603,17 @@ func applySemanticNearTieProvenanceReview(candidates []DiscoverCandidate) []Disc
 }
 
 func semanticNearTieGapLimit(candidate DiscoverCandidate) float64 {
-	if candidateHasAnyReason(candidate, "host_root_candidate", "identity_reference", "embedded_url_provenance") {
+	if candidateHasAnyReason(candidate, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "embedded_url_provenance") {
 		return 0.46
 	}
 	if candidateHasAnyReason(candidate, "semantic_family_evidence_mass") {
-		return 0.34
+		return 0.50
+	}
+	if candidateHasAnyReason(candidate, "candidate_cluster_representative") {
+		return 0.46
+	}
+	if candidateHasAnyReason(candidate, "semantic_evidence_probe", "semantic_provider_consensus") {
+		return 0.42
 	}
 	return 0
 }
@@ -554,18 +622,28 @@ func semanticNearTieEligible(candidate DiscoverCandidate) bool {
 	if candidateHasAnyReason(candidate, "target_kind_topology_mismatch") {
 		return false
 	}
-	if candidateHasAnyReason(candidate, "host_root_candidate", "identity_reference", "embedded_url_provenance") {
+	if candidateHasAnyReason(candidate, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "embedded_url_provenance") {
 		return true
 	}
 	if candidateHasAnyReason(candidate, "semantic_family_evidence_mass") && discoverycore.URLPathDepth(candidate.URL) > 0 {
+		return true
+	}
+	if candidateHasAnyReason(candidate, "candidate_cluster_representative") {
+		return true
+	}
+	if candidateHasAnyReason(candidate, "semantic_evidence_probe", "semantic_provider_consensus") {
 		return true
 	}
 	return false
 }
 
 func semanticNearTieMerit(candidate DiscoverCandidate) float64 {
+	return semanticNearTiePositiveMerit(candidate) - semanticNearTiePenalty(candidate)
+}
+
+func semanticNearTiePositiveMerit(candidate DiscoverCandidate) float64 {
 	merit := 0.0
-	if candidateHasAnyReason(candidate, "host_root_candidate", "identity_reference", "embedded_url_provenance") {
+	if candidateHasAnyReason(candidate, "semantic_root_identity_probe", "host_root_identity_probe", "host_root_candidate", "identity_reference", "embedded_url_provenance") {
 		merit += 0.28
 	}
 	if candidateHasAnyReason(candidate, "same_host_canonical_root", "same_family_canonical_root") && semanticNearTieEligible(candidate) {
@@ -581,25 +659,56 @@ func semanticNearTieMerit(candidate DiscoverCandidate) float64 {
 		merit += 0.08
 	}
 	if candidateHasAnyReason(candidate, "web_ir_probe") {
-		merit += 0.05
+		merit += 0.11
+	} else if candidateHasAnyReason(candidate, "page_title_probe") {
+		merit -= 0.04
 	}
 	if candidateHasAnyReason(candidate, "page_expand_child_context", "embedded_url_contextual_evidence") {
 		merit += 0.05
 	}
+	if candidateHasAnyReason(candidate, "candidate_cluster_representative") {
+		merit += 0.14
+	}
+	if candidateHasAnyReason(candidate, "semantic_evidence_probe") {
+		merit += 0.16
+	}
+	if candidateHasAnyReason(candidate, "semantic_provider_consensus") {
+		merit += 0.09
+	}
 	merit += min(semanticCandidateEvidence(candidate)*0.12, 0.10)
+	return merit
+}
+
+func semanticNearTiePenalty(candidate DiscoverCandidate) float64 {
+	penalty := 0.0
 	if candidateHasAnyReason(candidate, "semantic_derivative_surface_penalty") {
-		merit -= 0.08
+		penalty += 0.08
+	}
+	if candidateHasAnyReason(candidate, "candidate_cluster_redundant") {
+		penalty += 0.10
+	}
+	if candidateHasAnyReason(candidate, "same_family_shallow_preference", "semantic_derivative_surface_penalty") &&
+		!candidateHasAnyReason(candidate, "semantic_family_evidence_mass") {
+		penalty += 0.24
 	}
 	if candidateHasAnyReason(candidate, "web_ir_embedded") {
-		merit -= 0.08
+		penalty += 0.08
+	}
+	if candidateHasAnyReason(candidate, "embedded_url_untyped_resource") && !candidateHasAnyReason(candidate, "endpoint_extract_llm") {
+		penalty += 0.16
+	}
+	if candidateHasAnyReason(candidate, "embedded_url_non_html_source") &&
+		candidateHasAnyReason(candidate, "semantic_derivative_surface_penalty") &&
+		!candidateHasAnyReason(candidate, "endpoint_extract_llm") {
+		penalty += 0.08
 	}
 	if candidateHasAnyReason(candidate, "weak_canonical_root_context_penalty", "weak_recovered_family_context_penalty", "cross_family_mirror_route_penalty") {
-		merit -= 0.12
+		penalty += 0.12
 	}
 	if candidateHasAnyReason(candidate, "target_kind_topology_mismatch") {
-		merit -= 0.24
+		penalty += 0.24
 	}
-	return merit
+	return penalty
 }
 
 func (s *Service) discoverWebLocalFirst(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, bool) {
@@ -770,7 +879,8 @@ func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAg
 	}
 
 	merged := discoverycore.NewSet(candidates)
-	for _, candidate := range candidates[:probeCount] {
+	probeCandidates := semanticProbeCandidates(candidates, probeCount)
+	for _, candidate := range probeCandidates[:probeCount] {
 		probed, err := s.probeWebCandidate(ctx, goal, userAgent, domainHints, candidate)
 		if err != nil {
 			continue
@@ -778,6 +888,49 @@ func (s *Service) expandAndRerankWebCandidates(ctx context.Context, goal, userAg
 		merged.Merge(probed)
 	}
 	return merged.Sorted()
+}
+
+func semanticProbeCandidates(candidates []DiscoverCandidate, probeCount int) []DiscoverCandidate {
+	if probeCount <= 0 || len(candidates) <= probeCount {
+		return candidates
+	}
+	out := make([]DiscoverCandidate, 0, len(candidates))
+	used := map[string]struct{}{}
+	seenFamilies := map[string]struct{}{}
+	add := func(candidate DiscoverCandidate, slot int) {
+		if _, ok := used[candidate.URL]; ok {
+			return
+		}
+		candidate.Reason = discoverycore.AppendUniqueReason(candidate.Reason, "semantic_family_probe_diversity")
+		candidate.Metadata = discoverycore.MergeMetadata(candidate.Metadata, map[string]string{
+			"semantic_probe_slot": strconv.Itoa(slot),
+		})
+		used[candidate.URL] = struct{}{}
+		out = append(out, candidate)
+	}
+	if len(candidates) > 0 {
+		add(candidates[0], 1)
+		if family, ok := webdiscover.CandidateFamily(candidates[0].URL); ok {
+			seenFamilies[family] = struct{}{}
+		}
+	}
+	for _, candidate := range candidates[1:] {
+		family, ok := webdiscover.CandidateFamily(candidate.URL)
+		if ok {
+			if _, seen := seenFamilies[family]; seen {
+				continue
+			}
+			seenFamilies[family] = struct{}{}
+		}
+		add(candidate, len(out)+1)
+		if len(out) >= probeCount {
+			break
+		}
+	}
+	for _, candidate := range candidates {
+		add(candidate, len(out)+1)
+	}
+	return out
 }
 
 func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string, domainHints []string, candidate DiscoverCandidate) ([]DiscoverCandidate, error) {
@@ -794,6 +947,12 @@ func (s *Service) probeWebCandidate(ctx context.Context, goal, userAgent string,
 
 	refined := webdiscover.RefineCandidate(goal, candidate, rawPage.FinalURL, dom.Title, webIR, domainHints)
 	out := []DiscoverCandidate{refined}
+	if rootProbe := s.probeSemanticRootIdentity(ctx, goal, rawPage.FinalURL, dom.Title, webIR); rootProbe.Score > 0 {
+		refined.Score += rootProbe.Score
+		refined.Reason = discoverycore.AppendUniqueReason(refined.Reason, rootProbe.Reasons...)
+		refined.Metadata = discoverycore.MergeMetadata(refined.Metadata, rootProbe.Metadata)
+		out[0] = refined
+	}
 	if hostProbe, err := s.probeHostRootIdentity(ctx, goal, userAgent, rawPage.FinalURL); err == nil {
 		if hostProbe.Score > 0 {
 			refined.Score += hostProbe.Score
@@ -833,7 +992,31 @@ type hostRootIdentityProbe struct {
 	Metadata map[string]string
 }
 
-func (s *Service) probeHostRootIdentity(ctx context.Context, _ string, userAgent, rawURL string) (hostRootIdentityProbe, error) {
+func (s *Service) probeSemanticRootIdentity(ctx context.Context, goal, rawURL, title string, webIR core.WebIR) hostRootIdentityProbe {
+	if !discoverycore.IsCanonicalHomeURL(rawURL) {
+		return hostRootIdentityProbe{}
+	}
+	rootContext := webdiscover.IRContext(webIR, 900)
+	semantics := s.hostRootSemanticScores(ctx, goal, rawURL, title, rootContext)
+	if !semantics.HostRootIdentity() {
+		return hostRootIdentityProbe{}
+	}
+	return hostRootIdentityProbe{
+		URL:   strings.TrimSpace(rawURL),
+		Title: strings.TrimSpace(title),
+		Score: 0.28 + min(semantics.Goal*0.26+semantics.Origin*0.24, 0.38),
+		Reasons: []string{
+			"semantic_root_identity_probe",
+		},
+		Metadata: map[string]string{
+			"semantic_root_goal_similarity":       strconv.FormatFloat(semantics.Goal, 'f', 3, 64),
+			"semantic_root_origin_similarity":     strconv.FormatFloat(semantics.Origin, 'f', 3, 64),
+			"semantic_root_derivative_similarity": strconv.FormatFloat(semantics.Derivative, 'f', 3, 64),
+		},
+	}
+}
+
+func (s *Service) probeHostRootIdentity(ctx context.Context, goal string, userAgent, rawURL string) (hostRootIdentityProbe, error) {
 	rootURL, ok := webdiscover.HostRootURL(rawURL)
 	if !ok || strings.TrimSpace(rootURL) == strings.TrimSpace(rawURL) {
 		return hostRootIdentityProbe{}, nil
@@ -848,39 +1031,101 @@ func (s *Service) probeHostRootIdentity(ctx context.Context, _ string, userAgent
 		return hostRootIdentityProbe{}, err
 	}
 	rootContext := webdiscover.IRContext(buildWebIR(dom), 900)
+	metadata := map[string]string{
+		"host_root_url":     strings.TrimSpace(rawPage.FinalURL),
+		"host_root_title":   strings.TrimSpace(dom.Title),
+		"host_root_context": rootContext,
+	}
+	semantics := s.hostRootSemanticScores(ctx, goal, rawPage.FinalURL, dom.Title, rootContext)
+	if semantics.Goal > 0 {
+		metadata["host_root_goal_similarity"] = strconv.FormatFloat(semantics.Goal, 'f', 3, 64)
+	}
+	if semantics.Origin > 0 {
+		metadata["host_root_origin_similarity"] = strconv.FormatFloat(semantics.Origin, 'f', 3, 64)
+	}
+	if semantics.Derivative > 0 {
+		metadata["host_root_derivative_similarity"] = strconv.FormatFloat(semantics.Derivative, 'f', 3, 64)
+	}
 	if strings.TrimSpace(dom.Title) == "" {
 		return hostRootIdentityProbe{
-			URL: strings.TrimSpace(rawPage.FinalURL),
+			URL:      strings.TrimSpace(rawPage.FinalURL),
+			Metadata: metadata,
 		}, nil
 	}
 
 	identityScore, reasons := discoverycore.ScoreStructuralURL(rawPage.FinalURL, false, nil)
-	if identityScore <= 0 {
+	if identityScore <= 0 || !semantics.HostRootIdentity() {
 		return hostRootIdentityProbe{
-			URL:   strings.TrimSpace(rawPage.FinalURL),
-			Title: strings.TrimSpace(dom.Title),
-			Metadata: map[string]string{
-				"host_root_url":     strings.TrimSpace(rawPage.FinalURL),
-				"host_root_title":   strings.TrimSpace(dom.Title),
-				"host_root_context": rootContext,
-			},
+			URL:      strings.TrimSpace(rawPage.FinalURL),
+			Title:    strings.TrimSpace(dom.Title),
+			Metadata: metadata,
 		}, nil
 	}
 
 	return hostRootIdentityProbe{
 		URL:   strings.TrimSpace(rawPage.FinalURL),
 		Title: strings.TrimSpace(dom.Title),
-		Score: identityScore * 0.65,
+		Score: identityScore*0.45 + min(semantics.Goal*0.26+semantics.Origin*0.24, 0.35),
 		Reasons: discoverycore.AppendUniqueReason(
 			reasons,
 			"host_root_identity_probe",
 		),
-		Metadata: map[string]string{
-			"host_root_url":     strings.TrimSpace(rawPage.FinalURL),
-			"host_root_title":   strings.TrimSpace(dom.Title),
-			"host_root_context": rootContext,
-		},
+		Metadata: metadata,
 	}, nil
+}
+
+type hostRootSemanticScores struct {
+	Goal       float64
+	Origin     float64
+	Derivative float64
+}
+
+func (scores hostRootSemanticScores) HostRootIdentity() bool {
+	custodianRoot := scores.Goal >= hostRootSemanticMinSimilarity &&
+		scores.Origin >= hostRootOriginMinSimilarity &&
+		scores.Origin >= scores.Derivative+hostRootDerivativeMargin
+	topicSpecificRoot := scores.Goal >= 0.40 &&
+		scores.Origin >= 0.14 &&
+		scores.Derivative <= scores.Goal+0.02
+	return custodianRoot || topicSpecificRoot
+}
+
+func (s *Service) hostRootSemanticScores(ctx context.Context, goal, rootURL, title, rootContext string) hostRootSemanticScores {
+	if s.semantic == nil || strings.TrimSpace(goal) == "" {
+		return hostRootSemanticScores{}
+	}
+	text := discoverycore.JoinNonEmpty(title, rootContext, rootURL)
+	if strings.TrimSpace(text) == "" {
+		return hostRootSemanticScores{}
+	}
+	return hostRootSemanticScores{
+		Goal:       s.scoreHostRootSemanticText(ctx, goal, rootURL, text),
+		Origin:     s.scoreHostRootSemanticText(ctx, hostRootOriginProfile(), rootURL, text),
+		Derivative: s.scoreHostRootSemanticText(ctx, hostRootDerivativeProfile(), rootURL, text),
+	}
+}
+
+func (s *Service) scoreHostRootSemanticText(ctx context.Context, objective, rootURL, text string) float64 {
+	scored, err := s.semantic.Score(ctx, objective, []intel.SemanticCandidate{{
+		ID:   rootURL,
+		Text: compactSemanticCandidateText(text, 1200),
+	}})
+	if err != nil || len(scored) == 0 {
+		return 0
+	}
+	best := 0.0
+	for _, item := range scored {
+		best = max(best, item.Similarity)
+	}
+	return best
+}
+
+func hostRootOriginProfile() string {
+	return "Root surface of the responsible entity, project, institution, standard body, publisher, service, or product itself. Primary maintained identity, canonical owner presence, official home, source of record."
+}
+
+func hostRootDerivativeProfile() string {
+	return "General secondary collection, tutorial site, encyclopedia, aggregator, community portal, directory, mirror, external explanation, or multi-entity catalogue about other projects and sources."
 }
 
 func (s *Service) selectIdentityReferenceCandidates(ctx context.Context, goal string, source DiscoverCandidate, refs []webdiscover.IdentityReferenceCandidate) []DiscoverCandidate {
@@ -902,7 +1147,7 @@ func (s *Service) selectExpandedRecoveryCandidates(ctx context.Context, goal str
 	}
 	ordered := append([]DiscoverCandidate{}, expanded...)
 	goalSimilarity := s.scoreCandidateSetToGoal(ctx, goal, expandedRecoverySemanticCandidates(source, ordered))
-	applyExpandedRecoveryScores(source.URL, ordered, goalSimilarity)
+	applyExpandedRecoveryScores(source, ordered, goalSimilarity)
 	discoverycore.SortCandidates(ordered)
 	return selectExpandedRecoveryLeaders(ordered)
 }
@@ -927,9 +1172,11 @@ func expandedRecoverySemanticCandidates(source DiscoverCandidate, ordered []Disc
 	return semanticCandidates
 }
 
-func applyExpandedRecoveryScores(sourceURL string, ordered []DiscoverCandidate, goalSimilarity map[string]float64) {
-	sourceFamily, _ := webdiscover.CandidateFamily(sourceURL)
-	sourceDepth := discoverycore.URLPathDepth(sourceURL)
+func applyExpandedRecoveryScores(source DiscoverCandidate, ordered []DiscoverCandidate, goalSimilarity map[string]float64) {
+	sourceFamily, _ := webdiscover.CandidateFamily(source.URL)
+	sourceDepth := discoverycore.URLPathDepth(source.URL)
+	sourceSimilarity := semanticCandidateEvidence(source)
+	sourceGrounded := sourceSimilarity >= 0.30 || candidateHasAnyReason(source, "semantic_root_identity_probe", "host_root_identity_probe", "semantic_evidence_probe")
 	for i := range ordered {
 		similarity := goalSimilarity[ordered[i].URL]
 		family, familyOK := webdiscover.CandidateFamily(ordered[i].URL)
@@ -956,8 +1203,11 @@ func applyExpandedRecoveryScores(sourceURL string, ordered []DiscoverCandidate, 
 			if similarity < 0.18 {
 				ordered[i].Score -= 0.18
 				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "external_family_ungrounded")
+			} else if sourceGrounded && similarity <= sourceSimilarity+0.08 {
+				ordered[i].Score -= 0.22
+				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "external_family_context_only")
 			} else {
-				ordered[i].Score += 0.60
+				ordered[i].Score += 0.22 + min(max(0, similarity-sourceSimilarity)*0.90, 0.28)
 				ordered[i].Reason = discoverycore.AppendUniqueReason(ordered[i].Reason, "external_family_recovery")
 			}
 		}
@@ -974,6 +1224,10 @@ func selectExpandedRecoveryLeaders(ordered []DiscoverCandidate) []DiscoverCandid
 				continue
 			}
 			seenFamilies[family] = struct{}{}
+		}
+		if candidateHasAnyReason(candidate, "external_family_context_only", "external_family_ungrounded") &&
+			!candidateHasAnyReason(candidate, "same_family_child_recovery", "same_family_page_expand", "same_family_scope_regression") {
+			continue
 		}
 		if candidateHasAnyReason(candidate, "same_family_scope_regression") {
 			candidate.Score += 0.04

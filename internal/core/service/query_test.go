@@ -151,6 +151,41 @@ func TestReadQuerySelectedCandidateFallsBackFromUnsupportedContent(t *testing.T)
 	}
 }
 
+func TestReadQuerySelectedCandidateRetriesSelectedWithResilientFetchBeforeFallback(t *testing.T) {
+	primaryHits := 0
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		primaryHits++
+		if primaryHits == 1 {
+			http.Error(w, "blocked", http.StatusForbidden)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Primary docs</title></head><body><h1>Primary docs</h1><p>Recovered through resilient fetch.</p></body></html>`)
+	}))
+	defer primary.Close()
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, testHTML)
+	}))
+	defer fallback.Close()
+
+	svc := newSemanticService(t, primary.Client())
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "runtime fallback", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+	plan.SelectedURL = primary.URL
+	plan.CandidateURLs = []string{primary.URL, fallback.URL}
+
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback", FetchProfile: "standard", FetchRetryProfile: "standard"}, core.ProfileTiny, QueryDiscoveryWeb, &plan)
+	if err != nil {
+		t.Fatalf("expected resilient selected retry to succeed: %v", err)
+	}
+	if plan.SelectedURL != primary.URL || resp.Document.FinalURL != primary.URL {
+		t.Fatalf("expected selected URL to remain primary, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	if primaryHits != 2 {
+		t.Fatalf("expected primary to be retried before fallback, got %d hits", primaryHits)
+	}
+}
+
 func TestReadQuerySelectedCandidateFallsBackFromTLSError(t *testing.T) {
 	badTLS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
