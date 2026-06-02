@@ -93,6 +93,7 @@ func (r ExecDumpDOMRenderer) Render(ctx context.Context, req Request) (Page, err
 		args = append(args, "--headless=new")
 	}
 	args = append(args,
+		"--no-sandbox",
 		"--disable-gpu",
 		"--no-first-run",
 		"--no-default-browser-check",

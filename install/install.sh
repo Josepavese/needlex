@@ -369,6 +369,7 @@ verify_render_browser() {
   if [[ "${browser_base}" == *"chrome-headless-shell"* || "${browser_base}" == "headless_shell" ]]; then
     output="$("${RENDER_BROWSER_PATH}" \
       --disable-gpu \
+      --no-sandbox \
       --no-first-run \
       --no-default-browser-check \
       --disable-dev-shm-usage \
@@ -381,6 +382,7 @@ verify_render_browser() {
   else
     output="$("${RENDER_BROWSER_PATH}" \
       --headless=new \
+      --no-sandbox \
       --disable-gpu \
       --no-first-run \
       --no-default-browser-check \

@@ -201,6 +201,7 @@ function Test-RenderBrowser {
   New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
   try {
     $args = @(
+      "--no-sandbox",
       "--disable-gpu",
       "--no-first-run",
       "--no-default-browser-check",
