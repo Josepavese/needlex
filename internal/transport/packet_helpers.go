@@ -359,6 +359,9 @@ func isTightPunctuation(r rune) bool {
 
 func deriveReadUncertainty(chunks []coreservice.AgentChunk, webIR core.WebIR) compactUncertainty {
 	reasons := make([]string, 0, 4)
+	for _, reason := range core.WebIRUtilityReasons(webIR) {
+		reasons = appendUniqueStrings(reasons, reason)
+	}
 	confidence := topChunkConfidence(chunks)
 	switch {
 	case confidence > 0 && confidence < 0.72:

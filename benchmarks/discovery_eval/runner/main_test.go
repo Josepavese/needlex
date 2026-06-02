@@ -139,6 +139,7 @@ func runDiscoveryCase(t *testing.T, item discoveryCase) (discoveryRow, error) {
 	cfg.Semantic.EmbeddingURL = newDiscoveryEvalEmbeddingServer(t).URL
 	cfg.Semantic.TimeoutMS = 5000
 	cfg.Memory.Enabled = false
+	cfg.Render.Enabled = false
 	svc, err := coreservice.New(cfg, seed.Client())
 	if err != nil {
 		return discoveryRow{}, err

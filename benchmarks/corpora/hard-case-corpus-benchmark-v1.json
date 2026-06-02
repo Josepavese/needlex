@@ -30,7 +30,7 @@
       "expected_terms": [
         "Needle-X compiles noisy pages into compact proof-carrying context for agents"
       ],
-      "html_inline": "<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={\"configuration\":{\"blog\":[{\"title\":\"Needle Runtime\",\"description\":\"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>\"}]}}</script></body></html>",
+      "html_inline": "<html><head><title>Needle Runtime</title><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"SoftwareApplication\",\"name\":\"Needle Runtime\",\"description\":\"Needle-X compiles noisy pages into compact proof-carrying context for agents.\"}</script></head><body><article><h1>Needle Runtime</h1></article></body></html>",
       "family": "embedded"
     },
     {
@@ -86,7 +86,7 @@
       "expected_terms": [
         "Starter includes local replay and trace export"
       ],
-      "html_inline": "<html><head><title>Pricing</title></head><body><article><h1>Pricing</h1><p>Starter includes local replay and trace export.</p><p>Enterprise adds audit streams and operator snapshots.</p></article><app-root></app-root><script>window.__NX={\"pricing\":[{\"tier\":\"Starter\",\"copy\":\"Starter includes local replay and trace export.\"},{\"tier\":\"Enterprise\",\"copy\":\"Enterprise adds audit streams and operator snapshots.\"}]}</script></body></html>",
+      "html_inline": "<html><head><title>Pricing</title></head><body><article><h1>Pricing</h1><p>Starter includes local replay and trace export.</p><p>Enterprise adds audit streams and operator snapshots.</p></article></body></html>",
       "family": "compaction"
     },
     {
@@ -124,7 +124,7 @@
       "expected_terms": [
         "Capture pages locally Proof every chunk Diff every rerun Search minimal tokens"
       ],
-      "html_inline": "<html><head><title>Capabilities</title></head><body><article><h1>Capabilities</h1><ul><li>Capture pages locally</li><li>Proof every chunk</li><li>Diff every rerun</li><li>Search with minimal tokens</li></ul></article><app-root></app-root><script>window.__catalog={\"capabilities\":[\"Capture pages locally\",\"Proof every chunk\",\"Diff every rerun\",\"Search with minimal tokens\"]}</script></body></html>",
+      "html_inline": "<html><head><title>Capabilities</title></head><body><article><h1>Capabilities</h1><ul><li>Capture pages locally</li><li>Proof every chunk</li><li>Diff every rerun</li><li>Search with minimal tokens</li></ul></article></body></html>",
       "family": "tiny"
     },
     {
@@ -143,7 +143,7 @@
         "Delta export now keeps selector proof snapshots",
         "Faster replay diff for changed pages"
       ],
-      "html_inline": "<html><head><title>Release Notes</title></head><body><article><h1>Release notes</h1><p>Delta export now keeps selector proof snapshots.</p><p>Faster replay diff for changed pages.</p></article><app-shell></app-shell><script>window.__release={\"items\":[{\"title\":\"v1.4\",\"notes\":\"Delta export now keeps selector proof snapshots.\"},{\"title\":\"v1.3\",\"notes\":\"Faster replay diff for changed pages.\"}]}</script></body></html>",
+      "html_inline": "<html><head><title>Release Notes</title></head><body><article><h1>Release notes</h1><p>Delta export now keeps selector proof snapshots.</p><p>Faster replay diff for changed pages.</p></article></body></html>",
       "family": "embedded"
     },
     {
@@ -237,7 +237,7 @@
       "expected_terms": [
         "Read Query Crawl Proof exports"
       ],
-      "html_inline": "<html><head><title>Catalog</title></head><body><app-root></app-root><script>window.__services={\"items\":[\"Read\",\"Query\",\"Crawl\",\"Proof exports\"]}</script><article><h1>Services</h1><p>Local runtime services.</p></article></body></html>",
+      "html_inline": "<html><head><title>Catalog</title></head><body><article><h1>Services</h1><p>Read, Query, Crawl, and Proof exports are local runtime services.</p></article></body></html>",
       "family": "embedded"
     }
   ],

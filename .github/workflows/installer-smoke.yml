@@ -35,14 +35,24 @@ jobs:
           test -d "${state_root}/candidates"
           test -d "${state_root}/domain_graph"
           test -d "${state_root}/fingerprint_graph"
+          test -d "${state_root}/browsers"
           test -f "${state_root}/discovery/discovery.db"
           test -f "${state_root}/configs/needlex.json"
           test ! -e "${HOME}/.local/bin/needle"
           python3 - <<'PY'
+          import json
+          import os
           from pathlib import Path
           profile = Path.home() / ".profile"
           text = profile.read_text() if profile.exists() else ""
           assert text.count("# needlex-path") == 1, text
+          state_root = Path.home() / ".local" / "share" / "needlex"
+          cfg = json.loads((state_root / "configs" / "needlex.json").read_text())
+          browser_path = Path(cfg["render"]["browser_path"])
+          assert cfg["render"]["enabled"] is True, cfg["render"]
+          assert browser_path.exists(), browser_path
+          assert os.access(browser_path, os.X_OK), browser_path
+          assert state_root in browser_path.parents, browser_path
           print("path hook deduped")
           PY
 
@@ -54,11 +64,15 @@ jobs:
           source "${HOME}/.bashrc" >/dev/null 2>&1 || true
           needlex memory stats --json
           needlex config show --json
+          needlex doctor --json > /tmp/needlex-doctor.json
           needlex logs stats --json
           needlex support bundle --out /tmp/needlex-support --json
           needlex read https://example.com --json > /tmp/needlex-read.json
           python3 - <<'PY'
           import json
+          doctor = json.load(open("/tmp/needlex-doctor.json"))
+          assert doctor["render"]["enabled"] is True, doctor["render"]
+          assert doctor["render"]["ready"] is True, doctor["render"]
           payload = json.load(open("/tmp/needlex-read.json"))
           assert payload.get("url"), "missing url"
           assert payload.get("summary"), "missing summary"

@@ -9,6 +9,8 @@ type Config struct {
 	Discovery DiscoveryConfig `json:"discovery,omitempty"`
 	Semantic  SemanticConfig  `json:"semantic,omitempty"`
 	Memory    MemoryConfig    `json:"memory,omitempty"`
+	Agent     AgentConfig     `json:"agent,omitempty"`
+	Render    RenderConfig    `json:"render,omitempty"`
 }
 
 type RuntimeConfig struct {
@@ -96,4 +98,18 @@ type MemoryConfig struct {
 	VectorMode    string `json:"vector_mode,omitempty"`
 	VectorEngine  string `json:"vector_engine,omitempty"`
 	PrunePolicy   string `json:"prune_policy,omitempty"`
+}
+
+type AgentConfig struct {
+	ReadableEnabled bool `json:"readable_enabled,omitempty"`
+	MaxCandidates   int  `json:"max_candidates,omitempty"`
+}
+
+type RenderConfig struct {
+	Enabled        bool   `json:"enabled,omitempty"`
+	Provider       string `json:"provider,omitempty"`
+	BrowserPath    string `json:"browser_path,omitempty"`
+	RemoteCDPURL   string `json:"remote_cdp_url,omitempty"`
+	TimeoutMS      int64  `json:"timeout_ms,omitempty"`
+	MaxConcurrency int    `json:"max_concurrency,omitempty"`
 }

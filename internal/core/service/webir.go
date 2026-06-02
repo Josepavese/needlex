@@ -56,6 +56,7 @@ func buildWebIR(dom pipeline.SimplifiedDOM) core.WebIR {
 			HeadingRatio:      headingRatio,
 			EmbeddedNodeCount: embedded,
 			SubstrateClass:    strings.TrimSpace(dom.SubstrateClass),
+			SourceKind:        strings.TrimSpace(dom.SourceKind),
 		},
 	}
 }

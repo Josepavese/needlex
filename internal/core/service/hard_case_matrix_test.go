@@ -21,8 +21,8 @@ type hardCaseMetrics struct {
 }
 
 func TestHardCaseMatrix(t *testing.T) {
-	t.Run("embedded_lane3_beats_lane0_on_controlled_fullstack_path", func(t *testing.T) {
-		html := `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`
+	t.Run("structured_jsonld_lane3_beats_lane0_on_controlled_fullstack_path", func(t *testing.T) {
+		html := `<html><head><title>Needle Runtime</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Needle Runtime","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}</script></head><body><article><h1>Needle Runtime</h1></article></body></html>`
 		expected := []string{"Needle-X compiles noisy pages into compact proof-carrying context for agents"}
 		lane0 := runHardCaseMetrics(t, html, expected, ReadRequest{Objective: "company profile", Profile: core.ProfileStandard})
 		lane3 := runHardCaseMetrics(t, html, expected, ReadRequest{Objective: "company profile", Profile: core.ProfileStandard, ForceLane: 3})
@@ -42,7 +42,7 @@ func TestHardCaseMatrix(t *testing.T) {
 			t.Fatalf("expected lane3 objective score >= lane0, lane0=%#v lane3=%#v", lane0, lane3)
 		}
 		if lane3.fidelity < 1.0 {
-			t.Fatalf("expected lane3 fidelity to retain the embedded signal, got %#v", lane3)
+			t.Fatalf("expected lane3 fidelity to retain the structured signal, got %#v", lane3)
 		}
 	})
 

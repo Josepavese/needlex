@@ -18,6 +18,8 @@ func (c Config) Validate() error {
 	errs = append(errs, validateDiscovery(c.Discovery)...)
 	errs = append(errs, validateSemantic(c.Semantic)...)
 	errs = append(errs, validateMemory(c.Memory)...)
+	errs = append(errs, validateAgent(c.Agent)...)
+	errs = append(errs, validateRender(c.Render)...)
 
 	if len(errs) == 0 {
 		return nil
@@ -245,6 +247,30 @@ func validateMemory(memory MemoryConfig) []error {
 	}
 	if strings.TrimSpace(memory.PrunePolicy) == "" {
 		errs = append(errs, fmt.Errorf("memory.prune_policy must not be empty"))
+	}
+	return errs
+}
+
+func validateAgent(agent AgentConfig) []error {
+	errs := []error{}
+	if agent.MaxCandidates < 0 {
+		errs = append(errs, fmt.Errorf("agent.max_candidates must be >= 0"))
+	}
+	return errs
+}
+
+func validateRender(render RenderConfig) []error {
+	errs := []error{}
+	switch strings.TrimSpace(render.Provider) {
+	case "", "exec-dump-dom", "remote-cdp", "playwright-worker":
+	default:
+		errs = append(errs, fmt.Errorf("render.provider must be one of exec-dump-dom, remote-cdp, playwright-worker"))
+	}
+	if render.TimeoutMS < 0 {
+		errs = append(errs, fmt.Errorf("render.timeout_ms must be >= 0"))
+	}
+	if render.MaxConcurrency < 0 {
+		errs = append(errs, fmt.Errorf("render.max_concurrency must be >= 0"))
 	}
 	return errs
 }

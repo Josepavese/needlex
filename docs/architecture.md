@@ -90,6 +90,7 @@ Canonical layout:
 ```text
 <state-root>/
   analytics/
+  browsers/
   candidates/
   discovery/
     discovery.db

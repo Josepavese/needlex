@@ -76,17 +76,16 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 		title: extractTitle(root),
 	}
 	walker.walk(body, pathState{}, profile)
-	embeddedNodes := extractEmbeddedPayloadNodes(root)
-	if len(walker.nodes) < 2 {
-		walker.nodes = append(walker.nodes, embeddedNodes...)
-	} else if len(embeddedNodes) > 0 {
-		walker.nodes = append(walker.nodes, embeddedNodes...)
+	structuredNodes := extractStructuredDataNodes(root)
+	if len(structuredNodes) > 0 {
+		walker.nodes = append(walker.nodes, structuredNodes...)
 	}
 
 	return SimplifiedDOM{
 		URL:            page.FinalURL,
 		Title:          walker.title,
-		SubstrateClass: inferSubstrateClass(page.HTML),
+		SubstrateClass: inferSubstrateClass(page),
+		SourceKind:     strings.TrimSpace(page.SourceKind),
 		Nodes:          walker.nodes,
 	}, nil
 }
@@ -94,11 +93,25 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 func reduceTextLike(page RawPage) SimplifiedDOM {
 	text := strings.TrimSpace(page.HTML)
 	title := textPageTitle(page)
+	if looksLikeMarkdownContent(page, text) {
+		nodes, markdownTitle := markdownNodes(text)
+		if strings.TrimSpace(markdownTitle) != "" {
+			title = markdownTitle
+		}
+		return SimplifiedDOM{
+			URL:            page.FinalURL,
+			Title:          title,
+			SubstrateClass: markdownSubstrateClass(page),
+			SourceKind:     strings.TrimSpace(page.SourceKind),
+			Nodes:          nodes,
+		}
+	}
 	if text == "" {
 		return SimplifiedDOM{
 			URL:            page.FinalURL,
 			Title:          title,
 			SubstrateClass: "plain_text",
+			SourceKind:     strings.TrimSpace(page.SourceKind),
 		}
 	}
 	kind := "paragraph"
@@ -127,6 +140,7 @@ func reduceTextLike(page RawPage) SimplifiedDOM {
 		URL:            page.FinalURL,
 		Title:          title,
 		SubstrateClass: "plain_text",
+		SourceKind:     strings.TrimSpace(page.SourceKind),
 		Nodes:          nodes,
 	}
 }
@@ -137,6 +151,53 @@ func isHTMLLikeContentType(contentType string) bool {
 		return true
 	}
 	return strings.Contains(contentType, "text/html") || strings.Contains(contentType, "application/xhtml+xml")
+}
+
+func looksLikeMarkdownContent(page RawPage, text string) bool {
+	contentType := strings.ToLower(strings.TrimSpace(page.ContentType))
+	if strings.Contains(contentType, "text/markdown") || strings.Contains(contentType, "text/x-markdown") {
+		return true
+	}
+	parsed, err := url.Parse(strings.TrimSpace(page.FinalURL))
+	if err == nil {
+		switch strings.ToLower(path.Ext(parsed.Path)) {
+		case ".md", ".mdx", ".markdown":
+			return true
+		}
+	}
+	if strings.Contains(strings.ToLower(strings.TrimSpace(page.SourceKind)), "markdown") {
+		return true
+	}
+	lines := strings.Split(strings.TrimSpace(text), "\n")
+	if len(lines) == 0 {
+		return false
+	}
+	markdownSignals := 0
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(trimmed, "# "):
+			markdownSignals += 2
+		case strings.HasPrefix(trimmed, "## "):
+			markdownSignals++
+		case strings.HasPrefix(trimmed, "- [") && strings.Contains(trimmed, "]("):
+			markdownSignals++
+		case strings.HasPrefix(trimmed, "```"):
+			markdownSignals++
+		}
+		if markdownSignals >= 2 {
+			return true
+		}
+	}
+	return false
+}
+
+func markdownSubstrateClass(page RawPage) string {
+	sourceKind := strings.ToLower(strings.TrimSpace(page.SourceKind))
+	if strings.Contains(sourceKind, "agent") || strings.Contains(sourceKind, "llms") || strings.Contains(sourceKind, "markdown") {
+		return "agent_markdown"
+	}
+	return "plain_text"
 }
 
 func looksLikeCodeContent(page RawPage) bool {

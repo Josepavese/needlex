@@ -2,20 +2,32 @@ package pipeline
 
 import "strings"
 
-func inferSubstrateClass(rawHTML string) string {
-	haystack := strings.ToLower(strings.TrimSpace(rawHTML))
+func inferSubstrateClass(page RawPage) string {
+	if sourceKind := strings.ToLower(strings.TrimSpace(page.SourceKind)); sourceKind != "" {
+		switch {
+		case strings.Contains(sourceKind, "render"):
+			return "rendered_html"
+		case strings.Contains(sourceKind, "markdown") || strings.Contains(sourceKind, "llms"):
+			return "agent_markdown"
+		}
+	}
+	haystack := strings.ToLower(strings.TrimSpace(page.HTML))
 	if haystack == "" {
 		return "generic_content"
 	}
 	if containsAny(haystack,
-		"window._a2s",
-		"__next_data__",
+		"__next_f",
+		"self.__next_f",
 		"__nuxt__",
 		"__apollo_state__",
 		"<app-root",
+		"<app-shell",
 		"data-reactroot",
+		"id=\"__next_data__\"",
+		"id=\"__next\"",
+		"id=\"__nuxt\"",
 	) {
-		return "embedded_app_payload"
+		return "client_rendered_app"
 	}
 	if containsAny(haystack,
 		"wp-content",

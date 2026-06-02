@@ -11,6 +11,10 @@ func (s *Service) fetchAcquireInput(rawURL, userAgent string) pipeline.AcquireIn
 }
 
 func (s *Service) fetchAcquireInputWithProfiles(rawURL, userAgent, fetchProfile, fetchRetryProfile string) pipeline.AcquireInput {
+	return s.fetchAcquireInputWithProfilesAndAccept(rawURL, userAgent, fetchProfile, fetchRetryProfile, "")
+}
+
+func (s *Service) fetchAcquireInputWithProfilesAndAccept(rawURL, userAgent, fetchProfile, fetchRetryProfile, accept string) pipeline.AcquireInput {
 	if fetchProfile == "" {
 		fetchProfile = s.cfg.Fetch.Profile
 	}
@@ -22,6 +26,7 @@ func (s *Service) fetchAcquireInputWithProfiles(rawURL, userAgent, fetchProfile,
 		Timeout:             time.Duration(s.cfg.Runtime.TimeoutMS) * time.Millisecond,
 		MaxBytes:            s.cfg.Runtime.MaxBytes,
 		UserAgent:           userAgent,
+		Accept:              accept,
 		Profile:             fetchProfile,
 		RetryProfile:        fetchRetryProfile,
 		BlockedRetryBackoff: time.Duration(s.cfg.Fetch.BlockedRetryBackoffMS) * time.Millisecond,

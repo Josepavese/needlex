@@ -24,7 +24,7 @@ func writeConfigUsage(w io.Writer) {
 		"needlex config show [--json] [--path path]",
 		"needlex config init [--force] [--path path]",
 		"needlex config set <key> <value> [--path path]",
-		"keys: semantic.embedding_url, semantic.provider_model, semantic.vector_space, semantic.timeout_ms, semantic.max_candidates, semantic.embedding_cache.*, models.base_url, models.backend",
+		"keys: semantic.*, semantic.embedding_cache.*, render.*, models.base_url, models.backend",
 	)
 }
 
@@ -204,6 +204,30 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 		cfg.Models.Extractor = value
 	case "models.formatter":
 		cfg.Models.Formatter = value
+	case "render.enabled":
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("%s must be a boolean", key)
+		}
+		cfg.Render.Enabled = parsed
+	case "render.provider":
+		cfg.Render.Provider = value
+	case "render.browser_path":
+		cfg.Render.BrowserPath = value
+	case "render.remote_cdp_url":
+		cfg.Render.RemoteCDPURL = value
+	case "render.timeout_ms":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.TimeoutMS = parsed
+	case "render.max_concurrency":
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.MaxConcurrency = parsed
 	default:
 		if strings.HasPrefix(key, "semantic.embedding_cache.") {
 			if err := setEmbeddingCacheConfigValue(&cfg.Semantic.EmbeddingCache, key, value); err != nil {
@@ -269,5 +293,10 @@ func renderConfigText(w io.Writer, path string, cfg config.Config) {
 	fmt.Fprintf(w, "Embedding Cache Max Entries: %d\n", cfg.Semantic.EmbeddingCache.MaxEntries)
 	fmt.Fprintf(w, "Model Backend: %s\n", cfg.Models.Backend)
 	fmt.Fprintf(w, "Model Base URL: %s\n", cfg.Models.BaseURL)
+	fmt.Fprintf(w, "Render Enabled: %t\n", cfg.Render.Enabled)
+	fmt.Fprintf(w, "Render Provider: %s\n", cfg.Render.Provider)
+	if cfg.Render.BrowserPath != "" {
+		fmt.Fprintf(w, "Render Browser Path: %s\n", cfg.Render.BrowserPath)
+	}
 	fmt.Fprintf(w, "State Config Env: %s\n", os.Getenv(platform.EnvConfig))
 }

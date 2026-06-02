@@ -73,8 +73,8 @@ func TestReadGoldenForumDeep(t *testing.T) {
 	if !containsChunkText(resp.ResultPack.Chunks, "Compare stage hashes first.") {
 		t.Fatal("expected troubleshooting text in chunks")
 	}
-	if resp.Replay.StageCount != 4 {
-		t.Fatalf("expected 4 stages, got %d", resp.Replay.StageCount)
+	if resp.Replay.StageCount != 5 {
+		t.Fatalf("expected 5 stages, got %d", resp.Replay.StageCount)
 	}
 	if !resp.Replay.Deterministic {
 		t.Fatal("expected replay report to remain deterministic")

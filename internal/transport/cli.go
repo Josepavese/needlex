@@ -113,6 +113,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	var profile string
 	var userAgent string
 	var retrievalEffort string
+	var renderMode string
 	var jsonOut bool
 	var jsonMode string
 
@@ -121,6 +122,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
+	fs.StringVar(&renderMode, "render", "", "JS rendering mode: auto (default), off, or required")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 
@@ -145,10 +147,11 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	}
 
 	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
-		URL:       fs.Arg(0),
-		Objective: objective,
-		Profile:   profile,
-		UserAgent: userAgent,
+		URL:        fs.Arg(0),
+		Objective:  objective,
+		Profile:    profile,
+		UserAgent:  userAgent,
+		RenderMode: renderMode,
 	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "read", err, map[string]any{"url": fs.Arg(0), "objective": objective})
@@ -167,9 +170,9 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 func writeRootUsage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
-  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name]
-  needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort name]
-  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort name]
+  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name] [--render auto|off|required]
+  needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort name] [--render auto|off|required]
+  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required]
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
   needlex proof <trace-id|proof-id|chunk-id> [--json]
@@ -199,11 +202,11 @@ func (r Runner) runVersion(args []string, stdout, stderr io.Writer) int {
 }
 
 func writeQueryUsage(w io.Writer) {
-	writeUsage(w, "needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort minimal|light|balanced|standard|exhaustive]", "note: when seed-url is omitted, discovery defaults to web_search")
+	writeUsage(w, "needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]", "note: when seed-url is omitted, discovery defaults to web_search")
 }
 
 func writeReadUsage(w io.Writer) {
-	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive]")
+	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]")
 }
 
 func writeReplayUsage(w io.Writer) {
@@ -407,4 +410,6 @@ var readValueFlags = map[string]struct{}{
 	"-user-agent":        {},
 	"--retrieval-effort": {},
 	"-retrieval-effort":  {},
+	"--render":           {},
+	"-render":            {},
 }

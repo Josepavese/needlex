@@ -5,10 +5,16 @@ $Version = if ($env:NEEDLEX_VERSION) { $env:NEEDLEX_VERSION } else { "latest" }
 $ReleaseBaseUrl = if ($env:NEEDLEX_RELEASE_BASE_URL) { $env:NEEDLEX_RELEASE_BASE_URL } else { "" }
 $SkipPathUpdate = if ($env:NEEDLEX_INSTALL_SKIP_PATH_UPDATE) { $env:NEEDLEX_INSTALL_SKIP_PATH_UPDATE } else { "0" }
 $SkipSemanticPrereqs = if ($env:NEEDLEX_INSTALL_SKIP_SEMANTIC_PREREQS) { $env:NEEDLEX_INSTALL_SKIP_SEMANTIC_PREREQS } else { "0" }
+$SkipRenderPrereqs = if ($env:NEEDLEX_INSTALL_SKIP_RENDER_PREREQS) { $env:NEEDLEX_INSTALL_SKIP_RENDER_PREREQS } else { "0" }
 $OllamaHost = if ($env:NEEDLEX_OLLAMA_HOST) { $env:NEEDLEX_OLLAMA_HOST } else { "http://127.0.0.1:11434" }
 $SemanticEmbeddingUrl = if ($env:NEEDLEX_SEMANTIC_EMBEDDING_URL) { $env:NEEDLEX_SEMANTIC_EMBEDDING_URL } else { "$OllamaHost/api/embed" }
 $SemanticModel = if ($env:NEEDLEX_SEMANTIC_PROVIDER_MODEL) { $env:NEEDLEX_SEMANTIC_PROVIDER_MODEL } else { "embeddinggemma:latest" }
 $SemanticVectorSpace = if ($env:NEEDLEX_SEMANTIC_VECTOR_SPACE) { $env:NEEDLEX_SEMANTIC_VECTOR_SPACE } else { "ollama-embeddinggemma-v1" }
+$RenderProvider = if ($env:NEEDLEX_RENDER_PROVIDER) { $env:NEEDLEX_RENDER_PROVIDER } else { "exec-dump-dom" }
+$RenderBrowserPath = if ($env:NEEDLEX_RENDER_BROWSER_PATH) { $env:NEEDLEX_RENDER_BROWSER_PATH } else { "" }
+$RenderTimeoutMS = if ($env:NEEDLEX_RENDER_TIMEOUT_MS) { $env:NEEDLEX_RENDER_TIMEOUT_MS } else { "5000" }
+$RenderMaxConcurrency = if ($env:NEEDLEX_RENDER_MAX_CONCURRENCY) { $env:NEEDLEX_RENDER_MAX_CONCURRENCY } else { "1" }
+$RenderChromeVersion = if ($env:NEEDLEX_RENDER_CHROME_VERSION) { $env:NEEDLEX_RENDER_CHROME_VERSION } else { "" }
 
 function Remove-DuplicatePathEntries {
   param(
@@ -132,6 +138,146 @@ function Ensure-SemanticPrereqs {
   Test-EmbeddingEndpoint
 }
 
+function Get-ChromeForTestingPlatform {
+  switch ($goarch) {
+    "amd64" { return "win64" }
+    "arm64" { return "win64" }
+    default { throw "Chrome for Testing headless shell is not available as a PAL-local package for windows/$goarch." }
+  }
+}
+
+function Get-ChromeForTestingVersion {
+  if (-not [string]::IsNullOrWhiteSpace($RenderChromeVersion)) {
+    return $RenderChromeVersion.Trim()
+  }
+  return ((Invoke-WebRequest -Uri "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE").Content).Trim()
+}
+
+function Install-ChromeHeadlessShell {
+  $version = Get-ChromeForTestingVersion
+  $platform = Get-ChromeForTestingPlatform
+  $targetDir = Join-Path $StateRoot "browsers\chrome-headless-shell\$version\$platform"
+  $targetExe = Join-Path $targetDir "chrome-headless-shell.exe"
+  if (Test-Path $targetExe) {
+    $script:RenderBrowserPath = $targetExe
+    return
+  }
+  $archiveUrl = "https://storage.googleapis.com/chrome-for-testing-public/$version/$platform/chrome-headless-shell-$platform.zip"
+  $renderTemp = Join-Path ([System.IO.Path]::GetTempPath()) ("needlex-render-" + [guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Force -Path $renderTemp | Out-Null
+  try {
+    $zipPath = Join-Path $renderTemp "chrome-headless-shell.zip"
+    Invoke-WebRequest -Uri $archiveUrl -OutFile $zipPath
+    Expand-Archive -Path $zipPath -DestinationPath $renderTemp -Force
+    $sourceDir = Join-Path $renderTemp "chrome-headless-shell-$platform"
+    $sourceExe = Join-Path $sourceDir "chrome-headless-shell.exe"
+    if (-not (Test-Path $sourceExe)) {
+      throw "Chrome for Testing archive did not contain chrome-headless-shell.exe for $platform"
+    }
+    $parent = Split-Path -Parent $targetDir
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    $stagedDir = "$targetDir.tmp.$PID"
+    if (Test-Path $stagedDir) {
+      Remove-Item -Recurse -Force $stagedDir
+    }
+    New-Item -ItemType Directory -Force -Path $stagedDir | Out-Null
+    Copy-Item -Path (Join-Path $sourceDir "*") -Destination $stagedDir -Recurse -Force
+    if (Test-Path $targetDir) {
+      Remove-Item -Recurse -Force $targetDir
+    }
+    Move-Item -Path $stagedDir -Destination $targetDir
+    $script:RenderBrowserPath = $targetExe
+  }
+  finally {
+    Remove-Item -Recurse -Force $renderTemp
+  }
+}
+
+function Test-RenderBrowser {
+  if ([string]::IsNullOrWhiteSpace($RenderBrowserPath) -or -not (Test-Path $RenderBrowserPath)) {
+    throw "render browser is not executable: $RenderBrowserPath"
+  }
+  $profileDir = Join-Path ([System.IO.Path]::GetTempPath()) ("needlex-render-profile-" + [guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+  try {
+    $args = @(
+      "--disable-gpu",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-dev-shm-usage",
+      "--disable-background-networking",
+      "--disable-sync",
+      "--user-data-dir=$profileDir",
+      "--virtual-time-budget=1000",
+      "--dump-dom",
+      "data:text/html,<main>Needle-X%20render%20readiness%20probe</main>"
+    )
+    if ((Split-Path -Leaf $RenderBrowserPath) -notlike "*chrome-headless-shell*") {
+      $args = @("--headless=new") + $args
+    }
+    $output = (& $RenderBrowserPath @args 2>$null | Out-String)
+    if ($output -notlike "*Needle-X render readiness probe*") {
+      throw "render browser probe failed: $RenderBrowserPath"
+    }
+  }
+  finally {
+    Remove-Item -Recurse -Force $profileDir
+  }
+}
+
+function Ensure-RenderPrereqs {
+  if ($SkipRenderPrereqs -eq "1") {
+    Write-Host "Render prerequisite install skipped by NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1"
+    return
+  }
+  if ($RenderProvider -ne "exec-dump-dom") {
+    throw "unsupported render provider for installer-managed browser: $RenderProvider"
+  }
+  if (-not [string]::IsNullOrWhiteSpace($RenderBrowserPath)) {
+    if (-not (Test-Path $RenderBrowserPath)) {
+      throw "NEEDLEX_RENDER_BROWSER_PATH is not executable: $RenderBrowserPath"
+    }
+  } else {
+    Install-ChromeHeadlessShell
+  }
+  Test-RenderBrowser
+}
+
+function Invoke-NeedlexConfigSet {
+  param(
+    [string]$Key,
+    [string]$Value
+  )
+  & $RealExe config set $Key $Value | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "needlex config set $Key failed"
+  }
+}
+
+function Configure-RenderConfig {
+  if ($SkipRenderPrereqs -eq "1") {
+    return
+  }
+  if ([string]::IsNullOrWhiteSpace($RenderBrowserPath)) {
+    throw "render browser path is empty after prerequisite install"
+  }
+  $oldNeedlexHome = $env:NEEDLEX_HOME
+  $oldNeedlexConfig = $env:NEEDLEX_CONFIG
+  try {
+    $env:NEEDLEX_HOME = $StateRoot
+    $env:NEEDLEX_CONFIG = $ConfigPath
+    Invoke-NeedlexConfigSet "render.enabled" "true"
+    Invoke-NeedlexConfigSet "render.provider" $RenderProvider
+    Invoke-NeedlexConfigSet "render.browser_path" $RenderBrowserPath
+    Invoke-NeedlexConfigSet "render.timeout_ms" $RenderTimeoutMS
+    Invoke-NeedlexConfigSet "render.max_concurrency" $RenderMaxConcurrency
+  }
+  finally {
+    $env:NEEDLEX_HOME = $oldNeedlexHome
+    $env:NEEDLEX_CONFIG = $oldNeedlexConfig
+  }
+}
+
 $arch = $env:PROCESSOR_ARCHITECTURE
 switch ($arch.ToUpperInvariant()) {
   "AMD64" { $goarch = "amd64" }
@@ -168,6 +314,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "discovery") | O
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "candidates") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "domain_graph") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "fingerprint_graph") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $StateRoot "browsers") | Out-Null
 New-Item -ItemType File -Force -Path (Join-Path $StateRoot "discovery\discovery.db") | Out-Null
 
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("needlex-" + [guid]::NewGuid().ToString("N"))
@@ -177,6 +324,7 @@ try {
   Invoke-WebRequest -Uri $assetUrl -OutFile $zipPath
   Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
   Copy-Item (Join-Path $tempDir "needlex.exe") $RealExe -Force
+  Ensure-RenderPrereqs
 
   $oldNeedlexHome = $env:NEEDLEX_HOME
   $oldNeedlexConfig = $env:NEEDLEX_CONFIG
@@ -184,6 +332,11 @@ try {
   $oldSemanticModel = $env:NEEDLEX_SEMANTIC_PROVIDER_MODEL
   $oldSemanticVectorSpace = $env:NEEDLEX_SEMANTIC_VECTOR_SPACE
   $oldModelsBaseURL = $env:NEEDLEX_MODELS_BASE_URL
+  $oldRenderEnabled = $env:NEEDLEX_RENDER_ENABLED
+  $oldRenderProvider = $env:NEEDLEX_RENDER_PROVIDER
+  $oldRenderBrowserPath = $env:NEEDLEX_RENDER_BROWSER_PATH
+  $oldRenderTimeoutMS = $env:NEEDLEX_RENDER_TIMEOUT_MS
+  $oldRenderMaxConcurrency = $env:NEEDLEX_RENDER_MAX_CONCURRENCY
   try {
     $env:NEEDLEX_HOME = $StateRoot
     $env:NEEDLEX_CONFIG = $ConfigPath
@@ -191,6 +344,11 @@ try {
     $env:NEEDLEX_SEMANTIC_PROVIDER_MODEL = $SemanticModel
     $env:NEEDLEX_SEMANTIC_VECTOR_SPACE = $SemanticVectorSpace
     $env:NEEDLEX_MODELS_BASE_URL = "$OllamaHost/v1"
+    $env:NEEDLEX_RENDER_ENABLED = if ($SkipRenderPrereqs -eq "1") { "false" } else { "true" }
+    $env:NEEDLEX_RENDER_PROVIDER = $RenderProvider
+    $env:NEEDLEX_RENDER_BROWSER_PATH = $RenderBrowserPath
+    $env:NEEDLEX_RENDER_TIMEOUT_MS = $RenderTimeoutMS
+    $env:NEEDLEX_RENDER_MAX_CONCURRENCY = $RenderMaxConcurrency
     & $RealExe config init
   }
   finally {
@@ -200,7 +358,13 @@ try {
     $env:NEEDLEX_SEMANTIC_PROVIDER_MODEL = $oldSemanticModel
     $env:NEEDLEX_SEMANTIC_VECTOR_SPACE = $oldSemanticVectorSpace
     $env:NEEDLEX_MODELS_BASE_URL = $oldModelsBaseURL
+    $env:NEEDLEX_RENDER_ENABLED = $oldRenderEnabled
+    $env:NEEDLEX_RENDER_PROVIDER = $oldRenderProvider
+    $env:NEEDLEX_RENDER_BROWSER_PATH = $oldRenderBrowserPath
+    $env:NEEDLEX_RENDER_TIMEOUT_MS = $oldRenderTimeoutMS
+    $env:NEEDLEX_RENDER_MAX_CONCURRENCY = $oldRenderMaxConcurrency
   }
+  Configure-RenderConfig
   Ensure-SemanticPrereqs
 
   $cmd = "@echo off`r`nset NEEDLEX_HOME=$StateRoot`r`nset NEEDLEX_CONFIG=$ConfigPath`r`n`"$RealExe`" %*`r`n"
@@ -228,6 +392,11 @@ Write-Host "Config: $ConfigPath"
 Write-Host "Runtime log: $(Join-Path $StateRoot 'logs\\needlex.jsonl')"
 Write-Host "Semantic endpoint: $SemanticEmbeddingUrl"
 Write-Host "Semantic model: $SemanticModel"
+if ([string]::IsNullOrWhiteSpace($RenderBrowserPath)) {
+  Write-Host "Render browser: <skipped>"
+} else {
+  Write-Host "Render browser: $RenderBrowserPath"
+}
 Write-Host "Agent skill: https://github.com/$Repo/tree/main/skills/needlex-web-retrieval"
 Write-Host "Codex skill install: python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo $Repo --path skills/needlex-web-retrieval"
 if ($PreviousStateRoot -and $PreviousStateRoot -ne $StateRoot) {

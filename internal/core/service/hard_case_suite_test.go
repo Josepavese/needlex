@@ -25,8 +25,8 @@ func TestHardCaseSuite(t *testing.T) {
 		expectedContains string
 	}{
 		{
-			name:             "embedded_app_shell_force_lane3",
-			html:             `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`,
+			name:             "jsonld_structured_page_force_lane3",
+			html:             `<html><head><title>Needle Runtime</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Needle Runtime","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}</script></head><body><article><h1>Needle Runtime</h1></article></body></html>`,
 			objective:        "company profile",
 			profile:          core.ProfileStandard,
 			forceLane:        3,
@@ -45,8 +45,8 @@ func TestHardCaseSuite(t *testing.T) {
 			expectedContains: "Compare stage hashes first",
 		},
 		{
-			name:             "embedded_state_without_force_still_yields_signal",
-			html:             `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact context for agents.</p>"}]}}</script></body></html>`,
+			name:             "jsonld_state_without_force_still_yields_signal",
+			html:             `<html><head><title>Needle Runtime</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Needle Runtime","description":"Needle-X compiles noisy pages into compact context for agents."}</script></head><body><article><h1>Needle Runtime</h1></article></body></html>`,
 			objective:        "Needle Runtime summary",
 			profile:          core.ProfileStandard,
 			minMaxLane:       0,
@@ -88,8 +88,8 @@ func TestHardCaseSuite(t *testing.T) {
 	}
 }
 
-func BenchmarkHardCaseEmbeddedLane3(b *testing.B) {
-	benchmarkHardCaseRead(b, `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`, ReadRequest{Objective: "company profile", Profile: core.ProfileStandard, ForceLane: 3})
+func BenchmarkHardCaseStructuredLane3(b *testing.B) {
+	benchmarkHardCaseRead(b, `<html><head><title>Needle Runtime</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Needle Runtime","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}</script></head><body><article><h1>Needle Runtime</h1></article></body></html>`, ReadRequest{Objective: "company profile", Profile: core.ProfileStandard, ForceLane: 3})
 }
 
 func BenchmarkHardCaseForumLane2(b *testing.B) {

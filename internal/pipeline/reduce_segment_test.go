@@ -128,7 +128,7 @@ func TestReduceProfileAggressiveRemovesAdditionalNoiseHints(t *testing.T) {
 	}
 }
 
-func TestReduceExtractsEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
+func TestReduceDoesNotExtractCustomEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
 	dom, err := Reducer{}.ReduceProfile(RawPage{
 		URL:      "https://example.com/app",
 		FinalURL: "https://example.com/app",
@@ -138,22 +138,59 @@ func TestReduceExtractsEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
 		t.Fatalf("reduce failed: %v", err)
 	}
 
-	if len(dom.Nodes) == 0 {
-		t.Fatal("expected embedded payload nodes to be extracted")
-	}
-	found := false
 	for _, node := range dom.Nodes {
 		if strings.Contains(node.Text, "Needle-X compiles noisy pages into compact proof-carrying context for agents.") {
-			found = true
-			break
+			t.Fatalf("custom app payload should not be extracted into core nodes, got %#v", dom.Nodes)
 		}
 	}
-	if !found {
-		t.Fatalf("expected embedded payload text in reduced nodes, got %#v", dom.Nodes)
+	if dom.SubstrateClass != "client_rendered_app" {
+		t.Fatalf("expected client_rendered_app substrate, got %q", dom.SubstrateClass)
 	}
-	if dom.SubstrateClass != "embedded_app_payload" {
-		t.Fatalf("expected embedded_app_payload substrate, got %q", dom.SubstrateClass)
+}
+
+func TestReduceExtractsStandardJSONLD(t *testing.T) {
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		URL:      "https://example.com/article",
+		FinalURL: "https://example.com/article",
+		HTML:     `<html><head><title>Article</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Needle Runtime Update","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}</script></head><body><article><h1>Article</h1></article></body></html>`,
+	}, "standard")
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
 	}
+	if !containsNodeText(dom.Nodes, "Needle-X compiles noisy pages into compact proof-carrying context for agents.") {
+		t.Fatalf("expected JSON-LD standard text in reduced nodes, got %#v", dom.Nodes)
+	}
+}
+
+func TestReduceMarkdownBuildsHeadingAwareNodes(t *testing.T) {
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		URL:         "https://example.com/docs/cli-reference.md",
+		FinalURL:    "https://example.com/docs/cli-reference.md",
+		ContentType: "text/markdown; charset=utf-8",
+		SourceKind:  "markdown_variant",
+		HTML:        "# CLI reference\n\nThe CLI can create OAuth apps and run a local test server.\n\n## Commands\n\n- brevo login\n- brevo app create\n",
+	}, "standard")
+	if err != nil {
+		t.Fatalf("reduce markdown: %v", err)
+	}
+	if dom.Title != "CLI reference" {
+		t.Fatalf("expected markdown h1 title, got %q", dom.Title)
+	}
+	if dom.SubstrateClass != "agent_markdown" {
+		t.Fatalf("expected agent_markdown substrate, got %q", dom.SubstrateClass)
+	}
+	if !containsNodeText(dom.Nodes, "brevo app create") {
+		t.Fatalf("expected markdown list content, got %#v", dom.Nodes)
+	}
+}
+
+func containsNodeText(nodes []SimplifiedNode, expected string) bool {
+	for _, node := range nodes {
+		if strings.Contains(node.Text, expected) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestReduceClassifiesThemeHeavyWordPressSubstrate(t *testing.T) {

@@ -7,6 +7,7 @@ type AcquireInput struct {
 	Timeout             time.Duration
 	MaxBytes            int64
 	UserAgent           string
+	Accept              string
 	Profile             string
 	RetryProfile        string
 	BlockedRetryBackoff time.Duration
@@ -23,10 +24,14 @@ type RawPage struct {
 	FinalURL     string
 	StatusCode   int
 	ContentType  string
+	Headers      map[string][]string
 	HTML         string
 	Partial      bool
 	FetchMode    string
 	FetchProfile string
+	SourceKind   string
+	SourceReason string
+	SourceFrom   string
 	RetryCount   int
 	RetryReason  string
 	RetrySleepMS int64
@@ -47,6 +52,7 @@ type SimplifiedDOM struct {
 	URL            string
 	Title          string
 	SubstrateClass string
+	SourceKind     string
 	Nodes          []SimplifiedNode
 }
 

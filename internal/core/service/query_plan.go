@@ -151,5 +151,6 @@ func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL str
 		ForceLane:         req.ForceLane,
 		PruningProfile:    req.PruningProfile,
 		RenderHint:        req.RenderHint,
+		RenderMode:        req.RenderMode,
 	}
 }

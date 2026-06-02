@@ -21,6 +21,7 @@ import (
 	"github.com/josepavese/needlex/internal/observability"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/platform/buildinfo"
+	"github.com/josepavese/needlex/internal/rendering"
 )
 
 type doctorReport struct {
@@ -38,6 +39,7 @@ type doctorReport struct {
 	ConfigPath      string                    `json:"config_path"`
 	StorePaths      map[string]string         `json:"store_paths"`
 	Semantic        doctorSemantic            `json:"semantic"`
+	Render          doctorRender              `json:"render"`
 	EmbeddingCache  intel.EmbeddingCacheStats `json:"embedding_cache"`
 	AnalyticsStats  analytics.Stats           `json:"analytics_stats,omitempty"`
 	MemoryStats     memory.Stats              `json:"memory_stats,omitempty"`
@@ -69,6 +71,14 @@ type doctorSemantic struct {
 	Ready         bool   `json:"ready"`
 	Dimension     int    `json:"dimension,omitempty"`
 	Error         string `json:"error,omitempty"`
+}
+
+type doctorRender struct {
+	Enabled     bool   `json:"enabled"`
+	Provider    string `json:"provider"`
+	BrowserPath string `json:"browser_path,omitempty"`
+	Ready       bool   `json:"ready"`
+	Error       string `json:"error,omitempty"`
 }
 
 type doctorMCPProcess struct {
@@ -133,6 +143,7 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 		ConfigPath:      effectiveConfigPath(configPath),
 		StorePaths:      layout.Paths(),
 		Semantic:        probeDoctorSemantic(context.Background(), cfg),
+		Render:          probeDoctorRender(cfg),
 		EmbeddingCache:  doctorEmbeddingCache(cfg, layout),
 		Diagnostics:     diagnostics,
 		MCPProcesses:    processes,
@@ -178,6 +189,10 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 	fmt.Fprintf(w, "Runtime Log: %s\n", report.RuntimeLogPath)
 	fmt.Fprintf(w, "Config: %s\n", report.ConfigPath)
 	fmt.Fprintf(w, "Semantic: ready=%t provider=%s vector_space=%s endpoint=%s\n", report.Semantic.Ready, report.Semantic.ProviderModel, report.Semantic.VectorSpace, report.Semantic.EmbeddingURL)
+	fmt.Fprintf(w, "Render: enabled=%t ready=%t provider=%s browser=%s\n", report.Render.Enabled, report.Render.Ready, report.Render.Provider, doctorFirstNonEmpty(report.Render.BrowserPath, "<none>"))
+	if report.Render.Error != "" {
+		fmt.Fprintf(w, "Render Error: %s\n", report.Render.Error)
+	}
 	fmt.Fprintf(w, "Embedding Cache: enabled=%t files=%d negative=%d bytes=%d dir=%s\n", report.EmbeddingCache.Enabled, report.EmbeddingCache.PositiveFiles, report.EmbeddingCache.NegativeFiles, report.EmbeddingCache.Bytes, report.EmbeddingCache.Dir)
 	if report.Semantic.Error != "" {
 		fmt.Fprintf(w, "Semantic Error: %s\n", report.Semantic.Error)
@@ -245,6 +260,21 @@ func probeDoctorSemantic(ctx context.Context, cfg config.Config) doctorSemantic 
 	}
 	out.Ready = true
 	out.Dimension = len(vectors[0])
+	return out
+}
+
+func probeDoctorRender(cfg config.Config) doctorRender {
+	out := doctorRender{
+		Enabled:  cfg.Render.Enabled,
+		Provider: doctorFirstNonEmpty(cfg.Render.Provider, "exec-dump-dom"),
+	}
+	path, err := rendering.FindBrowserPath(cfg.Render.BrowserPath)
+	if err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	out.BrowserPath = path
+	out.Ready = true
 	return out
 }
 

@@ -32,6 +32,13 @@ func TestDefaultsUseBrowserLikeFetchProfile(t *testing.T) {
 	}
 }
 
+func TestDefaultsEnableRender(t *testing.T) {
+	cfg := Defaults()
+	if !cfg.Render.Enabled || cfg.Render.Provider != "exec-dump-dom" || cfg.Render.TimeoutMS != 5000 || cfg.Render.MaxConcurrency != 1 {
+		t.Fatalf("unexpected render defaults: %+v", cfg.Render)
+	}
+}
+
 func TestLoadMergesJSONWithDefaults(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "needlex.json")
@@ -73,6 +80,11 @@ func TestApplyEnvOverridesValues(t *testing.T) {
 		"NEEDLEX_POLICY_THRESHOLD_CONFLICT":      "0.65",
 		"NEEDLEX_MODELS_FORMATTER":               "formatter-x",
 		"NEEDLEX_MODELS_MICRO_TIMEOUT_MS":        "1500",
+		"NEEDLEX_RENDER_ENABLED":                 "true",
+		"NEEDLEX_RENDER_PROVIDER":                "exec-dump-dom",
+		"NEEDLEX_RENDER_BROWSER_PATH":            "/tmp/needlex-browser/chrome-headless-shell",
+		"NEEDLEX_RENDER_TIMEOUT_MS":              "6500",
+		"NEEDLEX_RENDER_MAX_CONCURRENCY":         "2",
 	}
 
 	if err := cfg.ApplyEnv(env); err != nil {
@@ -101,6 +113,9 @@ func TestApplyEnvOverridesValues(t *testing.T) {
 	}
 	if cfg.Models.MicroTimeoutMS != 1500 {
 		t.Fatalf("expected micro timeout override, got %d", cfg.Models.MicroTimeoutMS)
+	}
+	if !cfg.Render.Enabled || cfg.Render.Provider != "exec-dump-dom" || cfg.Render.BrowserPath != "/tmp/needlex-browser/chrome-headless-shell" || cfg.Render.TimeoutMS != 6500 || cfg.Render.MaxConcurrency != 2 {
+		t.Fatalf("unexpected render override: %+v", cfg.Render)
 	}
 }
 

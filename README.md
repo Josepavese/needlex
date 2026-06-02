@@ -132,6 +132,8 @@ The installer also prepares semantic prerequisites:
 2. pulls the default embedding model `embeddinggemma:latest`
 3. writes the PAL-home SSOT config
 4. wires the `needlex` wrapper to that config so users do not export env vars per command
+5. installs a PAL-local headless render browser
+6. enables render in the PAL config for JavaScript-rendered sites
 
 Change defaults with:
 

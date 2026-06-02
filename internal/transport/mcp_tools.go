@@ -112,6 +112,7 @@ func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {
 		MaxPages:   intDefault(args, "max_pages", 0),
 		MaxDepth:   intDefault(args, "max_depth", 0),
 		SameDomain: boolArg(args, "same_domain"),
+		RenderMode: stringArg(args, "render"),
 	}, "mcp")
 	if err != nil {
 		return nil, err
@@ -139,6 +140,7 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 		Profile:       stringArg(args, "profile"),
 		UserAgent:     stringArg(args, "user_agent"),
 		DiscoveryMode: stringArg(args, "discovery_mode"),
+		RenderMode:    stringArg(args, "render"),
 	}, "mcp")
 	if err != nil {
 		return nil, err
@@ -183,10 +185,11 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 		return nil, err
 	}
 	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
-		URL:       stringArg(args, "url"),
-		Objective: stringArg(args, "objective"),
-		Profile:   stringArg(args, "profile"),
-		UserAgent: stringArg(args, "user_agent"),
+		URL:        stringArg(args, "url"),
+		Objective:  stringArg(args, "objective"),
+		Profile:    stringArg(args, "profile"),
+		UserAgent:  stringArg(args, "user_agent"),
+		RenderMode: stringArg(args, "render"),
 	}, "mcp")
 	if err != nil {
 		return nil, err
@@ -244,6 +247,7 @@ func mcpCrawlTool() mcpTool {
 			"max_depth":        map[string]any{"type": "integer"},
 			"same_domain":      map[string]any{"type": "boolean"},
 			"retrieval_effort": retrievalEffortSchema(),
+			"render":           renderModeSchema(),
 		}, "seed_url"),
 			map[string]any{"seed_url": "https://example.com/docs", "same_domain": true, "max_pages": 5, "max_depth": 1, "retrieval_effort": "standard"},
 		),
@@ -265,6 +269,7 @@ func mcpQueryTool() mcpTool {
 				"description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL and should be used only after the exact page has already been verified.",
 			},
 			"retrieval_effort": retrievalEffortSchema(),
+			"render":           renderModeSchema(),
 		}, "goal"),
 			map[string]any{"goal": "Find authentication flow details", "seed_url": "https://agentclientprotocol.com/protocol/overview", "discovery_mode": "same_site_links"},
 			map[string]any{"goal": "OpenAI API pricing", "discovery_mode": "web_search", "retrieval_effort": "standard"},
@@ -283,6 +288,7 @@ func mcpReadTool() mcpTool {
 			"objective":        map[string]any{"type": "string"},
 			"user_agent":       map[string]any{"type": "string"},
 			"retrieval_effort": retrievalEffortSchema(),
+			"render":           renderModeSchema(),
 		}, "url"),
 			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details", "retrieval_effort": "standard"},
 		),

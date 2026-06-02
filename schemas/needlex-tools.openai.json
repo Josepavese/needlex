@@ -27,6 +27,16 @@
             "profile": {
               "type": "string"
             },
+            "render": {
+              "default": "auto",
+              "description": "Optional JavaScript rendering mode for the final page read. auto uses declared agent-readable sources first and renders when needed; off forbids browser rendering; required fails if the rendered DOM cannot be obtained.",
+              "enum": [
+                "auto",
+                "off",
+                "required"
+              ],
+              "type": "string"
+            },
             "retrieval_effort": {
               "default": "standard",
               "description": "Optional retrieval effort for semantic extraction and internal escalation. This is not a result count, page count, crawl depth, or candidate limit. Omit it for standard behavior.",
@@ -97,6 +107,16 @@
             "profile": {
               "type": "string"
             },
+            "render": {
+              "default": "auto",
+              "description": "Optional JavaScript rendering mode for the final page read. auto uses declared agent-readable sources first and renders when needed; off forbids browser rendering; required fails if the rendered DOM cannot be obtained.",
+              "enum": [
+                "auto",
+                "off",
+                "required"
+              ],
+              "type": "string"
+            },
             "retrieval_effort": {
               "default": "standard",
               "description": "Optional retrieval effort for semantic extraction and internal escalation. This is not a result count, page count, crawl depth, or candidate limit. Omit it for standard behavior.",
@@ -143,6 +163,16 @@
               "type": "string"
             },
             "profile": {
+              "type": "string"
+            },
+            "render": {
+              "default": "auto",
+              "description": "Optional JavaScript rendering mode for the final page read. auto uses declared agent-readable sources first and renders when needed; off forbids browser rendering; required fails if the rendered DOM cannot be obtained.",
+              "enum": [
+                "auto",
+                "off",
+                "required"
+              ],
               "type": "string"
             },
             "retrieval_effort": {

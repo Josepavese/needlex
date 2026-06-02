@@ -32,6 +32,15 @@ func retrievalEffortSchema() map[string]any {
 	}
 }
 
+func renderModeSchema() map[string]any {
+	return map[string]any{
+		"type":        "string",
+		"enum":        []string{"auto", "off", "required"},
+		"default":     "auto",
+		"description": "Optional JavaScript rendering mode for the final page read. auto uses declared agent-readable sources first and renders when needed; off forbids browser rendering; required fails if the rendered DOM cannot be obtained.",
+	}
+}
+
 func applyMCPRetrievalEffort(args map[string]any, cfg *config.Config) error {
 	if _, ok := args["lane_max"]; ok {
 		return fmt.Errorf("unsupported field lane_max; use retrieval_effort with one of: %s", retrievalEffortValues())

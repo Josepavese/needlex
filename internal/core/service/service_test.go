@@ -10,10 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
+	"github.com/josepavese/needlex/internal/rendering"
 	"github.com/josepavese/needlex/internal/store"
 )
 
@@ -92,8 +94,8 @@ func TestReadRunsDeterministicPipelineEndToEnd(t *testing.T) {
 	if len(resp.ProofRecords) != len(resp.ResultPack.Chunks) {
 		t.Fatalf("expected proof count to match chunks, got %d proofs and %d chunks", len(resp.ProofRecords), len(resp.ResultPack.Chunks))
 	}
-	if resp.Replay.StageCount != 4 {
-		t.Fatalf("expected 4 stages, got %d", resp.Replay.StageCount)
+	if resp.Replay.StageCount != 5 {
+		t.Fatalf("expected 5 stages, got %d", resp.Replay.StageCount)
 	}
 	if len(resp.Trace.Events) < 8 {
 		t.Fatalf("expected stage start/completion events, got %d", len(resp.Trace.Events))
@@ -474,7 +476,7 @@ func TestReadAppliesAggressivePruningProfile(t *testing.T) {
 	}
 }
 
-func TestReadRecoversFromAppShellEmbeddedPayload(t *testing.T) {
+func TestReadDoesNotRecoverFromCustomAppShellEmbeddedPayload(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`)
@@ -497,9 +499,140 @@ func TestReadRecoversFromAppShellEmbeddedPayload(t *testing.T) {
 		t.Fatalf("read failed: %v", err)
 	}
 	if len(resp.ResultPack.Chunks) == 0 {
-		t.Fatal("expected chunks from embedded payload extraction")
+		t.Fatal("expected synthetic shell chunks")
 	}
-	if !strings.Contains(resp.ResultPack.Chunks[0].Text, "Needle-X compiles noisy pages") {
-		t.Fatalf("expected embedded text in first chunk, got %q", resp.ResultPack.Chunks[0].Text)
+	for _, chunk := range resp.ResultPack.Chunks {
+		if strings.Contains(chunk.Text, "Needle-X compiles noisy pages") {
+			t.Fatalf("custom embedded payload should not be extracted, got %q", chunk.Text)
+		}
+	}
+	if resp.WebIR.Signals.SubstrateClass != "client_rendered_app" {
+		t.Fatalf("expected render-required substrate, got %q", resp.WebIR.Signals.SubstrateClass)
+	}
+}
+
+func TestReadPrefersMarkdownVariantForAgentReadableDocs(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs/cli-reference":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>CLI reference</title></head><body><header>Search Ask AI Help Center Status Sign In Guides API Reference Changelog</header><main></main></body></html>`)
+		case "/docs/cli-reference.md":
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# CLI reference\n\nThe Brevo CLI can authenticate, create OAuth apps, scaffold starter code, and run a local test server.\n\n## Commands\n\n- brevo login\n- brevo app create\n")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc, err := New(testConfig(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL + "/docs/cli-reference",
+		Objective: "Analyze CLI commands",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FinalURL != server.URL+"/docs/cli-reference.md" {
+		t.Fatalf("expected markdown variant final url, got %q", resp.Document.FinalURL)
+	}
+	if !containsChunkText(resp.ResultPack.Chunks, "brevo app create") {
+		t.Fatalf("expected markdown CLI command, got %#v", resp.ResultPack.Chunks)
+	}
+	if resp.WebIR.Signals.SubstrateClass != "agent_markdown" {
+		t.Fatalf("expected agent_markdown substrate, got %q", resp.WebIR.Signals.SubstrateClass)
+	}
+}
+
+type fakeRenderer struct {
+	page rendering.Page
+	err  error
+}
+
+func (f fakeRenderer) Render(context.Context, rendering.Request) (rendering.Page, error) {
+	return f.page, f.err
+}
+
+func TestReadAutoRenderIsEnabledByDefault(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root></body></html>`)
+	}))
+	defer server.Close()
+
+	cfg := config.Defaults()
+	enableDiscoverSemantic(&cfg, "")
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.renderer = fakeRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Rendered</title></head><body><article><h1>Rendered</h1><p>Default auto render exposes JavaScript content without a render flag.</p></article></body></html>`,
+		Browser:   "fake",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:     server.URL,
+		Profile: core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FetchMode != core.FetchModeRender {
+		t.Fatalf("expected default auto render fetch mode, got %q", resp.Document.FetchMode)
+	}
+	if !containsChunkText(resp.ResultPack.Chunks, "without a render flag") {
+		t.Fatalf("expected rendered content, got %#v", resp.ResultPack.Chunks)
+	}
+}
+
+func TestReadRequiredRenderUsesRenderedDOM(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root></body></html>`)
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.renderer = fakeRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Rendered</title></head><body><article><h1>Rendered</h1><p>Rendered JavaScript content exposes the final application data for agents.</p></article></body></html>`,
+		Browser:   "fake",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:        server.URL,
+		Profile:    core.ProfileStandard,
+		RenderMode: "required",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FetchMode != core.FetchModeRender {
+		t.Fatalf("expected render fetch mode, got %q", resp.Document.FetchMode)
+	}
+	if !containsChunkText(resp.ResultPack.Chunks, "Rendered JavaScript content") {
+		t.Fatalf("expected rendered content, got %#v", resp.ResultPack.Chunks)
 	}
 }

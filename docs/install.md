@@ -29,9 +29,11 @@ What it does:
 5. sets `NEEDLEX_HOME` and `NEEDLEX_CONFIG` inside the wrapper
 6. installs or verifies local Ollama semantic prerequisites
 7. pulls the default embedding model `embeddinggemma:latest`
-8. updates PATH persistence for future shells or terminals
-9. reconciles a previous install without duplicating PATH hooks
-10. leaves unrelated commands untouched
+8. installs or verifies a PAL-local headless render browser
+9. enables render in the PAL SSOT config
+10. updates PATH persistence for future shells or terminals
+11. reconciles a previous install without duplicating PATH hooks
+12. leaves unrelated commands untouched
 
 Default paths:
 1. binary wrapper: `~/.local/bin/needlex`
@@ -41,6 +43,7 @@ Default paths:
    macOS: `~/Library/Application Support/NeedleX`
 4. runtime log: `<state-root>/logs/needlex.jsonl`
 5. config: `<state-root>/configs/needlex.json`
+6. render browser: `<state-root>/browsers/`
 
 Diagnostic export:
 
@@ -95,6 +98,26 @@ needlex config set semantic.provider_model nomic-embed-text:latest
 needlex doctor
 ```
 
+## Render Prerequisites
+
+Needle-X prepares JavaScript rendering during installation because render is a required escalation path for client-rendered sites and future discovery quality.
+
+Default installed render backend:
+1. provider: `exec-dump-dom`
+2. browser payload: Chrome for Testing `chrome-headless-shell` on supported platforms
+3. Linux ARM64 payload: Playwright Chromium headless shell under the PAL browser directory
+4. config fields: `render.enabled=true` and `render.browser_path=<PAL browser executable>`
+
+The installer does not install a global Chrome package. It downloads the browser payload into the PAL state root, probes `--dump-dom`, and writes the PAL SSOT config. Existing installs are reconciled by updating the `render.*` config keys. Render is enabled by default; use `--render off` only when you intentionally need static-only acquisition.
+
+Skip only for controlled CI or packaging tests:
+
+```bash
+NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1 bash install/install.sh
+```
+
+Linux ARM64 note: Chrome for Testing does not currently publish a `linux-arm64` package. On `linux/arm64`, the installer uses Playwright with `PLAYWRIGHT_BROWSERS_PATH=<state-root>/browsers/playwright`. If Node.js/npm is missing, a Node.js LTS binary is downloaded into `<state-root>/browsers/node` for installation-time use.
+
 ## Re-running the installer
 
 The installer is designed to converge, not just append.
@@ -103,14 +126,16 @@ Unix:
 1. reuses the same wrapper path and real binary path
 2. rewrites the `needlex` wrapper deterministically
 3. keeps a single `# needlex-path` block in shell startup files
-4. leaves unrelated commands untouched
-5. preserves old state roots on disk if you intentionally switch to a new one
+4. reuses or updates the PAL-local render browser
+5. leaves unrelated commands untouched
+6. preserves old state roots on disk if you intentionally switch to a new one
 
 Windows:
 1. rewrites `needlex.cmd` deterministically
 2. deduplicates the user PATH before appending the install directory
-3. leaves unrelated commands untouched
-4. preserves old state roots on disk if you intentionally switch to a new one
+3. reuses or updates the PAL-local render browser
+4. leaves unrelated commands untouched
+5. preserves old state roots on disk if you intentionally switch to a new one
 
 ## Build from source
 

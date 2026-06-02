@@ -29,6 +29,8 @@ func Defaults() Config {
 		Discovery: defaultDiscoveryConfig(baseline),
 		Semantic:  defaultSemanticConfig(baseline),
 		Memory:    defaultMemoryConfig(baseline),
+		Agent:     defaultAgentConfig(),
+		Render:    defaultRenderConfig(),
 	}
 }
 
@@ -153,6 +155,22 @@ func defaultMemoryConfig(baseline modelbaseline.Manifest) MemoryConfig {
 		VectorMode:    "fallback-linear",
 		VectorEngine:  "sqlite-vec",
 		PrunePolicy:   "lru",
+	}
+}
+
+func defaultAgentConfig() AgentConfig {
+	return AgentConfig{
+		ReadableEnabled: true,
+		MaxCandidates:   8,
+	}
+}
+
+func defaultRenderConfig() RenderConfig {
+	return RenderConfig{
+		Enabled:        true,
+		Provider:       "exec-dump-dom",
+		TimeoutMS:      5000,
+		MaxConcurrency: 1,
 	}
 }
 

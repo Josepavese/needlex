@@ -30,6 +30,17 @@ func TestConfigInitShowAndSetUsePALSSOT(t *testing.T) {
 	if code := runner.Run([]string{"config", "set", "semantic.embedding_cache.ttl", "12h"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("config set cache ttl exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
+	stdout.Reset()
+	stderr.Reset()
+	renderPath := filepath.Join(root, "browsers", "chrome-headless-shell", "stable", "chrome-headless-shell")
+	if code := runner.Run([]string{"config", "set", "render.enabled", "true"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("config set render enabled exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := runner.Run([]string{"config", "set", "render.browser_path", renderPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("config set render browser path exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
 	loaded, err := config.Load("")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -40,12 +51,15 @@ func TestConfigInitShowAndSetUsePALSSOT(t *testing.T) {
 	if loaded.Semantic.EmbeddingCache.TTL != "12h" {
 		t.Fatalf("expected updated embedding cache ttl, got %q", loaded.Semantic.EmbeddingCache.TTL)
 	}
+	if !loaded.Render.Enabled || loaded.Render.BrowserPath != renderPath {
+		t.Fatalf("expected updated render config, got %+v", loaded.Render)
+	}
 	stdout.Reset()
 	stderr.Reset()
 	if code := runner.Run([]string{"config", "show"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("config show exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "nomic-embed-text:latest") || !strings.Contains(stdout.String(), "Embedding Cache TTL: 12h") {
+	if !strings.Contains(stdout.String(), "nomic-embed-text:latest") || !strings.Contains(stdout.String(), "Embedding Cache TTL: 12h") || !strings.Contains(stdout.String(), "Render Enabled: true") {
 		t.Fatalf("expected config show to include updated model, got %q", stdout.String())
 	}
 }

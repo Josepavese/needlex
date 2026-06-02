@@ -24,6 +24,7 @@ type CrawlRequest struct {
 	ForceLane         int
 	PruningProfile    string
 	RenderHint        bool
+	RenderMode        string
 }
 
 type CrawlSummary struct {
@@ -119,6 +120,7 @@ func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, 
 		ForceLane:         req.ForceLane,
 		PruningProfile:    req.PruningProfile,
 		RenderHint:        req.RenderHint,
+		RenderMode:        req.RenderMode,
 	})
 	return readResp, err == nil
 }

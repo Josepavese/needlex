@@ -13,6 +13,7 @@ import (
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
+	"github.com/josepavese/needlex/internal/rendering"
 	"github.com/josepavese/needlex/internal/store"
 )
 
@@ -21,6 +22,7 @@ type ReadRequest struct {
 	FetchProfile, FetchRetryProfile                    string
 	ForceLane                                          int
 	RenderHint                                         bool
+	RenderMode                                         string
 	StableFingerprints                                 []string
 }
 
@@ -40,6 +42,7 @@ type Service struct {
 	acquirer           pipeline.Acquirer
 	reducer            pipeline.Reducer
 	segmenter          pipeline.Segmenter
+	renderer           rendering.Renderer
 	runtime            intel.ModelRuntime
 	semantic           intel.SemanticAligner
 	now                func() time.Time
@@ -68,6 +71,7 @@ func NewWithStateRoot(cfg config.Config, client *http.Client, storeRoot string) 
 		segmenter: pipeline.Segmenter{
 			MaxSegmentChars: 1200,
 		},
+		renderer:           rendering.New(cfg.Render),
 		runtime:            intel.NewRuntime(cfg, client),
 		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, platform.NewStateLayout(cleanRoot).EmbeddingCacheDir),
 		now:                time.Now,
@@ -100,8 +104,16 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	if err != nil {
 		return ReadResponse{}, err
 	}
+	rawPage, err = s.resolveAgentReadable(ctx, recorder, req, rawPage)
+	if err != nil {
+		return ReadResponse{}, err
+	}
 
 	dom, err := s.reduce(recorder, rawPage, req)
+	if err != nil {
+		return ReadResponse{}, err
+	}
+	rawPage, dom, err = s.maybeRender(ctx, recorder, req, rawPage, dom)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -254,6 +266,11 @@ func (s *Service) segment(recorder *proof.Recorder, dom pipeline.SimplifiedDOM) 
 func validateReadRequest(req ReadRequest) error {
 	if strings.TrimSpace(req.URL) == "" {
 		return fmt.Errorf("read request url must not be empty")
+	}
+	switch strings.ToLower(strings.TrimSpace(req.RenderMode)) {
+	case "", "auto", "off", "required":
+	default:
+		return fmt.Errorf("read request render mode must be one of auto, off, required")
 	}
 	return nil
 }

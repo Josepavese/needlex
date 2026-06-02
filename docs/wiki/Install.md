@@ -28,11 +28,13 @@ Installed command:
 5. wires `NEEDLEX_CONFIG` to the PAL SSOT config
 6. installs or verifies local Ollama embeddings prerequisites
 7. pulls the default embedding model `embeddinggemma:latest`
-8. prepares the same runtime surface for CLI and MCP
-9. reconciles reruns without duplicating PATH hooks
-10. leaves unrelated commands untouched
-11. prints the optional Codex skill path for agent-side usage guidance
-12. creates the PAL runtime log directory used by `needlex logs`
+8. installs or verifies a PAL-local headless render browser
+9. enables render in the PAL SSOT config
+10. prepares the same runtime surface for CLI and MCP
+11. reconciles reruns without duplicating PATH hooks
+12. leaves unrelated commands untouched
+13. prints the optional Codex skill path for agent-side usage guidance
+14. creates the PAL runtime log directory used by `needlex logs`
 
 ## Semantic Config
 
@@ -55,6 +57,19 @@ needlex config show
 needlex config set semantic.provider_model nomic-embed-text:latest
 needlex doctor
 ```
+
+## Render Config
+
+The installer prepares JavaScript rendering as part of the normal runtime surface.
+
+Default render backend:
+1. Chrome for Testing `chrome-headless-shell`
+2. Playwright Chromium headless shell on `linux/arm64`
+3. PAL browser path under `<state-root>/browsers`
+4. `render.enabled=true`
+5. `render.provider=exec-dump-dom`
+
+Use `NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1` only for controlled CI or packaging tests.
 
 ## Optional Agent Skill
 

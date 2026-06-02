@@ -438,6 +438,7 @@ func runReadMetrics(html string, expected []string, objectiveReference string, r
 			backend = "openai-compatible"
 		}
 	}
+	cfg.Render.Enabled = false
 
 	svc, err := coreservice.New(cfg, client)
 	if err != nil {

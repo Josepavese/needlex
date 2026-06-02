@@ -22,6 +22,7 @@ type WebIRSignals struct {
 	HeadingRatio      float64 `json:"heading_ratio"`
 	EmbeddedNodeCount int     `json:"embedded_node_count"`
 	SubstrateClass    string  `json:"substrate_class,omitempty"`
+	SourceKind        string  `json:"source_kind,omitempty"`
 }
 
 type WebIR struct {
@@ -62,7 +63,7 @@ func (s WebIRSignals) Validate() error {
 	}
 	if s.SubstrateClass != "" {
 		switch s.SubstrateClass {
-		case "embedded_app_payload", "theme_heavy_wordpress", "generic_content", "plain_text":
+		case "client_rendered_app", "embedded_app_payload", "theme_heavy_wordpress", "generic_content", "plain_text", "agent_markdown", "rendered_html":
 		default:
 			errs = append(errs, fmt.Errorf("web_ir.signals.substrate_class %q is not supported", s.SubstrateClass))
 		}

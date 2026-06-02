@@ -102,7 +102,7 @@
       "expected_terms": [
         "Needle-X compiles noisy pages into compact proof-carrying context for agents"
       ],
-      "html_inline": "<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={\"configuration\":{\"blog\":[{\"title\":\"Needle Runtime\",\"description\":\"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>\"}]}}</script></body></html>",
+      "html_inline": "<html><head><title>Needle Runtime</title><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"SoftwareApplication\",\"name\":\"Needle Runtime\",\"description\":\"Needle-X compiles noisy pages into compact proof-carrying context for agents.\"}</script></head><body><article><h1>Needle Runtime</h1></article></body></html>",
       "family": "embedded"
     },
     {

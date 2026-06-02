@@ -20,6 +20,7 @@ const (
 
 type QueryRequest struct {
 	Goal, SeedURL, SeedTraceID, Profile, UserAgent, DiscoveryMode, PruningProfile string
+	RenderMode                                                                    string
 	FetchProfile, FetchRetryProfile                                               string
 	DomainHints                                                                   []string
 	SearchQueries                                                                 []string            `json:"-"`
@@ -239,6 +240,7 @@ func (r QueryRequest) withQueries(queries []string) QueryRequest {
 		SeedNovelty:               r.SeedNovelty,
 		SeedChanged:               r.SeedChanged,
 		RenderHint:                r.RenderHint,
+		RenderMode:                r.RenderMode,
 		ForceLane:                 r.ForceLane,
 		FingerprintEvidenceLoader: r.FingerprintEvidenceLoader,
 	}

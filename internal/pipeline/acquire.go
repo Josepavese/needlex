@@ -154,6 +154,9 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		return RawPage{}, fmt.Errorf("build request: %w", err)
 	}
 	request.Header.Set("User-Agent", userAgent(input.UserAgent, profile))
+	if strings.TrimSpace(input.Accept) != "" {
+		request.Header.Set("Accept", strings.TrimSpace(input.Accept))
+	}
 
 	client := a.Client
 	if client == nil {
@@ -185,6 +188,7 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		FinalURL:     resp.Request.URL.String(),
 		StatusCode:   resp.StatusCode,
 		ContentType:  contentType,
+		Headers:      cloneHTTPHeaders(resp.Header),
 		HTML:         htmlBody,
 		Partial:      partial,
 		FetchMode:    "http",
@@ -207,9 +211,11 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		client = client.ImpersonateChrome()
 	}
 
-	resp, err := client.R().
-		SetContext(reqCtx).
-		Get(input.URL)
+	request := client.R().SetContext(reqCtx)
+	if strings.TrimSpace(input.Accept) != "" {
+		request = request.SetHeader("Accept", strings.TrimSpace(input.Accept))
+	}
+	resp, err := request.Get(input.URL)
 	if err != nil {
 		return RawPage{}, fmt.Errorf("fetch page: %w", err)
 	}
@@ -245,12 +251,24 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		FinalURL:     finalURL,
 		StatusCode:   resp.GetStatusCode(),
 		ContentType:  contentType,
+		Headers:      cloneHTTPHeaders(resp.Response.Header),
 		HTML:         string(body),
 		Partial:      partial,
 		FetchMode:    "req",
 		FetchProfile: profile,
 		FetchedAt:    time.Now().UTC(),
 	}, nil
+}
+
+func cloneHTTPHeaders(headers http.Header) map[string][]string {
+	if len(headers) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(headers))
+	for key, values := range headers {
+		out[key] = append([]string{}, values...)
+	}
+	return out
 }
 
 func requestContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -428,7 +446,10 @@ func isAllowedContentType(contentType string) bool {
 		strings.Contains(contentType, "text/css") ||
 		strings.Contains(contentType, "text/markdown") ||
 		strings.Contains(contentType, "application/json") ||
+		strings.Contains(contentType, "application/yaml") ||
+		strings.Contains(contentType, "application/x-yaml") ||
 		strings.Contains(contentType, "application/xml") ||
+		strings.Contains(contentType, "text/yaml") ||
 		strings.Contains(contentType, "text/xml") ||
 		strings.Contains(contentType, "image/svg+xml")
 }

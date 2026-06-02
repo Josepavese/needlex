@@ -10,7 +10,7 @@ import (
 )
 
 func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
-	configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, jsonMode, jsonOut, ok := parseQueryArgs(args, stderr)
+	configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode, jsonOut, ok := parseQueryArgs(args, stderr)
 	if !ok {
 		writeQueryUsage(stderr)
 		return 2
@@ -34,6 +34,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 		Profile:       profile,
 		UserAgent:     userAgent,
 		DiscoveryMode: discovery,
+		RenderMode:    renderMode,
 	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "query", err, map[string]any{"goal": goal, "seed_url": seedURL, "discovery_mode": discovery})
@@ -50,7 +51,7 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, jsonMode string, jsonOut, ok bool) {
+func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode string, jsonOut, ok bool) {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
@@ -59,6 +60,7 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile,
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, web_search, or off")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
+	fs.StringVar(&renderMode, "render", "", "JS rendering mode for selected page: auto (default), off, or required")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
@@ -76,16 +78,18 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile,
 		"-discovery":         {},
 		"--retrieval-effort": {},
 		"-retrieval-effort":  {},
+		"--render":           {},
+		"-render":            {},
 	})); err != nil {
-		return "", "", "", "", "", "", "", "", false, false
+		return "", "", "", "", "", "", "", "", "", false, false
 	}
 	if fs.NArg() > 1 || goal == "" {
-		return "", "", "", "", "", "", "", "", false, false
+		return "", "", "", "", "", "", "", "", "", false, false
 	}
 	if fs.NArg() == 1 {
 		seedURL = fs.Arg(0)
 	}
-	return configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, jsonMode, jsonOut, true
+	return configPath, goal, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode, jsonOut, true
 }
 
 func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts artifactPaths) {

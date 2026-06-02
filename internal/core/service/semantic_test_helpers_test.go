@@ -32,6 +32,7 @@ func (noScoreSemanticAligner) Score(_ context.Context, _ string, _ []intel.Seman
 
 func testConfig() config.Config {
 	cfg := config.Defaults()
+	cfg.Render.Enabled = false
 	enableDiscoverSemantic(&cfg, "")
 	return cfg
 }
@@ -251,6 +252,7 @@ func newSemanticService(tb testing.TB, client *http.Client) *Service {
 	tb.Helper()
 
 	cfg := config.Defaults()
+	cfg.Render.Enabled = false
 	enableDiscoverSemantic(&cfg, "")
 	return newTestService(tb, cfg, client)
 }
