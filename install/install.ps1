@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 $Repo = if ($env:NEEDLEX_REPO) { $env:NEEDLEX_REPO } else { "Josepavese/needlex" }
 $Version = if ($env:NEEDLEX_VERSION) { $env:NEEDLEX_VERSION } else { "latest" }
@@ -56,7 +57,11 @@ function Get-OllamaCommand {
   if ($cmd) {
     return $cmd.Source
   }
-  $candidates = @(
+  $candidates = @()
+  if ($env:OLLAMA_INSTALL_DIR) {
+    $candidates += (Join-Path $env:OLLAMA_INSTALL_DIR "ollama.exe")
+  }
+  $candidates += @(
     (Join-Path $env:LOCALAPPDATA "Programs\Ollama\ollama.exe"),
     (Join-Path $env:ProgramFiles "Ollama\ollama.exe")
   )
@@ -73,10 +78,21 @@ function Install-OllamaIfMissing {
     return
   }
   $winget = Get-Command winget -ErrorAction SilentlyContinue
-  if (-not $winget) {
-    throw "Ollama is required but missing. Install winget or download Ollama from https://ollama.com/download, then rerun this installer."
+  if ($winget) {
+    & $winget.Source install --id Ollama.Ollama -e --accept-package-agreements --accept-source-agreements
+  } else {
+    Write-Host "winget not found; installing Ollama with the official Ollama PowerShell installer."
+    $oldOllamaInstallDir = $env:OLLAMA_INSTALL_DIR
+    try {
+      if (-not $env:OLLAMA_INSTALL_DIR) {
+        $env:OLLAMA_INSTALL_DIR = Join-Path $env:LOCALAPPDATA "Programs\Ollama"
+      }
+      Invoke-RestMethod https://ollama.com/install.ps1 | Invoke-Expression
+    }
+    finally {
+      $env:OLLAMA_INSTALL_DIR = $oldOllamaInstallDir
+    }
   }
-  & $winget.Source install --id Ollama.Ollama -e --accept-package-agreements --accept-source-agreements
   if (-not (Get-OllamaCommand)) {
     throw "Ollama install completed but ollama.exe was not found in PATH or standard install paths."
   }
@@ -150,7 +166,12 @@ function Get-ChromeForTestingVersion {
   if (-not [string]::IsNullOrWhiteSpace($RenderChromeVersion)) {
     return $RenderChromeVersion.Trim()
   }
-  return ((Invoke-WebRequest -Uri "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE").Content).Trim()
+  $response = Invoke-WebRequest -UseBasicParsing -Uri "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE"
+  $content = $response.Content
+  if ($content -is [byte[]]) {
+    $content = [System.Text.Encoding]::UTF8.GetString($content)
+  }
+  return ([string]$content).Trim()
 }
 
 function Install-ChromeHeadlessShell {

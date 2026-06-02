@@ -80,7 +80,7 @@ Default installed semantic backend:
 The installer attempts to prepare these prerequisites:
 1. Linux: installs Ollama through the official install script when `ollama` is missing
 2. macOS: uses Homebrew when available; otherwise it stops with the official Ollama download URL
-3. Windows: uses `winget install Ollama.Ollama` when `ollama` is missing
+3. Windows: uses `winget install Ollama.Ollama` when available; otherwise it falls back to the official Ollama PowerShell installer
 4. all platforms: starts the local Ollama API when needed, pulls the embedding model, and probes `/api/embed`
 
 Skip only for controlled CI or packaging tests:
