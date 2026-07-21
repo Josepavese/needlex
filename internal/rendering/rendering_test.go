@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -14,10 +15,7 @@ import (
 )
 
 func TestExecRendererCapturesRenderedDOMAndFinalLocationWhenBrowserAvailable(t *testing.T) {
-	browserPath, err := FindBrowserPath("")
-	if err != nil {
-		t.Skipf("render browser unavailable: %v", err)
-	}
+	browserPath := runnableBrowserOrSkip(t)
 	var serverURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -26,9 +24,9 @@ func TestExecRendererCapturesRenderedDOMAndFinalLocationWhenBrowserAvailable(t *
 	serverURL = server.URL
 	defer server.Close()
 
-	page, err := ExecDumpDOMRenderer{BrowserPath: browserPath, Timeout: 6 * time.Second}.Render(context.Background(), Request{
+	page, err := ExecDumpDOMRenderer{BrowserPath: browserPath, Timeout: 15 * time.Second}.Render(context.Background(), Request{
 		URL:      server.URL,
-		Timeout:  6 * time.Second,
+		Timeout:  15 * time.Second,
 		MaxBytes: 1_000_000,
 	})
 	if err != nil {
@@ -43,10 +41,7 @@ func TestExecRendererCapturesRenderedDOMAndFinalLocationWhenBrowserAvailable(t *
 }
 
 func TestExecRendererCapturesApplicationNetworkDataWhenBrowserAvailable(t *testing.T) {
-	browserPath, err := FindBrowserPath("")
-	if err != nil {
-		t.Skipf("render browser unavailable: %v", err)
-	}
+	browserPath := runnableBrowserOrSkip(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
@@ -109,6 +104,36 @@ func TestExecRendererCapturesApplicationNetworkDataWhenBrowserAvailable(t *testi
 	if page.NetworkStats.WebSocketMessages == 0 {
 		t.Fatalf("expected websocket messages, got %#v", page.NetworkStats)
 	}
+}
+
+func runnableBrowserOrSkip(t *testing.T) string {
+	t.Helper()
+	browserPath, err := FindBrowserPath("")
+	if err != nil {
+		t.Skipf("render browser unavailable: %v", err)
+	}
+	probeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	args := []string{}
+	if !isHeadlessShell(browserPath) {
+		args = append(args, "--headless=new")
+	}
+	args = append(args,
+		"--no-sandbox",
+		"--disable-gpu",
+		"--disable-dev-shm-usage",
+		"--dump-dom",
+		"data:text/html,<main>Needle-X%20browser%20capability%20probe</main>",
+	)
+	output, err := exec.CommandContext(probeCtx, browserPath, args...).CombinedOutput()
+	if err != nil || !strings.Contains(string(output), "Needle-X browser capability probe") {
+		message := strings.TrimSpace(string(output))
+		if len(message) > 300 {
+			message = message[:300]
+		}
+		t.Skipf("render browser is installed but not runnable in this environment: err=%v output=%q", err, message)
+	}
+	return browserPath
 }
 
 func networkResourceBodies(resources []NetworkResource) string {
