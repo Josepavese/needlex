@@ -11,6 +11,7 @@ Related docs:
 - `docs/semantic-alignment-gate.md`
 - `docs/model-baseline.md`
 - `docs/experimental/discovery-memory-spec.md`
+- `docs/experimental/seedless-discovery.md`
 
 ## 1. Scopo
 Questo documento definisce la specifica tecnica e di prodotto di Needle-X come:
@@ -49,11 +50,12 @@ Current active runtime contract:
 1. deterministic substrate
 2. semantic context gate
 3. bounded ambiguity solver only when benchmark-backed
+4. host-agent search followed by compact compilation of every agent-selected URL
 
 1. Rendere `WebIR` un artifact first-class e versionato.
 2. Evolvere `QueryPlan` in retrieval compiler con decisioni esplicite e reason code.
-3. Costruire discovery nativa oltre il bootstrap provider-based.
-3b. Costruire `Discovery Memory` client-local come substrate seedless senza infrastruttura obbligatoria.
+3. Mantenere la discovery seedless come ricerca sperimentale, separata dal contratto stabile e accessibile solo tramite opt-in esplicito.
+3b. Valutare `Discovery Memory` client-local come substrate sperimentale senza infrastruttura obbligatoria.
 4. Materializzare fingerprint graph per dedup/delta retrieval cross-run.
 5. Usare modello locale solo dove fornisce vantaggio misurabile su casi ad alta ambiguita'.
 6. Ottimizzare performance e benchmark senza compromettere il moat tecnico.
@@ -65,7 +67,7 @@ Current active runtime contract:
 4. Ambiguity score: indice di incertezza che guida escalation lane.
 5. Fidelity@k: percentuale di chunk top-k aderenti alla fonte reale.
 6. Semantic alignment: misura di vicinanza contestuale tra obiettivo e chunk, anche cross-lingua.
-7. Discovery Memory: memoria locale di pagine e segnali gia' osservati, usata per retrieval seedless prima del bootstrap pubblico.
+7. Discovery Memory: memoria locale sperimentale di pagine e segnali gia' osservati, valutata nel percorso seedless prima del bootstrap pubblico.
 
 ## 4. Product Requirements (FR)
 ### 4.1 Acquisition

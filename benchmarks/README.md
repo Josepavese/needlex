@@ -67,7 +67,7 @@ Discovery evaluation:
 go test ./benchmarks/discovery_eval/runner -run TestExportDiscoveryEval -count=1 -v
 ```
 
-Seedless DDG smoke with explicit profile/provider selection:
+Experimental seedless DDG smoke with explicit profile/provider selection:
 
 ```bash
 go run ./benchmarks/seedless_ddg/runner \

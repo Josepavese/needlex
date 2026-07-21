@@ -307,15 +307,15 @@ func TestRunnerQueryDiscoveryFlag(t *testing.T) {
 	}
 }
 
-func TestRunnerQueryWithoutSeedURL(t *testing.T) {
+func TestRunnerQueryWithoutSeedURLRequiresExplicitExperimentalOptIn(t *testing.T) {
 	root := t.TempDir()
-	var captured coreservice.QueryRequest
+	called := false
 	runner := Runner{
 		loadConfig: func(path string) (config.Config, error) {
 			return config.Defaults(), nil
 		},
 		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
-			captured = req
+			called = true
 			return fakeQueryResponse(req), nil
 		},
 		storeRoot: root,
@@ -324,11 +324,11 @@ func TestRunnerQueryWithoutSeedURL(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := runner.Run([]string{"query", "--goal", "proof replay deterministic", "--json"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	if code != 2 || !strings.Contains(stderr.String(), "experimental seedless discovery") || !strings.Contains(stderr.String(), "--discovery web_search") {
+		t.Fatalf("expected guided exit 2, got %d with stderr %q", code, stderr.String())
 	}
-	if captured.SeedURL != "" {
-		t.Fatalf("expected empty seed url for query-only mode, got %q", captured.SeedURL)
+	if called {
+		t.Fatal("expected query runtime not to be called without explicit opt-in")
 	}
 }
 
@@ -364,7 +364,7 @@ func TestRunnerQueryAutoSeedsFromCandidateMemory(t *testing.T) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	code := runner.Run([]string{"query", "--goal", "halfpocket studio profile", "--json"}, &stdout, &stderr)
+	code := runner.Run([]string{"query", "--goal", "halfpocket studio profile", "--discovery", "web_search", "--json"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
 	}
@@ -409,8 +409,8 @@ func TestRunnerQueryDoesNotAutoSeedWhenDiscoveryOff(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := runner.Run([]string{"query", "--goal", "halfpocket studio profile", "--discovery", "off", "--json"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("expected exit 0, got %d with stderr %q", code, stderr.String())
+	if code != 2 || !strings.Contains(stderr.String(), "seed-url is required") {
+		t.Fatalf("expected missing-seed exit 2, got %d with stderr %q", code, stderr.String())
 	}
 	if captured.SeedURL != "" {
 		t.Fatalf("expected no auto-seeding when discovery=off, got %q", captured.SeedURL)

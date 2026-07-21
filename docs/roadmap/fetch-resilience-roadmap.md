@@ -1,5 +1,7 @@
 # Fetch Resilience Roadmap
 
+Status: experimental research roadmap. Seedless work described here is outside the stable agent workflow and must remain explicit opt-in.
+
 This document tracks the hardening work for real-world fetch reliability.
 
 It is intentionally scoped to **resilience and compatibility**, not stealth or anti-bot evasion.

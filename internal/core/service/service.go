@@ -9,6 +9,8 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/fetchpolicy"
+	"github.com/josepavese/needlex/internal/core/webirbuilder"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/platform"
@@ -23,6 +25,7 @@ type ReadRequest struct {
 	ForceLane                                          int
 	RenderHint                                         bool
 	RenderMode                                         string
+	AgentReadableMode                                  string
 	StableFingerprints                                 []string
 }
 
@@ -104,7 +107,9 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	if err != nil {
 		return ReadResponse{}, err
 	}
-	rawPage, err = s.resolveAgentReadable(ctx, recorder, req, rawPage)
+	resolver := s.sourceResolver()
+	resolutionReq := sourceResolutionRequest(req)
+	rawPage, err = resolver.ResolveAgentReadable(ctx, recorder, resolutionReq, rawPage)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -113,12 +118,12 @@ func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	if err != nil {
 		return ReadResponse{}, err
 	}
-	rawPage, dom, err = s.maybeRender(ctx, recorder, req, rawPage, dom)
+	rawPage, dom, err = resolver.MaybeRender(ctx, recorder, resolutionReq, rawPage, dom)
 	if err != nil {
 		return ReadResponse{}, err
 	}
-	dom = ensureMinimumDOM(dom)
-	webIR := buildWebIR(dom)
+	dom = webirbuilder.EnsureMinimum(dom)
+	webIR := webirbuilder.Build(dom)
 	if err := webIR.Validate(); err != nil {
 		return ReadResponse{}, err
 	}
@@ -184,7 +189,7 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 		return pipeline.RawPage{}, err
 	}
 
-	page, err := s.acquirer.Acquire(ctx, s.fetchAcquireInputWithProfiles(req.URL, effectiveUserAgent(req.UserAgent, req.RenderHint), req.FetchProfile, req.FetchRetryProfile))
+	page, err := s.acquirer.Acquire(ctx, fetchpolicy.Input(s.cfg, req.URL, pipeline.EffectiveUserAgent(req.UserAgent, req.RenderHint), req.FetchProfile, req.FetchRetryProfile, ""))
 	if err != nil {
 		recorder.Error(stage, "NX_FETCH_FAILED", err.Error(), nil, s.now().UTC())
 		return pipeline.RawPage{}, err
@@ -214,85 +219,4 @@ func (s *Service) acquire(ctx context.Context, recorder *proof.Recorder, req Rea
 		return pipeline.RawPage{}, err
 	}
 	return page, nil
-}
-
-func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage, req ReadRequest) (pipeline.SimplifiedDOM, error) {
-	const stage = "reduce"
-	if err := recorder.StageStarted(stage, rawPage, s.now().UTC()); err != nil {
-		return pipeline.SimplifiedDOM{}, err
-	}
-
-	dom, err := s.reducer.ReduceProfile(rawPage, req.PruningProfile)
-	if err != nil {
-		recorder.Error(stage, "NX_REDUCE_FAILED", err.Error(), nil, s.now().UTC())
-		return pipeline.SimplifiedDOM{}, err
-	}
-
-	reducedChars := 0
-	for _, node := range dom.Nodes {
-		reducedChars += len(node.Text)
-	}
-	if err := recorder.StageCompleted(stage, dom, len(dom.Nodes), map[string]string{
-		"title":           dom.Title,
-		"web_ir_version":  core.WebIRVersion,
-		"substrate_class": dom.SubstrateClass,
-		"reduced_nodes":   fmt.Sprintf("%d", len(dom.Nodes)),
-		"reduced_chars":   fmt.Sprintf("%d", reducedChars),
-	}, s.now().UTC()); err != nil {
-		return pipeline.SimplifiedDOM{}, err
-	}
-	return dom, nil
-}
-
-func (s *Service) segment(recorder *proof.Recorder, dom pipeline.SimplifiedDOM) ([]pipeline.Segment, error) {
-	const stage = "segment"
-	if err := recorder.StageStarted(stage, dom, s.now().UTC()); err != nil {
-		return nil, err
-	}
-
-	segments := s.segmenter.Segment(dom)
-	if len(segments) == 0 {
-		err := fmt.Errorf("no segments produced")
-		recorder.Error(stage, "NX_EMPTY_SEGMENTS", err.Error(), nil, s.now().UTC())
-		return nil, err
-	}
-
-	if err := recorder.StageCompleted(stage, segments, len(segments), nil, s.now().UTC()); err != nil {
-		return nil, err
-	}
-	return segments, nil
-}
-
-func validateReadRequest(req ReadRequest) error {
-	if strings.TrimSpace(req.URL) == "" {
-		return fmt.Errorf("read request url must not be empty")
-	}
-	switch strings.ToLower(strings.TrimSpace(req.RenderMode)) {
-	case "", "auto", "off", "required":
-	default:
-		return fmt.Errorf("read request render mode must be one of auto, off, required")
-	}
-	return nil
-}
-
-func buildDocument(page pipeline.RawPage, title string) core.Document {
-	return core.Document{
-		ID:        prefixedHash("doc", page.FinalURL, page.HTML),
-		URL:       page.URL,
-		FinalURL:  page.FinalURL,
-		Title:     strings.TrimSpace(title),
-		FetchedAt: page.FetchedAt,
-		FetchMode: page.FetchMode,
-		RawHash:   prefixedHash("sha256", page.HTML),
-	}
-}
-
-func effectiveUserAgent(userAgent string, renderHint bool) string {
-	if strings.TrimSpace(userAgent) != "" {
-		return userAgent
-	}
-	if renderHint {
-		return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"
-	}
-	return ""
 }

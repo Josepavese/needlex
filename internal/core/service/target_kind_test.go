@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/josepavese/needlex/internal/core/targetkind"
 	"github.com/josepavese/needlex/internal/intel"
 )
 
@@ -22,11 +23,11 @@ func (a pageIntentTestAligner) Align(context.Context, string, []intel.SemanticCa
 
 func (a pageIntentTestAligner) Score(_ context.Context, objective string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
 	out := make([]intel.SemanticScore, 0, len(candidates))
-	targetText := targetKindArchetypeText(a.target)
+	targetText := targetkind.ArchetypeText(a.target)
 	for _, candidate := range candidates {
 		score := 0.10
 		switch {
-		case targetKindFromPrototypeID(candidate.ID) == a.target:
+		case targetkind.PrototypeKind(candidate.ID) == a.target:
 			score = 0.92
 		case strings.TrimSpace(objective) == targetText:
 			if value, ok := a.candidateScores[candidate.ID]; ok {
@@ -49,7 +50,7 @@ func TestTargetKindDoesNotPromoteBroadTargetsWhenSemanticUnavailable(t *testing.
 		{URL: "https://example.com/", Score: 1},
 	}
 
-	got := svc.applyTargetKindRerank(context.Background(), "official main home page broad identity overview", candidates)
+	got := targetkind.Apply(context.Background(), svc.semantic, "official main home page broad identity overview", candidates)
 	if got[0].URL != candidates[0].URL {
 		t.Fatalf("expected disabled semantic target-kind promotion to leave order unchanged, got %#v", got)
 	}
@@ -64,7 +65,7 @@ func TestTargetKindPromotesOrganizationAboutBySemanticPageIntent(t *testing.T) {
 	cfg := testConfig()
 	svc := newTestService(t, cfg, nil)
 	svc.semantic = pageIntentTestAligner{
-		target: targetKindOrganizationAbout,
+		target: targetkind.OrganizationAbout,
 		candidateScores: map[string]float64{
 			"https://example.com/solutions/gitops": 0.12,
 			"https://example.com/about":            0.94,
@@ -97,14 +98,14 @@ func TestTargetKindPromotesOrganizationAboutBySemanticPageIntent(t *testing.T) {
 		},
 	}
 
-	got := svc.applyTargetKindRerank(context.Background(), "understand the organization identity and accountability", candidates)
+	got := targetkind.Apply(context.Background(), svc.semantic, "understand the organization identity and accountability", candidates)
 	if got[0].URL != "https://example.com/about" {
 		t.Fatalf("expected semantic organization-about intent to win, got %#v", got)
 	}
 	if !containsReason(got[0].Reason, "target_kind_semantic_alignment") {
 		t.Fatalf("expected semantic target-kind reason, got %#v", got[0].Reason)
 	}
-	if got[0].Metadata["target_kind"] != targetKindOrganizationAbout {
+	if got[0].Metadata["target_kind"] != targetkind.OrganizationAbout {
 		t.Fatalf("expected target kind metadata, got %#v", got[0].Metadata)
 	}
 	if got[0].Metadata["target_kind_candidate_semantic"] == "" {
@@ -121,14 +122,14 @@ func TestPreferredRecoveredMemoryURLUsesSemanticCanonicalHome(t *testing.T) {
 				URL:   "https://sqlite.org",
 				Score: 2.4,
 				Metadata: map[string]string{
-					"target_kind": targetKindCanonicalHome,
+					"target_kind": targetkind.CanonicalHome,
 				},
 			},
 			{URL: seed, Score: 2.2},
 		},
 	}
 
-	profile := targetKindProfile{Kind: targetKindCanonicalHome, Similarity: 0.80, Margin: 0.20}
+	profile := targetkind.Profile{Kind: targetkind.CanonicalHome, Similarity: 0.80, Margin: 0.20}
 	if got := preferredRecoveredMemoryURL(seed, recovered, profile); got != "https://sqlite.org" {
 		t.Fatalf("expected semantic canonical home recovery, got %q", got)
 	}
@@ -143,14 +144,14 @@ func TestPreferredRecoveredMemoryURLPreservesNonRootMemorySeedForWeakHomeIntent(
 				URL:   "https://svelte.dev/",
 				Score: 2.4,
 				Metadata: map[string]string{
-					"target_kind": targetKindCanonicalHome,
+					"target_kind": targetkind.CanonicalHome,
 				},
 			},
 			{URL: seed, Score: 2.2},
 		},
 	}
 
-	profile := targetKindProfile{Kind: targetKindCanonicalHome, Similarity: 0.48, Margin: 0.04}
+	profile := targetkind.Profile{Kind: targetkind.CanonicalHome, Similarity: 0.48, Margin: 0.04}
 	if got := preferredRecoveredMemoryURL(seed, recovered, profile); got != seed {
 		t.Fatalf("expected weak home intent to preserve non-root memory seed, got %q", got)
 	}
@@ -166,7 +167,7 @@ func TestPreferredRecoveredMemoryURLKeepsRootSeedSelection(t *testing.T) {
 		},
 	}
 
-	profile := targetKindProfile{Kind: targetKindCanonicalHome, Similarity: 0.80, Margin: 0.20}
+	profile := targetkind.Profile{Kind: targetkind.CanonicalHome, Similarity: 0.80, Margin: 0.20}
 	if got := preferredRecoveredMemoryURL(seed, recovered, profile); got != seed {
 		t.Fatalf("expected root seed recovery to keep discovery selection, got %q", got)
 	}
@@ -182,7 +183,7 @@ func TestPreferredRecoveredMemoryURLAllowsSpecificRecoveryForNonHomeIntent(t *te
 		},
 	}
 
-	profile := targetKindProfile{Kind: targetKindLearningPath, Similarity: 0.60, Margin: 0.12}
+	profile := targetkind.Profile{Kind: targetkind.LearningPath, Similarity: 0.60, Margin: 0.12}
 	if got := preferredRecoveredMemoryURL(seed, recovered, profile); got != "https://playwright.dev/docs/intro" {
 		t.Fatalf("expected non-home intent to allow specific same-site recovery, got %q", got)
 	}
@@ -216,7 +217,7 @@ func TestDiscoverWebAppliesTargetKindResolverToSeedlessResults(t *testing.T) {
 	svc := newTestService(t, cfg, search.Client())
 	svc.SetWebDiscoverBaseURL(search.URL)
 	svc.semantic = pageIntentTestAligner{
-		target: targetKindOrganizationAbout,
+		target: targetkind.OrganizationAbout,
 		candidateScores: map[string]float64{
 			siteURL + "/solutions/gitops": 0.10,
 			siteURL + "/about":            0.96,

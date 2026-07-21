@@ -2,12 +2,12 @@ package service
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/queryplan"
+	"github.com/josepavese/needlex/internal/core/queryreview"
 )
 
 func (s *Service) prepareQuery(req QueryRequest) (string, string, string, QueryRequest, error) {
@@ -25,11 +25,13 @@ func (s *Service) prepareQuery(req QueryRequest) (string, string, string, QueryR
 	}
 	req.SeedURL = strings.TrimSpace(req.SeedURL)
 	req.DomainHints = discoverycore.NormalizeDomainHints(req.DomainHints)
-	if req.SeedURL == "" && discoveryMode == QueryDiscoverySameSite {
-		discoveryMode = QueryDiscoveryWeb
-	}
-	if req.SeedURL == "" && discoveryMode != QueryDiscoveryWeb {
-		return "", "", "", QueryRequest{}, fmt.Errorf("query request seed_url must not be empty when discovery_mode=%s", discoveryMode)
+	if req.SeedURL == "" {
+		if requestedMode == "" {
+			return "", "", "", QueryRequest{}, fmt.Errorf("query request seed_url is required for stable use; seedless discovery is experimental and requires explicit discovery_mode=%s", QueryDiscoveryWeb)
+		}
+		if discoveryMode != QueryDiscoveryWeb {
+			return "", "", "", QueryRequest{}, fmt.Errorf("query request seed_url must not be empty when discovery_mode=%s; seedless discovery is experimental and requires explicit discovery_mode=%s", discoveryMode, QueryDiscoveryWeb)
+		}
 	}
 	return profile, requestedMode, discoveryMode, req, nil
 }
@@ -84,60 +86,8 @@ func queryCandidateURLs(candidates []DiscoverCandidate) []string {
 	return out
 }
 
-func queryCandidateDiagnostics(candidates []DiscoverCandidate) []QueryCandidateDiagnostic {
-	const limit = 8
-	out := make([]QueryCandidateDiagnostic, 0, min(len(candidates), limit))
-	for i, candidate := range candidates {
-		if i >= limit {
-			break
-		}
-		out = append(out, QueryCandidateDiagnostic{
-			URL:                          strings.TrimSpace(candidate.URL),
-			Score:                        candidate.Score,
-			ResourceClass:                strings.TrimSpace(candidate.Metadata["resource_class"]),
-			SemanticRole:                 strings.TrimSpace(candidate.Metadata["semantic_role"]),
-			SemanticRoleConfidence:       parseDiagnosticFloat(candidate.Metadata["semantic_role_confidence"]),
-			SemanticRoleIntent:           parseDiagnosticFloat(candidate.Metadata["semantic_role_intent"]),
-			SemanticOriginAlignment:      parseDiagnosticFloat(candidate.Metadata["semantic_origin_alignment"]),
-			SemanticDerivativeAlignment:  parseDiagnosticFloat(candidate.Metadata["semantic_derivative_alignment"]),
-			ClusterID:                    strings.TrimSpace(candidate.Metadata["cluster_id"]),
-			ClusterSize:                  parseDiagnosticInt(candidate.Metadata["cluster_size"]),
-			LateInteractionScore:         parseDiagnosticFloat(candidate.Metadata["late_interaction_score"]),
-			LateInteractionConfidence:    parseDiagnosticFloat(candidate.Metadata["late_interaction_confidence"]),
-			SemanticEvidenceSimilarity:   parseDiagnosticFloat(candidate.Metadata["semantic_evidence_similarity"]),
-			SemanticEvidenceBoost:        parseDiagnosticFloat(candidate.Metadata["semantic_evidence_boost"]),
-			SemanticOriginSimilarity:     parseDiagnosticFloat(candidate.Metadata["semantic_origin_similarity"]),
-			SemanticDerivativeSimilarity: parseDiagnosticFloat(candidate.Metadata["semantic_derivative_similarity"]),
-			SemanticCommunitySimilarity:  parseDiagnosticFloat(candidate.Metadata["semantic_community_similarity"]),
-			SemanticAuthorityBoost:       parseDiagnosticFloat(candidate.Metadata["semantic_authority_boost"]),
-			SemanticAuthorityPenalty:     parseDiagnosticFloat(candidate.Metadata["semantic_authority_penalty"]),
-			SemanticCommunityPenalty:     parseDiagnosticFloat(candidate.Metadata["semantic_community_penalty"]),
-			SemanticQuorumProviderCount:  parseDiagnosticInt(candidate.Metadata["semantic_quorum_provider_count"]),
-			SemanticCalibrationScore:     parseDiagnosticFloat(candidate.Metadata["semantic_calibration_score"]),
-			SemanticProvenanceIdentity:   parseDiagnosticFloat(candidate.Metadata["semantic_provenance_identity"]),
-			SemanticProvenanceTopic:      parseDiagnosticFloat(candidate.Metadata["semantic_provenance_topic"]),
-			SemanticProvenanceBoost:      parseDiagnosticFloat(candidate.Metadata["semantic_provenance_boost"]),
-			SemanticProvenancePenalty:    parseDiagnosticFloat(candidate.Metadata["semantic_provenance_penalty"]),
-			SemanticFamilyEvidenceCount:  parseDiagnosticInt(candidate.Metadata["semantic_family_evidence_count"]),
-			SemanticFamilyEvidenceStrong: parseDiagnosticInt(candidate.Metadata["semantic_family_evidence_strong"]),
-			SemanticFamilyProvenance:     parseDiagnosticInt(candidate.Metadata["semantic_family_evidence_provenance"]),
-			SemanticFamilyEvidence:       parseDiagnosticFloat(candidate.Metadata["semantic_family_evidence_support"]),
-			SemanticNearTieMerit:         parseDiagnosticFloat(candidate.Metadata["semantic_near_tie_merit"]),
-			SemanticNearTieBoost:         parseDiagnosticFloat(candidate.Metadata["semantic_near_tie_boost"]),
-			Reasons:                      append([]string{}, candidate.Reason...),
-		})
-	}
-	return out
-}
-
-func parseDiagnosticFloat(raw string) float64 {
-	value, _ := strconv.ParseFloat(strings.TrimSpace(raw), 64)
-	return value
-}
-
-func parseDiagnosticInt(raw string) int {
-	value, _ := strconv.Atoi(strings.TrimSpace(raw))
-	return value
+func queryCandidateDiagnostics(candidates []DiscoverCandidate) []queryreview.Diagnostic {
+	return queryreview.Diagnostics(candidates, 8)
 }
 
 func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL string) ReadRequest {

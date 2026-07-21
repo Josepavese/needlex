@@ -171,7 +171,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 func writeRootUsage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name] [--render auto|off|required]
-  needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort name] [--render auto|off|required]
+  needlex query <seed-url> --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort name] [--render auto|off|required]
   needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required]
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
@@ -189,6 +189,7 @@ func writeRootUsage(w io.Writer) {
 
 Hint:
   needlex mcp --help    Show MCP transport notes and client integration details
+  experimental query without seed-url requires --discovery web_search
 `)
 }
 
@@ -202,7 +203,7 @@ func (r Runner) runVersion(args []string, stdout, stderr io.Writer) int {
 }
 
 func writeQueryUsage(w io.Writer) {
-	writeUsage(w, "needlex query [seed-url] --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery mode] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]", "note: when seed-url is omitted, discovery defaults to web_search")
+	writeUsage(w, "needlex query <seed-url> --goal text [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]", "experimental opt-in: omit seed-url only with --discovery web_search")
 }
 
 func writeReadUsage(w io.Writer) {

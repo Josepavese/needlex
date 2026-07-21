@@ -20,7 +20,7 @@ Se un task locale confligge con questo file, il task locale è sbagliato finché
 - Active semantic vectorizer: local/no-key Ollama `embeddinggemma` through provider-neutral dense HTTP embeddings
 - Active model task: `resolve_ambiguity`
 - Default philosophy: `AI-first compact output, diagnostics explicit`
-- Search status: `seed-first strong, seedless best-effort`
+- Search status: `host-agent discovery + Needle-X compilation`; internal seedless is experimental explicit opt-in
 
 ## Product Definition
 
@@ -51,7 +51,7 @@ Needle-X is:
 9. No new active model capability without direct evidence.
 10. No widening of the market claim while behavior is narrower.
 11. Local/no-key embedding infra is part of the installed product contract and must be prepared by the installer.
-12. Seedless discovery is allowed only as best-effort; it is not the product core.
+12. Seedless discovery is experimental explicit opt-in only; it is not part of the stable agent workflow or product claim.
 13. Every macrostep must improve one of:
    - user value
    - output quality
@@ -312,11 +312,12 @@ A workflow burst is successful only if it ends with one of:
 
 Search is now governed by this rule:
 
-1. `seed-first` is core
-2. `seedless` is a first-class product surface, but still less stable than seeded and warm-state flows
-3. no infra is required
-4. no public search provider is treated as strategic foundation
-5. `Discovery Memory` is partly absorbed already, but not yet the dominant seedless substrate
+1. the host agent owns search strategy, candidate selection, and candidate count
+2. Needle-X compiles every URL the agent chooses to analyze through `web_read`
+3. seeded same-site routing remains part of the stable product surface
+4. seedless `web_search` is experimental, requires explicit opt-in, and is never an automatic fallback
+5. no public search provider is treated as a strategic foundation
+6. `Discovery Memory` and public bootstrap remain measurable experimental substrates
 
 References:
 1. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)

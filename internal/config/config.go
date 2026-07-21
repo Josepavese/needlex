@@ -106,10 +106,14 @@ type AgentConfig struct {
 }
 
 type RenderConfig struct {
-	Enabled        bool   `json:"enabled,omitempty"`
-	Provider       string `json:"provider,omitempty"`
-	BrowserPath    string `json:"browser_path,omitempty"`
-	RemoteCDPURL   string `json:"remote_cdp_url,omitempty"`
-	TimeoutMS      int64  `json:"timeout_ms,omitempty"`
-	MaxConcurrency int    `json:"max_concurrency,omitempty"`
+	Enabled                 bool   `json:"enabled,omitempty"`
+	Provider                string `json:"provider,omitempty"`
+	BrowserPath             string `json:"browser_path,omitempty"`
+	TimeoutMS               int64  `json:"timeout_ms,omitempty"`
+	MaxConcurrency          int    `json:"max_concurrency,omitempty"`
+	NetworkIdleMS           int64  `json:"network_idle_ms,omitempty"`
+	NetworkMaxBytes         int64  `json:"network_max_bytes,omitempty"`
+	NetworkResourceMaxBytes int64  `json:"network_resource_max_bytes,omitempty"`
+	NetworkMaxResources     int    `json:"network_max_resources,omitempty"`
+	NetworkMaxMessages      int    `json:"network_max_messages,omitempty"`
 }

@@ -10,6 +10,7 @@ Baseline SSOT:
 Strategic but non-active specs:
 1. [discovery-memory-spec.md](experimental/discovery-memory-spec.md)
 2. [agentic-decision-plane-spec.md](experimental/agentic-decision-plane-spec.md)
+3. [seedless-discovery.md](experimental/seedless-discovery.md)
 
 ## Product Shape
 
@@ -35,8 +36,13 @@ What is strong today:
 5. local discovery memory in warm-state flows
 
 What remains narrow:
-1. seedless open-web discovery
+1. experimental seedless open-web discovery
 2. broad market claim beyond seeded and warm-state paths
+
+Stable research workflow:
+1. the host agent obtains and selects candidate URLs with its own search tool
+2. Needle-X compiles every URL selected by the agent
+3. Needle-X does not impose a candidate count or research-breadth policy
 
 ## Active Technical Doctrine
 

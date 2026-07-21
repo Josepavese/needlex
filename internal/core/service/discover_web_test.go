@@ -16,6 +16,7 @@ import (
 	"github.com/josepavese/needlex/internal/core/webdiscover"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"github.com/josepavese/needlex/internal/rendering"
 	"github.com/josepavese/needlex/internal/store"
 )
 
@@ -43,6 +44,42 @@ func (semanticProvenanceTestAligner) Score(_ context.Context, _ string, candidat
 		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
 	}
 	return out, nil
+}
+
+type familyIntentIDAligner map[string]float64
+
+func (familyIntentIDAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (a familyIntentIDAligner) Score(_ context.Context, _ string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: a[candidate.ID]})
+	}
+	return out, nil
+}
+
+type countingRenderer struct {
+	page        rendering.Page
+	err         error
+	calls       int
+	lastRequest rendering.Request
+}
+
+func (r *countingRenderer) Render(_ context.Context, req rendering.Request) (rendering.Page, error) {
+	r.calls++
+	r.lastRequest = req
+	return r.page, r.err
+}
+
+func findCandidateByURL(candidates []DiscoverCandidate, rawURL string) (DiscoverCandidate, bool) {
+	for _, candidate := range candidates {
+		if candidate.URL == rawURL {
+			return candidate, true
+		}
+	}
+	return DiscoverCandidate{}, false
 }
 
 func TestRefineWebCandidateStaysStructureAndProbeDriven(t *testing.T) {
@@ -179,6 +216,232 @@ func TestDiscoverWebPromotesSameFamilyEmbeddedEndpoint(t *testing.T) {
 	}
 	if resp.SelectedURL != docsServer.URL+"/api/coding/paas/v4" {
 		t.Fatalf("expected embedded endpoint candidate to win, got %q", resp.SelectedURL)
+	}
+}
+
+func TestDiscoverWebBrowserProbeExpandsClientRenderedSeedlessCandidate(t *testing.T) {
+	appServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/pricing":
+			_, _ = fmt.Fprint(w, `<html><head><title>API pricing reference</title></head><body><article><h1>API pricing reference</h1><p>Token and usage pricing details.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer appServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/">Example platform pricing</a></body></html>`, appServer.URL)
+	}))
+	defer searchServer.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       appServer.URL,
+		FinalURL:  appServer.URL + "/",
+		HTML:      `<html><head><title>Rendered App</title></head><body><main><a href="/pricing">API pricing reference</a><article><h1>Pricing</h1><p>Rendered app exposes token and usage pricing.</p></article></main></body></html>`,
+		Browser:   "fake-browser",
+		Duration:  3 * time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+		NetworkStats: rendering.NetworkStats{
+			IdleReason: "network_idle",
+		},
+	}}
+	svc.renderer = renderer
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "api pricing reference",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != appServer.URL+"/pricing" {
+		t.Fatalf("expected rendered child candidate to win, got %q candidates=%#v", resp.SelectedURL, resp.Candidates)
+	}
+	candidate, ok := findCandidateByURL(resp.Candidates, appServer.URL+"/pricing")
+	if !ok {
+		t.Fatalf("expected rendered child candidate in response, got %#v", resp.Candidates)
+	}
+	if candidate.Metadata["browser_rendered"] != "true" || !containsReason(candidate.Reason, "browser_probe") {
+		t.Fatalf("expected browser probe diagnostics on rendered child, got %#v", candidate)
+	}
+	if renderer.calls != 1 {
+		t.Fatalf("expected one bounded browser probe, got %d", renderer.calls)
+	}
+	if renderer.lastRequest.Timeout > webBrowserProbeTimeout {
+		t.Fatalf("expected seedless browser timeout cap %s, got %s", webBrowserProbeTimeout, renderer.lastRequest.Timeout)
+	}
+	if renderer.lastRequest.NetworkMaxBytes > webBrowserProbeNetworkBytes || renderer.lastRequest.NetworkMaxResources > webBrowserProbeResources {
+		t.Fatalf("expected seedless browser network caps, got request %#v", renderer.lastRequest)
+	}
+}
+
+func TestDiscoverWebBrowserProbeUsesRenderedNetworkEvidence(t *testing.T) {
+	appServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/":
+			_, _ = fmt.Fprint(w, `<html><head><title>Network App</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/api/pricing":
+			_, _ = fmt.Fprint(w, `{"name":"API pricing reference","status":"ok"}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer appServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/">Example network app</a></body></html>`, appServer.URL)
+	}))
+	defer searchServer.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	svc.renderer = fakeRenderer{page: rendering.Page{
+		URL:       appServer.URL,
+		FinalURL:  appServer.URL + "/",
+		HTML:      `<html><head><title>Rendered Network App</title></head><body><main>Application shell</main></body></html>`,
+		Browser:   "fake-browser",
+		Duration:  5 * time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+		NetworkResources: []rendering.NetworkResource{{
+			URL:          appServer.URL + "/events",
+			Type:         "EventSource",
+			ContentType:  "text/event-stream",
+			Source:       "event_source",
+			Body:         fmt.Sprintf("data: {\"endpoint\":\"%s/api/pricing\",\"description\":\"API pricing reference from rendered network evidence\"}\n\ndata: end\n\n", appServer.URL),
+			BodyBytes:    160,
+			MessageCount: 2,
+			Finished:     true,
+		}},
+		NetworkStats: rendering.NetworkStats{
+			ResourceCount:       1,
+			EventSourceMessages: 2,
+			BodyBytes:           160,
+			IdleReason:          "network_idle",
+		},
+	}}
+
+	resp, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "api pricing reference",
+		MaxCandidates: 5,
+	})
+	if err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if resp.SelectedURL != appServer.URL+"/api/pricing" {
+		t.Fatalf("expected network-discovered endpoint to win, got %q candidates=%#v", resp.SelectedURL, resp.Candidates)
+	}
+	candidate, ok := findCandidateByURL(resp.Candidates, appServer.URL+"/api/pricing")
+	if !ok {
+		t.Fatalf("expected network-discovered endpoint in response, got %#v", resp.Candidates)
+	}
+	if candidate.Metadata["browser_network_resources"] != "1" || candidate.Metadata["browser_event_source_messages"] != "2" {
+		t.Fatalf("expected browser network diagnostics on endpoint candidate, got %#v", candidate.Metadata)
+	}
+}
+
+func TestDiscoverWebDoesNotBrowserProbeRichStaticCandidate(t *testing.T) {
+	staticServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>API pricing reference</title></head><body><article><h1>API pricing reference</h1><p>Pricing documentation explains token usage, model rates, account billing, volume thresholds, invoices, payment methods, metering, and plan limits for application developers integrating the API in production environments.</p><p>Teams can use this maintained reference to forecast cost and compare model tiers.</p></article></body></html>`)
+	}))
+	defer staticServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/">API pricing reference</a></body></html>`, staticServer.URL)
+	}))
+	defer searchServer.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:      staticServer.URL,
+		FinalURL: staticServer.URL + "/",
+		HTML:     `<html><body>should not render</body></html>`,
+	}}
+	svc.renderer = renderer
+
+	if _, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "api pricing reference",
+		MaxCandidates: 5,
+	}); err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if renderer.calls != 0 {
+		t.Fatalf("expected rich static candidate to avoid browser probe, got %d calls", renderer.calls)
+	}
+}
+
+func TestDiscoverWebLimitsBrowserProbeBudget(t *testing.T) {
+	appServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><head><title>Shell %s</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`, r.URL.Path)
+	}))
+	defer appServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body>
+<a class="result__a" href="%s/a">App A</a>
+<a class="result__a" href="%s/b">App B</a>
+<a class="result__a" href="%s/c">App C</a>
+<a class="result__a" href="%s/d">App D</a>
+<a class="result__a" href="%s/e">App E</a>
+</body></html>`, appServer.URL, appServer.URL, appServer.URL, appServer.URL, appServer.URL)
+	}))
+	defer searchServer.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       appServer.URL,
+		FinalURL:  appServer.URL + "/rendered",
+		HTML:      `<html><head><title>Rendered App</title></head><body><article><h1>Rendered App</h1><p>Browser evidence.</p></article></body></html>`,
+		Browser:   "fake-browser",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	if _, err := svc.DiscoverWeb(context.Background(), DiscoverWebRequest{
+		Goal:          "browser rendered app",
+		MaxCandidates: 8,
+	}); err != nil {
+		t.Fatalf("discover web failed: %v", err)
+	}
+	if renderer.calls != webBrowserProbeLimit {
+		t.Fatalf("expected browser probe budget %d, got %d calls", webBrowserProbeLimit, renderer.calls)
+	}
+}
+
+func TestDiscoverWebDoesNotBrowserProbeGenericLowNodePage(t *testing.T) {
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, nil)
+	if svc.shouldRenderWebCandidateProbe(context.Background(), pipeline.RawPage{
+		URL:         "https://example.com/",
+		FinalURL:    "https://example.com/",
+		ContentType: "text/html; charset=utf-8",
+		HTML:        `<html><head><title>Thin</title></head><body><main></main></body></html>`,
+	}, core.WebIR{Title: "Thin", NodeCount: 0, Signals: core.WebIRSignals{SubstrateClass: "generic_content"}}) {
+		t.Fatal("expected generic low-node page to avoid browser probe")
 	}
 }
 
@@ -647,6 +910,208 @@ func TestSemanticProvenanceBalanceKeepsOrderWithoutIdentityLeader(t *testing.T) 
 	}
 }
 
+func TestSemanticFamilyIntentRecoveryPromotesEmbeddingAlignedFamily(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = familyIntentIDAligner{
+		semanticFamilyIntentIdentityID("aggregate.example"): 0.45,
+		semanticFamilyIntentTopicID("aggregate.example"):    0.82,
+		semanticFamilyIntentIdentityID("source.example"):    0.84,
+		semanticFamilyIntentTopicID("source.example"):       0.80,
+	}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://aggregate.example/react",
+			Score:  2.70,
+			Reason: []string{"semantic_goal_alignment"},
+			Label:  "Reference page",
+			Metadata: map[string]string{
+				"semantic_origin_alignment":     "0.050",
+				"semantic_derivative_alignment": "0.620",
+				"page_title":                    "Reference page",
+				"web_ir_context":                "Component lifecycle and rendering reference.",
+			},
+		},
+		{
+			URL:    "https://source.example/docs",
+			Score:  2.42,
+			Reason: []string{"semantic_custodian_alignment"},
+			Label:  "Reference page",
+			Metadata: map[string]string{
+				"semantic_origin_alignment":     "0.720",
+				"semantic_derivative_alignment": "0.030",
+				"host_root_context":             "Maintained project reference and API material.",
+				"page_title":                    "Reference page",
+				"web_ir_context":                "Component lifecycle and rendering reference.",
+			},
+		},
+	}
+
+	got := svc.applySemanticFamilyIntentRecovery(context.Background(), "component rendering reference", candidates)
+	if got[0].URL != "https://source.example/docs" {
+		t.Fatalf("expected embedding-aligned family to be recovered first, got %#v", got)
+	}
+	if !containsReason(got[0].Reason, "semantic_family_intent_recovery") {
+		t.Fatalf("expected family-intent recovery reason, got %#v", got[0].Reason)
+	}
+	if got[0].Metadata["semantic_family_intent_score"] == "" ||
+		got[0].Metadata["semantic_family_intent_identity"] == "" ||
+		got[0].Metadata["semantic_family_intent_topic"] == "" ||
+		got[0].Metadata["semantic_family_intent_merit"] == "" ||
+		got[0].Metadata["semantic_family_intent_boost"] == "" {
+		t.Fatalf("expected family-intent metadata, got %#v", got[0].Metadata)
+	}
+}
+
+func TestSemanticFamilyIntentRecoveryKeepsLeaderWithoutSemanticAdvantage(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = familyIntentIDAligner{
+		semanticFamilyIntentIdentityID("leader.example"):     0.78,
+		semanticFamilyIntentTopicID("leader.example"):        0.74,
+		semanticFamilyIntentIdentityID("challenger.example"): 0.76,
+		semanticFamilyIntentTopicID("challenger.example"):    0.74,
+	}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://leader.example/topic",
+			Score: 2.70,
+			Metadata: map[string]string{
+				"semantic_origin_alignment":     "0.550",
+				"semantic_derivative_alignment": "0.080",
+				"page_title":                    "Topic reference",
+			},
+		},
+		{
+			URL:   "https://challenger.example/topic",
+			Score: 2.49,
+			Metadata: map[string]string{
+				"semantic_origin_alignment":     "0.500",
+				"semantic_derivative_alignment": "0.080",
+				"page_title":                    "Topic reference",
+			},
+		},
+	}
+
+	got := svc.applySemanticFamilyIntentRecovery(context.Background(), "topic reference", candidates)
+	if got[0].URL != "https://leader.example/topic" {
+		t.Fatalf("expected existing leader to remain first, got %#v", got)
+	}
+	if containsReason(got[1].Reason, "semantic_family_intent_recovery") {
+		t.Fatalf("did not expect family-intent recovery reason without semantic advantage, got %#v", got[1].Reason)
+	}
+}
+
+func TestSemanticFamilyIntentRecoveryDoesNotBoostThinDerivativeFamily(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = familyIntentIDAligner{
+		semanticFamilyIntentIdentityID("leader.example"):     0.40,
+		semanticFamilyIntentTopicID("leader.example"):        0.70,
+		semanticFamilyIntentIdentityID("derivative.example"): 0.72,
+		semanticFamilyIntentTopicID("derivative.example"):    0.72,
+	}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://leader.example/guide",
+			Score:  2.70,
+			Reason: []string{"semantic_goal_alignment", "semantic_provenance_identity"},
+			Metadata: map[string]string{
+				"semantic_origin_alignment":     "0.120",
+				"semantic_derivative_alignment": "0.040",
+				"semantic_provenance_topic":     "0.700",
+			},
+		},
+		{
+			URL:    "https://derivative.example/guide",
+			Score:  2.62,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_origin_alignment":     "0.030",
+				"semantic_derivative_alignment": "0.160",
+				"semantic_provenance_topic":     "0.720",
+			},
+		},
+	}
+
+	got := svc.applySemanticFamilyIntentRecovery(context.Background(), "guide", candidates)
+	if got[0].URL != "https://leader.example/guide" {
+		t.Fatalf("expected thin derivative family not to be recovered, got %#v", got)
+	}
+	if containsReason(got[1].Reason, "semantic_family_intent_recovery") {
+		t.Fatalf("did not expect derivative singleton recovery, got %#v", got[1].Reason)
+	}
+}
+
+func TestSemanticFamilyIntentRecoveryAllowsStrongEmbeddingFamily(t *testing.T) {
+	cfg := testConfig()
+	svc := newTestService(t, cfg, nil)
+	svc.semantic = familyIntentIDAligner{
+		semanticFamilyIntentIdentityID("leader.example"):    0.31,
+		semanticFamilyIntentTopicID("leader.example"):       0.62,
+		semanticFamilyIntentIdentityID("candidate.example"): 0.52,
+		semanticFamilyIntentTopicID("candidate.example"):    0.64,
+	}
+
+	candidates := []DiscoverCandidate{
+		{
+			URL:   "https://leader.example/topic",
+			Score: 2.90,
+			Metadata: map[string]string{
+				"semantic_provenance_topic": "0.620",
+			},
+		},
+		{
+			URL:   "https://candidate.example/topic",
+			Score: 2.48,
+			Metadata: map[string]string{
+				"semantic_provenance_topic": "0.640",
+			},
+		},
+	}
+
+	got := svc.applySemanticFamilyIntentRecovery(context.Background(), "topic", candidates)
+	if got[0].URL != "https://candidate.example/topic" {
+		t.Fatalf("expected strong embedding family recovery, got %#v", got)
+	}
+	if !containsReason(got[0].Reason, "semantic_family_intent_recovery") {
+		t.Fatalf("expected family-intent recovery reason, got %#v", got[0].Reason)
+	}
+}
+
+func TestSemanticFamilyIntentMeritsUseExistingEmbeddingMetadata(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://mirror.example/topic",
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_provenance_topic":     "0.680",
+				"semantic_origin_alignment":     "0.030",
+				"semantic_derivative_alignment": "0.060",
+			},
+		},
+		{
+			URL:    "https://source.example/topic",
+			Reason: []string{"semantic_goal_alignment", "semantic_provenance_identity"},
+			Metadata: map[string]string{
+				"semantic_provenance_topic":     "0.660",
+				"semantic_provenance_identity":  "0.120",
+				"semantic_origin_alignment":     "0.120",
+				"semantic_derivative_alignment": "0.030",
+			},
+		},
+	}
+
+	_, aggregates := semanticFamilyIntentCandidates(candidates)
+	merits := semanticFamilyIntentMerits(nil, aggregates)
+	if merits["source.example"].Merit <= merits["mirror.example"].Merit {
+		t.Fatalf("expected existing embedding metadata to favor source family, got %#v", merits)
+	}
+}
+
 func TestSemanticFamilyEvidenceBalancePromotesCoherentFamily(t *testing.T) {
 	candidates := []DiscoverCandidate{
 		{
@@ -751,6 +1216,63 @@ func TestSemanticNearTieProvenanceReviewKeepsLargeGapLeader(t *testing.T) {
 	got := applySemanticNearTieProvenanceReview(candidates)
 	if got[0].URL != "https://leader.example/topic" {
 		t.Fatalf("expected large-gap leader to remain first, got %#v", got)
+	}
+}
+
+func TestSemanticNearTieProvenanceReviewSkipsWeakDerivativeRootProbe(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://leader.example/topic",
+			Score:  2.60,
+			Reason: []string{"semantic_goal_alignment", "semantic_provider_consensus"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.620",
+			},
+		},
+		{
+			URL:    "https://derivative.example/topic",
+			Score:  2.56,
+			Reason: []string{"semantic_goal_alignment", "host_root_identity_probe", "semantic_derivative_surface_penalty"},
+			Metadata: map[string]string{
+				"semantic_family_intent_origin":     "0.030",
+				"semantic_family_intent_derivative": "0.160",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://leader.example/topic" {
+		t.Fatalf("expected weak derivative root probe not to be promoted, got %#v", got)
+	}
+	if containsReason(got[1].Reason, "semantic_near_tie_provenance_review") {
+		t.Fatalf("did not expect near-tie review reason, got %#v", got[1].Reason)
+	}
+}
+
+func TestSemanticNearTieProvenanceReviewSkipsVectorDerivativeWithoutPenaltyReason(t *testing.T) {
+	candidates := []DiscoverCandidate{
+		{
+			URL:    "https://leader.example/topic",
+			Score:  2.60,
+			Reason: []string{"semantic_goal_alignment"},
+			Metadata: map[string]string{
+				"semantic_goal_similarity": "0.620",
+			},
+		},
+		{
+			URL:    "https://derivative.example/topic",
+			Score:  2.56,
+			Reason: []string{"semantic_goal_alignment", "semantic_provider_consensus"},
+			Metadata: map[string]string{
+				"semantic_family_intent_origin":     "0.020",
+				"semantic_family_intent_derivative": "0.180",
+			},
+		},
+	}
+
+	got := applySemanticNearTieProvenanceReview(candidates)
+	if got[0].URL != "https://leader.example/topic" {
+		t.Fatalf("expected vector-derivative candidate not to be promoted, got %#v", got)
 	}
 }
 

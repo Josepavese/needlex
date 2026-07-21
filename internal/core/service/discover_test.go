@@ -10,6 +10,7 @@ import (
 	"time"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/core/targetkind"
 	"github.com/josepavese/needlex/internal/intel"
 )
 
@@ -29,7 +30,7 @@ func (a targetKindTestAligner) Score(_ context.Context, _ string, candidates []i
 			out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
 			continue
 		}
-		if targetKindFromPrototypeID(candidate.ID) == a.target {
+		if targetkind.PrototypeKind(candidate.ID) == a.target {
 			score = 0.92
 		}
 		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
@@ -52,7 +53,7 @@ func (a localFirstSeedTestAligner) Score(_ context.Context, _ string, candidates
 		score := 0.10
 		if value, ok := a.candidateScores[candidate.ID]; ok {
 			score = value
-		} else if kind := targetKindFromPrototypeID(candidate.ID); kind != "" {
+		} else if kind := targetkind.PrototypeKind(candidate.ID); kind != "" {
 			if value, ok := a.prototypeScores[kind]; ok {
 				score = value
 			}
@@ -181,7 +182,7 @@ func TestDiscoverTargetKindKeepsBroadIdentityOnHome(t *testing.T) {
 
 	cfg := testConfig()
 	svc := newTestService(t, cfg, server.Client())
-	svc.semantic = targetKindTestAligner{target: targetKindCanonicalHome}
+	svc.semantic = targetKindTestAligner{target: targetkind.CanonicalHome}
 	resp, err := svc.Discover(context.Background(), DiscoverRequest{
 		Goal:                   "capire l'identità complessiva del progetto",
 		SeedURL:                server.URL,
@@ -569,8 +570,8 @@ func TestDiscoverWebLocalFirstPreservesNonRootSeedForWeakHomeIntent(t *testing.T
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 	svc.semantic = localFirstSeedTestAligner{
 		prototypeScores: map[string]float64{
-			targetKindCanonicalHome: 0.48,
-			targetKindLearningPath:  0.44,
+			targetkind.CanonicalHome: 0.48,
+			targetkind.LearningPath:  0.44,
 		},
 		candidateScores: map[string]float64{
 			seedServer.URL + "/docs/Web/JavaScript":                                    0.62,

@@ -9,7 +9,7 @@ needlex
 ## Core Commands
 
 1. `needlex read <url> --json`
-2. `needlex query [seed-url] --goal "<goal>" --json`
+2. `needlex query <seed-url> --goal "<goal>" --json`
 3. `needlex crawl <seed-url> --json`
 4. `needlex proof <trace-id|proof-id|chunk-id> --json`
 5. `needlex replay <trace-id> --json`
@@ -35,6 +35,14 @@ needlex config show
 needlex logs stats
 needlex support bundle --out /tmp/needlex-support
 needlex doctor
+```
+
+For open-web research, obtain URLs with the host agent's search tool and run `needlex read` on every URL the agent selects. Needle-X does not impose a candidate limit.
+
+Seedless query is experimental and requires explicit opt-in:
+
+```bash
+needlex query --goal "company profile" --discovery web_search --json
 ```
 
 ## Config

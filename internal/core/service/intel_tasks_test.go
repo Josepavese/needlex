@@ -151,8 +151,8 @@ func TestBuildResolveAmbiguityInputSkipsForEmbeddedAppPayloadSubstrate(t *testin
 	}
 }
 
-func TestBuildResolveAmbiguityInputSkipsForThemeHeavyWordPressWhenCoverageIsGood(t *testing.T) {
-	input, ok := buildResolveAmbiguityInput("digital marketing websites", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "theme_heavy_wordpress"}}, []rankedSegment{
+func TestBuildResolveAmbiguityInputSkipsForThemeHeavySiteWhenCoverageIsGood(t *testing.T) {
+	input, ok := buildResolveAmbiguityInput("digital marketing websites", core.WebIR{Signals: core.WebIRSignals{SubstrateClass: "theme_heavy_site"}}, []rankedSegment{
 		{chunk: core.Chunk{ID: "chk_1", Fingerprint: "fp_1", Text: "We build websites and provide digital marketing for small businesses.", HeadingPath: []string{"Services"}, Score: 0.90, Confidence: 0.87}},
 		{chunk: core.Chunk{ID: "chk_2", Fingerprint: "fp_2", Text: "Contact the studio today.", HeadingPath: []string{"CTA"}, Score: 0.80, Confidence: 0.77}},
 	}, map[string]intel.Decision{
@@ -160,7 +160,7 @@ func TestBuildResolveAmbiguityInputSkipsForThemeHeavyWordPressWhenCoverageIsGood
 		"fp_2": {Fingerprint: "fp_2", Lane: 1, RiskFlags: []string{"short_segment"}},
 	})
 	if ok {
-		t.Fatalf("expected theme_heavy_wordpress to suppress ambiguity route when the structure is already strong, got %#v", input)
+		t.Fatalf("expected theme_heavy_site to suppress ambiguity route when the structure is already strong, got %#v", input)
 	}
 }
 

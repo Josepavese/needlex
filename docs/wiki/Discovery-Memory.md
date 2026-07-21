@@ -45,7 +45,7 @@ Successful `read`, `query`, and `crawl` runs automatically observe:
 5. topic nodes and host/family expansions
 6. semantic family graph evidence and membership edges
 
-Seedless `web_query` consults this local substrate before public bootstrap. Public providers are fallback, not the first preferred source when local proof-backed memory is strong enough.
+Experimental seedless `web_query` consults this local substrate before public bootstrap. This path runs only after explicit `discovery_mode="web_search"` opt-in. Stable agent workflows use host-agent search followed by `web_read` for every URL the agent selects.
 
 ## Current Claim
 
@@ -58,7 +58,7 @@ Guardrail:
 1. this is a seeded-runtime claim
 2. it is not a blanket cold-state open-web superiority claim
 3. Discovery Memory warm-state stress is tracked separately from the seeded runtime score
-4. seedless discovery is a first-class product surface, but it is still noisier than seeded retrieval
+4. seedless discovery is experimental and outside the stable agent workflow
 
 ## Operator Surface
 

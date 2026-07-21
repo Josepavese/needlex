@@ -13,8 +13,13 @@ $SemanticModel = if ($env:NEEDLEX_SEMANTIC_PROVIDER_MODEL) { $env:NEEDLEX_SEMANT
 $SemanticVectorSpace = if ($env:NEEDLEX_SEMANTIC_VECTOR_SPACE) { $env:NEEDLEX_SEMANTIC_VECTOR_SPACE } else { "ollama-embeddinggemma-v1" }
 $RenderProvider = if ($env:NEEDLEX_RENDER_PROVIDER) { $env:NEEDLEX_RENDER_PROVIDER } else { "exec-dump-dom" }
 $RenderBrowserPath = if ($env:NEEDLEX_RENDER_BROWSER_PATH) { $env:NEEDLEX_RENDER_BROWSER_PATH } else { "" }
-$RenderTimeoutMS = if ($env:NEEDLEX_RENDER_TIMEOUT_MS) { $env:NEEDLEX_RENDER_TIMEOUT_MS } else { "5000" }
+$RenderTimeoutMS = if ($env:NEEDLEX_RENDER_TIMEOUT_MS) { $env:NEEDLEX_RENDER_TIMEOUT_MS } else { "30000" }
 $RenderMaxConcurrency = if ($env:NEEDLEX_RENDER_MAX_CONCURRENCY) { $env:NEEDLEX_RENDER_MAX_CONCURRENCY } else { "1" }
+$RenderNetworkIdleMS = if ($env:NEEDLEX_RENDER_NETWORK_IDLE_MS) { $env:NEEDLEX_RENDER_NETWORK_IDLE_MS } else { "1500" }
+$RenderNetworkMaxBytes = if ($env:NEEDLEX_RENDER_NETWORK_MAX_BYTES) { $env:NEEDLEX_RENDER_NETWORK_MAX_BYTES } else { "64000000" }
+$RenderNetworkResourceMaxBytes = if ($env:NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES) { $env:NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES } else { "64000000" }
+$RenderNetworkMaxResources = if ($env:NEEDLEX_RENDER_NETWORK_MAX_RESOURCES) { $env:NEEDLEX_RENDER_NETWORK_MAX_RESOURCES } else { "32" }
+$RenderNetworkMaxMessages = if ($env:NEEDLEX_RENDER_NETWORK_MAX_MESSAGES) { $env:NEEDLEX_RENDER_NETWORK_MAX_MESSAGES } else { "4096" }
 $RenderChromeVersion = if ($env:NEEDLEX_RENDER_CHROME_VERSION) { $env:NEEDLEX_RENDER_CHROME_VERSION } else { "" }
 
 function Remove-DuplicatePathEntries {
@@ -293,6 +298,11 @@ function Configure-RenderConfig {
     Invoke-NeedlexConfigSet "render.browser_path" $RenderBrowserPath
     Invoke-NeedlexConfigSet "render.timeout_ms" $RenderTimeoutMS
     Invoke-NeedlexConfigSet "render.max_concurrency" $RenderMaxConcurrency
+    Invoke-NeedlexConfigSet "render.network_idle_ms" $RenderNetworkIdleMS
+    Invoke-NeedlexConfigSet "render.network_max_bytes" $RenderNetworkMaxBytes
+    Invoke-NeedlexConfigSet "render.network_resource_max_bytes" $RenderNetworkResourceMaxBytes
+    Invoke-NeedlexConfigSet "render.network_max_resources" $RenderNetworkMaxResources
+    Invoke-NeedlexConfigSet "render.network_max_messages" $RenderNetworkMaxMessages
   }
   finally {
     $env:NEEDLEX_HOME = $oldNeedlexHome
@@ -359,6 +369,11 @@ try {
   $oldRenderBrowserPath = $env:NEEDLEX_RENDER_BROWSER_PATH
   $oldRenderTimeoutMS = $env:NEEDLEX_RENDER_TIMEOUT_MS
   $oldRenderMaxConcurrency = $env:NEEDLEX_RENDER_MAX_CONCURRENCY
+  $oldRenderNetworkIdleMS = $env:NEEDLEX_RENDER_NETWORK_IDLE_MS
+  $oldRenderNetworkMaxBytes = $env:NEEDLEX_RENDER_NETWORK_MAX_BYTES
+  $oldRenderNetworkResourceMaxBytes = $env:NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES
+  $oldRenderNetworkMaxResources = $env:NEEDLEX_RENDER_NETWORK_MAX_RESOURCES
+  $oldRenderNetworkMaxMessages = $env:NEEDLEX_RENDER_NETWORK_MAX_MESSAGES
   try {
     $env:NEEDLEX_HOME = $StateRoot
     $env:NEEDLEX_CONFIG = $ConfigPath
@@ -371,6 +386,11 @@ try {
     $env:NEEDLEX_RENDER_BROWSER_PATH = $RenderBrowserPath
     $env:NEEDLEX_RENDER_TIMEOUT_MS = $RenderTimeoutMS
     $env:NEEDLEX_RENDER_MAX_CONCURRENCY = $RenderMaxConcurrency
+    $env:NEEDLEX_RENDER_NETWORK_IDLE_MS = $RenderNetworkIdleMS
+    $env:NEEDLEX_RENDER_NETWORK_MAX_BYTES = $RenderNetworkMaxBytes
+    $env:NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES = $RenderNetworkResourceMaxBytes
+    $env:NEEDLEX_RENDER_NETWORK_MAX_RESOURCES = $RenderNetworkMaxResources
+    $env:NEEDLEX_RENDER_NETWORK_MAX_MESSAGES = $RenderNetworkMaxMessages
     & $RealExe config init
   }
   finally {
@@ -385,6 +405,11 @@ try {
     $env:NEEDLEX_RENDER_BROWSER_PATH = $oldRenderBrowserPath
     $env:NEEDLEX_RENDER_TIMEOUT_MS = $oldRenderTimeoutMS
     $env:NEEDLEX_RENDER_MAX_CONCURRENCY = $oldRenderMaxConcurrency
+    $env:NEEDLEX_RENDER_NETWORK_IDLE_MS = $oldRenderNetworkIdleMS
+    $env:NEEDLEX_RENDER_NETWORK_MAX_BYTES = $oldRenderNetworkMaxBytes
+    $env:NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES = $oldRenderNetworkResourceMaxBytes
+    $env:NEEDLEX_RENDER_NETWORK_MAX_RESOURCES = $oldRenderNetworkMaxResources
+    $env:NEEDLEX_RENDER_NETWORK_MAX_MESSAGES = $oldRenderNetworkMaxMessages
   }
   Configure-RenderConfig
   Ensure-SemanticPrereqs

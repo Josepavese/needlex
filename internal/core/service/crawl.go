@@ -10,6 +10,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
+	"github.com/josepavese/needlex/internal/core/fetchpolicy"
 )
 
 type CrawlRequest struct {
@@ -126,7 +127,7 @@ func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, 
 }
 
 func (s *Service) expandCrawlNode(ctx context.Context, req CrawlRequest, node crawlNode, readResp ReadResponse, visited map[string]struct{}) []crawlNode {
-	rawPage, err := s.acquirer.Acquire(ctx, s.fetchAcquireInput(readResp.Document.FinalURL, req.UserAgent))
+	rawPage, err := s.acquirer.Acquire(ctx, fetchpolicy.Input(s.cfg, readResp.Document.FinalURL, req.UserAgent, "", "", ""))
 	if err != nil {
 		return nil
 	}

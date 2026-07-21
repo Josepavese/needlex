@@ -80,6 +80,9 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 	if len(structuredNodes) > 0 {
 		walker.nodes = append(walker.nodes, structuredNodes...)
 	}
+	if networkNodes := networkTextNodes(page.NetworkText); len(networkNodes) > 0 {
+		walker.nodes = append(walker.nodes, networkNodes...)
+	}
 
 	return SimplifiedDOM{
 		URL:            page.FinalURL,
@@ -88,6 +91,31 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 		SourceKind:     strings.TrimSpace(page.SourceKind),
 		Nodes:          walker.nodes,
 	}, nil
+}
+
+func networkTextNodes(text string) []SimplifiedNode {
+	blocks := splitTextBlocks(strings.TrimSpace(text), false)
+	if len(blocks) == 0 {
+		return nil
+	}
+	nodes := make([]SimplifiedNode, 0, min(len(blocks), 2048))
+	for idx, block := range blocks {
+		block = strings.TrimSpace(block)
+		if block == "" {
+			continue
+		}
+		nodes = append(nodes, SimplifiedNode{
+			Path:  fmt.Sprintf("/network/resource[%d]", idx+1),
+			Tag:   "p",
+			Kind:  "paragraph",
+			Text:  block,
+			Depth: 2,
+		})
+		if len(nodes) >= 2048 {
+			break
+		}
+	}
+	return nodes
 }
 
 func reduceTextLike(page RawPage) SimplifiedDOM {

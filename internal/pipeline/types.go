@@ -1,6 +1,9 @@
 package pipeline
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type AcquireInput struct {
 	URL                 string
@@ -20,23 +23,32 @@ type AcquireInput struct {
 }
 
 type RawPage struct {
-	URL          string
-	FinalURL     string
-	StatusCode   int
-	ContentType  string
-	Headers      map[string][]string
-	HTML         string
-	Partial      bool
-	FetchMode    string
-	FetchProfile string
-	SourceKind   string
-	SourceReason string
-	SourceFrom   string
-	RetryCount   int
-	RetryReason  string
-	RetrySleepMS int64
-	HostPacingMS int64
-	FetchedAt    time.Time
+	URL              string
+	FinalURL         string
+	StatusCode       int
+	ContentType      string
+	Headers          map[string][]string
+	HTML             string
+	Partial          bool
+	FetchMode        string
+	FetchProfile     string
+	SourceKind       string
+	SourceReason     string
+	SourceFrom       string
+	NetworkText      string
+	NetworkBytes     int64
+	NetworkResources int
+	NetworkTruncated bool
+	RetryCount       int
+	RetryReason      string
+	RetrySleepMS     int64
+	HostPacingMS     int64
+	FetchedAt        time.Time
+}
+
+func IsHTMLLikeRawPage(page RawPage) bool {
+	contentType := strings.ToLower(strings.TrimSpace(page.ContentType))
+	return contentType == "" || strings.Contains(contentType, "text/html") || strings.Contains(contentType, "application/xhtml+xml")
 }
 
 type SimplifiedNode struct {

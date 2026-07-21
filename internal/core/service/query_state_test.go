@@ -271,6 +271,28 @@ func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedOverMemoryCandidates(t 
 	}
 }
 
+func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedImplicitSeedlessQuery(t *testing.T) {
+	root := t.TempDir()
+	candidateStore := store.NewCandidateStore(root)
+	if _, _, err := candidateStore.Observe(store.CandidateObservation{
+		URL:    "https://candidate.example/docs",
+		Title:  "Proof replay deterministic documentation",
+		Source: "read",
+	}); err != nil {
+		t.Fatalf("seed candidate store: %v", err)
+	}
+
+	cfg := testConfig()
+	cfg.Memory.Enabled = false
+	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+		Goal: "proof replay deterministic",
+	}, cfg, fakeSemanticAligner{suppressed: true})
+
+	if req.SeedURL != "" || len(req.DomainHints) != 0 || len(req.MemoryCandidates) != 0 {
+		t.Fatalf("implicit seedless query must not be auto-seeded or expanded, got %#v", req)
+	}
+}
+
 func TestRunQueryDiscoveryPrefersMemoryCandidatesForSeedlessWeb(t *testing.T) {
 	svc := newTestService(t, testConfig(), nil)
 

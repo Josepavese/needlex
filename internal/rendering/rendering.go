@@ -16,20 +16,49 @@ import (
 )
 
 type Request struct {
-	URL       string
-	UserAgent string
-	Timeout   time.Duration
-	MaxBytes  int64
+	URL                     string
+	UserAgent               string
+	Timeout                 time.Duration
+	MaxBytes                int64
+	NetworkIdle             time.Duration
+	NetworkMaxBytes         int64
+	NetworkResourceMaxBytes int64
+	NetworkMaxResources     int
+	NetworkMaxMessages      int
 }
 
 type Page struct {
-	URL       string
-	FinalURL  string
-	HTML      string
-	Browser   string
-	Duration  time.Duration
-	Partial   bool
-	FetchedAt time.Time
+	URL              string
+	FinalURL         string
+	HTML             string
+	Browser          string
+	Duration         time.Duration
+	Partial          bool
+	FetchedAt        time.Time
+	NetworkResources []NetworkResource
+	NetworkStats     NetworkStats
+}
+
+type NetworkResource struct {
+	URL          string
+	Type         string
+	ContentType  string
+	Status       int
+	Source       string
+	Body         string
+	BodyBytes    int64
+	Truncated    bool
+	MessageCount int
+	Finished     bool
+}
+
+type NetworkStats struct {
+	ResourceCount       int
+	EventSourceMessages int
+	WebSocketMessages   int
+	BodyBytes           int64
+	Truncated           bool
+	IdleReason          string
 }
 
 type Renderer interface {
@@ -43,30 +72,67 @@ func (NoopRenderer) Render(context.Context, Request) (Page, error) {
 }
 
 type ExecDumpDOMRenderer struct {
-	BrowserPath string
-	Timeout     time.Duration
-	MaxBytes    int64
+	BrowserPath             string
+	Timeout                 time.Duration
+	MaxBytes                int64
+	NetworkIdle             time.Duration
+	NetworkMaxBytes         int64
+	NetworkResourceMaxBytes int64
+	NetworkMaxResources     int
+	NetworkMaxMessages      int
 }
 
 func New(cfg config.RenderConfig) Renderer {
 	if !cfg.Enabled {
 		return NoopRenderer{}
 	}
+	var renderer Renderer
 	switch strings.TrimSpace(cfg.Provider) {
 	case "", "exec-dump-dom":
-		return ExecDumpDOMRenderer{
-			BrowserPath: strings.TrimSpace(cfg.BrowserPath),
-			Timeout:     time.Duration(cfg.TimeoutMS) * time.Millisecond,
+		renderer = ExecDumpDOMRenderer{
+			BrowserPath:             strings.TrimSpace(cfg.BrowserPath),
+			Timeout:                 time.Duration(cfg.TimeoutMS) * time.Millisecond,
+			NetworkIdle:             time.Duration(cfg.NetworkIdleMS) * time.Millisecond,
+			NetworkMaxBytes:         cfg.NetworkMaxBytes,
+			NetworkResourceMaxBytes: cfg.NetworkResourceMaxBytes,
+			NetworkMaxResources:     cfg.NetworkMaxResources,
+			NetworkMaxMessages:      cfg.NetworkMaxMessages,
 		}
 	default:
 		return NoopRenderer{}
 	}
+	if cfg.MaxConcurrency > 0 {
+		return limitedRenderer{next: renderer, sem: make(chan struct{}, cfg.MaxConcurrency)}
+	}
+	return renderer
+}
+
+type limitedRenderer struct {
+	next Renderer
+	sem  chan struct{}
+}
+
+func (r limitedRenderer) Render(ctx context.Context, req Request) (Page, error) {
+	select {
+	case r.sem <- struct{}{}:
+		defer func() { <-r.sem }()
+	case <-ctx.Done():
+		return Page{}, ctx.Err()
+	}
+	return r.next.Render(ctx, req)
 }
 
 func (r ExecDumpDOMRenderer) Render(ctx context.Context, req Request) (Page, error) {
 	if strings.TrimSpace(req.URL) == "" {
 		return Page{}, errors.New("render url must not be empty")
 	}
+	if page, err := r.renderWithCDP(ctx, req); err == nil {
+		return page, nil
+	}
+	return r.renderWithDumpDOM(ctx, req)
+}
+
+func (r ExecDumpDOMRenderer) renderWithDumpDOM(ctx context.Context, req Request) (Page, error) {
 	browserPath, err := FindBrowserPath(r.BrowserPath)
 	if err != nil {
 		return Page{}, err
@@ -154,41 +220,4 @@ func (r ExecDumpDOMRenderer) Render(ctx context.Context, req Request) (Page, err
 		Partial:   partial,
 		FetchedAt: time.Now().UTC(),
 	}, nil
-}
-
-func FindBrowserPath(configured string) (string, error) {
-	if strings.TrimSpace(configured) != "" {
-		if _, err := os.Stat(strings.TrimSpace(configured)); err != nil {
-			return "", fmt.Errorf("configured browser path unavailable: %w", err)
-		}
-		return strings.TrimSpace(configured), nil
-	}
-	for _, name := range []string{
-		"chrome-headless-shell",
-		"chromium",
-		"chromium-browser",
-		"google-chrome",
-		"google-chrome-stable",
-		"chrome",
-		"msedge",
-	} {
-		if path, err := exec.LookPath(name); err == nil {
-			return path, nil
-		}
-	}
-	return "", errors.New("no Chrome/Chromium executable found for JS rendering")
-}
-
-func isHeadlessShell(browserPath string) bool {
-	base := strings.ToLower(filepath.Base(browserPath))
-	return strings.Contains(base, "chrome-headless-shell") || base == "headless_shell"
-}
-
-func firstPositiveDuration(values ...time.Duration) time.Duration {
-	for _, value := range values {
-		if value > 0 {
-			return value
-		}
-	}
-	return 0
 }

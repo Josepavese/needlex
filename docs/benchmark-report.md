@@ -18,7 +18,7 @@ Rule:
 ## What They Do Not Support Yet
 
 1. broad market-superiority claims
-2. cold-state seedless open-web strength
+2. production-grade cold-state seedless open-web strength
 3. surface-form metrics as proxies for meaning
 4. reopening specialist model tasks in the active core
 
@@ -100,7 +100,7 @@ Deterministic suites:
 2. `hard_case_matrix`: `6/6` pass
 3. `hard_case_matrix.avg_lossiness = 0.098`
 
-Live 100-case seedless no-key provider run:
+Live 100-case experimental seedless no-key provider run:
 1. `case_count = 100`
 2. `runner_runs = 1`
 3. `runner_profiles = ["browser_like_semantic"]`
@@ -118,14 +118,14 @@ Live 100-case seedless no-key provider run:
 
 Interpretation:
 1. semantic-first changes did not regress deterministic discovery quality
-2. seedless runtime reliability is mostly stable with only no-key public HTML providers
+2. the experimental seedless runtime completed most requests with only no-key public HTML providers, but its selection quality and latency do not meet the stable contract
 3. semantic role, family-evidence mass, and near-tie provenance review moved the accepted cold seedless lane from `0.56` to `0.68`
 4. compared with the current pre-run `0.51`, this is a `+17` percentage-point recovery on the same 100-source lane
 5. the seedless runner supports explicit profile selection and multiple named provider chains
 6. remaining open-web seedless failures are mostly selection failures where the expected family is already in the candidate pool
 7. this is still a noisy no-key public-provider benchmark and should not be marketed as guaranteed seedless success
 6. this points to family representative selection and candidate promotion, not provider blocking, as the next improvement front
-7. broad cold-state seedless quality is not yet a market claim; the next measured target is converting `right_family_not_selected` into selected-pass without domain-specific rules
+7. broad cold-state seedless quality is an experimental research lane, not a market claim; the next measured target is converting `right_family_not_selected` into selected-pass without domain-specific rules
 
 ## Quality Interpretation Rule
 

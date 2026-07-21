@@ -29,9 +29,6 @@ type Candidate struct {
 }
 
 func Discover(page pipeline.RawPage, maxCandidates int) []Candidate {
-	if maxCandidates <= 0 {
-		maxCandidates = 8
-	}
 	baseURL := strings.TrimSpace(page.FinalURL)
 	if baseURL == "" {
 		baseURL = strings.TrimSpace(page.URL)
@@ -47,14 +44,7 @@ func Discover(page pipeline.RawPage, maxCandidates int) []Candidate {
 	out = append(out, candidatesFromLinkHeaders(page.Headers, parsed)...)
 	out = append(out, candidatesFromHTMLLinks(page.HTML, parsed)...)
 	out = append(out, conventionalCandidates(parsed)...)
-	out = dedupeCandidates(out)
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].Priority < out[j].Priority
-	})
-	if len(out) > maxCandidates {
-		out = out[:maxCandidates]
-	}
-	return out
+	return NormalizeCandidates(out, maxCandidates)
 }
 
 func candidatesFromLinkHeaders(headers map[string][]string, base *url.URL) []Candidate {
@@ -131,6 +121,22 @@ func conventionalCandidates(base *url.URL) []Candidate {
 	apiCatalog.RawQuery = ""
 	apiCatalog.Fragment = ""
 	out = append(out, Candidate{URL: apiCatalog.String(), Kind: KindAPICatalog, DeclaredBy: "well_known_path", Priority: 80})
+	for index, specPath := range []string{
+		"/openapi.json",
+		"/openapi.yaml",
+		"/openapi.yml",
+		"/swagger.json",
+		"/swagger.yaml",
+		"/swagger.yml",
+		"/.well-known/openapi.json",
+		"/.well-known/openapi.yaml",
+	} {
+		spec := *base
+		spec.Path = specPath
+		spec.RawQuery = ""
+		spec.Fragment = ""
+		out = append(out, Candidate{URL: spec.String(), Kind: KindServiceDescription, DeclaredBy: "well_known_path", Priority: 90 + index})
+	}
 	return out
 }
 
@@ -198,6 +204,20 @@ func parseHTTPLinkHeader(value string) []parsedLink {
 			link.Rel = strings.Trim(strings.TrimSpace(rawValue), `"`)
 		}
 		out = append(out, link)
+	}
+	return out
+}
+
+func NormalizeCandidates(candidates []Candidate, maxCandidates int) []Candidate {
+	out := dedupeCandidates(candidates)
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Priority == out[j].Priority {
+			return out[i].URL < out[j].URL
+		}
+		return out[i].Priority < out[j].Priority
+	})
+	if maxCandidates > 0 && len(out) > maxCandidates {
+		out = out[:maxCandidates]
 	}
 	return out
 }
@@ -304,20 +324,34 @@ func dedupeCandidates(candidates []Candidate) []Candidate {
 	return out
 }
 
-var markdownLinkPattern = regexp.MustCompile(`\[[^\]]+\]\(([^)\s]+)\)`)
+var markdownLinkDetailPattern = regexp.MustCompile(`\[([^\]]+)\]\(([^)\s]+)\)`)
+
+type MarkdownLink struct {
+	URL   string
+	Label string
+}
 
 func MarkdownLinks(indexURL, markdown string) []string {
+	links := MarkdownLinkDetails(indexURL, markdown)
+	out := make([]string, 0, len(links))
+	for _, link := range links {
+		out = append(out, link.URL)
+	}
+	return out
+}
+
+func MarkdownLinkDetails(indexURL, markdown string) []MarkdownLink {
 	base, err := url.Parse(strings.TrimSpace(indexURL))
 	if err != nil || base.Scheme == "" || base.Host == "" {
 		return nil
 	}
 	seen := map[string]struct{}{}
-	out := []string{}
-	for _, match := range markdownLinkPattern.FindAllStringSubmatch(markdown, -1) {
-		if len(match) < 2 {
+	out := []MarkdownLink{}
+	for _, match := range markdownLinkDetailPattern.FindAllStringSubmatch(markdown, -1) {
+		if len(match) < 3 {
 			continue
 		}
-		resolved := resolveURL(base, match[1])
+		resolved := resolveURL(base, match[2])
 		if resolved == "" || !sameOrigin(base.String(), resolved) || !hasExtensionURL(resolved, ".md", ".mdx", ".markdown") {
 			continue
 		}
@@ -326,7 +360,7 @@ func MarkdownLinks(indexURL, markdown string) []string {
 			continue
 		}
 		seen[key] = struct{}{}
-		out = append(out, resolved)
+		out = append(out, MarkdownLink{URL: resolved, Label: strings.TrimSpace(match[1])})
 	}
 	return out
 }
@@ -369,8 +403,17 @@ func IsAgentReadablePage(page pipeline.RawPage) bool {
 		}
 		return usefulText(page.HTML)
 	}
-	if strings.Contains(contentType, "application/json") && strings.Contains(strings.ToLower(finalURL), "api-catalog") {
-		return usefulText(page.HTML)
+	if sourceKind == KindAPICatalog {
+		if strings.Contains(contentType, "text/html") || strings.Contains(strings.ToLower(page.HTML), "<html") {
+			return false
+		}
+		return usefulText(page.HTML) || looksLikeAPICatalog(page.HTML)
+	}
+	if sourceKind == KindServiceDescription || isServiceDescriptionURL(finalURL) {
+		if strings.Contains(contentType, "text/html") || strings.Contains(strings.ToLower(page.HTML), "<html") {
+			return false
+		}
+		return usefulText(page.HTML) || looksLikeServiceDescription(page.HTML)
 	}
 	return false
 }
@@ -408,8 +451,11 @@ func RequestAccept(candidate Candidate) string {
 	if candidate.Kind == KindMarkdownVariant || candidate.Kind == KindLLMSIndex || candidate.Kind == KindLLMSFull {
 		return "text/markdown, text/plain;q=0.9, */*;q=0.1"
 	}
-	if candidate.Kind == KindAPICatalog || candidate.Kind == KindServiceDescription {
-		return "application/json, application/yaml;q=0.9, text/yaml;q=0.8, */*;q=0.1"
+	if candidate.Kind == KindAPICatalog {
+		return "application/linkset+json, application/json;q=0.9, application/yaml;q=0.8, text/yaml;q=0.7, text/plain;q=0.5, */*;q=0.1"
+	}
+	if candidate.Kind == KindServiceDescription {
+		return "application/openapi+json, application/json;q=0.9, application/yaml;q=0.8, text/yaml;q=0.7, text/plain;q=0.5, */*;q=0.1"
 	}
 	return ""
 }

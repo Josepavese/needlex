@@ -12,6 +12,8 @@ import (
 
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/agentreadable"
+	"github.com/josepavese/needlex/internal/core/sourceresolution"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
@@ -479,7 +481,7 @@ func TestReadAppliesAggressivePruningProfile(t *testing.T) {
 func TestReadDoesNotRecoverFromCustomAppShellEmbeddedPayload(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`)
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main><script type="application/json">{"items":[{"title":"Needle Runtime","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}]}</script></body></html>`)
 	}))
 	defer server.Close()
 
@@ -551,6 +553,339 @@ func TestReadPrefersMarkdownVariantForAgentReadableDocs(t *testing.T) {
 	}
 }
 
+func TestReadDiscoversMarkdownFromRobotsSitemap(t *testing.T) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs/cli-reference":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>CLI reference</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/robots.txt":
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", serverURL)
+		case "/sitemap.xml":
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><urlset><url><loc>%s/agent/docs/cli-reference.md</loc></url></urlset>`, serverURL)
+		case "/agent/docs/cli-reference.md":
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# CLI reference\n\nThe CLI supports semantic retrieval, rendering escalation, and agent-readable source discovery.\n\n## Commands\n\n- needlex read\n- needlex query\n")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	serverURL = server.URL
+	defer server.Close()
+
+	svc, err := New(testConfig(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL + "/docs/cli-reference",
+		Objective: "Analyze CLI commands",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FinalURL != server.URL+"/agent/docs/cli-reference.md" {
+		t.Fatalf("expected sitemap markdown final url, got %q", resp.Document.FinalURL)
+	}
+	if !containsChunkText(resp.ResultPack.Chunks, "needlex query") {
+		t.Fatalf("expected markdown command from sitemap candidate, got %#v", resp.ResultPack.Chunks)
+	}
+}
+
+func TestReadAgentReadableDeclaredModeSkipsConventionalSitemap(t *testing.T) {
+	var sitemapFetches int
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs/cli-reference":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>CLI reference</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/robots.txt":
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", serverURL)
+		case "/sitemap.xml":
+			sitemapFetches++
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><urlset><url><loc>%s/agent/docs/cli-reference.md</loc></url></urlset>`, serverURL)
+		case "/agent/docs/cli-reference.md":
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# CLI reference\n\nThe CLI supports agent-readable source discovery.\n")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	serverURL = server.URL
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = false
+	svc := newTestService(t, cfg, server.Client())
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:               server.URL + "/docs/cli-reference",
+		Objective:         "Analyze CLI commands",
+		Profile:           core.ProfileStandard,
+		AgentReadableMode: "declared",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if sitemapFetches != 0 {
+		t.Fatalf("expected declared mode to skip conventional sitemap, got %d fetches", sitemapFetches)
+	}
+	if resp.Document.FinalURL != server.URL+"/docs/cli-reference" {
+		t.Fatalf("expected original HTML page, got %q", resp.Document.FinalURL)
+	}
+}
+
+func TestReadUsesOpenAPIFromAPICatalog(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/developers":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Link", `</.well-known/api-catalog>; rel="api-catalog"`)
+			_, _ = fmt.Fprint(w, `<html><head><title>Developers</title></head><body><main></main></body></html>`)
+		case "/.well-known/api-catalog":
+			w.Header().Set("Content-Type", "application/linkset+json; charset=utf-8")
+			_, _ = fmt.Fprint(w, `{"linkset":[{"anchor":"/","service-desc":[{"href":"/openapi.json","type":"application/openapi+json"}]}]}`)
+		case "/openapi.json":
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			_, _ = fmt.Fprint(w, `{"openapi":"3.1.0","info":{"title":"Example API","version":"1.0.0"},"paths":{"/widgets":{"get":{"description":"List widgets for agents"}}}}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc, err := New(testConfig(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL + "/developers",
+		Objective: "Find API operations",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FinalURL != server.URL+"/openapi.json" {
+		t.Fatalf("expected OpenAPI final url, got %q", resp.Document.FinalURL)
+	}
+	if resp.WebIR.Signals.SourceKind != agentreadable.KindServiceDescription {
+		t.Fatalf("expected service description source kind, got %q", resp.WebIR.Signals.SourceKind)
+	}
+	if !containsChunkText(resp.ResultPack.Chunks, "List widgets for agents") {
+		t.Fatalf("expected OpenAPI content, got %#v", resp.ResultPack.Chunks)
+	}
+}
+
+type agentReadableChoiceAligner struct{}
+
+func (agentReadableChoiceAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (agentReadableChoiceAligner) Score(_ context.Context, objective string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	objective = strings.ToLower(objective)
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		text := strings.ToLower(candidate.Text)
+		score := 0.10
+		if strings.Contains(objective, "billing") && strings.Contains(text, "billing") {
+			score = 0.95
+		}
+		if strings.Contains(objective, "cli") && strings.Contains(text, "cli") {
+			score = 0.90
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: score})
+	}
+	return out, nil
+}
+
+func TestReadSelectsAgentReadableCandidateSemanticallyAcrossPhases(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/developers":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>Developers</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/developers.md":
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# Developer overview\n\nGeneral developer setup, installation notes, and onboarding content for command line usage.\n\n## Start\n\n- install tools\n- authenticate locally\n")
+		case "/openapi.json":
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			_, _ = fmt.Fprint(w, `{"openapi":"3.1.0","info":{"title":"Billing API","version":"1.0.0"},"paths":{"/billing/invoices":{"get":{"description":"List billing invoices for accounts"}}}}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc, err := New(testConfig(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.semantic = agentReadableChoiceAligner{}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL + "/developers",
+		Objective: "Find billing API operations",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FinalURL != server.URL+"/openapi.json" {
+		t.Fatalf("expected semantic selection to prefer OpenAPI, got %q", resp.Document.FinalURL)
+	}
+}
+
+func TestReadRespectsRobotsForConventionalAgentReadableCandidates(t *testing.T) {
+	var markdownFetches int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs/private":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>Private</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/robots.txt":
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = fmt.Fprint(w, "User-agent: *\nDisallow: /docs/private.md\nAllow: /\n")
+		case "/docs/private.md":
+			markdownFetches++
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# Private\n\nThis disallowed markdown should not be fetched or selected by conventional probing.\n")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc, err := New(testConfig(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL + "/docs/private",
+		Objective: "Read private markdown",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if markdownFetches != 0 {
+		t.Fatalf("expected robots-disallowed markdown not to be fetched, got %d fetches", markdownFetches)
+	}
+	if resp.Document.FinalURL == server.URL+"/docs/private.md" {
+		t.Fatalf("expected disallowed markdown not to be selected")
+	}
+}
+
+func TestReadAgentReadableConventionalProbesStopNearDeadline(t *testing.T) {
+	var markdownFetches int
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs/slow":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>Slow docs</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/robots.txt":
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", serverURL)
+		case "/sitemap.xml":
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><urlset><url><loc>%s/docs/slow-a.md</loc></url><url><loc>%s/docs/slow-b.md</loc></url><url><loc>%s/docs/slow-c.md</loc></url></urlset>`, serverURL, serverURL, serverURL)
+		case "/docs/slow-a.md", "/docs/slow-b.md", "/docs/slow-c.md":
+			markdownFetches++
+			time.Sleep(sourceresolution.AgentReadableProbeTimeout + time.Second)
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# Slow markdown\n\nThis should be best-effort under deadline.\n")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	serverURL = server.URL
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = false
+	svc := newTestService(t, cfg, server.Client())
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	resp, err := svc.Read(ctx, ReadRequest{
+		URL:       server.URL + "/docs/slow",
+		Objective: "Read slow docs",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if elapsed := time.Since(started); elapsed > 3*time.Second {
+		t.Fatalf("expected deadline-aware agent-readable probing, elapsed %s", elapsed)
+	}
+	if markdownFetches > 1 {
+		t.Fatalf("expected conventional probes to stop near deadline, got %d markdown fetches", markdownFetches)
+	}
+	if resp.Document.FinalURL != server.URL+"/docs/slow" {
+		t.Fatalf("expected fallback HTML page, got %q", resp.Document.FinalURL)
+	}
+}
+
+func TestReadSelectsLLMSMarkdownLinkSemantically(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/docs/start":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<html><head><title>Start</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+		case "/llms.txt":
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# Agent index\n\n- [CLI guide](/cli.md)\n- [Billing API reference](/billing.md)\n")
+		case "/cli.md":
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# CLI guide\n\nThe CLI guide explains local commands, profiles, and installation workflows for operators.\n")
+		case "/billing.md":
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = fmt.Fprint(w, "# Billing API reference\n\nBilling API operations list invoices, account balances, payment methods, and customer subscription history.\n")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc, err := New(testConfig(), server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.semantic = agentReadableChoiceAligner{}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL + "/docs/start",
+		Objective: "Find billing documentation",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FinalURL != server.URL+"/billing.md" {
+		t.Fatalf("expected semantic llms link selection to prefer billing doc, got %q", resp.Document.FinalURL)
+	}
+}
+
 type fakeRenderer struct {
 	page rendering.Page
 	err  error
@@ -563,7 +898,7 @@ func (f fakeRenderer) Render(context.Context, rendering.Request) (rendering.Page
 func TestReadAutoRenderIsEnabledByDefault(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root></body></html>`)
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
 	}))
 	defer server.Close()
 
@@ -598,10 +933,85 @@ func TestReadAutoRenderIsEnabledByDefault(t *testing.T) {
 	}
 }
 
+func TestReadAutoRenderSkipsWhenContextDeadlineIsTooClose(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, server.Client())
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Rendered</title></head><body><article><h1>Rendered</h1><p>Should not render near deadline.</p></article></body></html>`,
+		Browser:   "fake",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	ctx, cancel := context.WithTimeout(context.Background(), sourceresolution.AutoRenderDeadlineMinRemaining-time.Second)
+	defer cancel()
+	resp, err := svc.Read(ctx, ReadRequest{
+		URL:     server.URL,
+		Profile: core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if renderer.calls != 0 {
+		t.Fatalf("expected auto render to skip near deadline, got %d calls", renderer.calls)
+	}
+	if resp.Document.FetchMode == core.FetchModeRender {
+		t.Fatalf("did not expect render fetch mode near deadline")
+	}
+}
+
+func TestReadAutoRenderUsesDeadlineBoundedTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	cfg.Render.TimeoutMS = 30000
+	svc := newTestService(t, cfg, server.Client())
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Rendered</title></head><body><article><h1>Rendered</h1><p>Bounded render timeout.</p></article></body></html>`,
+		Browser:   "fake",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	resp, err := svc.Read(ctx, ReadRequest{
+		URL:     server.URL,
+		Profile: core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FetchMode != core.FetchModeRender {
+		t.Fatalf("expected render fetch mode, got %q", resp.Document.FetchMode)
+	}
+	if renderer.lastRequest.Timeout > sourceresolution.AutoRenderDeadlineTimeout {
+		t.Fatalf("expected bounded render timeout <= %s, got %s", sourceresolution.AutoRenderDeadlineTimeout, renderer.lastRequest.Timeout)
+	}
+}
+
 func TestReadRequiredRenderUsesRenderedDOM(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title></head><body><app-root></app-root></body></html>`)
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
 	}))
 	defer server.Close()
 
@@ -634,5 +1044,99 @@ func TestReadRequiredRenderUsesRenderedDOM(t *testing.T) {
 	}
 	if !containsChunkText(resp.ResultPack.Chunks, "Rendered JavaScript content") {
 		t.Fatalf("expected rendered content, got %#v", resp.ResultPack.Chunks)
+	}
+}
+
+func TestReadRequiredRenderIncludesApplicationNetworkEvidence(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc, err := New(cfg, server.Client())
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.renderer = fakeRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Rendered Shell</title></head><body><main>Application shell</main></body></html>`,
+		Browser:   "fake",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+		NetworkResources: []rendering.NetworkResource{{
+			URL:          server.URL + "/stream",
+			Type:         "EventSource",
+			ContentType:  "text/event-stream",
+			Source:       "event_source",
+			Body:         "data: {\"name\":\"Villa Semantica\",\"city\":\"Siena\",\"description\":\"Rendered network evidence feeds agent chunks.\"}\n\ndata: end\n\n",
+			BodyBytes:    118,
+			MessageCount: 2,
+			Finished:     true,
+		}},
+		NetworkStats: rendering.NetworkStats{
+			ResourceCount:       1,
+			EventSourceMessages: 2,
+			BodyBytes:           118,
+			IdleReason:          "network_idle",
+		},
+	}}
+	svc.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:        server.URL,
+		Profile:    core.ProfileStandard,
+		RenderMode: "required",
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if resp.Document.FetchMode != core.FetchModeRender {
+		t.Fatalf("expected render fetch mode, got %q", resp.Document.FetchMode)
+	}
+	if !containsChunkText(resp.ResultPack.Chunks, "Villa Semantica") || !containsChunkText(resp.ResultPack.Chunks, "Rendered network evidence") {
+		t.Fatalf("expected network evidence chunks, got %#v", resp.ResultPack.Chunks)
+	}
+}
+
+func TestRenderNetworkEvidenceTextOrdersJSONFieldsDeterministically(t *testing.T) {
+	resource := rendering.NetworkResource{
+		URL:         "https://example.com/api/data.json",
+		Type:        "Fetch",
+		ContentType: "application/json",
+		Body:        `{"zeta":"last","alpha":"first","middle":"center"}`,
+	}
+	first := rendering.EvidenceText([]rendering.NetworkResource{resource})
+	for i := 0; i < 20; i++ {
+		if got := rendering.EvidenceText([]rendering.NetworkResource{resource}); got != first {
+			t.Fatalf("expected deterministic network evidence text, first=%q got=%q", first, got)
+		}
+	}
+	alpha := strings.Index(first, "alpha: first")
+	middle := strings.Index(first, "middle: center")
+	zeta := strings.Index(first, "zeta: last")
+	if alpha < 0 || middle < 0 || zeta < 0 || alpha > middle || middle > zeta {
+		t.Fatalf("expected sorted JSON fields, got %q", first)
+	}
+}
+
+func TestRenderNetworkEvidenceTextPreservesUsefulURLsAndSanitizesSensitiveQueries(t *testing.T) {
+	text := rendering.EvidenceText([]rendering.NetworkResource{{
+		URL:         "https://example.com/api/data.json",
+		Type:        "Fetch",
+		ContentType: "application/json",
+		Body:        `{"endpoint":"https://example.com/api/pricing?token=secret-value#frag","image":"https://example.com/assets/photo.jpg?sig=abc","description":"pricing endpoint"}`,
+	}})
+	if !strings.Contains(text, "https://example.com/api/pricing") {
+		t.Fatalf("expected useful endpoint URL to be preserved, got %q", text)
+	}
+	if strings.Contains(text, "token=") || strings.Contains(text, "secret-value") || strings.Contains(text, "#frag") {
+		t.Fatalf("expected sensitive URL query and fragment to be removed, got %q", text)
+	}
+	if strings.Contains(text, "photo.jpg") {
+		t.Fatalf("expected media asset URL to be filtered, got %q", text)
 	}
 }

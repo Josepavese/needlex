@@ -1,4 +1,4 @@
-package service
+package webirbuilder
 
 import (
 	"testing"
@@ -37,7 +37,7 @@ func TestBuildWebIRBuildsSignals(t *testing.T) {
 		},
 	}
 
-	ir := buildWebIR(dom)
+	ir := Build(dom)
 	if ir.Version != core.WebIRVersion {
 		t.Fatalf("expected web ir version %q, got %q", core.WebIRVersion, ir.Version)
 	}
@@ -59,7 +59,7 @@ func TestBuildWebIRBuildsSignals(t *testing.T) {
 }
 
 func TestEnsureMinimumDOMSynthesizesTitleNodes(t *testing.T) {
-	dom := ensureMinimumDOM(pipeline.SimplifiedDOM{
+	dom := EnsureMinimum(pipeline.SimplifiedDOM{
 		URL:   "https://example.com/forum",
 		Title: "Discourse Meta",
 	})
@@ -69,7 +69,7 @@ func TestEnsureMinimumDOMSynthesizesTitleNodes(t *testing.T) {
 	if dom.Nodes[0].Kind != "heading" || dom.Nodes[1].Kind != "paragraph" {
 		t.Fatalf("unexpected synthetic node kinds %#v", dom.Nodes)
 	}
-	ir := buildWebIR(dom)
+	ir := Build(dom)
 	if err := ir.Validate(); err != nil {
 		t.Fatalf("expected synthetic dom to produce valid web ir, got %v", err)
 	}
@@ -90,7 +90,7 @@ func TestBuildWebIRSupportsPlainTextSubstrate(t *testing.T) {
 			},
 		},
 	}
-	ir := buildWebIR(dom)
+	ir := Build(dom)
 	if ir.Signals.SubstrateClass != "plain_text" {
 		t.Fatalf("expected plain_text substrate class, got %q", ir.Signals.SubstrateClass)
 	}

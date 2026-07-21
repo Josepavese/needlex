@@ -11,7 +11,7 @@ const (
 	QueryCompilerVersion = queryplan.QueryCompilerVersion
 
 	QueryPlanReasonSeedPresent          = queryplan.QueryPlanReasonSeedPresent
-	QueryPlanReasonSeedlessDefaultWeb   = queryplan.QueryPlanReasonSeedlessDefaultWeb
+	QueryPlanReasonExperimentalWebOptIn = queryplan.QueryPlanReasonExperimentalWebOptIn
 	QueryPlanReasonSelection            = queryplan.QueryPlanReasonSelection
 	QueryPlanReasonWebIR                = queryplan.QueryPlanReasonWebIR
 	QueryPlanReasonWebIRSelection       = queryplan.QueryPlanReasonWebIRSelection

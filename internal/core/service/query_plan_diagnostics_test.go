@@ -34,6 +34,15 @@ func TestQueryCandidateDiagnosticsExposeSemanticRoleMetadata(t *testing.T) {
 			"semantic_provenance_topic":           "0.512",
 			"semantic_provenance_boost":           "0.321",
 			"semantic_provenance_penalty":         "0.011",
+			"semantic_family_intent_score":        "0.812",
+			"semantic_family_intent_identity":     "0.812",
+			"semantic_family_intent_topic":        "0.604",
+			"semantic_family_intent_merit":        "1.211",
+			"semantic_family_intent_boost":        "0.184",
+			"semantic_family_intent_origin":       "0.744",
+			"semantic_family_intent_derivative":   "0.033",
+			"semantic_family_intent_count":        "4",
+			"semantic_family_intent_provenance":   "2",
 			"semantic_family_evidence_count":      "3",
 			"semantic_family_evidence_strong":     "2",
 			"semantic_family_evidence_provenance": "1",
@@ -64,6 +73,15 @@ func TestQueryCandidateDiagnosticsExposeSemanticRoleMetadata(t *testing.T) {
 		got.SemanticProvenanceTopic != 0.512 ||
 		got.SemanticProvenanceBoost != 0.321 ||
 		got.SemanticProvenancePenalty != 0.011 ||
+		got.SemanticFamilyIntentScore != 0.812 ||
+		got.SemanticFamilyIntentIdentity != 0.812 ||
+		got.SemanticFamilyIntentTopic != 0.604 ||
+		got.SemanticFamilyIntentMerit != 1.211 ||
+		got.SemanticFamilyIntentBoost != 0.184 ||
+		got.SemanticFamilyIntentOrigin != 0.744 ||
+		got.SemanticFamilyIntentDerivative != 0.033 ||
+		got.SemanticFamilyIntentCount != 4 ||
+		got.SemanticFamilyIntentProvenance != 2 ||
 		got.SemanticFamilyEvidenceCount != 3 ||
 		got.SemanticFamilyEvidenceStrong != 2 ||
 		got.SemanticFamilyProvenance != 1 ||

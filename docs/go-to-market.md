@@ -37,6 +37,8 @@ Read it like this:
 
 ## Discovery Memory Story
 
+This is an experimental/internal learning story. The stable agent workflow uses host-agent search followed by `web_read` for every URL selected by the agent.
+
 This is the right way to say it:
 1. first run observes and compiles
 2. later runs reuse local verified evidence

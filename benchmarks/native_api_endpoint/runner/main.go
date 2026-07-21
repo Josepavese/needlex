@@ -303,7 +303,7 @@ func runCase(binaryPath, configPath, profile, goal, expectedURL string) runResul
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	started := time.Now()
-	cmd := exec.CommandContext(ctx, binaryPath, "query", "--goal", goal, "--json", "--json-mode", "full", "--config", configPath)
+	cmd := exec.CommandContext(ctx, binaryPath, "query", "--goal", goal, "--discovery", "web_search", "--json", "--json-mode", "full", "--config", configPath)
 	out, err := cmd.CombinedOutput()
 	result.LatencyMS = time.Since(started).Milliseconds()
 	if err != nil {

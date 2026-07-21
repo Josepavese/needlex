@@ -215,16 +215,18 @@ func mcpToolErrorMessage(err error) string {
 	message := observability.RedactString(err.Error())
 	lower := strings.ToLower(message)
 	switch {
+	case strings.Contains(lower, "seedless discovery is experimental"):
+		return message + `; stable_next_call: obtain candidate URLs with the host agent's search tool, then call web_read for every URL the agent chooses to analyze`
 	case strings.Contains(lower, "lane_max"):
 		return `unsupported field lane_max; use retrieval_effort instead. Valid retrieval_effort values: minimal, light, balanced, standard, exhaustive`
 	case strings.Contains(lower, "quality_budget"):
 		return `unsupported field quality_budget; use retrieval_effort instead. Valid retrieval_effort values: minimal, light, balanced, standard, exhaustive`
 	case strings.Contains(lower, "discovery_mode=off") || strings.Contains(lower, "unexpected status code 404"):
-		return message + `; next_recommended_call: web_query with discovery_mode="same_site_links" and the same seed_url, or discovery_mode="web_search" if the seed URL is uncertain`
+		return message + `; next_recommended_call: web_query with discovery_mode="same_site_links" and the same seed_url, or obtain a verified candidate URL with the host agent's search tool and call web_read`
 	case strings.Contains(lower, "unsupported discovery_mode"):
-		return message + `; valid discovery_mode values: same_site_links, web_search, off`
+		return message + `; valid discovery_mode values: same_site_links, off, web_search (experimental explicit opt-in only)`
 	case strings.Contains(lower, "unsupported content type"):
-		return message + `; next_recommended_call: use web_query to find an HTML/text equivalent, or use a browser/full-fetch tool when exact binary layout is required`
+		return message + `; next_recommended_call: use the host agent's search tool to find an HTML/text equivalent and call web_read, or use a browser/full-fetch tool when exact binary layout is required`
 	case strings.Contains(lower, "provider blocked") || strings.Contains(lower, "anti-bot") || strings.Contains(lower, "status code 429") || strings.Contains(lower, "status code 403"):
 		return message + `; next_recommended_call: retry later, use a verified seed_url with same_site_links, or configure a healthier discovery provider`
 	default:

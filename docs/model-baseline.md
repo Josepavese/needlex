@@ -57,7 +57,7 @@ Current SSOT memory baseline:
 4. vector-space identity: inherited from the active dense embedder
 
 Reason:
-1. seedless discovery must improve as the tool is used
+1. experimental seedless discovery should improve as the tool is used without entering the stable agent path implicitly
 2. local proof-backed memory should be tried before public bootstrap
 3. memory must never fork a second embedding identity from semantic config
 4. without a valid embedding endpoint, operational use is invalid; memory must not invent vectors

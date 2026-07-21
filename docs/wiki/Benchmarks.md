@@ -31,21 +31,22 @@ Read it as:
 1. compact proof-carrying output
 2. efficient agent-facing retrieval
 3. strong warm-state local reuse
-4. a product that treats seedless retrieval as first-class, while still measuring it separately from warm-state performance
+4. a product whose stable workflow compiles URLs selected by the host agent
 
-## Reading Seedless Correctly
+## Reading Experimental Seedless Correctly
 
-Seedless discovery is part of the product surface now.
+Seedless discovery is an explicit experimental surface, not part of the stable skill or market claim.
 
 That does not mean:
 1. every seedless benchmark should be mixed into the warm-state story
 2. noisy provider behavior should be confused with retrieval quality
 
-It does mean:
+Experimental evaluation still requires:
 1. seedless pass rate matters
 2. provider reliability matters
 3. semantic grounding and family recovery matter
 4. warm-state and seedless should be evaluated as different modes with different failure profiles
+5. multi-run evidence before any promotion decision
 
 ## Next
 

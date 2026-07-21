@@ -34,8 +34,11 @@ func TestDefaultsUseBrowserLikeFetchProfile(t *testing.T) {
 
 func TestDefaultsEnableRender(t *testing.T) {
 	cfg := Defaults()
-	if !cfg.Render.Enabled || cfg.Render.Provider != "exec-dump-dom" || cfg.Render.TimeoutMS != 5000 || cfg.Render.MaxConcurrency != 1 {
+	if !cfg.Render.Enabled || cfg.Render.Provider != "exec-dump-dom" || cfg.Render.TimeoutMS != 30000 || cfg.Render.MaxConcurrency != 1 {
 		t.Fatalf("unexpected render defaults: %+v", cfg.Render)
+	}
+	if cfg.Render.NetworkIdleMS != 1500 || cfg.Render.NetworkMaxBytes != 64_000_000 || cfg.Render.NetworkResourceMaxBytes != 64_000_000 || cfg.Render.NetworkMaxResources != 32 || cfg.Render.NetworkMaxMessages != 4096 {
+		t.Fatalf("unexpected render network defaults: %+v", cfg.Render)
 	}
 }
 
@@ -66,25 +69,30 @@ func TestLoadMergesJSONWithDefaults(t *testing.T) {
 func TestApplyEnvOverridesValues(t *testing.T) {
 	cfg := Defaults()
 	env := map[string]string{
-		"NEEDLEX_FETCH_PROFILE":                  "standard",
-		"NEEDLEX_FETCH_RETRY_PROFILE":            "browser_like",
-		"NEEDLEX_FETCH_BLOCKED_RETRY_BACKOFF_MS": "700",
-		"NEEDLEX_FETCH_BLOCKED_RETRY_JITTER_MS":  "90",
-		"NEEDLEX_FETCH_PER_HOST_MIN_GAP_MS":      "333",
-		"NEEDLEX_FETCH_PER_HOST_JITTER_MS":       "55",
-		"NEEDLEX_FETCH_TIMEOUT_RETRY_BACKOFF_MS": "120",
-		"NEEDLEX_FETCH_TIMEOUT_RETRY_JITTER_MS":  "30",
-		"NEEDLEX_MODELS_BACKEND":                 "openai-compatible",
-		"NEEDLEX_MODELS_BASE_URL":                "http://localhost:11434/v1",
-		"NEEDLEX_RUNTIME_MAX_DEPTH":              "7",
-		"NEEDLEX_POLICY_THRESHOLD_CONFLICT":      "0.65",
-		"NEEDLEX_MODELS_FORMATTER":               "formatter-x",
-		"NEEDLEX_MODELS_MICRO_TIMEOUT_MS":        "1500",
-		"NEEDLEX_RENDER_ENABLED":                 "true",
-		"NEEDLEX_RENDER_PROVIDER":                "exec-dump-dom",
-		"NEEDLEX_RENDER_BROWSER_PATH":            "/tmp/needlex-browser/chrome-headless-shell",
-		"NEEDLEX_RENDER_TIMEOUT_MS":              "6500",
-		"NEEDLEX_RENDER_MAX_CONCURRENCY":         "2",
+		"NEEDLEX_FETCH_PROFILE":                     "standard",
+		"NEEDLEX_FETCH_RETRY_PROFILE":               "browser_like",
+		"NEEDLEX_FETCH_BLOCKED_RETRY_BACKOFF_MS":    "700",
+		"NEEDLEX_FETCH_BLOCKED_RETRY_JITTER_MS":     "90",
+		"NEEDLEX_FETCH_PER_HOST_MIN_GAP_MS":         "333",
+		"NEEDLEX_FETCH_PER_HOST_JITTER_MS":          "55",
+		"NEEDLEX_FETCH_TIMEOUT_RETRY_BACKOFF_MS":    "120",
+		"NEEDLEX_FETCH_TIMEOUT_RETRY_JITTER_MS":     "30",
+		"NEEDLEX_MODELS_BACKEND":                    "openai-compatible",
+		"NEEDLEX_MODELS_BASE_URL":                   "http://localhost:11434/v1",
+		"NEEDLEX_RUNTIME_MAX_DEPTH":                 "7",
+		"NEEDLEX_POLICY_THRESHOLD_CONFLICT":         "0.65",
+		"NEEDLEX_MODELS_FORMATTER":                  "formatter-x",
+		"NEEDLEX_MODELS_MICRO_TIMEOUT_MS":           "1500",
+		"NEEDLEX_RENDER_ENABLED":                    "true",
+		"NEEDLEX_RENDER_PROVIDER":                   "exec-dump-dom",
+		"NEEDLEX_RENDER_BROWSER_PATH":               "/tmp/needlex-browser/chrome-headless-shell",
+		"NEEDLEX_RENDER_TIMEOUT_MS":                 "6500",
+		"NEEDLEX_RENDER_MAX_CONCURRENCY":            "2",
+		"NEEDLEX_RENDER_NETWORK_IDLE_MS":            "2200",
+		"NEEDLEX_RENDER_NETWORK_MAX_BYTES":          "123456",
+		"NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES": "65432",
+		"NEEDLEX_RENDER_NETWORK_MAX_RESOURCES":      "7",
+		"NEEDLEX_RENDER_NETWORK_MAX_MESSAGES":       "99",
 	}
 
 	if err := cfg.ApplyEnv(env); err != nil {
@@ -116,6 +124,9 @@ func TestApplyEnvOverridesValues(t *testing.T) {
 	}
 	if !cfg.Render.Enabled || cfg.Render.Provider != "exec-dump-dom" || cfg.Render.BrowserPath != "/tmp/needlex-browser/chrome-headless-shell" || cfg.Render.TimeoutMS != 6500 || cfg.Render.MaxConcurrency != 2 {
 		t.Fatalf("unexpected render override: %+v", cfg.Render)
+	}
+	if cfg.Render.NetworkIdleMS != 2200 || cfg.Render.NetworkMaxBytes != 123456 || cfg.Render.NetworkResourceMaxBytes != 65432 || cfg.Render.NetworkMaxResources != 7 || cfg.Render.NetworkMaxMessages != 99 {
+		t.Fatalf("unexpected render network override: %+v", cfg.Render)
 	}
 }
 

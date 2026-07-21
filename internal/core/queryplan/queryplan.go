@@ -17,7 +17,7 @@ const (
 	QueryPlanReasonSeedMissing            = "NX_PLAN_SEED_MISSING"
 	QueryPlanReasonDefaultMode            = "NX_PLAN_DEFAULT_DISCOVERY_MODE"
 	QueryPlanReasonUserMode               = "NX_PLAN_USER_DISCOVERY_MODE"
-	QueryPlanReasonSeedlessDefaultWeb     = "NX_PLAN_SEEDLESS_DEFAULT_WEB"
+	QueryPlanReasonExperimentalWebOptIn   = "NX_PLAN_EXPERIMENTAL_WEB_SEARCH_OPT_IN"
 	QueryPlanReasonBudgetApplied          = "NX_PLAN_BUDGET_APPLIED"
 	QueryPlanReasonSelection              = "NX_PLAN_SELECTED_URL"
 	QueryPlanReasonWebIR                  = "NX_PLAN_WEB_IR_SIGNAL"
@@ -347,10 +347,10 @@ func hasDecisionStage(decisions []QueryPlanDecision, stage string) bool {
 }
 
 func resolveDiscoveryReason(seedURL, requestedMode, resolvedMode string) string {
+	if strings.TrimSpace(seedURL) == "" && strings.TrimSpace(requestedMode) == "web_search" && resolvedMode == "web_search" {
+		return QueryPlanReasonExperimentalWebOptIn
+	}
 	if strings.TrimSpace(requestedMode) == "" {
-		if strings.TrimSpace(seedURL) == "" && resolvedMode == "web_search" {
-			return QueryPlanReasonSeedlessDefaultWeb
-		}
 		return QueryPlanReasonDefaultMode
 	}
 	return QueryPlanReasonUserMode

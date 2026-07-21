@@ -48,6 +48,8 @@ func (c *Config) applyIntEnv(env map[string]string) error {
 		{"NEEDLEX_SEMANTIC_MAX_CANDIDATES", &c.Semantic.MaxCandidates},
 		{"NEEDLEX_AGENT_MAX_CANDIDATES", &c.Agent.MaxCandidates},
 		{"NEEDLEX_RENDER_MAX_CONCURRENCY", &c.Render.MaxConcurrency},
+		{"NEEDLEX_RENDER_NETWORK_MAX_RESOURCES", &c.Render.NetworkMaxResources},
+		{"NEEDLEX_RENDER_NETWORK_MAX_MESSAGES", &c.Render.NetworkMaxMessages},
 		{"NEEDLEX_EMBEDDING_CACHE_MAX_ENTRIES", &c.Semantic.EmbeddingCache.MaxEntries},
 		{"NEEDLEX_MEMORY_MAX_DOCUMENTS", &c.Memory.MaxDocuments},
 		{"NEEDLEX_MEMORY_MAX_EDGES", &c.Memory.MaxEdges},
@@ -75,6 +77,9 @@ func (c *Config) applyInt64Env(env map[string]string) error {
 		{"NEEDLEX_SEMANTIC_TIMEOUT_MS", &c.Semantic.TimeoutMS},
 		{"NEEDLEX_SEMANTIC_FAILURE_COOLDOWN_MS", &c.Semantic.FailureCooldownMS},
 		{"NEEDLEX_RENDER_TIMEOUT_MS", &c.Render.TimeoutMS},
+		{"NEEDLEX_RENDER_NETWORK_IDLE_MS", &c.Render.NetworkIdleMS},
+		{"NEEDLEX_RENDER_NETWORK_MAX_BYTES", &c.Render.NetworkMaxBytes},
+		{"NEEDLEX_RENDER_NETWORK_RESOURCE_MAX_BYTES", &c.Render.NetworkResourceMaxBytes},
 		{"NEEDLEX_EMBEDDING_CACHE_MAX_BYTES", &c.Semantic.EmbeddingCache.MaxBytes},
 		{"NEEDLEX_DISCOVERY_PROVIDER_FAILURE_COOLDOWN_MS", &c.Discovery.ProviderFailureCooldownMS},
 		{"NEEDLEX_DISCOVERY_PROVIDER_BLOCKED_COOLDOWN_MS", &c.Discovery.ProviderBlockedCooldownMS},
@@ -126,7 +131,6 @@ func (c *Config) applyStringEnv(env map[string]string) {
 		{"NEEDLEX_MEMORY_PRUNE_POLICY", &c.Memory.PrunePolicy},
 		{"NEEDLEX_RENDER_PROVIDER", &c.Render.Provider},
 		{"NEEDLEX_RENDER_BROWSER_PATH", &c.Render.BrowserPath},
-		{"NEEDLEX_RENDER_REMOTE_CDP_URL", &c.Render.RemoteCDPURL},
 	})
 }
 

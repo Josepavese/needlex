@@ -13,7 +13,7 @@ Its job is not to look plausible.
 Its job is to return the right source, page, or evidence path reliably enough that an agent can complete real work.
 
 Two product surfaces are first-class:
-1. seedless discovery
+1. compact proof-carrying compilation of agent-selected URLs
 2. MCP usability for agents
 
 ## Core Philosophy
@@ -66,10 +66,14 @@ Do not replace missing embeddings with character n-grams, token overlap, edit di
 
 ## Discovery Principles
 
-### Seedless discovery is a first-class product concern
+### Seedless discovery is experimental
 
-Seedless retrieval is not a side experiment.
-It is a primary runtime surface and must be treated as such in design, benchmarking, and regression analysis.
+Stable agent workflows must obtain candidate URLs through the host agent's search tool and use Needle-X to compile every URL the agent chooses to analyze.
+Needle-X must not prescribe a candidate count; research breadth belongs to the agent.
+
+Seedless retrieval remains an explicit experimental runtime surface.
+It must never be selected implicitly, advertised in the stable skill or README, or presented as a production reliability claim.
+Keep its implementation measurable and inspectable so it can improve without contaminating the stable contract.
 
 Changes to discovery should be evaluated for:
 1. pass rate
@@ -180,7 +184,7 @@ If a profile is cut off artificially, that is a benchmark design problem before 
 
 ### Multi-run evaluation beats single noisy runs
 
-For noisy providers and seedless discovery, prefer:
+For noisy providers and experimental seedless discovery, require:
 - multiple runs
 - majority/median interpretation
 - per-profile failure taxonomy
@@ -238,7 +242,7 @@ Before landing a discovery change, ask:
 1. Did this move the system toward semantics and context, or back toward surface-form hacks?
 2. Does this remain multilingual in principle?
 3. Is the effect measurable through tests or benchmarks?
-4. Does it degrade another product surface such as seedless, MCP, or install/runtime behavior?
+4. Does it degrade another product surface such as known-URL compilation, seeded routing, MCP, or install/runtime behavior?
 5. Is the new behavior understandable from metadata, reasons, and tests?
 
 If the answer is weak on those points, the change is probably not mature enough.

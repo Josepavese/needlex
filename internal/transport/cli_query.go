@@ -15,6 +15,11 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 		writeQueryUsage(stderr)
 		return 2
 	}
+	if strings.TrimSpace(seedURL) == "" && strings.TrimSpace(strings.ToLower(discovery)) != coreservice.QueryDiscoveryWeb {
+		fmt.Fprintf(stderr, "seed-url is required for stable query use; experimental seedless discovery requires explicit --discovery %s\n", coreservice.QueryDiscoveryWeb)
+		writeQueryUsage(stderr)
+		return 2
+	}
 	mode, err := normalizeJSONMode(jsonMode)
 	if err != nil {
 		return r.reportCLIError(stderr, "query", err, map[string]any{"phase": "parse_json_mode"})
@@ -58,7 +63,7 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile,
 	fs.StringVar(&goal, "goal", "", "query goal")
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
-	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, web_search, or off")
+	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, off, or experimental explicit opt-in web_search")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
 	fs.StringVar(&renderMode, "render", "", "JS rendering mode for selected page: auto (default), off, or required")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")

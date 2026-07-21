@@ -36,12 +36,15 @@ type readMetrics struct {
 	Success            bool     `json:"success"`
 	Error              string   `json:"error,omitempty"`
 	Title              string   `json:"title,omitempty"`
+	FetchMode          string   `json:"fetch_mode,omitempty"`
 	LatencyMS          int64    `json:"latency_ms"`
 	ChunkCount         int      `json:"chunk_count"`
 	ContextAlignment   float64  `json:"context_alignment,omitempty"`
 	NoiseHits          int      `json:"noise_hits"`
 	WebIRVersion       string   `json:"web_ir_version,omitempty"`
 	WebIRNodeCount     int      `json:"web_ir_node_count,omitempty"`
+	WebIRSubstrate     string   `json:"web_ir_substrate_class,omitempty"`
+	WebIRSourceKind    string   `json:"web_ir_source_kind,omitempty"`
 	WebIRShortRatio    float64  `json:"web_ir_short_ratio,omitempty"`
 	WebIRHeadingRatio  float64  `json:"web_ir_heading_ratio,omitempty"`
 	WebIREmbeddedCount int      `json:"web_ir_embedded_count,omitempty"`
@@ -378,16 +381,19 @@ func liveReadMetrics(item evalCase, backend string, warmResp coreservice.ReadRes
 	interventions, accepted, rejected := traceInterventions(warmResp.Trace)
 	patchEffects, validatorMessages := proofInvocationDiagnostics(warmResp.ProofRecords)
 
-	return readMetrics{
+	metrics := readMetrics{
 		Backend:            backend,
 		Success:            true,
 		Title:              warmResp.Document.Title,
+		FetchMode:          warmResp.Document.FetchMode,
 		LatencyMS:          warmResp.ResultPack.CostReport.LatencyMS,
 		ChunkCount:         len(warmResp.ResultPack.Chunks),
 		ContextAlignment:   semanticAlignment,
 		NoiseHits:          noiseHits(text),
 		WebIRVersion:       warmResp.WebIR.Version,
 		WebIRNodeCount:     warmResp.WebIR.NodeCount,
+		WebIRSubstrate:     warmResp.WebIR.Signals.SubstrateClass,
+		WebIRSourceKind:    warmResp.WebIR.Signals.SourceKind,
 		WebIRShortRatio:    warmResp.WebIR.Signals.ShortTextRatio,
 		WebIRHeadingRatio:  warmResp.WebIR.Signals.HeadingRatio,
 		WebIREmbeddedCount: warmResp.WebIR.Signals.EmbeddedNodeCount,
@@ -404,6 +410,25 @@ func liveReadMetrics(item evalCase, backend string, warmResp coreservice.ReadRes
 		PatchEffects:       patchEffects,
 		ValidatorMessages:  validatorMessages,
 	}
+	if err := readQualityFailure(warmResp, text, semanticAlignment); err != "" {
+		metrics.Success = false
+		metrics.Error = err
+	}
+	return metrics
+}
+
+func readQualityFailure(resp coreservice.ReadResponse, mergedText string, semanticAlignment float64) string {
+	signals := resp.WebIR.Signals
+	if signals.SubstrateClass != "client_rendered_app" {
+		return ""
+	}
+	if resp.Document.FetchMode == "render" || signals.SourceKind == "rendered_dom" {
+		return ""
+	}
+	if resp.WebIR.NodeCount <= 4 || len([]rune(strings.TrimSpace(mergedText))) < 120 || semanticAlignment < 0.45 {
+		return "client_rendered_shell_unrendered"
+	}
+	return ""
 }
 
 func stageMetadata(trace proof.RunTrace, stage, key string) string {
@@ -589,10 +614,15 @@ func (a *summaryAgg) record(item caseResult) {
 	a.recordTotals(item)
 	family := a.family(nonEmpty(strings.TrimSpace(item.Family), "uncategorized"))
 	family.record(item, a.compareEnabled)
+	if strings.TrimSpace(item.Baseline.Error) != "" {
+		a.runtimeErrorSet[item.Name] = struct{}{}
+		family.runtimeErrors++
+		a.clusterSet[classifyReadFailure(item.Baseline.Error, nil)] = struct{}{}
+	}
 	if a.compareEnabled && strings.TrimSpace(item.Compare.Error) != "" {
 		a.runtimeErrorSet[item.Name] = struct{}{}
 		family.runtimeErrors++
-		a.clusterSet[classifyCompareFailure(item.Compare.Error, item.Compare.ValidatorMessages)] = struct{}{}
+		a.clusterSet[classifyReadFailure(item.Compare.Error, item.Compare.ValidatorMessages)] = struct{}{}
 	}
 }
 
@@ -672,12 +702,12 @@ func (a *familyAgg) summary(compareEnabled bool) familySummary {
 		BaselineSuccessRate:  float64(a.baselineSuccess) / float64(a.count),
 		AvgBaselineLatencyMS: a.baselineLatency / int64(a.count),
 		AvgBaselineContext:   a.baselineContext / float64(a.count),
+		RuntimeErrorCount:    a.runtimeErrors,
 	}
 	if compareEnabled {
 		entry.CompareSuccessRate = float64(a.compareSuccess) / float64(a.count)
 		entry.AvgCompareLatencyMS = a.compareLatency / int64(a.count)
 		entry.AvgCompareContext = a.compareContext / float64(a.count)
-		entry.RuntimeErrorCount = a.runtimeErrors
 		entry.AcceptedInterventions = a.accepted
 		entry.RejectedInterventions = a.rejected
 	}
@@ -731,9 +761,11 @@ type summaryAgg struct {
 	compareEnabled  bool
 }
 
-func classifyCompareFailure(err string, validatorMessages []string) string {
+func classifyReadFailure(err string, validatorMessages []string) string {
 	text := strings.ToLower(strings.TrimSpace(err + " " + strings.Join(validatorMessages, " ")))
 	switch {
+	case strings.Contains(text, "client_rendered_shell"):
+		return "client_rendered_shell"
 	case strings.Contains(text, "deadline"), strings.Contains(text, "timeout"):
 		return "timeout"
 	case strings.Contains(text, "502"), strings.Contains(text, "bad gateway"):
@@ -759,6 +791,8 @@ func normalizeLegacyBaseline(item caseResult) readMetrics {
 		NoiseHits:          item.Baseline.NoiseHits,
 		WebIRVersion:       item.Baseline.WebIRVersion,
 		WebIRNodeCount:     item.Baseline.WebIRNodeCount,
+		WebIRSubstrate:     item.Baseline.WebIRSubstrate,
+		WebIRSourceKind:    item.Baseline.WebIRSourceKind,
 		WebIRShortRatio:    item.Baseline.WebIRShortRatio,
 		WebIRHeadingRatio:  item.Baseline.WebIRHeadingRatio,
 		WebIREmbeddedCount: item.Baseline.WebIREmbeddedCount,

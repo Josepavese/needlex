@@ -128,8 +128,20 @@ func TestRunnerMCPInitializeAndToolsListRawJSON(t *testing.T) {
 
 func TestMCPToolErrorMessageSuggestsNextCall(t *testing.T) {
 	message := mcpToolErrorMessage(fmt.Errorf("seed_url returned 404; discovery_mode=off requires an exact canonical page"))
-	if !strings.Contains(message, "next_recommended_call") || !strings.Contains(message, "same_site_links") {
+	if !strings.Contains(message, "next_recommended_call") || !strings.Contains(message, "same_site_links") || !strings.Contains(message, "web_read") || strings.Contains(message, `discovery_mode="web_search"`) {
 		t.Fatalf("expected actionable MCP error, got %q", message)
+	}
+}
+
+func TestRunnerMCPQueryWithoutSeedRequiresExplicitExperimentalOptIn(t *testing.T) {
+	runner := Runner{storeRoot: t.TempDir()}
+	_, err := runner.callMCPQueryTool(map[string]any{"goal": "proof replay deterministic"})
+	if err == nil || !strings.Contains(err.Error(), "seedless discovery is experimental") || !strings.Contains(err.Error(), `discovery_mode="web_search"`) {
+		t.Fatalf("expected explicit experimental opt-in error, got %v", err)
+	}
+	message := mcpToolErrorMessage(err)
+	if !strings.Contains(message, "host agent's search tool") || !strings.Contains(message, "web_read") {
+		t.Fatalf("expected stable workflow guidance, got %q", message)
 	}
 }
 
@@ -835,12 +847,24 @@ func TestRunnerMCPQueryToolSchemaIncludesDiscoveryModeEnum(t *testing.T) {
 		if !strings.Contains(dm["description"].(string), "same_site_links") {
 			t.Fatalf("expected discovery_mode description to mention canonical values, got %#v", dm["description"])
 		}
+		if !strings.Contains(dm["description"].(string), "EXPERIMENTAL") || !strings.Contains(dm["description"].(string), "never choose it automatically") {
+			t.Fatalf("expected web_search to be explicit experimental opt-in, got %#v", dm["description"])
+		}
 		if !strings.Contains(tool.Description, "exact canonical page") {
 			t.Fatalf("expected web_query description to guide strict off mode, got %#v", tool.Description)
 		}
 		seedURL, _ := props["seed_url"].(map[string]any)
 		if !strings.Contains(seedURL["description"].(string), "exact canonical page") {
 			t.Fatalf("expected seed_url description to guide strict off mode, got %#v", seedURL["description"])
+		}
+		if _, ok := tool.InputSchema["anyOf"].([]any); !ok {
+			t.Fatalf("expected schema to require seed_url or explicit web_search opt-in, got %#v", tool.InputSchema)
+		}
+		examples, _ := tool.InputSchema["examples"].([]map[string]any)
+		for _, example := range examples {
+			if _, seeded := example["seed_url"]; !seeded {
+				t.Fatalf("stable web_query examples must remain seeded, got %#v", example)
+			}
 		}
 		return
 	}

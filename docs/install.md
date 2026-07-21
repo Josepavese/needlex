@@ -107,8 +107,11 @@ Default installed render backend:
 2. browser payload: Chrome for Testing `chrome-headless-shell` on supported platforms
 3. Linux ARM64 payload: Playwright Chromium headless shell under the PAL browser directory
 4. config fields: `render.enabled=true` and `render.browser_path=<PAL browser executable>`
+5. network-aware CDP capture defaults: `render.network_max_bytes=64000000`, `render.network_resource_max_bytes=64000000`, `render.network_max_resources=32`, `render.network_max_messages=4096`
 
-The installer does not install a global Chrome package. It downloads the browser payload into the PAL state root, probes `--dump-dom`, and writes the PAL SSOT config. Existing installs are reconciled by updating the `render.*` config keys. Render is enabled by default; use `--render off` only when you intentionally need static-only acquisition.
+The installer does not install a global Chrome package. It downloads the browser payload into the PAL state root, probes the renderer, and writes the PAL SSOT config. Existing installs are reconciled by updating the `render.*` config keys. Render is enabled by default; use `--render off` only when you intentionally need static-only acquisition.
+
+Runtime note: `exec-dump-dom` is the installed provider name. The implementation first uses Chrome DevTools Protocol against the PAL browser so the rendered DOM can carry the final `location.href` and same-origin textual network payloads from fetch/XHR, SSE, and WebSocket messages; `--dump-dom` remains a fallback. Older experimental provider names such as `remote-cdp` and `playwright-worker` are not accepted config values unless a future implementation wires them explicitly.
 
 Skip only for controlled CI or packaging tests:
 

@@ -214,8 +214,6 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 		cfg.Render.Provider = value
 	case "render.browser_path":
 		cfg.Render.BrowserPath = value
-	case "render.remote_cdp_url":
-		cfg.Render.RemoteCDPURL = value
 	case "render.timeout_ms":
 		parsed, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
@@ -228,6 +226,36 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 			return fmt.Errorf("%s must be an integer", key)
 		}
 		cfg.Render.MaxConcurrency = parsed
+	case "render.network_idle_ms":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.NetworkIdleMS = parsed
+	case "render.network_max_bytes":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.NetworkMaxBytes = parsed
+	case "render.network_resource_max_bytes":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.NetworkResourceMaxBytes = parsed
+	case "render.network_max_resources":
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.NetworkMaxResources = parsed
+	case "render.network_max_messages":
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.NetworkMaxMessages = parsed
 	default:
 		if strings.HasPrefix(key, "semantic.embedding_cache.") {
 			if err := setEmbeddingCacheConfigValue(&cfg.Semantic.EmbeddingCache, key, value); err != nil {
@@ -298,5 +326,11 @@ func renderConfigText(w io.Writer, path string, cfg config.Config) {
 	if cfg.Render.BrowserPath != "" {
 		fmt.Fprintf(w, "Render Browser Path: %s\n", cfg.Render.BrowserPath)
 	}
+	fmt.Fprintf(w, "Render Timeout MS: %d\n", cfg.Render.TimeoutMS)
+	fmt.Fprintf(w, "Render Network Idle MS: %d\n", cfg.Render.NetworkIdleMS)
+	fmt.Fprintf(w, "Render Network Max Bytes: %d\n", cfg.Render.NetworkMaxBytes)
+	fmt.Fprintf(w, "Render Network Resource Max Bytes: %d\n", cfg.Render.NetworkResourceMaxBytes)
+	fmt.Fprintf(w, "Render Network Max Resources: %d\n", cfg.Render.NetworkMaxResources)
+	fmt.Fprintf(w, "Render Network Max Messages: %d\n", cfg.Render.NetworkMaxMessages)
 	fmt.Fprintf(w, "State Config Env: %s\n", os.Getenv(platform.EnvConfig))
 }

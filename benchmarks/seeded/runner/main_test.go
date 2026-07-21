@@ -52,6 +52,18 @@ func TestClassifyExecutionError(t *testing.T) {
 	}
 }
 
+func TestSameCanonicalURLAcceptsAgentReadableMarkdownEquivalent(t *testing.T) {
+	if !sameCanonicalURL("https://react.dev/reference/react.md", "https://react.dev/reference/react") {
+		t.Fatal("expected markdown agent-readable URL to match source document")
+	}
+	if !sameCanonicalURL("https://docs.z.ai/devpack/overview.md", "https://docs.z.ai/devpack/overview") {
+		t.Fatal("expected markdown agent-readable URL to match extensionless document")
+	}
+	if sameCanonicalURL("https://docs.python.org/3/library/json.md", "https://docs.python.org/3/library/asyncio.html") {
+		t.Fatal("unexpected match across different documents")
+	}
+}
+
 func TestDefaultCorpusV2HasHundredUniqueCases(t *testing.T) {
 	corpusPath := filepath.Join("..", "..", "corpora", "seeded-corpus-v2.json")
 	c, err := loadCorpus(corpusPath)

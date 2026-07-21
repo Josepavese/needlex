@@ -21,6 +21,16 @@ const (
 	defaultBrowserUserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0 Safari/537.36"
 )
 
+func EffectiveUserAgent(userAgent string, browserLike bool) string {
+	if strings.TrimSpace(userAgent) != "" {
+		return userAgent
+	}
+	if browserLike {
+		return defaultBrowserUserAgent
+	}
+	return ""
+}
+
 type Acquirer struct {
 	Client *http.Client
 }
@@ -446,9 +456,12 @@ func isAllowedContentType(contentType string) bool {
 		strings.Contains(contentType, "text/css") ||
 		strings.Contains(contentType, "text/markdown") ||
 		strings.Contains(contentType, "application/json") ||
+		strings.Contains(contentType, "+json") ||
 		strings.Contains(contentType, "application/yaml") ||
 		strings.Contains(contentType, "application/x-yaml") ||
+		strings.Contains(contentType, "+yaml") ||
 		strings.Contains(contentType, "application/xml") ||
+		strings.Contains(contentType, "+xml") ||
 		strings.Contains(contentType, "text/yaml") ||
 		strings.Contains(contentType, "text/xml") ||
 		strings.Contains(contentType, "image/svg+xml")

@@ -1,4 +1,4 @@
-package service
+package webirbuilder
 
 import (
 	"strings"
@@ -7,7 +7,7 @@ import (
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
-func buildWebIR(dom pipeline.SimplifiedDOM) core.WebIR {
+func Build(dom pipeline.SimplifiedDOM) core.WebIR {
 	nodes := make([]core.WebIRNode, 0, len(dom.Nodes))
 	shortText := 0
 	heading := 0
@@ -61,7 +61,7 @@ func buildWebIR(dom pipeline.SimplifiedDOM) core.WebIR {
 	}
 }
 
-func ensureMinimumDOM(dom pipeline.SimplifiedDOM) pipeline.SimplifiedDOM {
+func EnsureMinimum(dom pipeline.SimplifiedDOM) pipeline.SimplifiedDOM {
 	if len(dom.Nodes) > 0 || strings.TrimSpace(dom.Title) == "" {
 		return dom
 	}

@@ -161,16 +161,21 @@ func defaultMemoryConfig(baseline modelbaseline.Manifest) MemoryConfig {
 func defaultAgentConfig() AgentConfig {
 	return AgentConfig{
 		ReadableEnabled: true,
-		MaxCandidates:   8,
+		MaxCandidates:   16,
 	}
 }
 
 func defaultRenderConfig() RenderConfig {
 	return RenderConfig{
-		Enabled:        true,
-		Provider:       "exec-dump-dom",
-		TimeoutMS:      5000,
-		MaxConcurrency: 1,
+		Enabled:                 true,
+		Provider:                "exec-dump-dom",
+		TimeoutMS:               30000,
+		MaxConcurrency:          1,
+		NetworkIdleMS:           1500,
+		NetworkMaxBytes:         64_000_000,
+		NetworkResourceMaxBytes: 64_000_000,
+		NetworkMaxResources:     32,
+		NetworkMaxMessages:      4096,
 	}
 }
 

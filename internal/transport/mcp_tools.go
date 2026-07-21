@@ -127,6 +127,11 @@ func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {
 }
 
 func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
+	seedURL := stringArg(args, "seed_url")
+	discoveryMode := stringArg(args, "discovery_mode")
+	if strings.TrimSpace(seedURL) == "" && strings.TrimSpace(strings.ToLower(discoveryMode)) != coreservice.QueryDiscoveryWeb {
+		return nil, fmt.Errorf("web_query requires seed_url for stable use; seedless discovery is experimental and requires explicit discovery_mode=%q", coreservice.QueryDiscoveryWeb)
+	}
 	cfg, err := config.Load(stringArg(args, "config_path"))
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
@@ -136,10 +141,10 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 	}
 	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
 		Goal:          stringArg(args, "goal"),
-		SeedURL:       stringArg(args, "seed_url"),
+		SeedURL:       seedURL,
 		Profile:       stringArg(args, "profile"),
 		UserAgent:     stringArg(args, "user_agent"),
-		DiscoveryMode: stringArg(args, "discovery_mode"),
+		DiscoveryMode: discoveryMode,
 		RenderMode:    stringArg(args, "render"),
 	}, "mcp")
 	if err != nil {
@@ -255,24 +260,33 @@ func mcpCrawlTool() mcpTool {
 }
 
 func mcpQueryTool() mcpTool {
+	schema := toolSchema(map[string]any{
+		"goal":       map[string]any{"type": "string", "description": "Retrieval objective or question to answer."},
+		"seed_url":   map[string]any{"type": "string", "description": "Starting URL for stable use. same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist. Omit only for explicit experimental web_search."},
+		"profile":    map[string]any{"type": "string"},
+		"user_agent": map[string]any{"type": "string"},
+		"discovery_mode": map[string]any{
+			"type":        "string",
+			"enum":        []string{"same_site_links", "web_search", "off"},
+			"description": "Discovery strategy. same_site_links = follow links from the seed site. off = do not expand beyond an exact verified seed URL. web_search = EXPERIMENTAL seedless public bootstrap and must be selected explicitly when seed_url is omitted; never choose it automatically.",
+		},
+		"retrieval_effort": retrievalEffortSchema(),
+		"render":           renderModeSchema(),
+	}, "goal")
+	schema["anyOf"] = []any{
+		map[string]any{"required": []string{"seed_url"}},
+		map[string]any{
+			"required": []string{"discovery_mode"},
+			"properties": map[string]any{
+				"discovery_mode": map[string]any{"const": coreservice.QueryDiscoveryWeb},
+			},
+		},
+	}
 	return mcpTool{
 		Name:        "web_query",
-		Description: "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Internally, Needle-X records semantic family evidence and provider observations for future seedless reuse. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"goal":       map[string]any{"type": "string", "description": "Retrieval objective or question to answer."},
-			"seed_url":   map[string]any{"type": "string", "description": "Optional starting URL. If present, same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist."},
-			"profile":    map[string]any{"type": "string"},
-			"user_agent": map[string]any{"type": "string"},
-			"discovery_mode": map[string]any{
-				"type":        "string",
-				"enum":        []string{"same_site_links", "web_search", "off"},
-				"description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL and should be used only after the exact page has already been verified.",
-			},
-			"retrieval_effort": retrievalEffortSchema(),
-			"render":           renderModeSchema(),
-		}, "goal"),
+		Description: "Plan and execute a goal-oriented query from a seed URL. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page. Seedless web_search is experimental, explicit opt-in, and must never be selected automatically.",
+		InputSchema: schemaExamples(schema,
 			map[string]any{"goal": "Find authentication flow details", "seed_url": "https://agentclientprotocol.com/protocol/overview", "discovery_mode": "same_site_links"},
-			map[string]any{"goal": "OpenAI API pricing", "discovery_mode": "web_search", "retrieval_effort": "standard"},
 			map[string]any{"goal": "Read the verified initialize method page", "seed_url": "https://agentclientprotocol.com/protocol/initialization", "discovery_mode": "off"},
 		),
 	}
@@ -281,7 +295,7 @@ func mcpQueryTool() mcpTool {
 func mcpReadTool() mcpTool {
 	return mcpTool{
 		Name:        "web_read",
-		Description: "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory, semantic family graph evidence, and Analytics PAL for future seedless reuse.",
+		Description: "Read one known URL and return compact proof-carrying context first. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"url":              map[string]any{"type": "string"},
 			"profile":          map[string]any{"type": "string"},

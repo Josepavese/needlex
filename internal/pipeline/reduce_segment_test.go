@@ -78,6 +78,32 @@ func TestReduceAnnotatesRecoverableStructuralContext(t *testing.T) {
 	t.Fatalf("expected recoverable footer context annotation, got %#v", dom.Nodes)
 }
 
+func TestReduceAddsRenderedNetworkTextNodes(t *testing.T) {
+	dom, err := Reducer{}.Reduce(RawPage{
+		URL:      "https://example.com/app",
+		FinalURL: "https://example.com/app",
+		HTML:     `<html><head><title>App</title></head><body><main>shell</main></body></html>`,
+		NetworkText: strings.Join([]string{
+			"Render network resource EventSource stream",
+			"Villa Semantica | city: Siena | description: Rendered network evidence feeds agent chunks.",
+		}, "\n\n"),
+	})
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
+	}
+	allText := ""
+	hasNetworkPath := false
+	for _, node := range dom.Nodes {
+		allText += node.Text + "\n"
+		if strings.HasPrefix(node.Path, "/network/resource") {
+			hasNetworkPath = true
+		}
+	}
+	if !strings.Contains(allText, "Villa Semantica") || !hasNetworkPath {
+		t.Fatalf("expected rendered network text nodes, got %#v", dom.Nodes)
+	}
+}
+
 func TestSegmentBuildsHeadingAwareSegments(t *testing.T) {
 	dom, err := Reducer{}.Reduce(RawPage{
 		URL:       "https://example.com/spec",
@@ -132,7 +158,7 @@ func TestReduceDoesNotExtractCustomEmbeddedPayloadWhenSemanticDOMIsSparse(t *tes
 	dom, err := Reducer{}.ReduceProfile(RawPage{
 		URL:      "https://example.com/app",
 		FinalURL: "https://example.com/app",
-		HTML:     `<html><head><title>App Shell</title></head><body><app-root></app-root><script>window._a2s={"configuration":{"blog":[{"title":"Needle Runtime Update","description":"<p>Needle-X compiles noisy pages into compact proof-carrying context for agents.</p>"}]}}</script></body></html>`,
+		HTML:     `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main><script type="application/json">{"items":[{"title":"Needle Runtime Update","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}]}</script></body></html>`,
 	}, "standard")
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
@@ -145,6 +171,21 @@ func TestReduceDoesNotExtractCustomEmbeddedPayloadWhenSemanticDOMIsSparse(t *tes
 	}
 	if dom.SubstrateClass != "client_rendered_app" {
 		t.Fatalf("expected client_rendered_app substrate, got %q", dom.SubstrateClass)
+	}
+}
+
+func TestReduceClassifiesClientRenderedShellWithBoilerplateText(t *testing.T) {
+	boilerplate := strings.Repeat("Search Help Center Guides API Reference Changelog Sign In Status Contact ", 6)
+	dom, err := Reducer{}.ReduceProfile(RawPage{
+		URL:      "https://example.com/app",
+		FinalURL: "https://example.com/app",
+		HTML:     `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/chunk-a.js"></script><script src="/chunk-b.js"></script><script src="/chunk-c.js"></script></head><body><header>` + boilerplate + `</header><main></main><script src="/app.js"></script></body></html>`,
+	}, "standard")
+	if err != nil {
+		t.Fatalf("reduce failed: %v", err)
+	}
+	if dom.SubstrateClass != "client_rendered_app" {
+		t.Fatalf("expected client_rendered_app despite boilerplate, got %q", dom.SubstrateClass)
 	}
 }
 
@@ -197,13 +238,13 @@ func TestReduceClassifiesThemeHeavyWordPressSubstrate(t *testing.T) {
 	dom, err := Reducer{}.ReduceProfile(RawPage{
 		URL:      "https://example.com/agency",
 		FinalURL: "https://example.com/agency",
-		HTML:     `<html><head><title>Agency</title><script src="/wp-includes/js/jquery.js"></script></head><body class="et_pb"><article><h1>Agency</h1><p>Digital marketing and websites.</p></article><script src="/wp-content/themes/divi/js/swiper.js"></script><script>window.gsap={}</script></body></html>`,
+		HTML:     `<html><head><title>Agency</title><link rel="stylesheet" href="/assets/base.css"><link rel="stylesheet" href="/assets/theme.css"><script src="/assets/runtime.js"></script><script src="/assets/widgets.js"></script></head><body><div><div><div><article><h1>Agency</h1><p>Digital marketing and websites for small businesses need clear messaging, service pages, technical reliability, and conversion-oriented content that agents can summarize without relying on decorative chrome.</p></article></div></div></div><img src="/assets/hero.jpg"><img src="/assets/team.jpg"><script src="/assets/gallery.js"></script><script src="/assets/forms.js"></script></body></html>`,
 	}, "standard")
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
 	}
-	if dom.SubstrateClass != "theme_heavy_wordpress" {
-		t.Fatalf("expected theme_heavy_wordpress substrate, got %q", dom.SubstrateClass)
+	if dom.SubstrateClass != "theme_heavy_site" {
+		t.Fatalf("expected theme_heavy_site substrate, got %q", dom.SubstrateClass)
 	}
 }
 

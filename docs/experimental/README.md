@@ -14,6 +14,7 @@ Do not treat these documents as current rollout doctrine.
 ### Active candidates
 1. `agentic-decision-plane-spec.md`
 2. `discovery-memory-spec.md`
+3. `seedless-discovery.md`
 
 ### Partially absorbed by the runtime
 1. `discovery-memory-spec.md`
@@ -21,7 +22,7 @@ Do not treat these documents as current rollout doctrine.
 Reason:
 1. local discovery state already exists
 2. provider health memory already exists
-3. seedless local reuse is already part of the product
+3. seedless local reuse exists in the runtime but is experimental and explicit opt-in
 4. the document still matters because the full memory substrate is not complete
 
 ### Removed From Active Tree

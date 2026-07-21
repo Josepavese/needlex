@@ -21,7 +21,8 @@ const graphExpansionMinScore = 2.0
 func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg config.Config, semantic intel.SemanticAligner) QueryRequest {
 	candidateStore := store.NewCandidateStore(storeRoot)
 	domainGraphStore := store.NewDomainGraphStore(storeRoot)
-	autoSeed := strings.TrimSpace(strings.ToLower(req.DiscoveryMode)) != QueryDiscoveryOff
+	requestedMode := strings.TrimSpace(strings.ToLower(req.DiscoveryMode))
+	autoSeed := requestedMode != QueryDiscoveryOff && (strings.TrimSpace(req.SeedURL) != "" || requestedMode == QueryDiscoveryWeb)
 
 	if autoSeed {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Semantic.TimeoutMS)*time.Millisecond)

@@ -46,84 +46,105 @@ type queryResponse struct {
 }
 
 type candidateDiagnostic struct {
-	URL                          string   `json:"url"`
-	Score                        float64  `json:"score"`
-	ResourceClass                string   `json:"resource_class"`
-	SemanticRole                 string   `json:"semantic_role"`
-	SemanticRoleConfidence       float64  `json:"semantic_role_confidence"`
-	SemanticRoleIntent           float64  `json:"semantic_role_intent"`
-	SemanticOriginAlignment      float64  `json:"semantic_origin_alignment"`
-	SemanticDerivativeAlignment  float64  `json:"semantic_derivative_alignment"`
-	SemanticEvidenceSimilarity   float64  `json:"semantic_evidence_similarity"`
-	SemanticEvidenceBoost        float64  `json:"semantic_evidence_boost"`
-	SemanticOriginSimilarity     float64  `json:"semantic_origin_similarity"`
-	SemanticDerivativeSimilarity float64  `json:"semantic_derivative_similarity"`
-	SemanticCommunitySimilarity  float64  `json:"semantic_community_similarity"`
-	SemanticAuthorityBoost       float64  `json:"semantic_authority_boost"`
-	SemanticAuthorityPenalty     float64  `json:"semantic_authority_penalty"`
-	SemanticCommunityPenalty     float64  `json:"semantic_community_penalty"`
-	SemanticCalibrationScore     float64  `json:"semantic_calibration_score"`
-	ClusterID                    string   `json:"cluster_id"`
-	ClusterSize                  int      `json:"cluster_size"`
-	Reasons                      []string `json:"reasons"`
+	URL                            string   `json:"url"`
+	Score                          float64  `json:"score"`
+	ResourceClass                  string   `json:"resource_class"`
+	SemanticRole                   string   `json:"semantic_role"`
+	SemanticRoleConfidence         float64  `json:"semantic_role_confidence"`
+	SemanticRoleIntent             float64  `json:"semantic_role_intent"`
+	SemanticOriginAlignment        float64  `json:"semantic_origin_alignment"`
+	SemanticDerivativeAlignment    float64  `json:"semantic_derivative_alignment"`
+	SemanticEvidenceSimilarity     float64  `json:"semantic_evidence_similarity"`
+	SemanticEvidenceBoost          float64  `json:"semantic_evidence_boost"`
+	SemanticOriginSimilarity       float64  `json:"semantic_origin_similarity"`
+	SemanticDerivativeSimilarity   float64  `json:"semantic_derivative_similarity"`
+	SemanticCommunitySimilarity    float64  `json:"semantic_community_similarity"`
+	SemanticAuthorityBoost         float64  `json:"semantic_authority_boost"`
+	SemanticAuthorityPenalty       float64  `json:"semantic_authority_penalty"`
+	SemanticCommunityPenalty       float64  `json:"semantic_community_penalty"`
+	SemanticCalibrationScore       float64  `json:"semantic_calibration_score"`
+	SemanticFamilyIntentIdentity   float64  `json:"semantic_family_intent_identity"`
+	SemanticFamilyIntentTopic      float64  `json:"semantic_family_intent_topic"`
+	SemanticFamilyIntentMerit      float64  `json:"semantic_family_intent_merit"`
+	SemanticFamilyIntentBoost      float64  `json:"semantic_family_intent_boost"`
+	SemanticFamilyIntentOrigin     float64  `json:"semantic_family_intent_origin"`
+	SemanticFamilyIntentDerivative float64  `json:"semantic_family_intent_derivative"`
+	SemanticFamilyIntentProvenance int      `json:"semantic_family_intent_provenance"`
+	ClusterID                      string   `json:"cluster_id"`
+	ClusterSize                    int      `json:"cluster_size"`
+	Reasons                        []string `json:"reasons"`
+}
+
+type familyIntentSnapshot struct {
+	Identity   float64 `json:"identity,omitempty"`
+	Topic      float64 `json:"topic,omitempty"`
+	Merit      float64 `json:"merit,omitempty"`
+	Boost      float64 `json:"boost,omitempty"`
+	Origin     float64 `json:"origin,omitempty"`
+	Derivative float64 `json:"derivative,omitempty"`
+	Provenance int     `json:"provenance,omitempty"`
 }
 
 type runResult struct {
-	Profile          string       `json:"profile"`
-	Skipped          bool         `json:"skipped,omitempty"`
-	SkipReason       string       `json:"skip_reason,omitempty"`
-	AttemptCount     int          `json:"attempt_count,omitempty"`
-	PassCount        int          `json:"pass_count,omitempty"`
-	RuntimePassCount int          `json:"runtime_pass_count,omitempty"`
-	RuntimeOK        bool         `json:"runtime_ok"`
-	SelectedURL      string       `json:"selected_url,omitempty"`
-	SelectedDomain   string       `json:"selected_domain,omitempty"`
-	ExpectedDomain   string       `json:"expected_domain"`
-	SelectedPass     bool         `json:"selected_pass"`
-	DiscoverySource  string       `json:"discovery_provider,omitempty"`
-	CandidateCount   int          `json:"candidate_count"`
-	SelectedRole     string       `json:"selected_role,omitempty"`
-	SelectedScore    float64      `json:"selected_score,omitempty"`
-	SelectedReasons  []string     `json:"selected_reasons,omitempty"`
-	ExpectedRank     int          `json:"expected_candidate_rank,omitempty"`
-	ExpectedURL      string       `json:"expected_candidate_url,omitempty"`
-	ExpectedRole     string       `json:"expected_candidate_role,omitempty"`
-	ExpectedScore    float64      `json:"expected_candidate_score,omitempty"`
-	ExpectedReasons  []string     `json:"expected_candidate_reasons,omitempty"`
-	DocumentFetch    string       `json:"document_fetch_mode,omitempty"`
-	AcquireMetadata  []string     `json:"acquire_metadata,omitempty"`
-	RetryCount       int          `json:"retry_count,omitempty"`
-	RetrySleepMS     int64        `json:"retry_sleep_ms,omitempty"`
-	HostPacingMS     int64        `json:"host_pacing_ms,omitempty"`
-	RetryReason      string       `json:"retry_reason,omitempty"`
-	ErrorKind        string       `json:"error_kind,omitempty"`
-	LatencyMS        int64        `json:"latency_ms,omitempty"`
-	Error            string       `json:"error,omitempty"`
-	Attempts         []runAttempt `json:"attempts,omitempty"`
+	Profile              string                `json:"profile"`
+	Skipped              bool                  `json:"skipped,omitempty"`
+	SkipReason           string                `json:"skip_reason,omitempty"`
+	AttemptCount         int                   `json:"attempt_count,omitempty"`
+	PassCount            int                   `json:"pass_count,omitempty"`
+	RuntimePassCount     int                   `json:"runtime_pass_count,omitempty"`
+	RuntimeOK            bool                  `json:"runtime_ok"`
+	SelectedURL          string                `json:"selected_url,omitempty"`
+	SelectedDomain       string                `json:"selected_domain,omitempty"`
+	ExpectedDomain       string                `json:"expected_domain"`
+	SelectedPass         bool                  `json:"selected_pass"`
+	DiscoverySource      string                `json:"discovery_provider,omitempty"`
+	CandidateCount       int                   `json:"candidate_count"`
+	SelectedRole         string                `json:"selected_role,omitempty"`
+	SelectedScore        float64               `json:"selected_score,omitempty"`
+	SelectedReasons      []string              `json:"selected_reasons,omitempty"`
+	SelectedFamilyIntent *familyIntentSnapshot `json:"selected_family_intent,omitempty"`
+	ExpectedRank         int                   `json:"expected_candidate_rank,omitempty"`
+	ExpectedURL          string                `json:"expected_candidate_url,omitempty"`
+	ExpectedRole         string                `json:"expected_candidate_role,omitempty"`
+	ExpectedScore        float64               `json:"expected_candidate_score,omitempty"`
+	ExpectedReasons      []string              `json:"expected_candidate_reasons,omitempty"`
+	ExpectedFamilyIntent *familyIntentSnapshot `json:"expected_family_intent,omitempty"`
+	DocumentFetch        string                `json:"document_fetch_mode,omitempty"`
+	AcquireMetadata      []string              `json:"acquire_metadata,omitempty"`
+	RetryCount           int                   `json:"retry_count,omitempty"`
+	RetrySleepMS         int64                 `json:"retry_sleep_ms,omitempty"`
+	HostPacingMS         int64                 `json:"host_pacing_ms,omitempty"`
+	RetryReason          string                `json:"retry_reason,omitempty"`
+	ErrorKind            string                `json:"error_kind,omitempty"`
+	LatencyMS            int64                 `json:"latency_ms,omitempty"`
+	Error                string                `json:"error,omitempty"`
+	Attempts             []runAttempt          `json:"attempts,omitempty"`
 }
 
 type runAttempt struct {
-	Attempt         int     `json:"attempt"`
-	RuntimeOK       bool    `json:"runtime_ok"`
-	SelectedURL     string  `json:"selected_url,omitempty"`
-	SelectedDomain  string  `json:"selected_domain,omitempty"`
-	SelectedPass    bool    `json:"selected_pass"`
-	DiscoverySource string  `json:"discovery_provider,omitempty"`
-	CandidateCount  int     `json:"candidate_count"`
-	SelectedRole    string  `json:"selected_role,omitempty"`
-	SelectedScore   float64 `json:"selected_score,omitempty"`
-	ExpectedRank    int     `json:"expected_candidate_rank,omitempty"`
-	ExpectedURL     string  `json:"expected_candidate_url,omitempty"`
-	ExpectedRole    string  `json:"expected_candidate_role,omitempty"`
-	ExpectedScore   float64 `json:"expected_candidate_score,omitempty"`
-	DocumentFetch   string  `json:"document_fetch_mode,omitempty"`
-	RetryCount      int     `json:"retry_count,omitempty"`
-	RetrySleepMS    int64   `json:"retry_sleep_ms,omitempty"`
-	HostPacingMS    int64   `json:"host_pacing_ms,omitempty"`
-	RetryReason     string  `json:"retry_reason,omitempty"`
-	ErrorKind       string  `json:"error_kind,omitempty"`
-	LatencyMS       int64   `json:"latency_ms,omitempty"`
-	Error           string  `json:"error,omitempty"`
+	Attempt              int                   `json:"attempt"`
+	RuntimeOK            bool                  `json:"runtime_ok"`
+	SelectedURL          string                `json:"selected_url,omitempty"`
+	SelectedDomain       string                `json:"selected_domain,omitempty"`
+	SelectedPass         bool                  `json:"selected_pass"`
+	DiscoverySource      string                `json:"discovery_provider,omitempty"`
+	CandidateCount       int                   `json:"candidate_count"`
+	SelectedRole         string                `json:"selected_role,omitempty"`
+	SelectedScore        float64               `json:"selected_score,omitempty"`
+	SelectedFamilyIntent *familyIntentSnapshot `json:"selected_family_intent,omitempty"`
+	ExpectedRank         int                   `json:"expected_candidate_rank,omitempty"`
+	ExpectedURL          string                `json:"expected_candidate_url,omitempty"`
+	ExpectedRole         string                `json:"expected_candidate_role,omitempty"`
+	ExpectedScore        float64               `json:"expected_candidate_score,omitempty"`
+	ExpectedFamilyIntent *familyIntentSnapshot `json:"expected_family_intent,omitempty"`
+	DocumentFetch        string                `json:"document_fetch_mode,omitempty"`
+	RetryCount           int                   `json:"retry_count,omitempty"`
+	RetrySleepMS         int64                 `json:"retry_sleep_ms,omitempty"`
+	HostPacingMS         int64                 `json:"host_pacing_ms,omitempty"`
+	RetryReason          string                `json:"retry_reason,omitempty"`
+	ErrorKind            string                `json:"error_kind,omitempty"`
+	LatencyMS            int64                 `json:"latency_ms,omitempty"`
+	Error                string                `json:"error,omitempty"`
 }
 
 type caseResult struct {
@@ -554,27 +575,29 @@ func runCase(binaryPath, configPath, profile, caseID, goal, expectedDomain strin
 
 func runAttemptFromResult(index int, result runResult) runAttempt {
 	return runAttempt{
-		Attempt:         index,
-		RuntimeOK:       result.RuntimeOK,
-		SelectedURL:     result.SelectedURL,
-		SelectedDomain:  result.SelectedDomain,
-		SelectedPass:    result.SelectedPass,
-		DiscoverySource: result.DiscoverySource,
-		CandidateCount:  result.CandidateCount,
-		SelectedRole:    result.SelectedRole,
-		SelectedScore:   result.SelectedScore,
-		ExpectedRank:    result.ExpectedRank,
-		ExpectedURL:     result.ExpectedURL,
-		ExpectedRole:    result.ExpectedRole,
-		ExpectedScore:   result.ExpectedScore,
-		DocumentFetch:   result.DocumentFetch,
-		RetryCount:      result.RetryCount,
-		RetrySleepMS:    result.RetrySleepMS,
-		HostPacingMS:    result.HostPacingMS,
-		RetryReason:     result.RetryReason,
-		ErrorKind:       result.ErrorKind,
-		LatencyMS:       result.LatencyMS,
-		Error:           result.Error,
+		Attempt:              index,
+		RuntimeOK:            result.RuntimeOK,
+		SelectedURL:          result.SelectedURL,
+		SelectedDomain:       result.SelectedDomain,
+		SelectedPass:         result.SelectedPass,
+		DiscoverySource:      result.DiscoverySource,
+		CandidateCount:       result.CandidateCount,
+		SelectedRole:         result.SelectedRole,
+		SelectedScore:        result.SelectedScore,
+		SelectedFamilyIntent: result.SelectedFamilyIntent,
+		ExpectedRank:         result.ExpectedRank,
+		ExpectedURL:          result.ExpectedURL,
+		ExpectedRole:         result.ExpectedRole,
+		ExpectedScore:        result.ExpectedScore,
+		ExpectedFamilyIntent: result.ExpectedFamilyIntent,
+		DocumentFetch:        result.DocumentFetch,
+		RetryCount:           result.RetryCount,
+		RetrySleepMS:         result.RetrySleepMS,
+		HostPacingMS:         result.HostPacingMS,
+		RetryReason:          result.RetryReason,
+		ErrorKind:            result.ErrorKind,
+		LatencyMS:            result.LatencyMS,
+		Error:                result.Error,
 	}
 }
 
@@ -620,7 +643,7 @@ func runCaseOnce(binaryPath, configPath, profile, caseID, attemptID, goal, expec
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMS)*time.Millisecond)
 	defer cancel()
 	started := time.Now()
-	cmd := exec.CommandContext(ctx, binaryPath, "query", "--goal", goal, "--json", "--json-mode", "full", "--config", configPath)
+	cmd := exec.CommandContext(ctx, binaryPath, "query", "--goal", goal, "--discovery", "web_search", "--json", "--json-mode", "full", "--config", configPath)
 	stateRoot := seedlessStateRoot(configPath, caseID, profile, attemptID)
 	if !keepState {
 		defer func() { _ = os.RemoveAll(stateRoot) }()
@@ -707,6 +730,7 @@ func finalizeRunResult(result runResult, resp queryResponse, expectedDomain stri
 		result.SelectedRole = strings.TrimSpace(selected.SemanticRole)
 		result.SelectedScore = selected.Score
 		result.SelectedReasons = append([]string{}, selected.Reasons...)
+		result.SelectedFamilyIntent = familyIntentSnapshotFromDiagnostic(selected)
 	}
 	if expected, rank := diagnosticForExpectedDomain(resp.Plan.CandidateDiagnostics, resp.Plan.CandidateURLs, expectedDomain); expected.URL != "" {
 		result.ExpectedRank = rank
@@ -714,6 +738,7 @@ func finalizeRunResult(result runResult, resp queryResponse, expectedDomain stri
 		result.ExpectedRole = strings.TrimSpace(expected.SemanticRole)
 		result.ExpectedScore = expected.Score
 		result.ExpectedReasons = append([]string{}, expected.Reasons...)
+		result.ExpectedFamilyIntent = familyIntentSnapshotFromDiagnostic(expected)
 	}
 	result.DocumentFetch = strings.TrimSpace(resp.Document.FetchMode)
 	for _, stage := range resp.Trace.Stages {
@@ -726,6 +751,28 @@ func finalizeRunResult(result runResult, resp queryResponse, expectedDomain stri
 		result.ErrorKind = classifySelectionMiss(resp, expectedDomain)
 	}
 	return result
+}
+
+func familyIntentSnapshotFromDiagnostic(item candidateDiagnostic) *familyIntentSnapshot {
+	snapshot := familyIntentSnapshot{
+		Identity:   item.SemanticFamilyIntentIdentity,
+		Topic:      item.SemanticFamilyIntentTopic,
+		Merit:      item.SemanticFamilyIntentMerit,
+		Boost:      item.SemanticFamilyIntentBoost,
+		Origin:     item.SemanticFamilyIntentOrigin,
+		Derivative: item.SemanticFamilyIntentDerivative,
+		Provenance: item.SemanticFamilyIntentProvenance,
+	}
+	if snapshot.Identity == 0 &&
+		snapshot.Topic == 0 &&
+		snapshot.Merit == 0 &&
+		snapshot.Boost == 0 &&
+		snapshot.Origin == 0 &&
+		snapshot.Derivative == 0 &&
+		snapshot.Provenance == 0 {
+		return nil
+	}
+	return &snapshot
 }
 
 func classifySelectionMiss(resp queryResponse, expectedDomain string) string {
@@ -1135,26 +1182,28 @@ func runAttempts(run runResult) []runAttempt {
 		return run.Attempts
 	}
 	return []runAttempt{{
-		RuntimeOK:       run.RuntimeOK,
-		SelectedURL:     run.SelectedURL,
-		SelectedDomain:  run.SelectedDomain,
-		SelectedPass:    run.SelectedPass,
-		DiscoverySource: run.DiscoverySource,
-		CandidateCount:  run.CandidateCount,
-		SelectedRole:    run.SelectedRole,
-		SelectedScore:   run.SelectedScore,
-		ExpectedRank:    run.ExpectedRank,
-		ExpectedURL:     run.ExpectedURL,
-		ExpectedRole:    run.ExpectedRole,
-		ExpectedScore:   run.ExpectedScore,
-		DocumentFetch:   run.DocumentFetch,
-		RetryCount:      run.RetryCount,
-		RetrySleepMS:    run.RetrySleepMS,
-		HostPacingMS:    run.HostPacingMS,
-		RetryReason:     run.RetryReason,
-		ErrorKind:       run.ErrorKind,
-		LatencyMS:       run.LatencyMS,
-		Error:           run.Error,
+		RuntimeOK:            run.RuntimeOK,
+		SelectedURL:          run.SelectedURL,
+		SelectedDomain:       run.SelectedDomain,
+		SelectedPass:         run.SelectedPass,
+		DiscoverySource:      run.DiscoverySource,
+		CandidateCount:       run.CandidateCount,
+		SelectedRole:         run.SelectedRole,
+		SelectedScore:        run.SelectedScore,
+		SelectedFamilyIntent: run.SelectedFamilyIntent,
+		ExpectedRank:         run.ExpectedRank,
+		ExpectedURL:          run.ExpectedURL,
+		ExpectedRole:         run.ExpectedRole,
+		ExpectedScore:        run.ExpectedScore,
+		ExpectedFamilyIntent: run.ExpectedFamilyIntent,
+		DocumentFetch:        run.DocumentFetch,
+		RetryCount:           run.RetryCount,
+		RetrySleepMS:         run.RetrySleepMS,
+		HostPacingMS:         run.HostPacingMS,
+		RetryReason:          run.RetryReason,
+		ErrorKind:            run.ErrorKind,
+		LatencyMS:            run.LatencyMS,
+		Error:                run.Error,
 	}}
 }
 

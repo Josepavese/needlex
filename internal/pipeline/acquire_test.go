@@ -87,6 +87,26 @@ func TestAcquireRejectsOversizedBody(t *testing.T) {
 	}
 }
 
+func TestAcquireAcceptsStructuredJSONMediaTypes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/linkset+json; charset=utf-8")
+		_, _ = fmt.Fprint(w, `{"linkset":[{"service-desc":[{"href":"/openapi.json"}]}]}`)
+	}))
+	defer server.Close()
+
+	page, err := Acquirer{}.Acquire(context.Background(), AcquireInput{
+		URL:      server.URL,
+		Timeout:  2 * time.Second,
+		MaxBytes: 4096,
+	})
+	if err != nil {
+		t.Fatalf("expected structured +json media type to be accepted, got %v", err)
+	}
+	if !strings.Contains(page.HTML, "service-desc") {
+		t.Fatalf("expected body to be captured, got %q", page.HTML)
+	}
+}
+
 func TestAcquireCanKeepPartialOversizedBodyWhenAllowed(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")

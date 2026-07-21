@@ -15,7 +15,7 @@ Needle-X must deliver a full Day 1 runtime without turning into a sprawling code
 Canonical flow:
 
 ```text
-Acquire -> Reduce -> Segment -> ExtractDet -> SemanticGate -> (+ResolveAmbiguity) -> ChunkRank -> Pack -> Proof -> Trace
+Acquire -> AgentReadableResolve -> Reduce -> RenderIfNeeded -> Segment -> ExtractDet -> SemanticGate -> (+ResolveAmbiguity) -> ChunkRank -> Pack -> Proof -> Trace
 ```
 
 ## Internal Package Plan
@@ -70,11 +70,41 @@ Replacement rule:
 3. change persistence inside `memory`, `store`, or `analytics`
 4. do not push adapter concerns back into ranking or transport code
 
-Seedless discovery order:
+Experimental seedless discovery order:
 1. local Discovery Memory and topic/family recovery
 2. same-site recovery when a local family seed exists
 3. provider-health ordered public bootstrap
 4. rewrite escalation only when the leader is not semantically grounded
+
+Stable agent workflow:
+1. the host agent obtains candidate URLs with its own search tool
+2. the host agent chooses the breadth without a Needle-X candidate cap
+3. Needle-X compiles each selected URL independently through `web_read`
+4. seeded `web_query` may route within a known site or documentation family
+
+Seedless execution requires explicit `web_search` selection and is not an automatic transport or service fallback.
+
+## Agent-Readable Source Resolution
+
+Before rendering JavaScript, `core/service` attempts same-origin agent-readable sources with explicit provenance.
+
+Resolution order:
+1. declared resources from HTTP `Link` headers
+2. declared resources from HTML `<link>` elements
+3. shared conventions when the static page is weak: Markdown content negotiation, same-path `.md`/`.mdx`, `/llms.txt`, `/llms-full.txt`, `/.well-known/api-catalog`, OpenAPI/Swagger well-known paths
+4. `robots.txt` `Sitemap:` entries and conventional sitemap files as candidate indexes
+5. linked resources inside API catalogs, including `service-desc`, `service-doc`, `service-meta`, `describedby`, and OpenAPI/Swagger/AsyncAPI descriptions
+6. JavaScript rendering as the final escalation path, including rendered DOM plus same-origin textual network evidence from fetch/XHR, SSE, and received WebSocket frames
+
+Rules:
+1. candidates must stay same-origin
+2. conventional and sitemap-derived probes are filtered through same-origin `robots.txt` policy when robots is available
+3. accepted agent-readable candidates are selected semantically when an objective and dense semantic runtime are available
+4. protocol and URL strings may classify resource identity, not ranking relevance
+5. arbitrary application state locations such as framework globals or site-specific `window.*` payloads are not extraction sources
+6. non-JSON-LD `<script>` payloads remain ignored by the reducer
+7. JSON-LD is the only script-based structured-data extraction path
+8. renderer network payloads are evidence captured through browser/CDP transport provenance, not provider-specific ranking signals
 
 ## Runtime State Layout
 

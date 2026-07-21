@@ -1,5 +1,7 @@
 # Candidate Intelligence Roadmap
 
+Status: experimental research roadmap. Seedless candidate intelligence is not part of the stable agent workflow.
+
 ## Goal
 Strengthen seedless and technical discovery using semantic classification and clustering without turning the core into a search-term rule engine.
 

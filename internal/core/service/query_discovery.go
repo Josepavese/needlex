@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/url"
 	"strings"
+	"time"
 
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/queryflow"
+	"github.com/josepavese/needlex/internal/core/targetkind"
 )
 
 func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, discoveryMode string, seedEvidence QueryFingerprintEvidence) (queryDiscoveryResult, error) {
@@ -16,7 +18,7 @@ func (s *Service) runQueryDiscovery(ctx context.Context, req QueryRequest, disco
 	}
 	if strings.TrimSpace(req.SeedURL) == "" && len(req.MemoryCandidates) > 0 {
 		result.provider = "discovery_memory"
-		result.candidates = s.applyTargetKindRerank(ctx, req.Goal, req.MemoryCandidates)
+		result.candidates = targetkind.Apply(ctx, s.semantic, req.Goal, req.MemoryCandidates)
 		result.selected = req.MemoryCandidates[0].URL
 		if len(result.candidates) > 0 {
 			result.selected = result.candidates[0].URL
@@ -78,7 +80,7 @@ func preferRecoveredMemoryFamily(currentURL, recoveredURL string) bool {
 }
 
 func shouldPromoteRecoveredMemoryFamily(currentURL string, recovered DiscoverResponse) bool {
-	if recoveredSelectedTargetKind(recovered, targetKindCanonicalHome, targetKindOrganizationAbout) {
+	if recoveredSelectedTargetKind(recovered, targetkind.CanonicalHome, targetkind.OrganizationAbout) {
 		return true
 	}
 	if preferRecoveredMemoryFamily(currentURL, recovered.SelectedURL) {
@@ -98,7 +100,7 @@ func (s *Service) tryMemoryFamilyRecovery(ctx context.Context, req QueryRequest)
 	if strings.TrimSpace(seed.URL) == "" {
 		return DiscoverResponse{}, false
 	}
-	profile := s.inferTargetKindProfile(ctx, req.Goal)
+	profile := targetkind.Infer(ctx, s.semantic, req.Goal)
 	discovery, err := s.Discover(ctx, DiscoverRequest{
 		Goal:          req.Goal,
 		SeedURL:       seed.URL,
@@ -175,20 +177,20 @@ func urlPathDepth(raw string) int {
 	return len(strings.Split(path, "/"))
 }
 
-func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse, profile targetKindProfile) string {
+func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse, profile targetkind.Profile) string {
 	best := strings.TrimSpace(seedURL)
 	seedHost := hostFromURLString(seedURL)
 	if seedHost == "" {
 		return strings.TrimSpace(discovery.SelectedURL)
 	}
-	if urlPathDepth(seedURL) > 0 && weakCanonicalHomeProfile(profile) {
+	if urlPathDepth(seedURL) > 0 && targetkind.WeakCanonicalHome(profile) {
 		return best
 	}
-	if recoveredSelectedTargetKind(discovery, targetKindCanonicalHome, targetKindOrganizationAbout) {
+	if recoveredSelectedTargetKind(discovery, targetkind.CanonicalHome, targetkind.OrganizationAbout) {
 		return strings.TrimSpace(discovery.SelectedURL)
 	}
 	if urlPathDepth(seedURL) == 0 {
-		if profile.Kind == targetKindCanonicalHome {
+		if profile.Kind == targetkind.CanonicalHome {
 			return best
 		}
 		best = strings.TrimSpace(discovery.SelectedURL)
@@ -212,10 +214,6 @@ func preferredRecoveredMemoryURL(seedURL string, discovery DiscoverResponse, pro
 		}
 	}
 	return best
-}
-
-func weakCanonicalHomeProfile(profile targetKindProfile) bool {
-	return profile.Kind == targetKindCanonicalHome && profile.Similarity >= 0.36 && profile.Margin < 0.06 && profile.Similarity < 0.62
 }
 
 func recoveredSelectedTargetKind(discovery DiscoverResponse, kinds ...string) bool {
@@ -343,6 +341,12 @@ func (s *Service) discoverQueryWeb(ctx context.Context, req QueryRequest, maxCan
 			return queryWebDiscoveryResult{finalized: true}, nil
 		}
 	}
+	if !seedlessQueryHasTimeLeft(ctx, seedlessRewriteMinTimeLeft) {
+		if err != nil {
+			return queryWebDiscoveryResult{}, err
+		}
+		return queryWebDiscoveryResult{finalized: true}, nil
+	}
 	original := cloneQueryDiscoveryResult(*result)
 	if ok := s.applyQueryDiscoveryRewrite(ctx, req, maxCandidates, result); ok {
 		if err == nil && sameQueryDiscoverySelection(original.selected, result.selected) {
@@ -354,6 +358,14 @@ func (s *Service) discoverQueryWeb(ctx context.Context, req QueryRequest, maxCan
 		return queryWebDiscoveryResult{}, err
 	}
 	return queryWebDiscoveryResult{}, nil
+}
+
+func seedlessQueryHasTimeLeft(ctx context.Context, minRemaining time.Duration) bool {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return true
+	}
+	return time.Until(deadline) >= minRemaining
 }
 
 func cloneQueryDiscoveryResult(in queryDiscoveryResult) queryDiscoveryResult {

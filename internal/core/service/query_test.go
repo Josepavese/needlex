@@ -8,12 +8,45 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/josepavese/needlex/internal/core"
 	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/queryflow"
 	"github.com/josepavese/needlex/internal/core/queryplan"
+	"github.com/josepavese/needlex/internal/core/queryreview"
+	"github.com/josepavese/needlex/internal/intel"
 )
+
+type postReadSemanticTestAligner struct {
+	scores map[string]queryreview.Score
+}
+
+func (a postReadSemanticTestAligner) Align(context.Context, string, []intel.SemanticCandidate) (intel.SemanticAlignment, error) {
+	return intel.SemanticAlignment{}, nil
+}
+
+func (a postReadSemanticTestAligner) Score(_ context.Context, objective string, candidates []intel.SemanticCandidate) ([]intel.SemanticScore, error) {
+	out := make([]intel.SemanticScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := a.scores[strings.TrimSpace(candidate.ID)]
+		similarity := 0.18
+		switch strings.TrimSpace(objective) {
+		case hostRootOriginProfile():
+			similarity = score.Origin
+		case hostRootDerivativeProfile():
+			similarity = score.Derivative
+		default:
+			if strings.Contains(objective, "source-owner identity") && score.Entity > 0 {
+				similarity = score.Entity
+			} else if score.Goal > 0 {
+				similarity = score.Goal
+			}
+		}
+		out = append(out, intel.SemanticScore{ID: candidate.ID, Similarity: similarity})
+	}
+	return out, nil
+}
 
 func TestQueryBuildsPlanAndResultPack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -127,12 +160,12 @@ func TestReadQuerySelectedCandidateFallsBackFromUnsupportedContent(t *testing.T)
 	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "runtime fallback", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
 	plan.SelectedURL = server.URL + "/asset"
 	plan.CandidateURLs = []string{server.URL + "/asset", server.URL + "/docs"}
-	plan.CandidateDiagnostics = []QueryCandidateDiagnostic{
+	plan.CandidateDiagnostics = []queryreview.Diagnostic{
 		{URL: server.URL + "/asset", Score: 1.2},
 		{URL: server.URL + "/docs", Score: 1.1},
 	}
 
-	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback"}, core.ProfileTiny, QueryDiscoveryWeb, &plan)
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback"}, core.ProfileTiny, QueryDiscoveryWeb, &plan, nil)
 	if err != nil {
 		t.Fatalf("expected fallback read to succeed: %v", err)
 	}
@@ -174,7 +207,7 @@ func TestReadQuerySelectedCandidateRetriesSelectedWithResilientFetchBeforeFallba
 	plan.SelectedURL = primary.URL
 	plan.CandidateURLs = []string{primary.URL, fallback.URL}
 
-	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback", FetchProfile: "standard", FetchRetryProfile: "standard"}, core.ProfileTiny, QueryDiscoveryWeb, &plan)
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback", FetchProfile: "standard", FetchRetryProfile: "standard"}, core.ProfileTiny, QueryDiscoveryWeb, &plan, nil)
 	if err != nil {
 		t.Fatalf("expected resilient selected retry to succeed: %v", err)
 	}
@@ -203,7 +236,7 @@ func TestReadQuerySelectedCandidateFallsBackFromTLSError(t *testing.T) {
 	plan.SelectedURL = badTLS.URL
 	plan.CandidateURLs = []string{badTLS.URL, docs.URL}
 
-	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback"}, core.ProfileTiny, QueryDiscoveryWeb, &plan)
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "runtime fallback"}, core.ProfileTiny, QueryDiscoveryWeb, &plan, nil)
 	if err != nil {
 		t.Fatalf("expected TLS fallback read to succeed: %v", err)
 	}
@@ -215,6 +248,364 @@ func TestReadQuerySelectedCandidateFallsBackFromTLSError(t *testing.T) {
 	})
 	if decision.Metadata["runtime_error_class"] != "tls_certificate" {
 		t.Fatalf("expected tls_certificate fallback metadata, got %#v", decision.Metadata)
+	}
+}
+
+func TestReadQuerySelectedCandidateFallsBackAfterPostReadSemanticSourceValidation(t *testing.T) {
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/derivative":
+			_, _ = fmt.Fprint(w, `<html><head><title>Derivative automation surface</title></head><body><article><h1>Derivative automation surface</h1><p>Managed execution surface describing another browser automation project.</p></article></body></html>`)
+		case "/source":
+			_, _ = fmt.Fprint(w, `<html><head><title>Source automation project</title></head><body><article><h1>Source automation project</h1><p>Primary maintained project documentation and release surface.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	sourceURL := serverURL + "/source"
+	derivativeURL := serverURL + "/derivative"
+	svc := newSemanticService(t, server.Client())
+	svc.semantic = postReadSemanticTestAligner{scores: map[string]queryreview.Score{
+		derivativeURL: {Goal: 0.74, Entity: 0.30, Origin: 0.16, Derivative: 0.54},
+		sourceURL:     {Goal: 0.70, Entity: 0.70, Origin: 0.62, Derivative: 0.18},
+	}}
+	candidates := []DiscoverCandidate{
+		{
+			URL:   derivativeURL,
+			Score: 2.00,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_topic_without_identity_penalty",
+				"semantic_derivative_surface_penalty",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.480",
+				"semantic_family_intent_topic":      "0.620",
+				"semantic_family_intent_merit":      "0.660",
+				"semantic_family_intent_origin":     "0.050",
+				"semantic_family_intent_derivative": "0.180",
+				"semantic_origin_alignment":         "0.050",
+				"semantic_derivative_alignment":     "0.180",
+			},
+		},
+		{
+			URL:   sourceURL,
+			Score: 1.60,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_provider_consensus",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.504",
+				"semantic_family_intent_topic":      "0.590",
+				"semantic_family_intent_merit":      "0.682",
+				"semantic_family_intent_origin":     "0.220",
+				"semantic_family_intent_derivative": "0.080",
+				"semantic_origin_alignment":         "0.220",
+				"semantic_derivative_alignment":     "0.080",
+			},
+		},
+	}
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "browser automation project", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+	plan.SelectedURL = derivativeURL
+	plan.CandidateURLs = []string{derivativeURL, sourceURL}
+	plan.CandidateDiagnostics = queryCandidateDiagnostics(candidates)
+
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "browser automation project"}, core.ProfileTiny, QueryDiscoveryWeb, &plan, candidates)
+	if err != nil {
+		t.Fatalf("expected post-read semantic fallback to succeed: %v", err)
+	}
+	if plan.SelectedURL != sourceURL || resp.Document.FinalURL != sourceURL {
+		t.Fatalf("expected source selection after post-read validation, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	decision := requireCompilerDecision(t, plan.Compiler.Decisions, QueryPlanReasonSelection, func(decision QueryPlanDecision) bool {
+		return decision.Stage == "select.post_read_semantic_fallback"
+	})
+	if decision.Metadata["validation_surface"] != "post_read_embedding_source_role" {
+		t.Fatalf("expected post-read validation metadata, got %#v", decision.Metadata)
+	}
+}
+
+func TestReadQuerySelectedCandidateKeepsStrongPostReadSourceSelection(t *testing.T) {
+	hits := map[string]int{}
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits[r.URL.Path]++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/source":
+			_, _ = fmt.Fprint(w, `<html><head><title>Source automation project</title></head><body><article><h1>Source automation project</h1><p>Primary maintained project documentation and release surface.</p></article></body></html>`)
+		case "/derivative":
+			_, _ = fmt.Fprint(w, `<html><head><title>Derivative automation surface</title></head><body><article><h1>Derivative automation surface</h1><p>Managed execution surface describing another browser automation project.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	sourceURL := serverURL + "/source"
+	derivativeURL := serverURL + "/derivative"
+	svc := newSemanticService(t, server.Client())
+	svc.semantic = postReadSemanticTestAligner{scores: map[string]queryreview.Score{
+		sourceURL:     {Goal: 0.70, Entity: 0.70, Origin: 0.62, Derivative: 0.18},
+		derivativeURL: {Goal: 0.74, Entity: 0.30, Origin: 0.16, Derivative: 0.54},
+	}}
+	candidates := []DiscoverCandidate{
+		{
+			URL:   sourceURL,
+			Score: 2.00,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_provenance_identity",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.640",
+				"semantic_family_intent_topic":      "0.620",
+				"semantic_family_intent_merit":      "0.820",
+				"semantic_family_intent_origin":     "0.500",
+				"semantic_family_intent_derivative": "0.050",
+				"semantic_provenance_identity":      "0.640",
+				"semantic_origin_alignment":         "0.500",
+				"semantic_derivative_alignment":     "0.050",
+			},
+		},
+		{
+			URL:   derivativeURL,
+			Score: 1.80,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_derivative_surface_penalty",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.480",
+				"semantic_family_intent_topic":      "0.620",
+				"semantic_family_intent_merit":      "0.660",
+				"semantic_family_intent_origin":     "0.050",
+				"semantic_family_intent_derivative": "0.180",
+				"semantic_origin_alignment":         "0.050",
+				"semantic_derivative_alignment":     "0.180",
+			},
+		},
+	}
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "browser automation project", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+	plan.SelectedURL = sourceURL
+	plan.CandidateURLs = []string{sourceURL, derivativeURL}
+	plan.CandidateDiagnostics = queryCandidateDiagnostics(candidates)
+
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "browser automation project"}, core.ProfileTiny, QueryDiscoveryWeb, &plan, candidates)
+	if err != nil {
+		t.Fatalf("expected selected read to succeed: %v", err)
+	}
+	if plan.SelectedURL != sourceURL || resp.Document.FinalURL != sourceURL {
+		t.Fatalf("expected strong source selection to remain, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	if hits["/derivative"] != 0 {
+		t.Fatalf("expected derivative challenger not to be read, got hits=%d", hits["/derivative"])
+	}
+	for _, decision := range plan.Compiler.Decisions {
+		if decision.Stage == "select.post_read_semantic_fallback" {
+			t.Fatalf("did not expect post-read fallback decision, got %#v", plan.Compiler.Decisions)
+		}
+	}
+}
+
+func TestReadQuerySelectedCandidateUsesPreReadSemanticFamilyEvidenceFallback(t *testing.T) {
+	hits := map[string]int{}
+	var serverURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits[r.URL.Path]++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/derivative":
+			_, _ = fmt.Fprint(w, `<html><head><title>Derivative automation surface</title></head><body><article><h1>Derivative automation surface</h1><p>Managed execution surface describing another browser automation project.</p></article></body></html>`)
+		case "/source":
+			_, _ = fmt.Fprint(w, `<html><head><title>Source automation project</title></head><body><article><h1>Source automation project</h1><p>Primary maintained project documentation and release surface.</p></article></body></html>`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	serverURL = server.URL
+
+	sourceURL := serverURL + "/source"
+	derivativeURL := serverURL + "/derivative"
+	svc := newSemanticService(t, server.Client())
+	svc.semantic = postReadSemanticTestAligner{scores: map[string]queryreview.Score{
+		sourceURL: {Goal: 0.70, Entity: 0.70, Origin: 0.62, Derivative: 0.18},
+	}}
+	candidates := []DiscoverCandidate{
+		{
+			URL:   derivativeURL,
+			Score: 2.00,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_topic_without_identity_penalty",
+				"semantic_derivative_surface_penalty",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.480",
+				"semantic_family_intent_topic":      "0.620",
+				"semantic_family_intent_merit":      "0.660",
+				"semantic_family_intent_origin":     "0.050",
+				"semantic_family_intent_derivative": "0.180",
+				"semantic_origin_alignment":         "0.050",
+				"semantic_derivative_alignment":     "0.180",
+			},
+		},
+		{
+			URL:   sourceURL,
+			Score: 1.60,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_family_evidence_mass",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":     "0.525",
+				"semantic_family_intent_topic":        "0.590",
+				"semantic_family_intent_merit":        "0.682",
+				"semantic_family_intent_origin":       "0.220",
+				"semantic_family_intent_derivative":   "0.080",
+				"semantic_family_intent_provenance":   "2",
+				"semantic_family_evidence_support":    "0.320",
+				"semantic_family_evidence_strong":     "2",
+				"semantic_family_evidence_provenance": "1",
+				"semantic_origin_alignment":           "0.220",
+				"semantic_derivative_alignment":       "0.080",
+			},
+		},
+	}
+	plan, _, _ := svc.buildQueryPlan(QueryRequest{Goal: "browser automation project", DiscoveryMode: QueryDiscoveryWeb}, core.ProfileTiny, "", QueryDiscoveryWeb)
+	plan.SelectedURL = derivativeURL
+	plan.CandidateURLs = []string{derivativeURL, sourceURL}
+	plan.CandidateDiagnostics = queryCandidateDiagnostics(candidates)
+
+	resp, err := svc.readQuerySelectedCandidate(context.Background(), QueryRequest{Goal: "browser automation project"}, core.ProfileTiny, QueryDiscoveryWeb, &plan, candidates)
+	if err != nil {
+		t.Fatalf("expected pre-read semantic fallback to succeed: %v", err)
+	}
+	if plan.SelectedURL != sourceURL || resp.Document.FinalURL != sourceURL {
+		t.Fatalf("expected source selection from pre-read validation, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	if hits["/derivative"] != 0 {
+		t.Fatalf("expected derivative selected candidate not to be read, got hits=%d", hits["/derivative"])
+	}
+	requireCompilerDecision(t, plan.Compiler.Decisions, QueryPlanReasonSelection, func(decision QueryPlanDecision) bool {
+		return decision.Stage == "select.pre_read_semantic_fallback"
+	})
+}
+
+func TestQueryPreReadSemanticFallbackDoesNotPromoteRedundantWithoutFamilyEvidence(t *testing.T) {
+	selectedURL := "https://source.example/docs"
+	redundantURL := "https://mirror.example/docs"
+	candidates := []DiscoverCandidate{
+		{
+			URL:   selectedURL,
+			Score: 6.50,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_derivative_surface_penalty",
+				"candidate_cluster_representative",
+				"semantic_provenance_identity",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.270",
+				"semantic_family_intent_topic":      "0.810",
+				"semantic_family_intent_merit":      "0.480",
+				"semantic_family_intent_origin":     "0.046",
+				"semantic_family_intent_derivative": "0.234",
+				"semantic_family_intent_provenance": "2",
+				"semantic_origin_similarity":        "0.120",
+				"semantic_derivative_similarity":    "0.234",
+			},
+		},
+		{
+			URL:   redundantURL,
+			Score: 6.20,
+			Reason: []string{
+				"semantic_goal_alignment",
+				"semantic_derivative_surface_penalty",
+				"candidate_cluster_redundant",
+				"semantic_provenance_identity",
+			},
+			Metadata: map[string]string{
+				"semantic_family_intent_identity":   "0.400",
+				"semantic_family_intent_topic":      "0.830",
+				"semantic_family_intent_merit":      "0.620",
+				"semantic_family_intent_origin":     "0.047",
+				"semantic_family_intent_derivative": "0.231",
+				"semantic_family_intent_provenance": "2",
+				"semantic_origin_similarity":        "0.120",
+				"semantic_derivative_similarity":    "0.231",
+			},
+		},
+	}
+	plan := QueryPlan{
+		SelectedURL:          selectedURL,
+		CandidateURLs:        []string{selectedURL, redundantURL},
+		CandidateDiagnostics: queryCandidateDiagnostics(candidates),
+	}
+
+	if fallback, ok := queryreview.PreReadFallbackCandidate("", QueryDiscoveryWeb, QueryDiscoveryWeb, queryReviewPlan(&plan), candidates); ok {
+		t.Fatalf("did not expect redundant candidate without family evidence to win, got %#v", fallback)
+	}
+}
+
+func TestQueryPreReadSemanticFallbackAllowsProvenanceIdentityAdvantage(t *testing.T) {
+	selected := queryreview.Diagnostic{
+		URL:                            "https://aggregate.example/pricing",
+		SemanticFamilyIntentIdentity:   0.34,
+		SemanticFamilyIntentMerit:      0.50,
+		SemanticFamilyIntentOrigin:     0.03,
+		SemanticFamilyIntentDerivative: 0.18,
+		Reasons: []string{
+			"semantic_derivative_surface_penalty",
+		},
+	}
+	challenger := queryreview.Diagnostic{
+		URL:                            "https://source.example/pricing",
+		SemanticFamilyIntentIdentity:   0.47,
+		SemanticFamilyIntentMerit:      0.66,
+		SemanticFamilyIntentOrigin:     0.04,
+		SemanticFamilyIntentDerivative: 0.22,
+		Reasons: []string{
+			"semantic_provenance_identity",
+			"candidate_cluster_redundant",
+		},
+	}
+
+	if !queryreview.PreReadChallengerBeatsSelected(selected, challenger) {
+		t.Fatal("expected provenance identity advantage to allow pre-read semantic fallback")
+	}
+}
+
+func TestQueryPreReadSemanticFallbackAllowsDerivativeRelief(t *testing.T) {
+	selected := queryreview.Diagnostic{
+		URL:                            "https://docs.example/topic",
+		SemanticFamilyIntentIdentity:   0.54,
+		SemanticFamilyIntentMerit:      0.64,
+		SemanticFamilyIntentDerivative: 0.22,
+		Reasons: []string{
+			"semantic_derivative_surface_penalty",
+		},
+	}
+	challenger := queryreview.Diagnostic{
+		URL:                            "https://source.example/",
+		SemanticFamilyIntentIdentity:   0.53,
+		SemanticFamilyIntentMerit:      0.69,
+		SemanticFamilyIntentDerivative: 0.16,
+		Reasons: []string{
+			"host_root_identity_probe",
+		},
+	}
+
+	if !queryreview.PreReadChallengerBeatsSelected(selected, challenger) {
+		t.Fatal("expected derivative relief to allow pre-read semantic fallback")
 	}
 }
 
@@ -615,7 +1006,15 @@ func TestQueryRequiresSeedWhenDiscoveryOff(t *testing.T) {
 	}
 }
 
-func TestQueryWithoutSeedUsesWebDiscovery(t *testing.T) {
+func TestQueryWithoutSeedRequiresExplicitWebSearch(t *testing.T) {
+	svc := newTestService(t, testConfig(), nil)
+	_, err := svc.Query(context.Background(), QueryRequest{Goal: "proof replay deterministic"})
+	if err == nil || !strings.Contains(err.Error(), "seedless discovery is experimental") || !strings.Contains(err.Error(), "explicit discovery_mode=web_search") {
+		t.Fatalf("expected explicit experimental opt-in error, got %v", err)
+	}
+}
+
+func TestQueryWithoutSeedUsesExplicitWebDiscovery(t *testing.T) {
 	docsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprint(w, `<html><head><title>Replay Guide</title></head><body><article><h1>Replay Guide</h1><p>Proof replay deterministic context for operators.</p></article></body></html>`)
@@ -632,16 +1031,17 @@ func TestQueryWithoutSeedUsesWebDiscovery(t *testing.T) {
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
-		Goal:    "proof replay deterministic",
-		Profile: core.ProfileTiny,
+		Goal:          "proof replay deterministic",
+		Profile:       core.ProfileTiny,
+		DiscoveryMode: QueryDiscoveryWeb,
 	})
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
 	if resp.Plan.DiscoveryMode != QueryDiscoveryWeb {
-		t.Fatalf("expected default no-seed discovery mode to switch to web, got %q", resp.Plan.DiscoveryMode)
+		t.Fatalf("expected explicit no-seed discovery mode to remain web, got %q", resp.Plan.DiscoveryMode)
 	}
-	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonSeedlessDefaultWeb, nil)
+	requireCompilerDecision(t, resp.Plan.Compiler.Decisions, QueryPlanReasonExperimentalWebOptIn, nil)
 	if resp.Plan.SeedURL != "" {
 		t.Fatalf("expected empty seed in plan, got %q", resp.Plan.SeedURL)
 	}
@@ -762,7 +1162,7 @@ func TestQuerySeedlessWebSearchUsesRewriteQueries(t *testing.T) {
 	svc := newTestService(t, cfg, pageServer.Client())
 	svc.SetWebDiscoverBaseURL(searchServer.URL)
 
-	resp, err := svc.Query(context.Background(), QueryRequest{Goal: "ASD Charly Brown dance school Alessandria"})
+	resp, err := svc.Query(context.Background(), QueryRequest{Goal: "ASD Charly Brown dance school Alessandria", DiscoveryMode: QueryDiscoveryWeb})
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
 	}
@@ -775,6 +1175,51 @@ func TestQuerySeedlessWebSearchUsesRewriteQueries(t *testing.T) {
 	rewrite := requireCompilerDecision(t, resp.Plan.Compiler.Decisions, queryplan.QueryPlanReasonRewrite, nil)
 	if rewrite.Metadata["query_count"] == "" {
 		t.Fatalf("missing rewrite metadata %#v", rewrite.Metadata)
+	}
+}
+
+func TestQuerySeedlessSkipsRewriteWhenBudgetIsLow(t *testing.T) {
+	pageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><head><title>Budgeted result</title></head><body><article><h1>Budgeted result</h1><p>Seedless query should keep first discovery when the rewrite budget is low.</p></article></body></html>`)
+	}))
+	defer pageServer.Close()
+
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><body><a class="result__a" href="%s/first">First result</a><a class="result__a" href="%s/second">Second result</a></body></html>`, pageServer.URL, pageServer.URL)
+	}))
+	defer searchServer.Close()
+
+	modelHits := 0
+	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		modelHits++
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []map[string]any{{"finish_reason": "stop", "message": map[string]any{"content": `{"search_queries":["refined query"],"canonical_entity":"Budgeted","confidence":0.9}`}}}})
+	}))
+	defer modelServer.Close()
+
+	cfg := testConfig()
+	cfg.Models.Backend = "openai-compatible"
+	cfg.Models.BaseURL = modelServer.URL
+	cfg.Models.Router = "gemma3:1b-it-q8_0"
+	cfg.Models.MicroTimeoutMS = 500
+	svc := newTestService(t, cfg, pageServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), seedlessRewriteMinTimeLeft-time.Second)
+	defer cancel()
+	resp, err := svc.Query(ctx, QueryRequest{Goal: "ambiguous budgeted result", DiscoveryMode: QueryDiscoveryWeb})
+	if err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if modelHits != 0 {
+		t.Fatalf("expected rewrite model to be skipped under low budget, got %d hits", modelHits)
+	}
+	if resp.Plan.SelectedURL == "" {
+		t.Fatal("expected first discovery selection to be preserved")
+	}
+	if hasCompilerDecision(resp.Plan.Compiler.Decisions, queryplan.QueryPlanReasonRewrite) {
+		t.Fatalf("did not expect rewrite decision under low budget")
 	}
 }
 
@@ -794,7 +1239,7 @@ func TestQueryDiscoveryOffGuidesOnSeed404(t *testing.T) {
 		t.Fatal("expected query to fail")
 	}
 	msg := err.Error()
-	if !strings.Contains(msg, "seed_url returned 404") || !strings.Contains(msg, "same_site_links") || !strings.Contains(msg, "web_search") {
+	if !strings.Contains(msg, "seed_url returned 404") || !strings.Contains(msg, "same_site_links") || !strings.Contains(msg, "web_read") || strings.Contains(msg, "web_search") {
 		t.Fatalf("unexpected guided error: %q", msg)
 	}
 }

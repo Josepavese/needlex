@@ -68,6 +68,9 @@ Default render backend:
 3. PAL browser path under `<state-root>/browsers`
 4. `render.enabled=true`
 5. `render.provider=exec-dump-dom`
+6. network-aware defaults for fetch/XHR, SSE, and WebSocket text payloads: 64 MB total, 64 MB per resource, 32 resources, 4096 messages
+
+The `exec-dump-dom` provider first uses Chrome DevTools Protocol to capture rendered DOM, final `location.href`, and relevant same-origin textual network payloads; browser `--dump-dom` remains a fallback. Experimental provider names that are not implemented are rejected by config validation.
 
 Use `NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1` only for controlled CI or packaging tests.
 

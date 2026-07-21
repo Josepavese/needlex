@@ -1,15 +1,17 @@
 ---
 name: needlex-web-retrieval
-description: Use Needle-X for AI-agent web retrieval, compact proof-backed page reading, seedless discovery, same-site exploration, lightweight scraping, source evidence gathering, and MCP/CLI web context workflows. Trigger this skill when a task involves web search, reading URLs, finding authoritative pages, extracting compact context from pages, comparing candidate sources, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
+description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
 # Needle-X Web Retrieval
 
 ## Purpose
 
-Use Needle-X to turn web pages and discovery tasks into compact, proof-backed context an AI agent can act on. Prefer it when the goal is to find the right source, summarize evidence, or retrieve semantic context with provenance.
+Use Needle-X to turn web pages selected by the host agent into compact, proof-backed context the agent can act on. The host agent owns search, candidate selection, research breadth, and source comparison. Needle-X owns token-efficient reading and evidence compilation for each URL the agent chooses to analyze.
 
-Use Needle-X first when the value is source discovery, compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Escalate when the task depends on rendering, exact bytes, full-document completeness, or authenticated state.
+Needle-X must not impose or suggest a numeric candidate limit. If the agent chooses to analyze one URL or one hundred URLs, use Needle-X for every selected URL as allowed by the host's execution and concurrency controls.
+
+Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Escalate when the task depends on rendering, exact bytes, full-document completeness, or authenticated state.
 
 ## Policy Compatibility
 
@@ -19,13 +21,12 @@ Needle-X does not override higher-priority browsing, citation, copyright, offici
 
 Use Needle-X when the task needs:
 
-1. fast source discovery from a natural-language goal
-2. compact context from a known URL
-3. proof-backed snippets and trace IDs
-4. same-site exploration from a seed URL
-5. lightweight scraping of text-heavy or documentation pages
-6. candidate URLs for official docs, APIs, policies, pricing, references, or support pages
-7. reduced context before sending material to an LLM
+1. compact context from a known URL
+2. proof-backed snippets and trace IDs
+3. same-site exploration from a verified seed URL
+4. lightweight extraction from text-heavy or documentation pages
+5. reduced context before sending material to an LLM
+6. consistent evidence packets across all URLs selected by the host agent
 
 Do not rely on Needle-X alone when the task needs:
 
@@ -36,14 +37,14 @@ Do not rely on Needle-X alone when the task needs:
 5. legal/compliance-grade full-document review where omitted text is unacceptable
 6. proof that a page is empty or missing when the result could be extraction loss
 
-For those cases, use Needle-X to find the source URL or evidence path, then escalate to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor.
+For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor.
 
 ## Tool Choice
 
 Prefer MCP tools when available:
 
-1. `web_read`: read one known URL and return compact proof-backed context.
-2. `web_query`: find and read the best page for a goal.
+1. `web_read`: primary tool; read one known URL and return compact proof-backed context.
+2. `web_query`: route within a known site or documentation family only when a verified `seed_url` is supplied.
 3. `web_crawl`: traverse bounded same-domain links from a seed URL.
 4. `web_proof`: inspect saved proof or trace records when evidence must be audited.
 5. `analytics`: advanced diagnostics only. Use `action="recent_runs"`, `action="stats"`, or `action="value_report"` when debugging retrieval behavior or showing value.
@@ -53,7 +54,6 @@ Use CLI fallback when MCP is unavailable:
 
 ```bash
 needlex read https://example.com --json
-needlex query --goal "find the official API authentication docs" --json
 needlex query https://example.com --goal "pricing" --json
 needlex crawl https://example.com --max-pages 10 --json
 needlex analytics stats
@@ -61,20 +61,21 @@ needlex analytics stats
 
 ## Examples
 
-1. Known docs URL: use `web_read` on the official page, answer from cited chunks, and keep proof/trace IDs when the answer is implementation-sensitive.
-2. Latest release/changelog: use `web_query` to find the likely official release page, verify the selected source is authoritative and current, then answer with the source URL.
-3. Same-site docs routing: use `web_query` with `seed_url` and `discovery_mode="same_site_links"` to find a specific concept inside a documentation family.
-4. Layout/table/assets needed: use Needle-X to locate the page, then switch to browser/raw/PDF/image tooling for exact rendered or binary content.
+1. Multi-source research: use the host agent's search tool to obtain candidate URLs, then call `web_read` with the same objective for every URL the agent chooses to analyze. The agent decides the count and comparison strategy.
+2. Known docs URL: use `web_read` on the official page, answer from cited chunks, and keep proof/trace IDs when the answer is implementation-sensitive.
+3. Latest release/changelog: search with the host agent's current-information tool, then use `web_read` on every selected release or changelog URL before answering.
+4. Same-site docs routing: use `web_query` with `seed_url` and `discovery_mode="same_site_links"` to find a specific concept inside a known documentation family.
+5. Layout/table/assets needed: use Needle-X to compact the page first, then switch to browser/raw/PDF/image tooling for exact rendered or binary content.
 
 ## Query Strategy
 
 Use `web_read` when the exact page URL is already known.
 
-Use `web_query` without `seed_url` only when no useful seed exists. This is seedless discovery; expect more provider noise and verify candidates.
+For research that starts from a natural-language question, use the host agent's own search tool first. Pass every URL the agent elects to analyze to a separate `web_read` call with the research objective. Run those calls concurrently when the host supports concurrency and the agent considers that appropriate.
 
 Use `web_query` with `seed_url` and `discovery_mode="same_site_links"` when the target is likely inside the same site or documentation family.
 
-Use `discovery_mode="off"` only for an exact canonical page that should be read directly. If that URL returns 404 or the content is not the intended page, do not retry `off`; switch to same-site discovery or seedless discovery.
+Use `discovery_mode="off"` only for an exact canonical page that should be read directly. If that URL returns 404 or is not the intended page, use same-site routing from a valid seed or return to the host agent's search tool for a verified replacement URL.
 
 Use `web_crawl` when the task is to map a small site area, not when the user needs one answer quickly.
 
@@ -94,8 +95,7 @@ Treat the compact result as the front door, not the whole truth. Check:
 3. `chunks`
 4. `proof_refs` or proof references inside chunks
 5. `uncertainty`
-6. `candidates` for discovery tasks
-7. `trace_id` when debugging or auditing
+6. `trace_id` when debugging or auditing
 
 If the answer depends on absent text, page structure, a table, a code block, or a binary asset that is not present in the compact context, assume possible extraction loss and escalate instead of guessing.
 
@@ -115,13 +115,13 @@ Escalate beyond Needle-X when:
 2. the page is heavily interactive or JavaScript-driven and Needle-X returns only shell text
 3. the compact packet lacks the field, row, code block, or asset the user asked about
 4. proof references are absent for a claim that needs verification
-5. `uncertainty` is high or candidate ranking looks semantically wrong
+5. `uncertainty` is high or the extracted evidence does not support the task
 6. a failed retrieval is a 404, block, timeout, or unsupported content type and another fetch method could reasonably recover
 
 When escalating, state why:
 
 ```text
-Needle-X found the likely documentation page, but the requested data depends on rendered table structure. I will use a browser/raw DOM path for that part.
+Needle-X compacted the selected documentation page, but the requested data depends on rendered table structure. I will use a browser/raw DOM path for that part.
 ```
 
 ## Output Discipline

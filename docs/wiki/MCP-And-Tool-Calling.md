@@ -69,7 +69,7 @@ Analytics actions:
 
 Canonical query discovery values:
 1. `same_site_links`
-2. `web_search`
+2. `web_search` (experimental explicit opt-in)
 3. `off`
 
 Agent note:
@@ -96,10 +96,12 @@ Tool scope rule:
 
 Agent routing rule:
 1. use `web_read` when the exact URL is known and page layout fidelity is not the goal
-2. use `web_query` when the agent has a goal and may need same-site routing, local memory, or public bootstrap
-3. omit `seed_url` for seedless discovery; Needle-X will consult Discovery Memory first and use public bootstrap only when needed
-4. use `memory` with `action="search"` to inspect local recall explicitly before spending public-provider budget
-5. use `discovery_mode=off` only after the exact canonical page has already been verified
+2. use the host agent's search tool to obtain candidate URLs, then call `web_read` for every URL the agent chooses to analyze
+3. do not impose a candidate limit; breadth and concurrency belong to the host agent
+4. use `web_query` with a verified `seed_url` for same-site routing
+5. use `memory` with `action="search"` only for explicit local recall inspection
+6. use `discovery_mode=off` only after the exact canonical page has already been verified
+7. omit `seed_url` only for explicit experimental testing with `discovery_mode="web_search"`; this mode is never an automatic fallback
 
 ## Provider Catalogs
 

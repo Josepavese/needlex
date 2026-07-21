@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/josepavese/needlex/internal/core"
+	coreservice "github.com/josepavese/needlex/internal/core/service"
 )
 
 func TestCompareReportsDetectsWebIRRegressions(t *testing.T) {
@@ -188,5 +191,51 @@ func TestLoadCasesRetainsFamily(t *testing.T) {
 	}
 	if cases[0].Family != "docs" {
 		t.Fatalf("expected family retained, got %#v", cases[0])
+	}
+}
+
+func TestReadQualityFailureRejectsUnrenderedClientShell(t *testing.T) {
+	resp := coreservice.ReadResponse{
+		Document: core.Document{FetchMode: "req"},
+		WebIR: core.WebIR{
+			NodeCount: 2,
+			Signals:   core.WebIRSignals{SubstrateClass: "client_rendered_app"},
+		},
+	}
+	if got := readQualityFailure(resp, "Carratelli", 0.33); got != "client_rendered_shell_unrendered" {
+		t.Fatalf("expected client rendered shell failure, got %q", got)
+	}
+
+	resp.Document.FetchMode = "render"
+	resp.WebIR.Signals.SourceKind = "rendered_dom"
+	if got := readQualityFailure(resp, "Carratelli rendered content with enough context", 0.33); got != "" {
+		t.Fatalf("expected rendered DOM to pass shell guard, got %q", got)
+	}
+}
+
+func TestSummarizeResultsClassifiesBaselineShellFailure(t *testing.T) {
+	rep := summarizeResults([]caseResult{
+		{
+			Name:   "carratellire",
+			Family: "corporate",
+			Baseline: readMetrics{
+				Success:          false,
+				Error:            "client_rendered_shell_unrendered",
+				LatencyMS:        100,
+				ContextAlignment: 0.33,
+			},
+		},
+	}, false)
+	if rep.BaselineSuccessRate != 0 {
+		t.Fatalf("expected failed baseline success rate, got %#v", rep)
+	}
+	if len(rep.RuntimeErrorCases) != 1 || rep.RuntimeErrorCases[0] != "carratellire" {
+		t.Fatalf("expected baseline runtime error case, got %#v", rep.RuntimeErrorCases)
+	}
+	if len(rep.FailureClusters) != 1 || rep.FailureClusters[0] != "client_rendered_shell" {
+		t.Fatalf("expected client rendered shell cluster, got %#v", rep.FailureClusters)
+	}
+	if len(rep.Families) != 1 || rep.Families[0].RuntimeErrorCount != 1 {
+		t.Fatalf("expected family runtime error count, got %#v", rep.Families)
 	}
 }

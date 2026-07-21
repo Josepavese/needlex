@@ -41,33 +41,26 @@ This is the current sweet spot:
 
 ![Needle-X Metrics](docs/assets/readme-metrics-2.png)
 
-## Discovery Memory
+## Agent Retrieval Workflow
 
-Needle-X includes local `Discovery Memory` backed by SQLite.
+Needle-X is the compact reading layer after search:
+1. the host agent uses its own search tool to obtain candidate URLs
+2. the agent decides which URLs to analyze and how many; Needle-X imposes no candidate limit
+3. the agent calls `web_read` for every selected URL, passing the research objective
+4. Needle-X returns compact, proof-carrying context for comparison and synthesis
+5. the agent escalates to browser, raw fetch, PDF, or domain-specific tooling only when exact layout, bytes, or missing content matter
 
-The story is simple:
-1. first run observes and compiles
-2. later runs reuse local verified evidence
-3. repeated use improves local retrieval without hosted infra
-
-Discovery Memory is enabled by default and stored in the PAL state root. Dense embeddings are mandatory: the installer creates a PAL SSOT config at `<state-root>/configs/needlex.json` with local Ollama `embeddinggemma` as the default no-key embedding backend.
+This keeps responsibilities explicit: the agent controls discovery strategy and breadth; Needle-X optimizes the evidence read from each chosen source.
 
 Current verified seeded result on `seeded-corpus-v2`:
 1. **100/100** selected-url correctness
 2. **100/100** proof usability
 3. **100/100** runtime success
 
-Guardrail:
-1. seeded-runtime claim
-2. not a blanket cold-state open-web seedless claim
-3. Discovery Memory warm-state stress is tracked separately from the seeded runtime score
-
-![Needle-X Discovery Memory](docs/assets/readme-memory.png)
-
 ## What It Does
 
 1. `read`
-2. `query`
+2. seeded `query`
 3. `crawl`
 4. `proof`
 5. `replay`
@@ -93,7 +86,7 @@ The non-core `memory` and `analytics` surfaces use an explicit `action` paramete
 ## Tiny Demo
 
 ```bash
-needlex read https://example.com --json
+needlex read https://example.com --objective "pricing and cancellation policy" --json
 needlex query https://example.com --goal "pricing" --json
 needlex proof proof_1 --json
 needlex analytics stats
@@ -144,7 +137,7 @@ needlex config set semantic.provider_model nomic-embed-text:latest
 
 ## Agent Skill
 
-Needle-X also ships an optional Codex skill that tells agents when to use Needle-X for web retrieval, when to escalate to browser/raw fetch tools, and how to avoid treating compact context as full DOM coverage.
+Needle-X also ships an optional Codex skill that tells agents to obtain candidate URLs with their own search tool, compile every URL they choose with Needle-X, escalate when needed, and avoid treating compact context as full DOM coverage.
 
 Skill path:
 1. [skills/needlex-web-retrieval](skills/needlex-web-retrieval)
@@ -170,5 +163,4 @@ After installing the skill, restart Codex so it can discover it.
 2. [Install](docs/wiki/Install.md)
 3. [CLI](docs/wiki/CLI.md)
 4. [MCP And Tool Calling](docs/wiki/MCP-And-Tool-Calling.md)
-5. [Discovery Memory](docs/wiki/Discovery-Memory.md)
-6. [Benchmarks](docs/wiki/Benchmarks.md)
+5. [Benchmarks](docs/wiki/Benchmarks.md)

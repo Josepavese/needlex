@@ -58,8 +58,6 @@ func ambiguityRoutingSuppressed(webIR core.WebIR, candidates []rankedSegment, de
 	switch strings.TrimSpace(webIR.Signals.SubstrateClass) {
 	case "embedded_app_payload":
 		return true
-	case "theme_heavy_wordpress":
-		return ambiguityStructurallyResolved(candidates, decisions, 0.82)
 	default:
 		return ambiguityStructurallyResolved(candidates, decisions, 0.86)
 	}
@@ -139,9 +137,6 @@ func ambiguityStructurallyResolved(candidates []rankedSegment, decisions map[str
 }
 
 func candidateNeedsAmbiguityRoute(webIR core.WebIR, item rankedSegment, decision intel.Decision) bool {
-	if strings.TrimSpace(webIR.Signals.SubstrateClass) == "theme_heavy_wordpress" && !hasStrictAmbiguityRisk(decision.RiskFlags) {
-		return false
-	}
 	if decision.Lane >= 1 && hasStrictAmbiguityRisk(decision.RiskFlags) {
 		return true
 	}

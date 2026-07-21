@@ -22,7 +22,7 @@ For agent-facing consumption, prefer the compact agent-facing fields first:
 2. inline `source_url`
 3. inline `source_selector`
 4. inline `proof_ref`
-5. candidate URLs for seedless discovery
+5. candidate diagnostics for seeded same-site routing when applicable
 
 In CLI compact JSON these show up primarily as:
 1. `chunks`
@@ -73,6 +73,12 @@ Fetch profile rule:
 2. retry default is `hardened`
 3. use `standard` only for benchmark/debug comparability
 
+Render rule:
+1. render is enabled by default after installation
+2. before render, Needle-X probes agent-readable standards such as declared links, Markdown variants, `llms.txt`, API catalogs, OpenAPI/Swagger paths, robots and sitemaps
+3. when render runs, the trace `render` stage reports DOM render status plus network evidence counters such as `network_resources`, `event_source_messages`, `websocket_messages`, `network_bytes`, `network_truncated`, and `network_idle_reason`
+4. `network_truncated=true` means captured payloads hit configured `render.network_*` budgets
+
 Example benchmark override:
 
 ```bash
@@ -81,7 +87,7 @@ NEEDLEX_FETCH_PROFILE=standard NEEDLEX_FETCH_RETRY_PROFILE=standard needlex read
 
 ### Query
 
-Use `query` when you have a goal and optionally a seed URL.
+Use `query` when you have a goal and a seed URL.
 
 Seeded query:
 
@@ -95,13 +101,20 @@ Full diagnostic query payload:
 needlex query https://example.com --goal "company profile" --json --json-mode full
 ```
 
-Unseeded query with bootstrap discovery:
+For open-web research, the stable workflow is:
+1. obtain candidate URLs with the host agent's search tool
+2. let the agent decide how many URLs to analyze
+3. call `web_read` with the same objective for every selected URL
+
+Needle-X does not impose a candidate limit.
+
+Experimental seedless query requires explicit opt-in:
 
 ```bash
-needlex query --goal "company profile" --json
+needlex query --goal "company profile" --discovery web_search --json
 ```
 
-Bootstrap discovery provider order is SSOT-driven. Current default chain:
+This is a benchmark/development surface, not the stable agent workflow. Its provider order is SSOT-driven. Current default chain:
 1. `lite.duckduckgo.com`
 2. `html.duckduckgo.com`
 3. `www.bing.com`
@@ -213,7 +226,7 @@ Look at `web_ir_summary` first. Use full `web_ir` only when you need to understa
 
 Use it to answer:
 1. did the runtime see heading-backed structure?
-2. did embedded or app-shell evidence dominate?
+2. did embedded or client-rendered surface evidence dominate?
 3. was the page mostly noise or usable content?
 
 ### 3. Proof
@@ -410,7 +423,7 @@ Operator rule:
 3. `memory export` and `memory import` are operator tools for portability, backup, and warm-state seeding
 4. `memory rebuild-index` is the maintenance path after bulk import or index drift
 5. the canonical store is SQLite under `<state-root>/discovery/`
-6. for seedless `query`, proof-backed memory can short-circuit public bootstrap
+6. for experimental seedless `query`, proof-backed memory can short-circuit public bootstrap
 
 Evaluation artifacts live under `improvements/`.
 
@@ -431,7 +444,7 @@ This matters operationally:
 1. most runs stay deterministic
 2. model activation is bounded and visible in proof/trace
 3. surface-form overlap is not the primary meaning judge
-4. seedless web discovery provider order is part of config, not a hidden default
+4. experimental seedless provider order is part of config and requires explicit `web_search` opt-in
 
 ## Baseline Commands
 

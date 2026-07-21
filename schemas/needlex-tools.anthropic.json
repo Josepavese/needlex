@@ -65,19 +65,31 @@
     },
     {
       "name": "web_query",
-      "description": "Plan and execute a goal-oriented query with optional seed URL. Discovery Memory is consulted first for seedless queries; web_search is public bootstrap fallback. Internally, Needle-X records semantic family evidence and provider observations for future seedless reuse. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page.",
+      "description": "Plan and execute a goal-oriented query from a seed URL. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page. Seedless web_search is experimental, explicit opt-in, and must never be selected automatically.",
       "input_schema": {
         "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "seed_url"
+            ]
+          },
+          {
+            "properties": {
+              "discovery_mode": {
+                "const": "web_search"
+              }
+            },
+            "required": [
+              "discovery_mode"
+            ]
+          }
+        ],
         "examples": [
           {
             "discovery_mode": "same_site_links",
             "goal": "Find authentication flow details",
             "seed_url": "https://agentclientprotocol.com/protocol/overview"
-          },
-          {
-            "discovery_mode": "web_search",
-            "goal": "OpenAI API pricing",
-            "retrieval_effort": "standard"
           },
           {
             "discovery_mode": "off",
@@ -87,7 +99,7 @@
         ],
         "properties": {
           "discovery_mode": {
-            "description": "Discovery strategy. same_site_links = follow links from the seed site. web_search = bootstrap with search. off = do not expand beyond the seed URL and should be used only after the exact page has already been verified.",
+            "description": "Discovery strategy. same_site_links = follow links from the seed site. off = do not expand beyond an exact verified seed URL. web_search = EXPERIMENTAL seedless public bootstrap and must be selected explicitly when seed_url is omitted; never choose it automatically.",
             "enum": [
               "same_site_links",
               "web_search",
@@ -125,7 +137,7 @@
             "type": "string"
           },
           "seed_url": {
-            "description": "Optional starting URL. If present, same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist.",
+            "description": "Starting URL for stable use. same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist. Omit only for explicit experimental web_search.",
             "type": "string"
           },
           "user_agent": {
@@ -140,7 +152,7 @@
     },
     {
       "name": "web_read",
-      "description": "Read one URL and return compact proof-carrying context first. Successful reads automatically feed local Discovery Memory, semantic family graph evidence, and Analytics PAL for future seedless reuse.",
+      "description": "Read one known URL and return compact proof-carrying context first. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [

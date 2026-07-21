@@ -62,12 +62,15 @@ That alignment is enforced by tests.
 
 If you wire Needle-X into an AI tool-calling stack:
 1. prefer `web_read` for single-page compilation
-2. prefer `web_query` for goal-oriented retrieval
-3. use `web_proof` to convert claims into source-backed evidence
-4. keep `web_replay` and `web_diff` for audit/debug flows, not default agent loops
-5. keep `web_prune` as an operator tool, not a model-default tool; use `embedding_cache=true` only for explicit PAL embedding cache maintenance
-6. use `memory` only for advanced local semantic memory inspection or maintenance
-7. use `analytics` only for diagnostics, value reporting, or maintainer rollups
+2. use the host agent's search tool to obtain candidate URLs, then call `web_read` for every URL the agent chooses to analyze
+3. use `web_query` only with a verified seed URL for goal-oriented same-site routing
+4. use `web_proof` to convert claims into source-backed evidence
+5. keep `web_replay` and `web_diff` for audit/debug flows, not default agent loops
+6. keep `web_prune` as an operator tool, not a model-default tool; use `embedding_cache=true` only for explicit PAL embedding cache maintenance
+7. use `memory` only for advanced local semantic memory inspection or maintenance
+8. use `analytics` only for diagnostics, value reporting, or maintainer rollups
+
+Needle-X does not set a candidate-count policy. Search breadth, URL selection, concurrency, and research budget belong to the host agent.
 
 `memory` and `analytics` are dispatch tools with an `action` parameter.
 They intentionally replace many narrower MCP tools to reduce provider-side tool-list context.
@@ -100,12 +103,15 @@ Analytics actions:
 
 For `web_query`, use the canonical `discovery_mode` values:
 1. `same_site_links` to expand from the seed site
-2. `web_search` to bootstrap with search
+2. `web_search` only as explicit experimental seedless opt-in
 3. `off` for strict seeded mode
 
-Strict mode note:
+Contract note:
 1. Needle-X accepts only the canonical values above
 2. non-canonical spellings such as `same-site` or `web-search` are rejected
+3. stable `web_query` calls require `seed_url`
+4. omitting `seed_url` requires explicit `discovery_mode="web_search"`; omission never selects public bootstrap automatically
+5. stable agent workflows should search with the host tool and call `web_read` for each agent-selected URL
 
 ### Retrieval Effort
 

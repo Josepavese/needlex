@@ -8,7 +8,7 @@ import (
 
 func TestQueryCompilerLifecycleValidatesRequiredStages(t *testing.T) {
 	cfg := config.Defaults()
-	base := BuildQueryCompiler("", "", "web_search", "find protocol authentication flow", "standard", 0, cfg.Budget, cfg.Runtime)
+	base := BuildQueryCompiler("", "web_search", "web_search", "find protocol authentication flow", "standard", 0, cfg.Budget, cfg.Runtime)
 	candidates := []Candidate{
 		{URL: "https://example.com/docs/auth", Score: 1.2, Reason: []string{"semantic_goal_alignment"}, Metadata: map[string]string{"semantic_goal_similarity": "0.710"}},
 		{URL: "https://example.com/blog", Score: 0.7, Reason: []string{"structure_hint"}},
@@ -30,14 +30,14 @@ func TestQueryCompilerLifecycleValidatesRequiredStages(t *testing.T) {
 	}
 }
 
-func TestBuildQueryCompilerExplainsSeedlessDefaultWebSearch(t *testing.T) {
+func TestBuildQueryCompilerExplainsExperimentalWebSearchOptIn(t *testing.T) {
 	cfg := config.Defaults()
-	plan := BuildQueryCompiler("", "", "web_search", "trova documentazione autorevole", "standard", 0, cfg.Budget, cfg.Runtime)
+	plan := BuildQueryCompiler("", "web_search", "web_search", "trova documentazione autorevole", "standard", 0, cfg.Budget, cfg.Runtime)
 	if got := plan.Decisions[0].ReasonCode; got != QueryPlanReasonSeedMissing {
 		t.Fatalf("seed reason got %q want %q", got, QueryPlanReasonSeedMissing)
 	}
-	if got := plan.Decisions[1].ReasonCode; got != QueryPlanReasonSeedlessDefaultWeb {
-		t.Fatalf("discovery reason got %q want %q", got, QueryPlanReasonSeedlessDefaultWeb)
+	if got := plan.Decisions[1].ReasonCode; got != QueryPlanReasonExperimentalWebOptIn {
+		t.Fatalf("discovery reason got %q want %q", got, QueryPlanReasonExperimentalWebOptIn)
 	}
 }
 

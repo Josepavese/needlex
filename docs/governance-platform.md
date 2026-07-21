@@ -117,6 +117,27 @@ Current calibration:
 2. target LOC pressure is aligned to the current semantic, analytics, memory, provider-diversity, and discovery-diagnostics production surface
 3. future LOC wins should ratchet `TARGET_MAX_PROD_LOC` and `TARGET_MAX_PACKAGE_LOC` down after measurable cleanup
 
+### v0.1.33 strategic recalibration
+
+The v0.1.33 baseline was recalibrated only after a structural reduction pass.
+The production surface now includes agent-readable standards, network-aware PAL rendering, and semantic query review. Removing those substrates merely to recover the former total-LOC ceiling would reduce product behavior.
+
+The compensating structural results are measured rather than assumed:
+- average Go file size fell from 225 to 192 LOC
+- files over 300 LOC fell from 37 to 27
+- files over 350 LOC fell from 28 to 22
+- the largest file fell from 1,895 to 798 LOC
+- the largest package fell from 8,605 to 6,650 LOC
+- deprecated WebSocket usage was removed and `staticcheck` is green
+
+Accordingly, only two hard limits changed:
+- production LOC: `30,500` to `34,500`, with target pressure at `34,000`
+- direct runtime dependencies: `4` to `5`, with target pressure at `4`
+
+The dependency count is deliberately truthful. `go mod tidy` classified every imported module as direct; the runtime uses HTTP, HTML, SQLite memory, YAML standards parsing, and maintained WebSocket/CDP transport. Marking an imported dependency as indirect to satisfy the old gate would hide architecture rather than improve it.
+
+Zero-legacy cleanup accompanied the recalibration: the unused remote-CDP configuration field and its environment/CLI aliases were removed, the deprecated WebSocket module was replaced, and extracted packages expose their real APIs without service-layer compatibility shims.
+
 ## Processes
 
 ### Standard local check

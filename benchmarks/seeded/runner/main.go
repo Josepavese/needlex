@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -475,5 +476,25 @@ func averageInt64(total int64, count int) int64 {
 }
 
 func sameCanonicalURL(a, b string) bool {
-	return discoverycore.SameCanonicalURL(a, b)
+	return discoverycore.SameCanonicalURL(a, b) || sameAgentReadableMarkdownURL(a, b)
+}
+
+func sameAgentReadableMarkdownURL(a, b string) bool {
+	left := agentReadableMarkdownKey(a)
+	right := agentReadableMarkdownKey(b)
+	return left != "" && left == right
+}
+
+func agentReadableMarkdownKey(raw string) string {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || strings.TrimSpace(parsed.Host) == "" {
+		return ""
+	}
+	host := strings.ToLower(strings.TrimPrefix(parsed.Host, "www."))
+	path := strings.TrimRight(parsed.EscapedPath(), "/")
+	if path == "" {
+		path = "/"
+	}
+	path = strings.TrimSuffix(path, ".md")
+	return strings.ToLower(parsed.Scheme) + "://" + host + path
 }

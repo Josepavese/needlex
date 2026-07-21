@@ -212,7 +212,7 @@ func runWarmup(binaryPath, workDir, configPath, pageURL string) error {
 }
 
 func runQueryStage(binaryPath, workDir, configPath string, item seededCase) stageResult {
-	out, err := runNeedle(binaryPath, workDir, "query", "--goal", item.Goal, "--json", "--config", configPath)
+	out, err := runNeedle(binaryPath, workDir, "query", "--goal", item.Goal, "--discovery", "web_search", "--json", "--config", configPath)
 	if err != nil {
 		return stageResult{Error: err.Error(), FailureClasses: []string{classifyExecError(err.Error())}}
 	}
