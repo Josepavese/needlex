@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/proof"
 )
 
 func TestCompactReadResponseLimitsChunksAndCleansDisplay(t *testing.T) {
@@ -120,5 +122,54 @@ func TestCleanDisplayStringTightensPunctuation(t *testing.T) {
 	got := cleanDisplayString("small , fast , self-contained .")
 	if got != "small, fast, self-contained." {
 		t.Fatalf("unexpected cleaned string %q", got)
+	}
+}
+
+func TestCompactSignalsReportRenderNetworkProvenance(t *testing.T) {
+	trace := proof.RunTrace{Stages: []proof.StageSnapshot{{
+		Stage: "render",
+		Metadata: map[string]string{
+			"rendered":          "true",
+			"render_path":       "cdp",
+			"network_resources": "3",
+			"network_bytes":     "4096",
+			"network_truncated": "true",
+		},
+	}}}
+	signals := compactSignalsFor(nil, core.WebIR{}, trace)
+	if signals.ContentSource != "dom+network" || signals.NetworkResources != 3 || signals.NetworkBytes != 4096 || !signals.NetworkTruncated {
+		t.Fatalf("expected network provenance, got %#v", signals)
+	}
+}
+
+func TestCompactSignalsReportRenderedDOMWithoutNetworkEvidence(t *testing.T) {
+	trace := proof.RunTrace{Stages: []proof.StageSnapshot{{
+		Stage:    "render",
+		Metadata: map[string]string{"rendered": "true", "render_path": "cdp", "network_resources": "0", "network_bytes": "0"},
+	}}}
+	signals := compactSignalsFor(nil, core.WebIR{}, trace)
+	if signals.ContentSource != "dom" {
+		t.Fatalf("expected rendered DOM provenance, got %#v", signals)
+	}
+	if signals.NetworkResources != 0 || signals.NetworkBytes != 0 || signals.NetworkTruncated {
+		t.Fatalf("expected no network evidence, got %#v", signals)
+	}
+}
+
+func TestCompactSignalsStayEmptyForStaticReads(t *testing.T) {
+	signals := compactSignalsFor(nil, core.WebIR{}, proof.RunTrace{})
+	if signals.ContentSource != "" || signals.RenderDegraded {
+		t.Fatalf("expected static read to stay free of render provenance, got %#v", signals)
+	}
+}
+
+func TestCompactSignalsReportDegradedFallback(t *testing.T) {
+	trace := proof.RunTrace{Stages: []proof.StageSnapshot{{
+		Stage:    "render",
+		Metadata: map[string]string{"rendered": "true", "render_path": "dump_dom", "render_degraded": "true"},
+	}}}
+	signals := compactSignalsFor(nil, core.WebIR{}, trace)
+	if !signals.RenderDegraded || signals.ContentSource != "dom" {
+		t.Fatalf("expected degraded dom provenance, got %#v", signals)
 	}
 }

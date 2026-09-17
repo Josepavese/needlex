@@ -970,7 +970,7 @@ func TestReadAutoRenderSkipsWhenContextDeadlineIsTooClose(t *testing.T) {
 	}
 }
 
-func TestReadAutoRenderUsesDeadlineBoundedTimeout(t *testing.T) {
+func TestReadAutoRenderUsesAdaptiveNetworkBudget(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprint(w, `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main></body></html>`)
@@ -984,7 +984,7 @@ func TestReadAutoRenderUsesDeadlineBoundedTimeout(t *testing.T) {
 	renderer := &countingRenderer{page: rendering.Page{
 		URL:       server.URL,
 		FinalURL:  server.URL,
-		HTML:      `<html><head><title>Rendered</title></head><body><article><h1>Rendered</h1><p>Bounded render timeout.</p></article></body></html>`,
+		HTML:      `<html><head><title>Rendered</title></head><body><article><h1>Rendered</h1><p>Adaptive render budget.</p></article></body></html>`,
 		Browser:   "fake",
 		Duration:  time.Millisecond,
 		FetchedAt: time.Unix(1700000000, 0).UTC(),
@@ -1003,8 +1003,46 @@ func TestReadAutoRenderUsesDeadlineBoundedTimeout(t *testing.T) {
 	if resp.Document.FetchMode != core.FetchModeRender {
 		t.Fatalf("expected render fetch mode, got %q", resp.Document.FetchMode)
 	}
-	if renderer.lastRequest.Timeout > sourceresolution.AutoRenderDeadlineTimeout {
-		t.Fatalf("expected bounded render timeout <= %s, got %s", sourceresolution.AutoRenderDeadlineTimeout, renderer.lastRequest.Timeout)
+	if renderer.lastRequest.Timeout <= 8*time.Second {
+		t.Fatalf("expected render budget beyond the former fixed cap, got %s", renderer.lastRequest.Timeout)
+	}
+	if limit := 18 * time.Second; renderer.lastRequest.Timeout > limit {
+		t.Fatalf("expected render timeout bounded by the remaining deadline <= %s, got %s", limit, renderer.lastRequest.Timeout)
+	}
+}
+
+func TestReadAutoRenderSkipsNonHTMLLikeContent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = fmt.Fprint(w, "Plain registrar listing")
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, server.Client())
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><body><pre>Plain registrar listing</pre></body></html>`,
+		Browser:   "fake",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:     server.URL,
+		Profile: core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if renderer.calls != 0 {
+		t.Fatalf("expected no browser render for non-HTML content, got %d calls", renderer.calls)
+	}
+	if resp.Document.FetchMode == core.FetchModeRender {
+		t.Fatal("did not expect render fetch mode for non-HTML content")
 	}
 }
 
@@ -1139,4 +1177,151 @@ func TestRenderNetworkEvidenceTextPreservesUsefulURLsAndSanitizesSensitiveQuerie
 	if strings.Contains(text, "photo.jpg") {
 		t.Fatalf("expected media asset URL to be filtered, got %q", text)
 	}
+}
+
+func TestReadEscalatesToRenderOnSemanticCoverageGap(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><head><title>Registrar Overview</title></head><body><main><h1>Registrar overview</h1><p>%s</p><p>%s</p></main></body></html>`,
+			strings.Repeat("Registry policy text ", 20), strings.Repeat("Registrar listing detail ", 20))
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, server.Client())
+	svc.semantic = fakeSemanticAligner{}
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Registrar Overview</title></head><body><article><h1>Registrar overview</h1><p>Materialized application data: 852 registrar records with pricing.</p></article></body></html>`,
+		Browser:   "fake cdp",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Objective: "Extract registrar pricing and policy details",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if renderer.calls != 1 {
+		t.Fatalf("expected exactly one semantic escalation render, got %d", renderer.calls)
+	}
+	if resp.Document.FetchMode != core.FetchModeRender {
+		t.Fatalf("expected render fetch mode, got %q", resp.Document.FetchMode)
+	}
+	metadata := renderStageMetadata(t, resp.Trace)
+	if metadata["semantic_gap_similarity"] == "" {
+		t.Fatalf("expected semantic gap similarity in render metadata, got %#v", metadata)
+	}
+	if !renderEscalationReasons(resp.Trace)["semantic_coverage_gap"] {
+		t.Fatalf("expected semantic_coverage_gap reason in render escalation, got %#v", resp.Trace.Events)
+	}
+}
+
+func TestReadKeepsStaticContentWhenSemanticCoverageHolds(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><head><title>Registrar Overview</title></head><body><main><h1>Registrar overview</h1><p>%s</p><p>%s</p></main></body></html>`,
+			strings.Repeat("Registry policy text ", 20), strings.Repeat("Registrar listing detail ", 20))
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, server.Client())
+	svc.semantic = fakeSemanticAligner{suppressed: true, reason: "semantic_dominance"}
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><body><article><h1>Rendered</h1><p>Should stay unused.</p></article></body></html>`,
+		Browser:   "fake cdp",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Objective: "Extract registrar pricing and policy details",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if renderer.calls != 0 {
+		t.Fatalf("expected static content to satisfy the objective without render, got %d calls", renderer.calls)
+	}
+	if resp.Document.FetchMode == core.FetchModeRender {
+		t.Fatal("did not expect render fetch mode when semantic coverage holds")
+	}
+}
+
+func TestReadSkipsSemanticRenderGapForPlaceholderObjective(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><head><title>Registrar Overview</title></head><body><main><h1>Registrar overview</h1><p>%s</p><p>%s</p></main></body></html>`,
+			strings.Repeat("Registry policy text ", 20), strings.Repeat("Registrar listing detail ", 20))
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, server.Client())
+	svc.semantic = fakeSemanticAligner{}
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><body><article><h1>Rendered</h1><p>Should stay unused.</p></article></body></html>`,
+		Browser:   "fake cdp",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:       server.URL,
+		Objective: "crawl",
+		Profile:   core.ProfileStandard,
+	})
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if renderer.calls != 0 {
+		t.Fatalf("expected placeholder objective to stay out of semantic escalation, got %d calls", renderer.calls)
+	}
+	if resp.Document.FetchMode == core.FetchModeRender {
+		t.Fatal("did not expect render fetch mode for placeholder objective")
+	}
+}
+
+func renderStageMetadata(t *testing.T, trace proof.RunTrace) map[string]string {
+	t.Helper()
+	for _, stage := range trace.Stages {
+		if stage.Stage == "render" {
+			return stage.Metadata
+		}
+	}
+	t.Fatalf("expected render stage in trace, got %#v", trace.Stages)
+	return nil
+}
+
+func renderEscalationReasons(trace proof.RunTrace) map[string]bool {
+	out := map[string]bool{}
+	for _, event := range trace.Events {
+		if event.Type != proof.EventEscalationTriggered {
+			continue
+		}
+		for _, reason := range strings.Split(event.Data["reasons"], ",") {
+			if trimmed := strings.TrimSpace(reason); trimmed != "" {
+				out[trimmed] = true
+			}
+		}
+	}
+	return out
 }

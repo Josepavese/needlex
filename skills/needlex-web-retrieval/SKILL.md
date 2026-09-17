@@ -95,7 +95,16 @@ Treat the compact result as the front door, not the whole truth. Check:
 3. `chunks`
 4. `proof_refs` or proof references inside chunks
 5. `uncertainty`
-6. `trace_id` when debugging or auditing
+6. `signals.content_source` when the page loads content dynamically
+7. `trace_id` when debugging or auditing
+
+`signals.content_source` reports where the compiled content came from:
+
+1. absent: the page was read without browser rendering
+2. `dom`: the page was rendered and the content comes from the rendered DOM
+3. `dom+network`: the page was rendered and application data captured from fetch, XHR, SSE, or WebSocket payloads also contributed content
+4. `signals.network_truncated`: captured application data was cut by budget or a stream was still open, so more data exists upstream
+5. `signals.render_degraded`: the browser path failed and only a DOM dump was available, so application data was not captured
 
 If the answer depends on absent text, page structure, a table, a code block, or a binary asset that is not present in the compact context, assume possible extraction loss and escalate instead of guessing.
 
@@ -106,6 +115,7 @@ Anti-overclaim checklist:
 3. uncertainty does not undermine the answer
 4. missing tables, code, assets, or layout are not silently inferred
 5. fallback or escalation is used when compact context is insufficient
+6. `content_source` is checked before claiming a dynamic page has no more data
 
 ## Escalation Rules
 
@@ -117,6 +127,8 @@ Escalate beyond Needle-X when:
 4. proof references are absent for a claim that needs verification
 5. `uncertainty` is high or the extracted evidence does not support the task
 6. a failed retrieval is a 404, block, timeout, or unsupported content type and another fetch method could reasonably recover
+
+Before leaving Needle-X for rule 2 or 3, retry the same URL once with `render: "required"`. That forces browser rendering with application-data capture and fails loudly when the rendered DOM cannot be obtained. Only escalate to an external browser path if the forced render still misses the data or reports `network_truncated` for the field you need.
 
 When escalating, state why:
 

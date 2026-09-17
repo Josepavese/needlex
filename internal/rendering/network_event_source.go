@@ -47,6 +47,37 @@ func (c *networkCollector) handleEventSourceMessage(params json.RawMessage) {
 	c.markEventSourceActivity()
 }
 
+func (c *networkCollector) isStreamingResponse(res *NetworkResource) bool {
+	if res == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(res.Type)) {
+	case "xhr", "fetch":
+	default:
+		return false
+	}
+	contentType := strings.ToLower(res.ContentType)
+	return strings.Contains(contentType, "event-stream") ||
+		strings.Contains(contentType, "ndjson") ||
+		strings.Contains(contentType, "stream")
+}
+
+func (c *networkCollector) handleDataReceived(params json.RawMessage) {
+	var event struct {
+		RequestID string `json:"requestId"`
+	}
+	if json.Unmarshal(params, &event) != nil || strings.TrimSpace(event.RequestID) == "" {
+		return
+	}
+	if _, ok := c.activeStreams[event.RequestID]; ok {
+		c.markStreamActivity()
+		return
+	}
+	if _, ok := c.activeEventSources[event.RequestID]; ok {
+		c.markEventSourceActivity()
+	}
+}
+
 func (c *networkCollector) handleWebSocketCreated(params json.RawMessage) {
 	var event struct {
 		RequestID string `json:"requestId"`
@@ -236,7 +267,20 @@ func (c *networkCollector) appendResponseBody(requestID, data string) {
 }
 
 func (c *networkCollector) markBodyUnavailable(requestID string) {
-	if c.resources[requestID] != nil {
-		c.bodyUnavailableCount++
+	res := c.resources[requestID]
+	if res == nil {
+		return
 	}
+	c.bodyUnavailableCount++
+	if len(c.bodyUnavailableSample) < maxBodyUnavailableSample {
+		c.bodyUnavailableSample = append(c.bodyUnavailableSample, boundedBodyURL(res.URL))
+	}
+}
+
+func boundedBodyURL(rawURL string) string {
+	rawURL = strings.TrimSpace(rawURL)
+	if len(rawURL) > 140 {
+		return rawURL[:140]
+	}
+	return rawURL
 }

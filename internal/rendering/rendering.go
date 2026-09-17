@@ -34,6 +34,8 @@ type Page struct {
 	Browser          string
 	Duration         time.Duration
 	Partial          bool
+	Degraded         bool
+	DegradeReason    string
 	FetchedAt        time.Time
 	NetworkResources []NetworkResource
 	NetworkStats     NetworkStats
@@ -54,6 +56,10 @@ type NetworkResource struct {
 
 type NetworkStats struct {
 	ResourceCount       int
+	ObservedResources   int
+	BodyUnavailable     int
+	BodyUnavailableURLs []string
+	StreamsOpen         int
 	EventSourceMessages int
 	WebSocketMessages   int
 	BodyBytes           int64
@@ -126,10 +132,25 @@ func (r ExecDumpDOMRenderer) Render(ctx context.Context, req Request) (Page, err
 	if strings.TrimSpace(req.URL) == "" {
 		return Page{}, errors.New("render url must not be empty")
 	}
-	if page, err := r.renderWithCDP(ctx, req); err == nil {
+	page, cdpErr := r.renderWithCDP(ctx, req)
+	if cdpErr == nil {
 		return page, nil
 	}
-	return r.renderWithDumpDOM(ctx, req)
+	fallback, err := r.renderWithDumpDOM(ctx, req)
+	if err != nil {
+		return Page{}, err
+	}
+	fallback.Degraded = true
+	fallback.DegradeReason = boundedRenderReason("cdp_unavailable: " + cdpErr.Error())
+	return fallback, nil
+}
+
+func boundedRenderReason(reason string) string {
+	reason = strings.TrimSpace(reason)
+	if len(reason) > 240 {
+		return reason[:240]
+	}
+	return reason
 }
 
 func (r ExecDumpDOMRenderer) renderWithDumpDOM(ctx context.Context, req Request) (Page, error) {

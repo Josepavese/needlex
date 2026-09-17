@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	AutoRenderDeadlineTimeout      = 8 * time.Second
+	AutoRenderFallbackTimeout      = 30 * time.Second
 	AutoRenderDeadlineMinRemaining = 10 * time.Second
 
 	AgentReadableProbeTimeout         = 2 * time.Second

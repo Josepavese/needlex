@@ -7,9 +7,29 @@ import (
 
 	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
+	"github.com/josepavese/needlex/internal/proof"
 )
 
 const compactChunkLimit = 5
+
+func compactSignalsFor(chunks []coreservice.AgentChunk, webIR core.WebIR, trace proof.RunTrace) compactSignals {
+	signals := compactSignals{Confidence: topChunkConfidence(chunks), SubstrateClass: webIR.Signals.SubstrateClass}
+	stage, ok := traceStage(trace, "render")
+	if !ok || stage.Metadata["rendered"] != "true" {
+		return signals
+	}
+	resources := intMetadata(stage.Metadata, "network_resources")
+	bytes := intMetadata(stage.Metadata, "network_bytes")
+	signals.ContentSource = "dom"
+	signals.NetworkTruncated = stage.Metadata["network_truncated"] == "true"
+	signals.RenderDegraded = stage.Metadata["render_degraded"] == "true"
+	if resources > 0 || bytes > 0 {
+		signals.ContentSource = "dom+network"
+		signals.NetworkResources = resources
+		signals.NetworkBytes = int64(bytes)
+	}
+	return signals
+}
 
 func firstNonEmptyTrimmed(values ...string) string {
 	for _, value := range values {

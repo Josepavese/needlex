@@ -8,8 +8,10 @@ import (
 
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/core/agentreadable"
+	discoverycore "github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/fetchpolicy"
 	"github.com/josepavese/needlex/internal/core/webirbuilder"
+	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/rendering"
@@ -81,15 +83,24 @@ func (r Resolver) MaybeRender(ctx context.Context, recorder *proof.Recorder, req
 	if mode == "auto" && !r.Config.Render.Enabled {
 		return rawPage, dom, nil
 	}
+	if mode == "auto" && !pipeline.IsHTMLLikeRawPage(rawPage) {
+		return rawPage, dom, nil
+	}
 	webIR := webirbuilder.Build(webirbuilder.EnsureMinimum(dom))
 	reasons := core.WebIRUtilityReasons(webIR)
+	semanticGap := 0.0
 	if mode == "auto" && !shouldRenderForRead(rawPage, webIR, reasons) {
-		return rawPage, dom, nil
+		similarity, gap := r.semanticRenderGap(ctx, req, dom)
+		if !gap {
+			return rawPage, dom, nil
+		}
+		semanticGap = similarity
+		reasons = append(reasons, semanticRenderEscalationReason)
 	}
 	if mode == "auto" && !autoRenderHasTime(ctx) {
 		return rawPage, dom, nil
 	}
-	rendered, err := r.renderPage(ctx, recorder, req, rawPage, mode, reasons)
+	rendered, err := r.renderPage(ctx, recorder, req, rawPage, mode, reasons, semanticGap)
 	if err != nil {
 		if mode == "required" {
 			return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, err
@@ -109,7 +120,7 @@ func (r Resolver) MaybeRender(ctx context.Context, recorder *proof.Recorder, req
 	return rendered, renderedDOM, nil
 }
 
-func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req Request, rawPage pipeline.RawPage, mode string, reasons []string) (pipeline.RawPage, error) {
+func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req Request, rawPage pipeline.RawPage, mode string, reasons []string, semanticGap float64) (pipeline.RawPage, error) {
 	const stage = "render"
 	if err := recorder.StageStarted(stage, rawPage, r.now().UTC()); err != nil {
 		return pipeline.RawPage{}, err
@@ -138,6 +149,8 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 		return pipeline.RawPage{}, err
 	}
 	networkText := rendering.EvidenceText(rendered.NetworkResources)
+	stats := rendered.NetworkStats
+	networkTruncated := stats.Truncated || stats.StreamsOpen > 0
 	page := pipeline.RawPage{
 		URL:              rawPage.URL,
 		FinalURL:         rendered.FinalURL,
@@ -151,33 +164,55 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 		SourceReason:     "js_render",
 		SourceFrom:       rawPage.FinalURL,
 		NetworkText:      networkText,
-		NetworkBytes:     rendered.NetworkStats.BodyBytes,
-		NetworkResources: rendered.NetworkStats.ResourceCount,
-		NetworkTruncated: rendered.NetworkStats.Truncated,
+		NetworkBytes:     stats.BodyBytes,
+		NetworkResources: stats.ResourceCount,
+		NetworkTruncated: networkTruncated,
 		FetchedAt:        rendered.FetchedAt,
 	}
 	if page.FinalURL == "" {
 		page.FinalURL = rawPage.FinalURL
 	}
-	networkIdleReason := strings.TrimSpace(rendered.NetworkStats.IdleReason)
+	networkIdleReason := strings.TrimSpace(stats.IdleReason)
 	if networkIdleReason == "" {
 		networkIdleReason = "not_collected"
 	}
-	if err := recorder.StageCompleted(stage, page, 1, map[string]string{
+	metadata := map[string]string{
 		"rendered":              "true",
+		"render_path":           renderPath(rendered),
 		"browser":               rendered.Browser,
 		"duration_ms":           fmt.Sprintf("%d", rendered.Duration.Milliseconds()),
 		"partial":               fmt.Sprintf("%t", rendered.Partial),
-		"network_resources":     fmt.Sprintf("%d", rendered.NetworkStats.ResourceCount),
-		"network_bytes":         fmt.Sprintf("%d", rendered.NetworkStats.BodyBytes),
-		"network_truncated":     fmt.Sprintf("%t", rendered.NetworkStats.Truncated),
-		"event_source_messages": fmt.Sprintf("%d", rendered.NetworkStats.EventSourceMessages),
-		"websocket_messages":    fmt.Sprintf("%d", rendered.NetworkStats.WebSocketMessages),
+		"network_resources":     fmt.Sprintf("%d", stats.ResourceCount),
+		"network_observed":      fmt.Sprintf("%d", stats.ObservedResources),
+		"network_body_missing":  fmt.Sprintf("%d", stats.BodyUnavailable),
+		"network_streams_open":  fmt.Sprintf("%d", stats.StreamsOpen),
+		"network_bytes":         fmt.Sprintf("%d", stats.BodyBytes),
+		"network_truncated":     fmt.Sprintf("%t", networkTruncated),
+		"event_source_messages": fmt.Sprintf("%d", stats.EventSourceMessages),
+		"websocket_messages":    fmt.Sprintf("%d", stats.WebSocketMessages),
 		"network_idle_reason":   networkIdleReason,
-	}, r.now().UTC()); err != nil {
+	}
+	if len(rendered.NetworkStats.BodyUnavailableURLs) > 0 {
+		metadata["network_body_missing_sample"] = strings.Join(rendered.NetworkStats.BodyUnavailableURLs, " | ")
+	}
+	if rendered.Degraded {
+		metadata["render_degraded"] = "true"
+		metadata["render_degrade_reason"] = rendered.DegradeReason
+	}
+	if semanticGap > 0 {
+		metadata["semantic_gap_similarity"] = fmt.Sprintf("%.4f", semanticGap)
+	}
+	if err := recorder.StageCompleted(stage, page, 1, metadata, r.now().UTC()); err != nil {
 		return pipeline.RawPage{}, err
 	}
 	return page, nil
+}
+
+func renderPath(page rendering.Page) string {
+	if page.Degraded || !strings.Contains(page.Browser, "cdp") {
+		return "dump_dom"
+	}
+	return "cdp"
 }
 
 func autoRenderHasTime(ctx context.Context) bool {
@@ -188,24 +223,75 @@ func autoRenderHasTime(ctx context.Context) bool {
 	return time.Until(deadline) >= AutoRenderDeadlineMinRemaining
 }
 
+const autoRenderDeadlineReserve = 2 * time.Second
+
+// semanticRenderGapThreshold is calibrated against the local embedding runtime:
+// navigation-like shells score around 0.35 against a concrete objective, while
+// surfaces that genuinely cover it score 0.59 and above, including cross-language
+// matches. The threshold sits in that measured gap.
+const semanticRenderGapThreshold = 0.5
+
+const semanticRenderEscalationReason = "semantic_coverage_gap"
+
+func (r Resolver) semanticRenderGap(ctx context.Context, req Request, dom pipeline.SimplifiedDOM) (float64, bool) {
+	if r.Semantic == nil || !semanticRenderGapObjectiveUsable(req.Objective) {
+		return 0, false
+	}
+	text := discoverycore.CompactSemanticText(reducedSurfaceText(dom), 1600)
+	if text == "" {
+		return 0, false
+	}
+	scored, err := r.Semantic.Score(ctx, req.Objective, []intel.SemanticCandidate{{ID: "static_surface", Text: text}})
+	if err != nil {
+		return 0, false
+	}
+	best := 0.0
+	for _, score := range scored {
+		best = max(best, score.Similarity)
+	}
+	if best <= 0 || best >= semanticRenderGapThreshold {
+		return 0, false
+	}
+	return best, true
+}
+
+func reducedSurfaceText(dom pipeline.SimplifiedDOM) string {
+	parts := make([]string, 0, len(dom.Nodes))
+	for _, node := range dom.Nodes {
+		if text := strings.TrimSpace(node.Text); text != "" {
+			parts = append(parts, text)
+		}
+	}
+	body := strings.Join(parts, "\n")
+	if title := strings.TrimSpace(dom.Title); title != "" {
+		return title + "\n" + body
+	}
+	return body
+}
+
+// semanticRenderGapObjectiveUsable keeps placeholder objectives such as the
+// crawl lane marker from grounding a coverage comparison.
+func semanticRenderGapObjectiveUsable(objective string) bool {
+	objective = strings.TrimSpace(objective)
+	if len([]rune(objective)) < 16 {
+		return false
+	}
+	return len(strings.Fields(objective)) >= 3
+}
+
 func autoBoundedRenderTimeout(ctx context.Context, mode string, configuredMS int64) time.Duration {
 	timeout := time.Duration(configuredMS) * time.Millisecond
 	if timeout <= 0 {
-		timeout = AutoRenderDeadlineTimeout
+		timeout = AutoRenderFallbackTimeout
 	}
 	if mode != "auto" {
 		return timeout
 	}
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return timeout
-	}
-	if timeout > AutoRenderDeadlineTimeout {
-		timeout = AutoRenderDeadlineTimeout
-	}
-	remaining := time.Until(deadline) - 2*time.Second
-	if remaining > 0 && remaining < timeout {
-		timeout = remaining
+	if deadline, ok := ctx.Deadline(); ok {
+		remaining := time.Until(deadline) - autoRenderDeadlineReserve
+		if remaining > 0 && remaining < timeout {
+			timeout = remaining
+		}
 	}
 	if timeout < time.Second {
 		return time.Second

@@ -137,6 +137,10 @@ func collectNetworkBodies(ctx context.Context, cdp *cdpClient, sessionID string,
 			}
 			data = string(decoded)
 		}
+		data = decodeNetworkBody(data, collector.resourceMaxBytes)
+		if !isTextualNetworkBody(data) {
+			continue
+		}
 		collector.appendResponseBody(requestID, data)
 	}
 	return nil
@@ -148,6 +152,7 @@ type networkCollector struct {
 	order                   []string
 	active                  map[string]struct{}
 	activeEventSources      map[string]struct{}
+	activeStreams           map[string]struct{}
 	activeWebSockets        map[string]struct{}
 	pendingBodies           map[string]struct{}
 	totalBytes              int64
@@ -157,12 +162,16 @@ type networkCollector struct {
 	maxMessages             int
 	lastActivity            time.Time
 	lastEventSourceActivity time.Time
+	lastStreamActivity      time.Time
 	eventSourceMessages     int
 	webSocketMessages       int
 	truncated               bool
 	idleReason              string
 	bodyUnavailableCount    int
+	bodyUnavailableSample   []string
 }
+
+const maxBodyUnavailableSample = 3
 
 func newNetworkCollector(rawURL string, maxBytes, resourceMaxBytes int64, maxResources, maxMessages int) *networkCollector {
 	parsed, _ := url.Parse(strings.TrimSpace(rawURL))
@@ -172,6 +181,7 @@ func newNetworkCollector(rawURL string, maxBytes, resourceMaxBytes int64, maxRes
 		resources:          map[string]*NetworkResource{},
 		active:             map[string]struct{}{},
 		activeEventSources: map[string]struct{}{},
+		activeStreams:      map[string]struct{}{},
 		activeWebSockets:   map[string]struct{}{},
 		pendingBodies:      map[string]struct{}{},
 		maxBytes:           firstPositiveInt64(maxBytes, 64_000_000),
@@ -192,6 +202,8 @@ func (c *networkCollector) handleEvent(msg cdpMessage) {
 		c.handleLoadingDone(msg.Params, false)
 	case "Network.eventSourceMessageReceived":
 		c.handleEventSourceMessage(msg.Params)
+	case "Network.dataReceived":
+		c.handleDataReceived(msg.Params)
 	case "Network.webSocketCreated":
 		c.handleWebSocketCreated(msg.Params)
 	case "Network.webSocketFrameReceived":
@@ -225,10 +237,14 @@ func (c *networkCollector) handleResponseReceived(params json.RawMessage) {
 	}
 	res.Status = event.Response.Status
 	c.active[event.RequestID] = struct{}{}
-	if strings.EqualFold(event.Type, "EventSource") || strings.Contains(strings.ToLower(contentType), "event-stream") {
+	switch {
+	case strings.EqualFold(event.Type, "EventSource"):
 		res.Source = "event_source"
 		c.activeEventSources[event.RequestID] = struct{}{}
 		c.markEventSourceActivity()
+	case c.isStreamingResponse(res):
+		c.activeStreams[event.RequestID] = struct{}{}
+		c.markStreamActivity()
 	}
 	if c.shouldFetchResponseBody(res) {
 		c.pendingBodies[event.RequestID] = struct{}{}
@@ -245,6 +261,7 @@ func (c *networkCollector) handleLoadingDone(params json.RawMessage, finished bo
 	}
 	delete(c.active, event.RequestID)
 	delete(c.activeWebSockets, event.RequestID)
+	delete(c.activeStreams, event.RequestID)
 	if res := c.resources[event.RequestID]; res != nil {
 		if !c.shouldKeepEventSourceOpenUntilMessageIdle(res, finished) {
 			delete(c.activeEventSources, event.RequestID)

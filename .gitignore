@@ -1,5 +1,6 @@
 .needlex/
 .agent/
+.zcode/
 dist/
 dist-local-install/
 bin/

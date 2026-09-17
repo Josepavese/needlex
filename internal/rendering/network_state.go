@@ -1,10 +1,12 @@
 package rendering
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func (c *networkCollector) markSettleError(err error) {
@@ -35,6 +38,35 @@ func (c *networkCollector) markEventSourceActivity() {
 	c.lastEventSourceActivity = now
 }
 
+func (c *networkCollector) markStreamActivity() {
+	now := time.Now()
+	c.lastActivity = now
+	c.lastStreamActivity = now
+}
+
+func (c *networkCollector) activeStreamCount() int {
+	return len(c.activeEventSources) + len(c.activeStreams)
+}
+
+func (c *networkCollector) isOpenStream(requestID string) bool {
+	if _, ok := c.activeStreams[requestID]; ok {
+		return true
+	}
+	_, ok := c.activeEventSources[requestID]
+	return ok
+}
+
+func (c *networkCollector) streamQuietSince() time.Time {
+	last := c.lastStreamActivity
+	if c.lastEventSourceActivity.After(last) {
+		last = c.lastEventSourceActivity
+	}
+	if last.IsZero() {
+		return c.lastActivity
+	}
+	return last
+}
+
 func (c *networkCollector) settled(readyElapsed, totalElapsed, idle time.Duration) bool {
 	if idle <= 0 {
 		idle = 1500 * time.Millisecond
@@ -42,44 +74,62 @@ func (c *networkCollector) settled(readyElapsed, totalElapsed, idle time.Duratio
 	if readyElapsed < 500*time.Millisecond {
 		return false
 	}
-	idleElapsed := time.Since(c.lastActivity)
-	if len(c.activeEventSources) > 0 {
-		eventSourceIdle := maxDuration(idle*10, 15*time.Second)
-		eventSourceLastActivity := c.lastEventSourceActivity
-		if eventSourceLastActivity.IsZero() {
-			eventSourceLastActivity = c.lastActivity
-		}
-		if totalElapsed < 12*time.Second {
+	if c.activeStreamCount() > 0 {
+		if totalElapsed < streamMinObservation {
 			return false
 		}
-		if time.Since(eventSourceLastActivity) >= eventSourceIdle {
-			c.idleReason = "event_source_idle"
-			return true
+		streamIdle := maxDuration(idle*4, 6*time.Second)
+		if time.Since(c.streamQuietSince()) < streamIdle {
+			return false
 		}
-		return false
-	}
-	if idleElapsed >= idle {
-		if len(c.activeWebSockets) > 0 {
-			c.idleReason = "websocket_idle"
-		} else if len(c.active) > 0 {
-			c.idleReason = "network_idle_with_active_requests"
-		} else {
-			c.idleReason = "network_idle"
+		c.idleReason = "stream_idle"
+		if len(c.activeEventSources) > 0 {
+			c.idleReason = "event_source_idle"
 		}
 		return true
 	}
-	return false
+	if len(c.active) > 0 {
+		if totalElapsed < streamMinObservation {
+			return false
+		}
+		if time.Since(c.lastActivity) < maxDuration(idle*4, 6*time.Second) {
+			return false
+		}
+		c.idleReason = "network_idle_with_active_requests"
+		return true
+	}
+	if time.Since(c.lastActivity) < idle {
+		return false
+	}
+	if len(c.activeWebSockets) > 0 {
+		c.idleReason = "websocket_idle"
+	} else {
+		c.idleReason = "network_idle"
+	}
+	return true
 }
 
 func (c *networkCollector) snapshot() ([]NetworkResource, NetworkStats) {
 	out := make([]NetworkResource, 0, len(c.order))
+	openStreams := c.activeStreamCount()
 	for _, requestID := range c.order {
-		if res := c.resources[requestID]; res != nil && strings.TrimSpace(res.Body) != "" {
+		res := c.resources[requestID]
+		if res == nil {
+			continue
+		}
+		if c.isOpenStream(requestID) {
+			res.Truncated = true
+		}
+		if strings.TrimSpace(res.Body) != "" {
 			out = append(out, *res)
 		}
 	}
 	stats := NetworkStats{
 		ResourceCount:       len(out),
+		ObservedResources:   len(c.order),
+		BodyUnavailable:     c.bodyUnavailableCount,
+		BodyUnavailableURLs: append([]string(nil), c.bodyUnavailableSample...),
+		StreamsOpen:         openStreams,
 		EventSourceMessages: c.eventSourceMessages,
 		WebSocketMessages:   c.webSocketMessages,
 		BodyBytes:           c.totalBytes,
@@ -245,6 +295,54 @@ func maxDuration(left, right time.Duration) time.Duration {
 		return left
 	}
 	return right
+}
+
+const streamMinObservation = 8 * time.Second
+
+// decodeNetworkBody unwraps gzip payloads served as files, which Chrome returns
+// undecoded, so application data sharded as .json.gz stays readable. The decode
+// is bounded by the per-resource budget to keep hostile payloads from allocating
+// beyond capture limits.
+func decodeNetworkBody(data string, limit int64) string {
+	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
+		return data
+	}
+	if limit <= 0 {
+		limit = 8_000_000
+	}
+	reader, err := gzip.NewReader(strings.NewReader(data))
+	if err != nil {
+		return data
+	}
+	defer reader.Close() //nolint:errcheck
+	decoded, err := io.ReadAll(io.LimitReader(reader, limit))
+	if err != nil && len(decoded) == 0 {
+		return data
+	}
+	return string(decoded)
+}
+
+// isTextualNetworkBody keeps binary payloads out of semantic evidence instead of
+// letting undecodable bytes reach chunks as noise.
+func isTextualNetworkBody(data string) bool {
+	if data == "" {
+		return false
+	}
+	sample := data
+	if len(sample) > 4096 {
+		sample = sample[:4096]
+	}
+	if !utf8.ValidString(sample) {
+		return false
+	}
+	runes := []rune(sample)
+	control := 0
+	for _, r := range runes {
+		if r < 0x20 && r != '\n' && r != '\r' && r != '\t' {
+			control++
+		}
+	}
+	return control*20 <= len(runes)
 }
 
 func renderSettleBudget(timeout time.Duration) time.Duration {

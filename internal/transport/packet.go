@@ -33,8 +33,13 @@ type compactWebIRSummary struct {
 }
 
 type compactSignals struct {
-	Confidence     float64 `json:"confidence,omitempty"`
-	SubstrateClass string  `json:"substrate_class,omitempty"`
+	Confidence       float64 `json:"confidence,omitempty"`
+	SubstrateClass   string  `json:"substrate_class,omitempty"`
+	ContentSource    string  `json:"content_source,omitempty"`
+	NetworkResources int     `json:"network_resources,omitempty"`
+	NetworkBytes     int64   `json:"network_bytes,omitempty"`
+	NetworkTruncated bool    `json:"network_truncated,omitempty"`
+	RenderDegraded   bool    `json:"render_degraded,omitempty"`
 }
 
 type compactUncertainty struct {
@@ -114,7 +119,7 @@ func compactReadResponse(resp coreservice.ReadResponse) compactReadOutput {
 		Outline:      cleanDisplayPath(resp.ResultPack.Outline),
 		Chunks:       compactChunks(selectedChunks),
 		Links:        append([]string{}, resp.ResultPack.Links...),
-		Signals:      compactSignals{Confidence: topChunkConfidence(selectedChunks), SubstrateClass: resp.WebIR.Signals.SubstrateClass},
+		Signals:      compactSignalsFor(selectedChunks, resp.WebIR, resp.Trace),
 		WebIRSummary: compactWebIR(resp.WebIR),
 		Analytics:    compactAnalyticsForRead(resp),
 		CostReport:   resp.ResultPack.CostReport,
@@ -137,7 +142,7 @@ func compactQueryResponse(resp coreservice.QueryResponse) compactQueryOutput {
 		Outline:      cleanDisplayPath(resp.ResultPack.Outline),
 		Chunks:       compactChunks(selectedChunks),
 		Candidates:   compactCandidates(resp.AgentContext.Candidates),
-		Signals:      compactSignals{Confidence: topChunkConfidence(selectedChunks), SubstrateClass: resp.WebIR.Signals.SubstrateClass},
+		Signals:      compactSignalsFor(selectedChunks, resp.WebIR, resp.Trace),
 		WebIRSummary: compactWebIR(resp.WebIR),
 		Analytics:    compactAnalyticsForQuery(resp),
 		CostReport:   resp.CostReport,

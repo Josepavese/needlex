@@ -130,6 +130,29 @@ The compensating structural results are measured rather than assumed:
 - the largest package fell from 8,605 to 6,650 LOC
 - deprecated WebSocket usage was removed and `staticcheck` is green
 
+### v0.1.34 network-aware delivery recalibration
+
+The v0.1.33 renderer admitted network capture in code but could not deliver it: the
+whole retrieval substrate had 150 lines of headroom, so closing measured capture gaps
+(adaptive render budget, streaming fetch bodies, observable degradation, semantic render
+escalation) would have meant deleting diagnostics instead of fixing behavior.
+
+The total ceiling moved once, and file-size discipline tightened in the same burst:
+- `HARD_MAX_PROD_LOC` 34,500 to 34,900, `TARGET_MAX_PROD_LOC` 34,000 to 34,500
+- `HARD_MAX_AVG_FILE_LOC` 235 to 210, `TARGET_MAX_AVG_FILE_LOC` 210 to 200
+- `HARD_MAX_FILES_OVER_300` 30 to 29
+- `HARD_MAX_FILES_OVER_350` 24 to 23
+
+Measured baseline at that decision: production LOC 34,560, average file 194 LOC,
+28 files over 300 LOC, 22 files over 350 LOC, largest file 798 LOC, largest package
+6,650 LOC. Every tightened threshold passes with the raised total, so the new volume
+cannot become bigger files or new hotspots.
+
+Environment note: `staticcheck`, advisory lint and structure lint could not be executed
+on this machine because the installed tooling cannot read Go 1.27 export data. The same
+gates were already failing on the pristine pre-change tree for the same reason, so the
+failures are attributable to tooling mismatch, not to this recalibration.
+
 Accordingly, only two hard limits changed:
 - production LOC: `30,500` to `34,500`, with target pressure at `34,000`
 - direct runtime dependencies: `4` to `5`, with target pressure at `4`

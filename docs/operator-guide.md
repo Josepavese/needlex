@@ -76,8 +76,12 @@ Fetch profile rule:
 Render rule:
 1. render is enabled by default after installation
 2. before render, Needle-X probes agent-readable standards such as declared links, Markdown variants, `llms.txt`, API catalogs, OpenAPI/Swagger paths, robots and sitemaps
-3. when render runs, the trace `render` stage reports DOM render status plus network evidence counters such as `network_resources`, `event_source_messages`, `websocket_messages`, `network_bytes`, `network_truncated`, and `network_idle_reason`
-4. `network_truncated=true` means captured payloads hit configured `render.network_*` budgets
+3. when render runs, the trace `render` stage reports DOM render status plus network evidence counters such as `render_path`, `network_resources`, `network_observed`, `network_body_missing`, `network_streams_open`, `event_source_messages`, `websocket_messages`, `network_bytes`, `network_truncated`, and `network_idle_reason`
+4. `network_truncated=true` means captured payloads hit configured `render.network_*` budgets or a stream was still open at snapshot time
+5. `render_path=dump_dom` with `render_degraded=true` means the CDP capture path failed and no application data was observed
+6. render escalation in `auto` mode is both structural (thin or client-rendered surface) and semantic: `semantic_gap_similarity` records the objective-to-surface similarity that triggered escalation
+7. render budget is adaptive up to `render.timeout_ms` (default 30000): quiet pages finish as soon as the page and its streams go idle, active streams extend the wait within that ceiling
+8. non-HTML responses are never rendered in `auto` mode; `--render required` forces a browser read anyway
 
 Example benchmark override:
 
