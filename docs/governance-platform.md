@@ -165,12 +165,20 @@ toolchain, which was newer than the module minimum. The same gates were already 
 on the pristine pre-change tree for the same reason, so the failures were attributable to
 tooling mismatch, not to the recalibration.
 
-That mismatch was removed in v0.1.37: the module now targets Go 1.27, the lint pins
-(`gofumpt v0.12.0`, `staticcheck 2026.2.1`, `golangci-lint v2.13.2`) are installed from the
-same toolchain CI resolves from `go.mod`, and local and CI gate results agree. A developer
-whose local Go is newer than the module minimum must set `GOTOOLCHAIN` to the version in
-`go.mod` before trusting a local gate result, because lint binaries built with the older
-toolchain cannot read newer export data.
+That mismatch was removed in v0.1.37: the module now targets Go 1.27 and the lint pins are
+gofumpt `v0.12.0`, staticcheck `2026.2.1` and golangci-lint `v2.13.2`, installed from the
+same toolchain CI resolves from `go.mod`:
+
+```bash
+go install mvdan.cc/gofumpt@v0.12.0
+go install honnef.co/go/tools/cmd/staticcheck@2026.2.1
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+```
+
+A developer whose local Go is newer than the module minimum must set `GOTOOLCHAIN` to the
+version in `go.mod` before trusting a local gate result, because lint binaries built with
+the older toolchain cannot read newer export data and report import errors instead of
+findings.
 
 Accordingly, only two hard limits changed:
 - production LOC: `30,500` to `34,500`, with target pressure at `34,000`
