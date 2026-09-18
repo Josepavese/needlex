@@ -74,6 +74,9 @@ Current active runtime contract:
 - FR-001: il sistema deve supportare fetch HTTP/HTTPS con redirect tracking.
 - FR-002: il sistema deve registrare `final_url`, headers principali, status code e fetch_mode.
 - FR-003: il sistema deve supportare render adapter attivabile via policy per siti JS-heavy.
+- FR-003b: il render deve consegnare, oltre al DOM, l'evidenza testuale applicativa catturata via browser/CDP (body fetch/XHR, messaggi SSE, frame WebSocket ricevuti), entro budget `render.network_*` espliciti.
+- FR-003c: l'attesa del render deve essere adattiva, guidata dall'attività di rete e limitata da `render.timeout_ms` e dalla deadline dell'operazione; una cattura tagliata o degradata deve essere segnalata (`network_truncated`, `render_degraded`).
+- FR-003d: l'escalation a render in modalità `auto` deve essere strutturale e semantica, con la similarità obiettivo-superficie registrata nel trace; i contenuti non-HTML non devono essere renderizzati in `auto`.
 
 ### 4.2 DOM Reduction e Segmentazione
 - FR-004: il sistema deve applicare pruning deterministico configurabile per rimuovere boilerplate.
@@ -159,7 +162,7 @@ Current active runtime contract:
 
 ## 6. Architettura
 ## 6.1 Componenti
-1. `acquire`: fetch, redirect, content-type checks, optional render.
+1. `acquire`: fetch, redirect, content-type checks, optional render with application-data capture.
 2. `reduce`: pruning boilerplate e normalizzazione DOM.
 3. `segment`: region building semantico.
 4. `extract_det`: estrazione deterministic.

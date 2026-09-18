@@ -11,7 +11,7 @@ Use Needle-X to turn web pages selected by the host agent into compact, proof-ba
 
 Needle-X must not impose or suggest a numeric candidate limit. If the agent chooses to analyze one URL or one hundred URLs, use Needle-X for every selected URL as allowed by the host's execution and concurrency controls.
 
-Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Escalate when the task depends on rendering, exact bytes, full-document completeness, or authenticated state.
+Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Needle-X also renders client-rendered pages and captures textual application data from fetch/XHR, SSE, and WebSocket payloads, so dynamic pages are in scope before any external escalation. Escalate when the task depends on exact visual bytes, full-document completeness, client-side interaction, or authenticated state.
 
 ## Policy Compatibility
 
@@ -27,17 +27,19 @@ Use Needle-X when the task needs:
 4. lightweight extraction from text-heavy or documentation pages
 5. reduced context before sending material to an LLM
 6. consistent evidence packets across all URLs selected by the host agent
+7. content that a page builds after load, up to the capture window and budget the runtime reports
 
 Do not rely on Needle-X alone when the task needs:
 
 1. exact visual layout, coordinates, screenshots, or rendered styling
-2. full DOM fidelity, client-side state, forms, canvas, maps, or interactive widgets
+2. interactive widget state: forms, canvas, maps, drag interactions, or anything requiring clicks or scrolling
 3. login-gated content, paywalled state, cart/session state, or user-specific pages
 4. exact asset bytes for CSS, images, PDFs, videos, archives, or generated files
 5. legal/compliance-grade full-document review where omitted text is unacceptable
 6. proof that a page is empty or missing when the result could be extraction loss
+7. application data the page only requests after the capture window, or an unbounded stream still open when the render stopped
 
-For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor.
+For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor. For rule 7, check `signals.content_source`, `network_truncated`, and `render_degraded` first, and retry once with `render: "required"` before leaving Needle-X.
 
 ## Tool Choice
 

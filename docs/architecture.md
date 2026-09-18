@@ -94,7 +94,7 @@ Resolution order:
 3. shared conventions when the static page is weak: Markdown content negotiation, same-path `.md`/`.mdx`, `/llms.txt`, `/llms-full.txt`, `/.well-known/api-catalog`, OpenAPI/Swagger well-known paths
 4. `robots.txt` `Sitemap:` entries and conventional sitemap files as candidate indexes
 5. linked resources inside API catalogs, including `service-desc`, `service-doc`, `service-meta`, `describedby`, and OpenAPI/Swagger/AsyncAPI descriptions
-6. JavaScript rendering as the final escalation path, including rendered DOM plus same-origin textual network evidence from fetch/XHR, SSE, and received WebSocket frames
+6. JavaScript rendering as the final escalation path, including rendered DOM plus same-origin textual network evidence from fetch/XHR bodies, SSE messages, and received WebSocket frames
 
 Rules:
 1. candidates must stay same-origin
@@ -105,6 +105,30 @@ Rules:
 6. non-JSON-LD `<script>` payloads remain ignored by the reducer
 7. JSON-LD is the only script-based structured-data extraction path
 8. renderer network payloads are evidence captured through browser/CDP transport provenance, not provider-specific ranking signals
+
+## Render Budget and Network Evidence
+
+Rendering runs only in `auto` or `required` mode, and only for HTML-like content in `auto`.
+
+Escalation in `auto` mode is structural and semantic:
+1. structural reasons: thin surface, navigation-like surface, or a client-rendered substrate
+2. semantic reason: the objective-to-surface similarity falls below a calibrated threshold, recorded as `semantic_gap_similarity` together with the `semantic_coverage_gap` reason code
+
+Waiting is activity-driven and bounded:
+1. a render may wait up to `render.timeout_ms` and never past the remaining operation deadline
+2. quiet pages settle as soon as the page and its streams go idle
+3. active application requests and open streams keep the render alive while they produce
+4. a stream still open at snapshot time is reported as truncated instead of being presented as complete
+
+Network evidence handling:
+1. relevant textual resources are retained within `render.network_*` budgets; gzipped payloads are decoded at the transport boundary before they become evidence
+2. payloads that remain non-textual after decoding are observed and reported but never enter semantic evidence
+3. the DOM plus the synthesized network text is reduced into one page substrate, so captured application data reaches segments, chunks, and the packet
+
+Trace and packet contract:
+1. the `render` stage records `render_path`, `network_observed`, `network_resources`, `network_body_missing` with a bounded URL sample, `network_streams_open`, `network_bytes`, `network_truncated`, `network_idle_reason`, and `render_degraded` when the CDP path failed
+2. `render_path=dump_dom` means no application data was captured, and that degradation is explicit rather than silent
+3. the compact packet exposes `signals.content_source` (`dom` or `dom+network`) with network counters, so an agent can tell rendered DOM from delivered application data
 
 ## Runtime State Layout
 

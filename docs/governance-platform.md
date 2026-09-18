@@ -148,6 +148,13 @@ Measured baseline at that decision: production LOC 34,560, average file 194 LOC,
 6,650 LOC. Every tightened threshold passes with the raised total, so the new volume
 cannot become bigger files or new hotspots.
 
+Follow-up in the same release cycle: the later capture work pushed
+`internal/rendering/network_state.go` and `internal/core/sourceresolution/robots.go`
+past the file thresholds, so both were decomposed along cohesion lines
+(`network_evidence.go` for body decoding and evidence hygiene, `render_policy.go` for
+escalation and budget policy). That restored slack instead of relaxing the new limits:
+28 files over 300 LOC, 22 files over 350 LOC.
+
 Environment note: `staticcheck`, advisory lint and structure lint could not be executed
 on this machine because the installed tooling cannot read Go 1.27 export data. The same
 gates were already failing on the pristine pre-change tree for the same reason, so the

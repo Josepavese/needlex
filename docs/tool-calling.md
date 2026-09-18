@@ -72,6 +72,19 @@ If you wire Needle-X into an AI tool-calling stack:
 
 Needle-X does not set a candidate-count policy. Search breadth, URL selection, concurrency, and research budget belong to the host agent.
 
+Render mode:
+1. `render` accepts `auto`, `off`, or `required`, and applies to the final page read
+2. `auto` reads declared agent-readable sources first, then renders when the static surface is thin, client-rendered, or does not cover the objective, and captures rendered DOM plus textual application data from fetch/XHR, SSE, and received WebSocket frames
+3. `off` forbids browser rendering entirely
+4. `required` forces a browser read even for non-HTML content and fails if the rendered DOM cannot be obtained
+5. render waiting is bounded by the configured render timeout and by the remaining operation deadline; a capture cut by a budget or by a stream still open is reported as truncated
+
+Reading a rendered result:
+1. `signals.content_source` is `dom` when content comes from the rendered DOM, and `dom+network` when captured application data also contributed
+2. `signals.network_truncated` means more application data exists upstream than was captured
+3. `signals.render_degraded` means the browser path failed and application data was not observed
+4. before escalating to an external browser, retry the same URL once with `render: "required"`
+
 `memory` and `analytics` are dispatch tools with an `action` parameter.
 They intentionally replace many narrower MCP tools to reduce provider-side tool-list context.
 
@@ -180,6 +193,7 @@ For MCP agent-facing calls:
 1. `content.text` should expose the compact packet first
 2. `structuredContent` should retain the richer diagnostic envelope
 3. agents should read the compact packet first and open diagnostics only when needed
+4. for dynamic pages, read `signals.content_source` before concluding that the page has no more data
 
 Tool expansion rule:
 1. do not add narrower tools like `web_extract` until repeated agent misuse shows that `web_read` and `web_query` cannot be made clear enough

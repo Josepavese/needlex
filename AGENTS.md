@@ -129,8 +129,57 @@ Distinguish at least:
 - unsupported_content_type
 - empty_candidates
 - unavailable_upstream
+- render_degraded
+- network_body_missing
+- network_truncated
 
 Interpret benchmark results through this taxonomy before changing ranking logic.
+
+## Render and Application-Data Delivery Principles
+
+### Rendering exists to deliver application data, not only the DOM
+
+JavaScript rendering is the last escalation step, and it is not satisfied by a DOM dump.
+Its purpose is to materialize the content an application builds after load: `fetch`/XHR bodies, SSE messages, received WebSocket frames, and other textual application payloads.
+
+A render that produces a DOM but drops the application data has not delivered the page.
+
+### Budgets must follow the transport, not a constant
+
+Render waiting is bounded by `render.timeout_ms` and by the remaining operation deadline, never by a fixed cap that makes the documented target case structurally unreachable.
+
+Termination is driven by observed activity:
+- a quiet page stops as soon as the page and its streams go idle
+- a page with active application requests or open streams keeps waiting while they produce
+- a stream cut while still open is reported as truncated, with the reason, instead of being presented as a complete capture
+
+If a budget is ever reached, the result must say so.
+
+### Degradation is reported, never silent
+
+A fallback is a measured event, not an invisible one.
+
+When the capture path degrades, the run must record it:
+- the render path that actually ran (`cdp` versus `dump_dom`)
+- how many relevant resources were observed, retained, and unreadable
+- whether streams were still open at snapshot time
+- why waiting stopped
+
+Reporting degradation is part of the product contract because an agent that cannot tell “no data exists” from “data was not captured” will make a wrong decision.
+
+### Evidence hygiene at the transport boundary
+
+Transport-level decoding such as gzip unwrapping is allowed and expected at the capture boundary; it recovers application data that is otherwise unreadable.
+
+Payloads that remain non-textual after decoding must not enter semantic evidence. This is an evidence-scoped exclusion, not a global resource hard drop: the resource stays observed and reported, it simply does not become text.
+
+### Render escalation is semantic, not only structural
+
+Render escalation triggers on structural weakness (thin, navigation-like, or client-rendered surface) and on semantic grounding: when the static surface does not cover the objective, the objective-to-surface similarity decides.
+
+Calibrated thresholds must be measured against the local embedding runtime, documented with the samples behind them, and recorded per run so they can be re-tuned from field data instead of intuition.
+
+Non-HTML responses are never rendered in `auto` mode. There is no JavaScript to run in them, and paying a browser launch for a JSON, CSS, or plain-text response is waste.
 
 ## MCP and Agent UX Principles
 
@@ -148,14 +197,18 @@ For agent-facing MCP responses:
 
 Do not force agents to parse a giant diagnostic blob before they can see the useful result.
 
+Compact output must still answer where the content came from.
+For reads that involved rendering, the packet reports the content source (rendered DOM, or rendered DOM plus captured application data) and whether the capture was truncated or degraded, so an agent can trust the result or escalate without opening full diagnostics.
+
 ### Be explicit about strict modes
 
-Strict options such as `discovery_mode=off` must be documented as strict.
+Strict options such as `discovery_mode=off` and `render=required` must be documented as strict.
 
 If a strict mode requires:
 - an exact canonical page
 - a verified seed URL
 - no discovery expansion
+- a browser read even for non-HTML content
 
 that requirement must be stated in:
 - schema descriptions
@@ -174,6 +227,8 @@ If rewrite escalation happens, it should be because the current leader is not se
 ### Semantic signals must be durable and inspectable
 
 When semantic reranking influences a candidate, preserve enough metadata and reasons to make that influence inspectable in code and tests.
+
+The same rule applies to render escalation: when an objective-to-surface similarity decides that a page must be rendered, that similarity value and its reason code belong in the run record.
 
 ## Benchmarking Principles
 
@@ -229,20 +284,24 @@ When making changes, prefer:
 2. structural/contextual annotations over hard exclusions
 3. narrow, testable improvements over sprawling heuristics
 4. explicit diagnostics over hidden magic
+5. budgets derived from measured transport reality over fixed constants
 
 Avoid:
 1. provider-name hacks
 2. single-case patches disguised as general logic
 3. monolingual search-term filters as primary ranking logic
 4. benchmark conclusions drawn from unstable runs without taxonomy
+5. silent fallbacks that trade captured data for a green status
 
 ## Practical Checklist For Future Contributors
 
-Before landing a discovery change, ask:
+Before landing a change, ask:
 1. Did this move the system toward semantics and context, or back toward surface-form hacks?
 2. Does this remain multilingual in principle?
 3. Is the effect measurable through tests or benchmarks?
-4. Does it degrade another product surface such as known-URL compilation, seeded routing, MCP, or install/runtime behavior?
+4. Does it degrade another product surface such as known-URL compilation, seeded routing, MCP, render delivery, or install/runtime behavior?
 5. Is the new behavior understandable from metadata, reasons, and tests?
+6. If the change touches capture or waiting, can an operator tell from the run record what was captured, what was lost, and why?
+7. If the change narrows a budget, was the previous value derived from a measurement rather than a guess?
 
 If the answer is weak on those points, the change is probably not mature enough.

@@ -34,10 +34,12 @@ What is strong today:
 3. compact default output
 4. proof / trace / replay
 5. local discovery memory in warm-state flows
+6. rendered application-data delivery for agent-selected URLs: the render path captures fetch/XHR, SSE, and WebSocket payloads inside an adaptive budget, and the packet reports where the content came from
 
 What remains narrow:
 1. experimental seedless open-web discovery
 2. broad market claim beyond seeded and warm-state paths
+3. application data that a page only requests outside the capture window, and still-open streams, which are reported as truncated rather than followed progressively
 
 Stable research workflow:
 1. the host agent obtains and selects candidate URLs with its own search tool
@@ -52,6 +54,7 @@ Stable research workflow:
 4. local-first state is part of the product
 5. compact output is the default contract
 6. diagnostics are explicit, not default
+7. capture budgets follow measured transport reality, and every degradation is reported instead of hidden
 
 ## Active Surface
 

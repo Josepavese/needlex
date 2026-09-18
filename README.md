@@ -48,7 +48,8 @@ Needle-X is the compact reading layer after search:
 2. the agent decides which URLs to analyze and how many; Needle-X imposes no candidate limit
 3. the agent calls `web_read` for every selected URL, passing the research objective
 4. Needle-X returns compact, proof-carrying context for comparison and synthesis
-5. the agent escalates to browser, raw fetch, PDF, or domain-specific tooling only when exact layout, bytes, or missing content matter
+5. client-rendered pages are compiled too: the read renders when needed and captures textual application data from fetch/XHR, SSE, and WebSocket payloads within an adaptive budget, then reports where the content came from
+6. the agent escalates to browser, raw fetch, PDF, or domain-specific tooling only when exact layout, bytes, or content outside the capture window matter
 
 This keeps responsibilities explicit: the agent controls discovery strategy and breadth; Needle-X optimizes the evidence read from each chosen source.
 
@@ -126,7 +127,7 @@ The installer also prepares semantic prerequisites:
 3. writes the PAL-home SSOT config
 4. wires the `needlex` wrapper to that config so users do not export env vars per command
 5. installs a PAL-local headless render browser
-6. enables render in the PAL config for JavaScript-rendered sites
+6. enables render in the PAL config, with network-aware capture budgets and an adaptive wait bounded by the operation deadline
 
 Change defaults with:
 

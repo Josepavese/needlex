@@ -122,7 +122,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
-	fs.StringVar(&renderMode, "render", "", "JS rendering mode: auto (default), off, or required")
+	fs.StringVar(&renderMode, "render", "", "JS rendering mode: auto (default; renders and captures application data when the static surface is thin or does not cover the objective), off, or required")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 

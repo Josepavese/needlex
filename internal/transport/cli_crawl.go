@@ -66,7 +66,7 @@ func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userA
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
-	fs.StringVar(&renderMode, "render", "", "JS rendering mode for visited pages: auto (default), off, or required")
+	fs.StringVar(&renderMode, "render", "", "JS rendering mode for visited pages: auto (default; renders and captures application data when needed), off, or required")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 	fs.IntVar(&maxPages, "max-pages", 0, "maximum pages to visit")
 	fs.IntVar(&maxDepth, "max-depth", 0, "maximum crawl depth")

@@ -84,6 +84,16 @@ Strategic direction from now on:
 
 Needle-X should not trust surface-form matching as the main judge of context meaning on a multilingual web.
 
+### Render escalation cross-reference
+
+Render escalation in `auto` mode uses the same class of calibrated objective-to-surface similarity and records it as `semantic_gap_similarity` together with the `semantic_coverage_gap` reason code.
+
+Rules:
+1. it is a separate calibrated constant, not `semantic.similarity_threshold`, because it compares an objective against a whole reduced surface instead of ranking candidates against each other
+2. its value must be backed by measured samples against the local embedding runtime and documented with those samples
+3. changing it follows the same evidence discipline as the ambiguity gate: measure, then change defaults
+4. objectives too short to express intent, such as lane placeholders, must not ground a coverage comparison
+
 ## Rollout
 
 1. Keep dense embeddings mandatory in installed/runtime surfaces

@@ -37,7 +37,7 @@ func renderModeSchema() map[string]any {
 		"type":        "string",
 		"enum":        []string{"auto", "off", "required"},
 		"default":     "auto",
-		"description": "Optional JavaScript rendering mode for the final page read. auto uses declared agent-readable sources first and renders when needed; off forbids browser rendering; required fails if the rendered DOM cannot be obtained.",
+		"description": "Optional JavaScript rendering mode for the final page read. auto reads declared agent-readable sources first, then renders when the static surface is thin, client-rendered, or does not cover the objective, capturing rendered DOM plus textual application data from fetch/XHR, SSE, and received WebSocket frames; the result reports content_source, network_truncated, and render_degraded so application data delivery stays checkable. off forbids browser rendering. required forces a browser read and fails if the rendered DOM cannot be obtained.",
 	}
 }
 

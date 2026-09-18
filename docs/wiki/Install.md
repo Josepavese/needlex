@@ -70,7 +70,9 @@ Default render backend:
 5. `render.provider=exec-dump-dom`
 6. network-aware defaults for fetch/XHR, SSE, and WebSocket text payloads: 64 MB total, 64 MB per resource, 32 resources, 4096 messages
 
-The `exec-dump-dom` provider first uses Chrome DevTools Protocol to capture rendered DOM, final `location.href`, and relevant same-origin textual network payloads; browser `--dump-dom` remains a fallback. Experimental provider names that are not implemented are rejected by config validation.
+The `exec-dump-dom` provider first uses Chrome DevTools Protocol to capture rendered DOM, final `location.href`, and relevant same-origin textual application payloads (fetch/XHR bodies, SSE messages, received WebSocket frames); browser `--dump-dom` remains a fallback, and a fallback render is reported as degraded because it captures no application data. Experimental provider names that are not implemented are rejected by config validation.
+
+Render waiting is adaptive: up to `render.timeout_ms` (default 30000) and never past the remaining operation deadline. Quiet pages settle as soon as the page and its streams go idle; a capture cut by a budget or by a still-open stream is reported as truncated.
 
 Use `NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1` only for controlled CI or packaging tests.
 

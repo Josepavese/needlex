@@ -110,4 +110,24 @@ grep -q 'DenseHTTPTextEmbedder' internal/intel/embedder.go || {
   exit 1
 }
 
+grep -q 'Render and Application-Data Delivery Principles' AGENTS.md || {
+  echo "FAIL: AGENTS.md must declare render application-data delivery doctrine"
+  exit 1
+}
+
+grep -q 'Degradation is reported, never silent' AGENTS.md || {
+  echo "FAIL: AGENTS.md must require reported render degradation"
+  exit 1
+}
+
+grep -q 'content_source' skills/needlex-web-retrieval/SKILL.md || {
+  echo "FAIL: shipped skill must document signals.content_source"
+  exit 1
+}
+
+grep -q 'content_source' docs/agent-answer-packet.md || {
+  echo "FAIL: packet contract must document signals.content_source"
+  exit 1
+}
+
 echo "SEMANTIC_GUARD_STATUS=pass"

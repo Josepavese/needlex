@@ -39,6 +39,14 @@ Regola per `chunks`:
 2. puo' restituire meno chunk del cap se quelli successivi sono ridondanti rispetto ai precedenti
 3. puo' scartare tail chunks strutturalmente deboli quando esiste gia' un anchor esplicativo forte
 
+Regola per `signals`:
+1. `confidence` e `substrate_class` descrivono la superficie compilata
+2. `content_source` descrive la provenienza del contenuto: assente quando la pagina non e' stata renderizzata, `dom` quando il contenuto viene dal DOM renderizzato, `dom+network` quando hanno contribuito anche payload applicativi catturati (fetch, XHR, SSE, WebSocket)
+3. `network_resources` e `network_bytes` quantificano l'evidenza applicativa trattenuta
+4. `network_truncated` segnala che la cattura e' stata tagliata da un budget o da uno stream ancora aperto
+5. `render_degraded` segnala che il percorso browser e' fallito e l'evidenza applicativa non e' stata osservata
+6. i campi di provenienza compaiono solo per letture che hanno coinvolto il rendering: le letture statiche restano senza rumore aggiuntivo
+
 Campi query-specific:
 1. `selected_url`
 2. `selection_why`
@@ -82,6 +90,53 @@ Campi query-specific:
   }
 }
 ```
+
+## `read` Example With Rendered Application Data
+
+Quando la lettura passa dal rendering e cattura payload applicativi, `signals` aggiunge la provenienza:
+
+```json
+{
+  "kind": "page_read",
+  "url": "https://example.com/app",
+  "title": "Registrar Overview",
+  "summary": "The page lists registrar records with pricing after the application loads.",
+  "uncertainty": {
+    "level": "low"
+  },
+  "chunks": [
+    {
+      "text": "Registrar record: Aurora, 320 square metres, price 1,250,000 euro.",
+      "heading_path": ["Records"],
+      "source_url": "https://example.com/api/records",
+      "source_selector": "/network/resource[1]",
+      "proof_ref": "proof_789"
+    }
+  ],
+  "signals": {
+    "confidence": 0.93,
+    "substrate_class": "rendered_html",
+    "content_source": "dom+network",
+    "network_resources": 8,
+    "network_bytes": 951884
+  },
+  "web_ir_summary": {
+    "node_count": 103,
+    "substrate_class": "rendered_html"
+  },
+  "cost_report": {
+    "latency_ms": 9043,
+    "token_in": 0,
+    "token_out": 0,
+    "lane_path": [0, 4]
+  }
+}
+```
+
+Note:
+1. un chunk può avere come `source_url` l'endpoint applicativo invece della pagina, perché l'evidenza di rete entra nel substrate con provenance `/network/resource[N]`
+2. se la cattura è stata tagliata, `network_truncated` è `true` e l'agente deve considerare che esistono dati non materializzati
+3. se il percorso browser è fallito, `render_degraded` è `true` e `content_source` resta `dom`
 
 ## `query` Example
 

@@ -22,6 +22,8 @@ Rule:
 3. surface-form metrics as proxies for meaning
 4. reopening specialist model tasks in the active core
 
+Scope note on render delivery: the seeded and live lanes below are static or agent-readable surfaces. Rendered application-data delivery is shipped and covered by unit and live browser tests, but it has no dedicated lane measurement yet, so this report makes no claim about it. When a lane is added, it must report capture completeness (`content_source`, `network_truncated`) and latency alongside pass rates.
+
 ## Live Advantage Metrics
 
 Source run:
@@ -133,6 +135,7 @@ Keep these axes separate:
 1. `runtime_success_rate`
 2. `quality_pass_rate`
 3. `advantage metrics`
+4. capture completeness on rendered surfaces (`content_source`, `network_truncated`, `render_degraded`), which is neither a pass rate nor an advantage metric
 
 If these are collapsed into one leaderboard, the report becomes misleading.
 

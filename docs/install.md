@@ -111,7 +111,9 @@ Default installed render backend:
 
 The installer does not install a global Chrome package. It downloads the browser payload into the PAL state root, probes the renderer, and writes the PAL SSOT config. Existing installs are reconciled by updating the `render.*` config keys. Render is enabled by default; use `--render off` only when you intentionally need static-only acquisition.
 
-Runtime note: `exec-dump-dom` is the installed provider name. The implementation first uses Chrome DevTools Protocol against the PAL browser so the rendered DOM can carry the final `location.href` and same-origin textual network payloads from fetch/XHR, SSE, and WebSocket messages; `--dump-dom` remains a fallback. Older experimental provider names such as `remote-cdp` and `playwright-worker` are not accepted config values unless a future implementation wires them explicitly.
+Runtime note: `exec-dump-dom` is the installed provider name. The implementation first uses Chrome DevTools Protocol against the PAL browser so the rendered DOM can carry the final `location.href` and same-origin textual application payloads from fetch/XHR bodies, SSE messages, and received WebSocket frames; `--dump-dom` remains a fallback, and a fallback render is reported as degraded because it captures no application data. Older experimental provider names such as `remote-cdp` and `playwright-worker` are not accepted config values unless a future implementation wires them explicitly.
+
+Render waiting is adaptive: a render may wait up to `render.timeout_ms` (default 30000) and never past the remaining operation deadline. Quiet pages settle as soon as the page and its streams go idle; pages with active application requests keep waiting while they produce. A capture cut by a budget or by a still-open stream is reported as truncated (`network_truncated`, `network_streams_open`) instead of being presented as complete.
 
 Skip only for controlled CI or packaging tests:
 

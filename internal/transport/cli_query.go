@@ -65,7 +65,7 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile,
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, off, or experimental explicit opt-in web_search")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
-	fs.StringVar(&renderMode, "render", "", "JS rendering mode for selected page: auto (default), off, or required")
+	fs.StringVar(&renderMode, "render", "", "JS rendering mode for selected page: auto (default; renders and captures application data when needed), off, or required")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{

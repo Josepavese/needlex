@@ -113,6 +113,24 @@ needlex tool-catalog --provider openai --strict
 needlex tool-catalog --provider anthropic
 ```
 
+## Render Mode And Content Provenance
+
+`web_read`, `web_query`, and `web_crawl` accept a `render` argument with `auto`, `off`, or `required`.
+
+1. `auto` reads declared agent-readable sources first, then renders when the static surface is thin, client-rendered, or does not cover the objective, capturing rendered DOM plus textual application data from fetch/XHR, SSE, and received WebSocket frames
+2. `off` forbids browser rendering
+3. `required` forces a browser read even for non-HTML content and fails if the rendered DOM cannot be obtained
+
+Render waiting is adaptive: it may wait up to `render.timeout_ms` and never past the remaining operation deadline, and it stops as soon as the page and its streams go idle.
+
+Read `signals` in the compact packet to know what was delivered:
+
+1. `content_source` is `dom` when content comes from the rendered DOM, and `dom+network` when captured application data also contributed
+2. `network_truncated` means more application data exists upstream than was captured
+3. `render_degraded` means the browser path failed and application data was not observed
+
+Before escalating to an external browser, retry the same URL once with `render: "required"`.
+
 ## Mapping
 
 1. `web_read` -> `needlex read`

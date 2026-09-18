@@ -78,7 +78,7 @@ From now to GitHub release we do **not** spend cycles primarily on:
 
 1. speculative multi-agent runtime expansion
 2. broad search-engine replacement claims
-3. browser automation
+3. browser automation as an agent feature; rendering stays an internal escalation that materializes application data for compilation, not a user-facing browser surface
 4. anti-bot reverse-engineering as product identity
 5. deep budget-only work unless it blocks shipping quality
 6. new specialist model tasks
@@ -146,8 +146,9 @@ Definition of done:
    - `signals`
    - `cost_report`
 2. the default packet is enough for common agent reasoning without opening full diagnostics
-3. proof lookup remains simple when the agent needs verification
-4. no default field exists only for internal implementation nostalgia
+3. for rendered pages, `signals.content_source` plus the network counters are what make point 2 true: an agent must be able to tell delivered application data from a rendered shell without opening the trace
+4. proof lookup remains simple when the agent needs verification
+5. no default field exists only for internal implementation nostalgia
 
 Hard rule:
 The default output is an answer packet, not a runtime dump.

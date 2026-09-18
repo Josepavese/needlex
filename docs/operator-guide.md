@@ -80,8 +80,11 @@ Render rule:
 4. `network_truncated=true` means captured payloads hit configured `render.network_*` budgets or a stream was still open at snapshot time
 5. `render_path=dump_dom` with `render_degraded=true` means the CDP capture path failed and no application data was observed
 6. render escalation in `auto` mode is both structural (thin or client-rendered surface) and semantic: `semantic_gap_similarity` records the objective-to-surface similarity that triggered escalation
-7. render budget is adaptive up to `render.timeout_ms` (default 30000): quiet pages finish as soon as the page and its streams go idle, active streams extend the wait within that ceiling
+7. render budget is adaptive: it may wait up to `render.timeout_ms` (default 30000) and never past the remaining operation deadline. Quiet pages finish as soon as the page and its streams go idle; active application requests and open streams extend the wait within that ceiling
 8. non-HTML responses are never rendered in `auto` mode; `--render required` forces a browser read anyway
+9. `network_body_missing` counts relevant application resources whose bodies could not be read, and `network_body_missing_sample` names up to three of them so a capture gap can be diagnosed without rerunning
+10. gzipped payloads are decoded at the transport boundary before they become evidence; payloads that remain non-textual are observed and counted but never enter semantic evidence
+11. how long a render waited and why it stopped are visible in `duration_ms` and `network_idle_reason`, so slow or cut captures are diagnosable from the trace alone
 
 Example benchmark override:
 

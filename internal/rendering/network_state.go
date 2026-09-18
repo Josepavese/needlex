@@ -1,12 +1,10 @@
 package rendering
 
 import (
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -14,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 func (c *networkCollector) markSettleError(err error) {
@@ -298,52 +295,6 @@ func maxDuration(left, right time.Duration) time.Duration {
 }
 
 const streamMinObservation = 8 * time.Second
-
-// decodeNetworkBody unwraps gzip payloads served as files, which Chrome returns
-// undecoded, so application data sharded as .json.gz stays readable. The decode
-// is bounded by the per-resource budget to keep hostile payloads from allocating
-// beyond capture limits.
-func decodeNetworkBody(data string, limit int64) string {
-	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
-		return data
-	}
-	if limit <= 0 {
-		limit = 8_000_000
-	}
-	reader, err := gzip.NewReader(strings.NewReader(data))
-	if err != nil {
-		return data
-	}
-	defer reader.Close() //nolint:errcheck
-	decoded, err := io.ReadAll(io.LimitReader(reader, limit))
-	if err != nil && len(decoded) == 0 {
-		return data
-	}
-	return string(decoded)
-}
-
-// isTextualNetworkBody keeps binary payloads out of semantic evidence instead of
-// letting undecodable bytes reach chunks as noise.
-func isTextualNetworkBody(data string) bool {
-	if data == "" {
-		return false
-	}
-	sample := data
-	if len(sample) > 4096 {
-		sample = sample[:4096]
-	}
-	if !utf8.ValidString(sample) {
-		return false
-	}
-	runes := []rune(sample)
-	control := 0
-	for _, r := range runes {
-		if r < 0x20 && r != '\n' && r != '\r' && r != '\t' {
-			control++
-		}
-	}
-	return control*20 <= len(runes)
-}
 
 func renderSettleBudget(timeout time.Duration) time.Duration {
 	if timeout <= 0 {

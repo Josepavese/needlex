@@ -16,30 +16,32 @@ needlex/
     architecture.md
     benchmark-report.md
     competitive-benchmark-protocol.md
+    fetch-profiles.md
     folder-tree.md
     go-to-market.md
+    governance-platform.md
+    install.md
     model-baseline.md
     operator-guide.md
     project-context.md
     seeded-benchmark-spec.md
     semantic-alignment-gate.md
+    tool-calling.md
     vademecum.md
     vercel-browser-agent-bridge.md
+    assets/
     experimental/
+    roadmap/
     wiki/
+  governance/
+    budget.env
+    golangci.advisory.yml
   improvements/
     README.md
-    competitive-benchmark-latest.json
-    discovery-eval-latest.json
-    discovery-memory-benchmark-latest.json
-    hard-case-matrix-baseline.json
-    hard-case-matrix-latest.json
-    live-read-baseline.json
-    live-read-latest.json
-    live-semantic-eval-latest.json
-    live-semantic-global-eval-latest.json
-    live-validation-closure-latest.json
-    seeded-benchmark-latest.json
+  install/
+    install.sh
+    install.ps1
+  issues/
   benchmarks/
     README.md
     corpora/
@@ -47,34 +49,41 @@ needlex/
     discovery_eval/runner/
     discovery_memory/runner/
     hard_case_matrix/runner/
+    internal/
     live_read_eval/runner/
+    native_api_endpoint/runner/
     seeded/runner/
+    seedless_ddg/runner/
   internal/
+    analytics/
     config/
     core/
-    evalutil/
     intel/
     memory/
+    observability/
     pipeline/
+    platform/
     proof/
+    rendering/
     store/
     transport/
   schemas/
   scripts/
     external_baselines/
     lib/
+    release/
     check_budget.sh
-    run_cpu_baseline_matrix.sh
-    run_cpu_model_benchmark.sh
-    run_discovery_eval.sh
-    run_hard_case_matrix.sh
-    run_live_read_eval.sh
-    run_live_semantic_eval.sh
-    run_qwen35_cpu_matrix.sh
-    run_semantic_gate_smoke.sh
+    check_governance.sh
+    check_semantic_guard.sh
+    check_skills.sh
+    run_*.sh
+  skills/
+    needlex-web-retrieval/
   testdata/
     golden/
 ```
+
+Note on `improvements/`: benchmark JSON outputs are local analysis artifacts and are not tracked; the directory keeps its README plus the artifacts currently under analysis.
 
 ## Responsibilities
 
@@ -107,3 +116,6 @@ Primary entrypoints:
 2. [Wiki Home](wiki/Home.md)
 3. [Operator Guide](operator-guide.md)
 4. [Tool Calling](tool-calling.md)
+5. [Agent Answer Packet](agent-answer-packet.md)
+6. [Install](install.md)
+7. [Governance Platform](governance-platform.md)

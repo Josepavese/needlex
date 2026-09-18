@@ -21,6 +21,10 @@ These claims are benchmark-backed today:
 4. Needle-X lowers post-processing burden for downstream agents
 5. warm-state `Discovery Memory` is strong on the active local benchmark
 
+Claims that require their own measurement before they are used:
+1. rendered application-data delivery is shipped and covered by tests, but it has no published lane measurement yet; do not turn it into a market claim until it has one
+2. when measured, it must be reported with the same discipline as the seeded lanes: capture completeness (`content_source`, `network_truncated`), latency, and the failure taxonomy
+
 ## Live Advantage Snapshot
 
 | Metric | Needle-X | Tavily | Jina | Firecrawl |
