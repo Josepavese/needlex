@@ -308,6 +308,35 @@ Avoid:
 4. benchmark conclusions drawn from unstable runs without taxonomy
 5. silent fallbacks that trade captured data for a green status
 6. leaving a shipped contract and its installed guidance version out of sync
+7. leaving avoidable local residue after a task
+
+## Workstation and Artifact Footprint
+
+### The development device is space-constrained
+
+Treat this workstation as a device with a chronically full root filesystem. A few gigabytes of headroom is the entire budget for local work, so space is a resource the project manages explicitly, not an infinite platform assumption.
+
+Operating rules:
+- check free space before heavy work: full test suites, release builds, benchmark matrices, and browser payload downloads all consume gigabytes
+- prefer temporary directories for test artifacts, and remove them when the task ends
+- remove build output when it has served its purpose: `dist/` exists for the duration of a release, not as permanent storage
+- treat caches as reclaimable state: when space is short, reclaim them (`go clean -cache`, downloaded toolchains) instead of deleting source, data, or another project's work
+- a task is not finished while it left avoidable local residue behind
+
+### Footprint is governed, not improvised
+
+Thresholds live in `governance/workstation.env` and are enforced by `scripts/check_workstation_space.sh`, which runs inside `scripts/check_governance.sh`.
+
+Two families of checks:
+1. repository footprint: large files, `dist/` size, artifacts under `improvements/`, stray archives
+2. device footprint: free space, Go build cache size, local residue in the working tree and in temp
+
+Device checks run on a workstation and are skipped where `CI` is set, because a CI runner's disk is not ours to manage.
+
+Rules:
+- never silence a footprint check to make a gate green; reclaim the cache or remove the residue instead
+- when a threshold is wrong, change it in `governance/workstation.env` with the measurement that justifies it, exactly like the LOC budget
+- keep the residue named and actionable: every failure prints the path and the reclaim command
 
 ## Practical Checklist For Future Contributors
 
@@ -320,5 +349,6 @@ Before landing a change, ask:
 6. If the change touches capture or waiting, can an operator tell from the run record what was captured, what was lost, and why?
 7. If the change narrows a budget, was the previous value derived from a measurement rather than a guess?
 8. If the change alters a public contract, does shipped agent guidance carry it and can installed copies be detected as stale?
+9. Did the work leave local residue, and did it reclaim the space it consumed?
 
 If the answer is weak on those points, the change is probably not mature enough.

@@ -29,5 +29,8 @@ bash scripts/check_skills.sh .
 echo '-- bash scripts/check_skill_refresh.sh .'
 bash scripts/check_skill_refresh.sh .
 
+echo '-- bash scripts/check_workstation_space.sh .'
+bash scripts/check_workstation_space.sh .
+
 echo '-- bash scripts/check_semantic_guard.sh .'
 bash scripts/check_semantic_guard.sh .

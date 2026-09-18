@@ -35,6 +35,7 @@ needlex/
     wiki/
   governance/
     budget.env
+    workstation.env
     golangci.advisory.yml
   improvements/
     README.md
@@ -77,6 +78,7 @@ needlex/
     check_semantic_guard.sh
     check_skill_refresh.sh
     check_skills.sh
+    check_workstation_space.sh
     run_*.sh
   skills/
     needlex-web-retrieval/

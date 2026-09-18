@@ -140,4 +140,19 @@ grep -Eq '^version:[[:space:]]*v?[0-9]+\.[0-9]+\.[0-9]+' skills/needlex-web-retr
   exit 1
 }
 
+grep -q 'Workstation and Artifact Footprint' AGENTS.md || {
+  echo "FAIL: AGENTS.md must declare workstation footprint doctrine"
+  exit 1
+}
+
+grep -q 'space-constrained' AGENTS.md || {
+  echo "FAIL: AGENTS.md must state that the development device is space-constrained"
+  exit 1
+}
+
+grep -q '^MIN_FREE_GB_HARD=' governance/workstation.env || {
+  echo "FAIL: governance/workstation.env must define the device space policy"
+  exit 1
+}
+
 echo "SEMANTIC_GUARD_STATUS=pass"

@@ -158,6 +158,23 @@ needlex doctor
 
 `Agent Skill: ... stale=true` means the installed copy documents a different release than the running binary, and the report prints the refresh command to fix it. Refreshing is idempotent and keeps a backup, so acting on the warning is always safe.
 
+## Local Footprint
+
+An install keeps local state under `NEEDLEX_HOME`. On a machine with little free space the useful numbers are:
+
+1. render browser: roughly 260 MB per Chrome for Testing version, under `<state-root>/browsers/`
+2. traces and proofs: grow with every read, under `<state-root>/traces/` and `<state-root>/proofs/`
+3. embedding cache: reusable vectors, under `<state-root>/data/embeddings/cache`
+
+Reclaiming space without losing configuration:
+
+```bash
+needlex prune --older-than-hours 48   # drop older traces, proofs and derived state
+needlex prune --embedding-cache       # drop cached embeddings; they are recomputed on demand
+```
+
+The installer replaces the render browser when it installs a newer one; superseded browser versions under `<state-root>/browsers/` are left in place and can be removed manually, keeping only the version `needlex doctor` reports as `browser=`.
+
 ## Re-running the installer
 
 The installer is designed to converge, not just append.

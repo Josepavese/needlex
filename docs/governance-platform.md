@@ -28,6 +28,7 @@ Current hard gates are enforced by:
 - [check_governance.sh](/home/jose/hpdev/Libraries/needlex/scripts/check_governance.sh)
 - [check_budget.sh](/home/jose/hpdev/Libraries/needlex/scripts/check_budget.sh)
 - [budget.env](/home/jose/hpdev/Libraries/needlex/governance/budget.env)
+- [workstation.env](/home/jose/hpdev/Libraries/needlex/governance/workstation.env)
 - [golangci.yml](/home/jose/hpdev/Libraries/needlex/.golangci.yml)
 
 They include:
@@ -40,6 +41,7 @@ They include:
   - `check_skills.sh`: every shipped skill declares `name`, `description`, and the release `version` it documents
   - `check_semantic_guard.sh`: semantic-first doctrine is present and banned surface-form retrieval residues stay out
   - `check_skill_refresh.sh`: the installer's host-skill refresh backs up the previous copy, restores it on failure, and never installs a skill that was not already present
+- device footprint, see [Workstation Footprint](#workstation-footprint)
 - hard ceilings on:
   - total production LOC, excluding benchmark runners
   - average file LOC
@@ -187,6 +189,41 @@ Accordingly, only two hard limits changed:
 The dependency count is deliberately truthful. `go mod tidy` classified every imported module as direct; the runtime uses HTTP, HTML, SQLite memory, YAML standards parsing, and maintained WebSocket/CDP transport. Marking an imported dependency as indirect to satisfy the old gate would hide architecture rather than improve it.
 
 Zero-legacy cleanup accompanied the recalibration: the unused remote-CDP configuration field and its environment/CLI aliases were removed, the deprecated WebSocket module was replaced, and extracted packages expose their real APIs without service-layer compatibility shims.
+
+## Workstation Footprint
+
+This development device is managed as a space-constrained machine: its root filesystem sits near 100% used, so free space is a few gigabytes rather than tens. That is not an accident of one afternoon; it is the operating condition local work must hold itself to.
+
+Thresholds live in [workstation.env](/home/jose/hpdev/Libraries/needlex/governance/workstation.env) and are enforced by [check_workstation_space.sh](/home/jose/hpdev/Libraries/needlex/scripts/check_workstation_space.sh) inside the governance script.
+
+| Limit | Value | Consequence |
+| --- | --- | --- |
+| free space, hard floor | 3 GB | fails: builds and tests start failing on writes below it |
+| free space, warn floor | 5 GB | warns: reclaim caches before heavy work |
+| Go build cache | 3 GB | warns: reclaim with `go clean -cache` |
+| single working-tree file | 10 MB | fails: excludes `dist/`, which has its own cap |
+| `dist/` | 200 MB | fails above the cap; notices whenever it is present |
+| `improvements/` | 12 MB | fails: benchmark artifacts are not a dumping ground |
+| local residue | 128 MB | fails: repo-local state and leftover temp trees |
+
+Two families of checks, deliberately split:
+
+1. repository footprint runs everywhere, including CI, because it is deterministic and describes the tree
+2. device footprint runs only on a workstation and is skipped when `CI` is set or `NEEDLEX_SKIP_DEVICE_CHECKS=1`, because a CI runner's disk is not ours to manage
+
+Reclaiming space, in the order that costs least:
+
+```bash
+go clean -cache                          # regenerable; the usual answer
+rm -rf dist                              # release output, once published
+rm -rf ~/go/pkg/mod/golang.org/toolchain@*   # downloaded toolchains no longer targeted
+needlex prune --older-than-hours 48      # PAL traces and proofs
+needlex prune --embedding-cache          # PAL embedding cache
+```
+
+`go clean -modcache` is a last resort: it removes the dependency cache and forces a full re-download. Removing another project's cache is never the answer; reclaim what this project generated.
+
+A footprint failure is never silenced to make a gate green. If a threshold is wrong, change it in `governance/workstation.env` with the measurement that justifies it, the same way LOC limits are recalibrated.
 
 ## Processes
 
