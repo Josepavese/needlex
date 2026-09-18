@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.36
+version: v0.1.37
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 

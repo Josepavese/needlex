@@ -159,10 +159,18 @@ past the file thresholds, so both were decomposed along cohesion lines
 escalation and budget policy). That restored slack instead of relaxing the new limits:
 28 files over 300 LOC, 22 files over 350 LOC.
 
-Environment note: `staticcheck`, advisory lint and structure lint could not be executed
-on this machine because the installed tooling cannot read Go 1.27 export data. The same
-gates were already failing on the pristine pre-change tree for the same reason, so the
-failures are attributable to tooling mismatch, not to this recalibration.
+Environment note: `staticcheck`, advisory lint and structure lint failed on this machine
+because the installed lint binaries could not read the export data of the local Go
+toolchain, which was newer than the module minimum. The same gates were already failing
+on the pristine pre-change tree for the same reason, so the failures were attributable to
+tooling mismatch, not to the recalibration.
+
+That mismatch was removed in v0.1.37: the module now targets Go 1.27, the lint pins
+(`gofumpt v0.12.0`, `staticcheck 2026.2.1`, `golangci-lint v2.13.2`) are installed from the
+same toolchain CI resolves from `go.mod`, and local and CI gate results agree. A developer
+whose local Go is newer than the module minimum must set `GOTOOLCHAIN` to the version in
+`go.mod` before trusting a local gate result, because lint binaries built with the older
+toolchain cannot read newer export data.
 
 Accordingly, only two hard limits changed:
 - production LOC: `30,500` to `34,500`, with target pressure at `34,000`
