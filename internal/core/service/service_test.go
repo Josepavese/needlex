@@ -1262,6 +1262,47 @@ func TestReadKeepsStaticContentWhenSemanticCoverageHolds(t *testing.T) {
 	}
 }
 
+func TestReadServesExplicitRenderRequestWithoutUtilityReasons(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<html><head><title>Registrar Overview</title></head><body><main><h1>Registrar overview</h1><p>%s</p><p>%s</p></main></body></html>`,
+			strings.Repeat("Registry policy text ", 20), strings.Repeat("Registrar listing detail ", 20))
+	}))
+	defer server.Close()
+
+	cfg := testConfig()
+	cfg.Render.Enabled = true
+	svc := newTestService(t, cfg, server.Client())
+	renderer := &countingRenderer{page: rendering.Page{
+		URL:       server.URL,
+		FinalURL:  server.URL,
+		HTML:      `<html><head><title>Registrar Overview</title></head><body><article><h1>Registrar overview</h1><p>Application data: 852 registrar records.</p></article></body></html>`,
+		Browser:   "fake cdp",
+		Duration:  time.Millisecond,
+		FetchedAt: time.Unix(1700000000, 0).UTC(),
+	}}
+	svc.renderer = renderer
+
+	resp, err := svc.Read(context.Background(), ReadRequest{
+		URL:        server.URL,
+		Objective:  "Extract registrar pricing and policy details",
+		Profile:    core.ProfileStandard,
+		RenderMode: "required",
+	})
+	if err != nil {
+		t.Fatalf("read with render=required failed: %v", err)
+	}
+	if renderer.calls != 1 {
+		t.Fatalf("expected the explicit render request to be served, got %d calls", renderer.calls)
+	}
+	if resp.Document.FetchMode != core.FetchModeRender {
+		t.Fatalf("expected render fetch mode, got %q", resp.Document.FetchMode)
+	}
+	if !renderEscalationReasons(resp.Trace)["explicit_render_request"] {
+		t.Fatalf("expected explicit_render_request reason in render escalation, got %#v", resp.Trace.Events)
+	}
+}
+
 func TestReadSkipsSemanticRenderGapForPlaceholderObjective(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -226,6 +226,9 @@ that requirement must be stated in:
 - examples
 - error messages
 
+A strict mode must also be exercised by a test on a case where the relaxed path would not have acted.
+A strict mode that fails hard on a valid input is a defect, not a safety feature: the operator asking for the stronger guarantee is the caller most entitled to a served result.
+
 ## Rewrite and Semantic Escalation Principles
 
 ### Rewrite is for semantic retrieval, not surface-form copying

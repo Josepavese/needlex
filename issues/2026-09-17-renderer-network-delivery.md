@@ -62,6 +62,32 @@ Unit e live, tutti verdi:
 7. contenuti non-HTML non renderizzati in `auto`
 8. provenienza packet: `dom+network`, `dom`, vuota per letture statiche, degradata
 
+## Seguito: il render esplicito falliva in validazione (v0.1.36)
+
+Verifica sul campo del 2026-09-18: `needlex read <url> --render required` su una pagina che non presenta ragioni strutturali di render terminava con
+
+```text
+read failed. class=runtime_error
+run_trace.events[7] trace_event.data[reasons] must not be empty
+```
+
+Lo stesso comando falliva identicamente sulla v0.1.35 installata: il difetto era pre-esistente, non introdotto dalla verifica.
+
+Causa: `renderPage` registrava l'escalation con `"reasons": strings.Join(reasons, ",")`. In modalità `required` le due porte di `auto` (`shouldRenderForRead`, gap semantico) vengono saltate per definizione, quindi `reasons` resta vuota e il valore registrato è una stringa vuota. `proof.validateStringMap` rifiuta i valori vuoti, e la validazione del run trace fa fallire l'intera lettura invece di servire la pagina.
+
+Effetto pratico: la modalità stretta che il prodotto documenta (`--render required`, `render: "required"` via MCP) non era utilizzabile proprio sui casi in cui serve, cioè quando la superficie statica sembra a posto ma l'agente vuole comunque il browser.
+
+Correzione:
+
+1. `renderEscalationReasons` (`render_policy.go`) rende sempre non vuota la ragione registrata: `explicit_render_request` quando il render è una richiesta del chiamante, con dettaglio dell'evento coerente (`caller requested a browser read`).
+2. `renderMetadataValue` protegge gli altri metadati di render che possono arrivare vuoti da un renderer (`browser`, `render_degrade_reason`): un valore vuoto non deve trasformare una lacuna di cattura in un errore di runtime.
+
+Test: `TestReadServesExplicitRenderRequestWithoutUtilityReasons` serve una pagina statica ricca, richiede `RenderMode: "required"` e prima della correzione falliva con lo stesso messaggio visto in produzione; ora verifica un solo render servito e la ragione `explicit_render_request` nel trace.
+
+Smoke live sulla build corretta (`about.gitlab.com`, `--render required`): `fetch_mode=render`, `render_path=cdp`, `network_observed=2`, `network_bytes=258964`, `network_body_missing=0`, `network_streams_open=0`, riduzione 477 → 84025 caratteri, packet compatto con `content_source=dom+network`.
+
+Rischio residuo noto, non affrontato qui: la stessa classe di errore è possibile in ogni evento di trace con un valore vuoto in `data` (per esempio `fingerprint` o `reason_code` vuoti in `intel.Decision.Metadata()`, usati dall'escalation di `pack`). La validazione è corretta a rifiutare i valori vuoti; il punto debole è che il fallimento avviene a fine run invece che nel punto che ha prodotto il valore mancante.
+
 ## Non obiettivi
 
 1. Nessuna intercettazione `Fetch.enable` o lettura progressiva di stream ancora aperti: gli stream che non chiudono entro il budget vengono segnalati, non inseguiti.

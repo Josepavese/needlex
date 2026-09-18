@@ -123,9 +123,10 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 	if err := recorder.StageStarted(stage, rawPage, r.now().UTC()); err != nil {
 		return pipeline.RawPage{}, err
 	}
-	recorder.EscalationTriggered(stage, "NX_JS_RENDER_REQUIRED", "static source did not provide useful agent-readable content", 4, map[string]string{
+	reasonText, reasonDetail := renderEscalationReasons(reasons)
+	recorder.EscalationTriggered(stage, "NX_JS_RENDER_REQUIRED", reasonDetail, 4, map[string]string{
 		"mode":    mode,
-		"reasons": strings.Join(reasons, ","),
+		"reasons": reasonText,
 	}, r.now().UTC())
 	rendered, err := r.Renderer.Render(ctx, rendering.Request{
 		URL:                     rawPage.FinalURL,
@@ -177,7 +178,7 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 	metadata := map[string]string{
 		"rendered":              "true",
 		"render_path":           renderPath(rendered),
-		"browser":               rendered.Browser,
+		"browser":               renderMetadataValue(rendered.Browser, "unknown_renderer"),
 		"duration_ms":           fmt.Sprintf("%d", rendered.Duration.Milliseconds()),
 		"partial":               fmt.Sprintf("%t", rendered.Partial),
 		"network_resources":     fmt.Sprintf("%d", stats.ResourceCount),
@@ -195,7 +196,7 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 	}
 	if rendered.Degraded {
 		metadata["render_degraded"] = "true"
-		metadata["render_degrade_reason"] = rendered.DegradeReason
+		metadata["render_degrade_reason"] = renderMetadataValue(rendered.DegradeReason, "unspecified")
 	}
 	if semanticGap > 0 {
 		metadata["semantic_gap_similarity"] = fmt.Sprintf("%.4f", semanticGap)

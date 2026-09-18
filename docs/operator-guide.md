@@ -82,6 +82,7 @@ Render rule:
 6. render escalation in `auto` mode is both structural (thin or client-rendered surface) and semantic: `semantic_gap_similarity` records the objective-to-surface similarity that triggered escalation
 7. render budget is adaptive: it may wait up to `render.timeout_ms` (default 30000) and never past the remaining operation deadline. Quiet pages finish as soon as the page and its streams go idle; active application requests and open streams extend the wait within that ceiling
 8. non-HTML responses are never rendered in `auto` mode; `--render required` forces a browser read anyway
+9. an explicit render request records `explicit_render_request` as its escalation reason, because the decision came from the caller and not from the static surface
 9. `network_body_missing` counts relevant application resources whose bodies could not be read, and `network_body_missing_sample` names up to three of them so a capture gap can be diagnosed without rerunning
 10. gzipped payloads are decoded at the transport boundary before they become evidence; payloads that remain non-textual are observed and counted but never enter semantic evidence
 11. how long a render waited and why it stopped are visible in `duration_ms` and `network_idle_reason`, so slow or cut captures are diagnosable from the trace alone

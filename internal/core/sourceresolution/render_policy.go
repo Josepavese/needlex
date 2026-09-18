@@ -41,6 +41,30 @@ const semanticRenderGapThreshold = 0.5
 
 const semanticRenderEscalationReason = "semantic_coverage_gap"
 
+// explicitRenderReason names a render the caller asked for. Such a render carries
+// no utility reason by construction: render=required is an explicit decision, not
+// a conclusion drawn from the static surface.
+const explicitRenderReason = "explicit_render_request"
+
+// renderEscalationReasons keeps the recorded reasons non-empty: an empty data
+// value fails trace validation, which would turn an explicit render request into
+// a runtime error instead of a served page.
+func renderEscalationReasons(reasons []string) (string, string) {
+	if text := strings.Join(reasons, ","); text != "" {
+		return text, "static source did not provide useful agent-readable content"
+	}
+	return explicitRenderReason, "caller requested a browser read"
+}
+
+// renderMetadataValue keeps trace metadata non-empty, because an empty value fails
+// trace validation and would fail the whole read instead of reporting a gap.
+func renderMetadataValue(value, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return value
+}
+
 func (r Resolver) semanticRenderGap(ctx context.Context, req Request, dom pipeline.SimplifiedDOM) (float64, bool) {
 	if r.Semantic == nil || !semanticRenderGapObjectiveUsable(req.Objective) {
 		return 0, false
