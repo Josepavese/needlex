@@ -5,6 +5,33 @@ OUT_DIR="${1:-dist}"
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
 VERSION="${NEEDLEX_VERSION:-dev}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# The shipped agent skill carries its own version marker. A release whose binary
+# and skill disagree would tell every installed agent that its copy is stale, so
+# the build refuses to produce such artifacts.
+verify_skill_version() {
+  local skill_file="${REPO_ROOT}/skills/needlex-web-retrieval/SKILL.md"
+  local skill_version
+  if [[ ! -f "${skill_file}" ]]; then
+    echo "shipped skill not found: ${skill_file}" >&2
+    exit 1
+  fi
+  skill_version="$(sed -n 's/^version:[[:space:]]*//p' "${skill_file}" | head -1 | tr -d '[:space:]')"
+  if [[ -z "${skill_version}" ]]; then
+    echo "skill version marker missing in ${skill_file}" >&2
+    exit 1
+  fi
+  if [[ "${VERSION}" == "dev" ]]; then
+    return 0
+  fi
+  if [[ "${skill_version#v}" != "${VERSION#v}" ]]; then
+    echo "skill version ${skill_version} does not match release version ${VERSION}" >&2
+    exit 1
+  fi
+}
+
+verify_skill_version
 
 build_one() {
   local goos="$1"

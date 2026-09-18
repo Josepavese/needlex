@@ -200,6 +200,17 @@ Do not force agents to parse a giant diagnostic blob before they can see the use
 Compact output must still answer where the content came from.
 For reads that involved rendering, the packet reports the content source (rendered DOM, or rendered DOM plus captured application data) and whether the capture was truncated or degraded, so an agent can trust the result or escalate without opening full diagnostics.
 
+### Installed agent guidance must be able to go stale visibly
+
+Agent skills and similar guidance are installed as snapshots. They do not refresh themselves, and a host agent cannot see that its local copy documents an older contract than the running binary.
+
+Therefore:
+- shipped agent guidance declares the release version it documents
+- `needlex doctor` reports the installed guidance version against the running build and reports drift explicitly
+- the installer refreshes guidance it previously installed, while backing up the previous copy and restoring it if the refresh fails
+
+Silent drift is the failure mode to avoid: an agent following an outdated contract is indistinguishable from an agent misusing the tool unless the drift is reported.
+
 ### Be explicit about strict modes
 
 Strict options such as `discovery_mode=off` and `render=required` must be documented as strict.
@@ -265,6 +276,7 @@ This includes:
 - CLI smoke tests
 - MCP smoke tests
 - release asset verification
+- shipped agent guidance aligned to the released version
 
 ### Public behavior changes require release discipline
 
@@ -292,6 +304,7 @@ Avoid:
 3. monolingual search-term filters as primary ranking logic
 4. benchmark conclusions drawn from unstable runs without taxonomy
 5. silent fallbacks that trade captured data for a green status
+6. leaving a shipped contract and its installed guidance version out of sync
 
 ## Practical Checklist For Future Contributors
 
@@ -303,5 +316,6 @@ Before landing a change, ask:
 5. Is the new behavior understandable from metadata, reasons, and tests?
 6. If the change touches capture or waiting, can an operator tell from the run record what was captured, what was lost, and why?
 7. If the change narrows a budget, was the previous value derived from a measurement rather than a guess?
+8. If the change alters a public contract, does shipped agent guidance carry it and can installed copies be detected as stale?
 
 If the answer is weak on those points, the change is probably not mature enough.

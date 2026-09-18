@@ -130,4 +130,14 @@ grep -q 'content_source' docs/agent-answer-packet.md || {
   exit 1
 }
 
+grep -q 'Installed agent guidance must be able to go stale visibly' AGENTS.md || {
+  echo "FAIL: AGENTS.md must require visible drift for installed agent guidance"
+  exit 1
+}
+
+grep -Eq '^version:[[:space:]]*v?[0-9]+\.[0-9]+\.[0-9]+' skills/needlex-web-retrieval/SKILL.md || {
+  echo "FAIL: shipped skill must declare the released contract version"
+  exit 1
+}
+
 echo "SEMANTIC_GUARD_STATUS=pass"

@@ -7,6 +7,7 @@ RELEASE_BASE_URL="${NEEDLEX_RELEASE_BASE_URL:-}"
 SKIP_SHELL_HOOKS="${NEEDLEX_INSTALL_SKIP_SHELL_HOOKS:-0}"
 SKIP_SEMANTIC_PREREQS="${NEEDLEX_INSTALL_SKIP_SEMANTIC_PREREQS:-0}"
 SKIP_RENDER_PREREQS="${NEEDLEX_INSTALL_SKIP_RENDER_PREREQS:-0}"
+SKIP_SKILL_REFRESH="${NEEDLEX_INSTALL_SKIP_SKILL_REFRESH:-0}"
 OLLAMA_HOST="${NEEDLEX_OLLAMA_HOST:-http://127.0.0.1:11434}"
 SEMANTIC_EMBEDDING_URL="${NEEDLEX_SEMANTIC_EMBEDDING_URL:-${OLLAMA_HOST}/api/embed}"
 SEMANTIC_MODEL="${NEEDLEX_SEMANTIC_PROVIDER_MODEL:-embeddinggemma:latest}"
@@ -446,6 +447,44 @@ configure_render_config() {
   NEEDLEX_HOME="${STATE_ROOT}" NEEDLEX_CONFIG="${CONFIG_PATH}" "${REAL_BIN}" config set render.network_max_messages "${RENDER_NETWORK_MAX_MESSAGES}" >/dev/null
 }
 
+# Host agent skills are one-shot copies: a previously installed skill keeps its old
+# contract until it is refreshed. Refresh only what is already installed, back the old
+# copy up, and restore it if the refresh fails - the installer never fails because of it.
+refresh_host_agent_skill() {
+  if [[ "${SKIP_SKILL_REFRESH}" == "1" ]]; then
+    echo "Host agent skill refresh skipped by NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1"
+    return 0
+  fi
+  local codex_home="${CODEX_HOME:-${HOME}/.codex}"
+  local skill_dir="${codex_home}/skills/needlex-web-retrieval"
+  local skill_installer="${codex_home}/skills/.system/skill-installer/scripts/install-skill-from-github.py"
+  if [[ ! -d "${skill_dir}" || ! -f "${skill_installer}" ]]; then
+    return 0
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Host agent skill refresh skipped: python3 not found" >&2
+    return 0
+  fi
+  local installed_version timestamp backup_dir
+  installed_version="$(sed -n 's/^version:[[:space:]]*//p' "${skill_dir}/SKILL.md" 2>/dev/null | head -n1 | tr -d '[:space:]')"
+  installed_version="${installed_version:-unknown}"
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  backup_dir="${codex_home}/skill-backups/needlex-web-retrieval-pre-${installed_version}-${timestamp}"
+  if ! mkdir -p "$(dirname "${backup_dir}")" || ! mv "${skill_dir}" "${backup_dir}"; then
+    echo "Host agent skill refresh skipped: cannot back up ${skill_dir}" >&2
+    return 0
+  fi
+  if python3 "${skill_installer}" --repo "${REPO}" --path skills/needlex-web-retrieval >/dev/null 2>&1; then
+    echo "Host agent skill refreshed: ${skill_dir}"
+    echo "Previous host agent skill backed up: ${backup_dir}"
+    return 0
+  fi
+  rm -rf "${skill_dir}"
+  mv "${backup_dir}" "${skill_dir}"
+  echo "Host agent skill refresh failed; previous copy restored from ${backup_dir}" >&2
+  return 0
+}
+
 read -r GOOS GOARCH < <(needlex_platform)
 
 ASSET_BASENAME="needlex_${GOOS}_${GOARCH}"
@@ -501,6 +540,8 @@ if [[ "${SKIP_SHELL_HOOKS}" != "1" ]]; then
   reconcile_path_hook "${HOME}/.zshrc"
   reconcile_path_hook "${HOME}/.profile"
 fi
+
+refresh_host_agent_skill
 
 printf '\nInstalled needlex to %s\n' "${WRAPPER_PATH}"
 printf 'State root: %s\n' "${STATE_ROOT}"

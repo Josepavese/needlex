@@ -1,5 +1,6 @@
 ---
 name: needlex-web-retrieval
+version: v0.1.36
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -147,3 +148,19 @@ When answering from Needle-X:
 3. preserve proof/trace IDs for audit-heavy tasks
 4. do not claim full-page coverage unless the task verified full content separately
 5. do not hide provider failures or extraction gaps
+
+## Keeping This Skill Current
+
+This skill ships with the Needle-X release and carries a `version:` marker in its frontmatter naming the release it documents.
+
+An installed copy is a snapshot: host agents read it from disk and never refresh it on their own, so a copy installed at `vX.Y.Z` stays at `vX.Y.Z` even after the binary is upgraded. `needlex doctor` reports the installed copy against the running build and prints a refresh command when they differ.
+
+If `needlex doctor` reports installed agent skill drift, refresh the copy before trusting this guidance: an older copy can describe tool behavior that no longer matches the running binary. The installer refreshes an existing copy automatically and keeps a backup of the previous one.
+
+The installer prints the exact command for your host. For a Codex-style install layout it is:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
+```
+
+Reinstalling that way requires removing or renaming the existing copy first, since the host installer refuses to overwrite; keep the old directory as a backup.

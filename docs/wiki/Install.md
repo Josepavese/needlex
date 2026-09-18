@@ -32,9 +32,10 @@ Installed command:
 9. enables render in the PAL SSOT config
 10. prepares the same runtime surface for CLI and MCP
 11. reconciles reruns without duplicating PATH hooks
-12. leaves unrelated commands untouched
-13. prints the optional Codex skill path for agent-side usage guidance
-14. creates the PAL runtime log directory used by `needlex logs`
+12. refreshes an already installed host agent skill with the copy from this repository
+13. leaves unrelated commands untouched
+14. prints the optional Codex skill path for agent-side usage guidance
+15. creates the PAL runtime log directory used by `needlex logs`
 
 ## Semantic Config
 
@@ -91,6 +92,10 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 
 Restart Codex after installing the skill.
 
+A skill copy does not update itself. It declares the release it documents (`version: vX.Y.Z`), and two things keep it honest:
+1. the installer refreshes an existing skill copy automatically, backing up the previous one under `<codex-home>/skill-backups/` and restoring it if the refresh fails (`NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1` opts out)
+2. `needlex doctor` reports `Agent Skill: ... stale=true` with the refresh command when the installed copy is older than the running binary
+
 ## Reinstall Behavior
 
 The installer is meant to be re-runnable.
@@ -99,11 +104,13 @@ Unix:
 1. keeps one `needlex` wrapper
 2. keeps one PATH hook block
 3. reuses the same install paths unless you override them
+4. refreshes an installed host agent skill in place, with a backup copy
 
 Windows:
 1. rewrites `needlex.cmd`
 2. deduplicates the user PATH
-3. keeps the install convergent on rerun
+3. refreshes an installed host agent skill in place, with a backup copy
+4. keeps the install convergent on rerun
 
 ## Fetch Defaults
 

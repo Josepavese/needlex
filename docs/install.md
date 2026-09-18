@@ -33,7 +33,8 @@ What it does:
 9. enables render in the PAL SSOT config
 10. updates PATH persistence for future shells or terminals
 11. reconciles a previous install without duplicating PATH hooks
-12. leaves unrelated commands untouched
+12. refreshes an already installed host agent skill with the copy from this repository
+13. leaves unrelated commands untouched
 
 Default paths:
 1. binary wrapper: `~/.local/bin/needlex`
@@ -123,6 +124,40 @@ NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1 bash install/install.sh
 
 Linux ARM64 note: Chrome for Testing does not currently publish a `linux-arm64` package. On `linux/arm64`, the installer uses Playwright with `PLAYWRIGHT_BROWSERS_PATH=<state-root>/browsers/playwright`. If Node.js/npm is missing, a Node.js LTS binary is downloaded into `<state-root>/browsers/node` for installation-time use.
 
+## Agent Skill
+
+The shipped agent skill lives at `skills/needlex-web-retrieval` and declares the release version it documents in its frontmatter (`version: vX.Y.Z`).
+
+An installed skill copy is a snapshot: a host agent does not re-read it or update it by itself. The installer therefore refreshes a copy that is already present in a host skill directory:
+
+1. it acts only when the skill is already installed (Codex: `<codex-home>/skills/needlex-web-retrieval` with `<codex-home>/skills/.system/skill-installer/scripts/install-skill-from-github.py` present)
+2. it moves the current copy to `<codex-home>/skill-backups/needlex-web-retrieval-pre-<installed-version>-<utc-timestamp>/`
+3. it re-runs the host installer for `skills/needlex-web-retrieval`
+4. if the refresh fails it deletes the partial result and restores the backup, and the install itself still succeeds
+5. it never installs a skill that was not already there
+
+Skip only when you manage agent skills yourself:
+
+```bash
+NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1 bash install/install.sh
+```
+
+Manual install for any host agent:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
+```
+
+This repository's skill installer refuses to overwrite an existing copy: move the current copy aside first, or re-run the installer script from this repository, which does that for you.
+
+Check drift at any time:
+
+```bash
+needlex doctor
+```
+
+`Agent Skill: ... stale=true` means the installed copy documents a different release than the running binary, and the report prints the refresh command to fix it. Refreshing is idempotent and keeps a backup, so acting on the warning is always safe.
+
 ## Re-running the installer
 
 The installer is designed to converge, not just append.
@@ -132,15 +167,17 @@ Unix:
 2. rewrites the `needlex` wrapper deterministically
 3. keeps a single `# needlex-path` block in shell startup files
 4. reuses or updates the PAL-local render browser
-5. leaves unrelated commands untouched
-6. preserves old state roots on disk if you intentionally switch to a new one
+5. refreshes an installed host agent skill in place, with a backup copy
+6. leaves unrelated commands untouched
+7. preserves old state roots on disk if you intentionally switch to a new one
 
 Windows:
 1. rewrites `needlex.cmd` deterministically
 2. deduplicates the user PATH before appending the install directory
 3. reuses or updates the PAL-local render browser
-4. leaves unrelated commands untouched
-5. preserves old state roots on disk if you intentionally switch to a new one
+4. refreshes an installed host agent skill in place, with a backup copy
+5. leaves unrelated commands untouched
+6. preserves old state roots on disk if you intentionally switch to a new one
 
 ## Build from source
 

@@ -36,6 +36,10 @@ They include:
 - `go vet`
 - `staticcheck`
 - structural lint hard set via `golangci-lint`
+- shipped-contract guards:
+  - `check_skills.sh`: every shipped skill declares `name`, `description`, and the release `version` it documents
+  - `check_semantic_guard.sh`: semantic-first doctrine is present and banned surface-form retrieval residues stay out
+  - `check_skill_refresh.sh`: the installer's host-skill refresh backs up the previous copy, restores it on failure, and never installs a skill that was not already present
 - hard ceilings on:
   - total production LOC, excluding benchmark runners
   - average file LOC

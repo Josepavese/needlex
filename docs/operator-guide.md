@@ -195,8 +195,16 @@ Interpretation rule:
 5. `failures` shows the failure-class mix: blocks, timeouts, missing pages, unsupported content, empty candidates
 6. `daily` tells you whether those numbers are improving or regressing over time
 7. `export` makes the substrate portable for dashboards, audit, and offline analysis
-8. `doctor` verifies the effective local home, DB paths, runtime log health, binary path, and active MCP processes
+8. `doctor` verifies the effective local home, DB paths, runtime log health, binary path, active MCP processes, and whether an installed host agent skill matches this build
 9. `support bundle` exports doctor, analytics, runtime log stats/tail, and redacted runtime log files into one diagnostic directory
+
+Host agent skill rule:
+1. a skill copy installed into a host agent (for example Codex) is a snapshot, not a live link
+2. `doctor` reports `Agent Skill: installed=<bool> version=<installed> expected=<build> stale=<bool> path=<path>` and, when stale, an `Agent Skill Refresh:` command
+3. the shipped skill declares the release it documents, so `stale=true` means the installed copy documents a different release than the running binary; refresh before trusting its guidance in an agent session
+4. refreshing is idempotent and keeps a backup, so refreshing on a drift warning is always safe
+5. the installer refreshes an existing host skill copy automatically, backing up the previous one under `<codex-home>/skill-backups/` and restoring it if the refresh fails; set `NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1` to opt out
+6. a `dev` build never reports drift: there is no released version to compare against
 
 Token and cost rule:
 1. Analytics stores canonical character counts in SQLite

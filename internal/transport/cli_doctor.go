@@ -46,6 +46,7 @@ type doctorReport struct {
 	LogStats        observability.LogStats    `json:"log_stats,omitempty"`
 	Diagnostics     doctorDiagnostics         `json:"diagnostics,omitempty"`
 	MCPProcesses    []doctorMCPProcess        `json:"mcp_processes,omitempty"`
+	AgentSkill      doctorAgentSkill          `json:"agent_skill"`
 	Warnings        []string                  `json:"warnings,omitempty"`
 }
 
@@ -147,8 +148,10 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 		EmbeddingCache:  doctorEmbeddingCache(cfg, layout),
 		Diagnostics:     diagnostics,
 		MCPProcesses:    processes,
+		AgentSkill:      probeAgentSkill(buildinfo.Version, agentSkillCandidatePaths()),
 	}
 	report.Warnings = append(report.Warnings, diagnosticsWarnings...)
+	report.Warnings = append(report.Warnings, agentSkillWarnings(report.AgentSkill)...)
 	if statsErr == nil {
 		report.AnalyticsStats = stats
 	} else {
@@ -192,6 +195,16 @@ func renderDoctorText(w io.Writer, report doctorReport) {
 	fmt.Fprintf(w, "Render: enabled=%t ready=%t provider=%s browser=%s\n", report.Render.Enabled, report.Render.Ready, report.Render.Provider, doctorFirstNonEmpty(report.Render.BrowserPath, "<none>"))
 	if report.Render.Error != "" {
 		fmt.Fprintf(w, "Render Error: %s\n", report.Render.Error)
+	}
+	fmt.Fprintf(w, "Agent Skill: installed=%t version=%s expected=%s stale=%t path=%s\n",
+		report.AgentSkill.Installed,
+		doctorFirstNonEmpty(report.AgentSkill.InstalledVersion, "<unknown>"),
+		doctorFirstNonEmpty(report.AgentSkill.ExpectedVersion, "<unknown>"),
+		report.AgentSkill.Stale,
+		doctorFirstNonEmpty(report.AgentSkill.Path, "<none>"),
+	)
+	if report.AgentSkill.RefreshCommand != "" {
+		fmt.Fprintf(w, "Agent Skill Refresh: %s\n", report.AgentSkill.RefreshCommand)
 	}
 	fmt.Fprintf(w, "Embedding Cache: enabled=%t files=%d negative=%d bytes=%d dir=%s\n", report.EmbeddingCache.Enabled, report.EmbeddingCache.PositiveFiles, report.EmbeddingCache.NegativeFiles, report.EmbeddingCache.Bytes, report.EmbeddingCache.Dir)
 	if report.Semantic.Error != "" {

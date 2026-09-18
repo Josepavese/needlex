@@ -75,6 +75,7 @@ needlex/
     check_budget.sh
     check_governance.sh
     check_semantic_guard.sh
+    check_skill_refresh.sh
     check_skills.sh
     run_*.sh
   skills/

@@ -23,6 +23,10 @@ while IFS= read -r -d '' skill; do
     echo "FAIL: $skill missing description frontmatter"
     fail=1
   fi
+  if ! grep -Eq '^version:[[:space:]]*v?[0-9]+\.[0-9]+\.[0-9]+' "$skill"; then
+    echo "FAIL: $skill missing version frontmatter (expected version: vX.Y.Z)"
+    fail=1
+  fi
   if ! grep -Eq '^# ' "$skill"; then
     echo "FAIL: $skill missing top-level heading"
     fail=1

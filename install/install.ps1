@@ -7,6 +7,7 @@ $ReleaseBaseUrl = if ($env:NEEDLEX_RELEASE_BASE_URL) { $env:NEEDLEX_RELEASE_BASE
 $SkipPathUpdate = if ($env:NEEDLEX_INSTALL_SKIP_PATH_UPDATE) { $env:NEEDLEX_INSTALL_SKIP_PATH_UPDATE } else { "0" }
 $SkipSemanticPrereqs = if ($env:NEEDLEX_INSTALL_SKIP_SEMANTIC_PREREQS) { $env:NEEDLEX_INSTALL_SKIP_SEMANTIC_PREREQS } else { "0" }
 $SkipRenderPrereqs = if ($env:NEEDLEX_INSTALL_SKIP_RENDER_PREREQS) { $env:NEEDLEX_INSTALL_SKIP_RENDER_PREREQS } else { "0" }
+$SkipSkillRefresh = if ($env:NEEDLEX_INSTALL_SKIP_SKILL_REFRESH) { $env:NEEDLEX_INSTALL_SKIP_SKILL_REFRESH } else { "0" }
 $OllamaHost = if ($env:NEEDLEX_OLLAMA_HOST) { $env:NEEDLEX_OLLAMA_HOST } else { "http://127.0.0.1:11434" }
 $SemanticEmbeddingUrl = if ($env:NEEDLEX_SEMANTIC_EMBEDDING_URL) { $env:NEEDLEX_SEMANTIC_EMBEDDING_URL } else { "$OllamaHost/api/embed" }
 $SemanticModel = if ($env:NEEDLEX_SEMANTIC_PROVIDER_MODEL) { $env:NEEDLEX_SEMANTIC_PROVIDER_MODEL } else { "embeddinggemma:latest" }
@@ -310,6 +311,65 @@ function Configure-RenderConfig {
   }
 }
 
+# Host agent skills are one-shot copies: a previously installed skill keeps its old
+# contract until it is refreshed. Refresh only what is already installed, back the old
+# copy up, and restore it if the refresh fails - the installer never fails because of it.
+function Update-HostAgentSkill {
+  if ($SkipSkillRefresh -eq "1") {
+    Write-Host "Host agent skill refresh skipped by NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1"
+    return
+  }
+  $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
+  $skillDir = Join-Path $codexHome "skills/needlex-web-retrieval"
+  $skillInstaller = Join-Path $codexHome "skills/.system/skill-installer/scripts/install-skill-from-github.py"
+  if (-not (Test-Path $skillDir) -or -not (Test-Path $skillInstaller)) {
+    return
+  }
+  $python = Get-Command python3 -ErrorAction SilentlyContinue
+  if (-not $python) {
+    $python = Get-Command python -ErrorAction SilentlyContinue
+  }
+  if (-not $python) {
+    Write-Host "Host agent skill refresh skipped: python3 not found"
+    return
+  }
+  $installedVersion = "unknown"
+  $skillManifest = Join-Path $skillDir "SKILL.md"
+  if (Test-Path $skillManifest) {
+    $match = Select-String -Path $skillManifest -Pattern '^version:\s*(.+)$' | Select-Object -First 1
+    if ($match) {
+      $installedVersion = $match.Matches[0].Groups[1].Value.Trim()
+    }
+  }
+  $backupDir = Join-Path $codexHome ("skill-backups/needlex-web-retrieval-pre-{0}-{1}" -f $installedVersion, (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ"))
+  try {
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $backupDir) | Out-Null
+    Move-Item -Path $skillDir -Destination $backupDir
+  }
+  catch {
+    Write-Host "Host agent skill refresh skipped: cannot back up $skillDir"
+    return
+  }
+  $refreshed = $false
+  try {
+    & $python.Source $skillInstaller --repo $Repo --path skills/needlex-web-retrieval | Out-Null
+    $refreshed = ($LASTEXITCODE -eq 0)
+  }
+  catch {
+    $refreshed = $false
+  }
+  if ($refreshed) {
+    Write-Host "Host agent skill refreshed: $skillDir"
+    Write-Host "Previous host agent skill backed up: $backupDir"
+    return
+  }
+  if (Test-Path $skillDir) {
+    Remove-Item -Recurse -Force $skillDir
+  }
+  Move-Item -Path $backupDir -Destination $skillDir
+  Write-Host "Host agent skill refresh failed; previous copy restored from $backupDir"
+}
+
 $arch = $env:PROCESSOR_ARCHITECTURE
 switch ($arch.ToUpperInvariant()) {
   "AMD64" { $goarch = "amd64" }
@@ -431,6 +491,8 @@ if ($SkipPathUpdate -ne "1") {
   $newPath = (($deduped + $BinDir) -join ';')
   [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
 }
+
+Update-HostAgentSkill
 
 Write-Host ""
 Write-Host "Installed needlex to $NeedlexCmd"
