@@ -37,6 +37,13 @@ descriptor whose flags are restored at shutdown. EOF, transport errors and
 SIGTERM close the MCP renderer. Arbitrary SIGKILL of the MCP process is outside
 this graceful-cleanup qualification.
 
+Unix browser processes receive a private short `/tmp/needlex-ipc-*` directory
+for Chromium's temporary Unix sockets. Profiles still use the caller's temporary
+root. Both allocations belong to the process owner and are released on startup
+failure, cancellation or shutdown. This avoids full Chromium's socket-path limit
+when the caller supplies a deeply nested `TMPDIR`; native full-Chrome crash
+recovery and an actual Unix-socket regression cover this boundary.
+
 ## Measurement method
 
 The source is [measure.py](../benchmarks/render_reuse/measure.py). Before/after

@@ -88,19 +88,22 @@ func launchBrowser(ctx context.Context, path string) (BrowserProcess, error) {
 	args := append(browserArgs(path, profile), "--remote-debugging-port=0",
 		"--remote-debugging-address="+cdpLoopbackHost, "about:blank")
 	cmd := exec.Command(path, args...)
-	configureBrowserProcess(cmd)
+	cleanup, err := prepareBrowserProcess(cmd)
+	if err != nil {
+		return nil, errors.Join(err, os.RemoveAll(profile))
+	}
+	cleanupProfile := func() error { return errors.Join(os.RemoveAll(profile), cleanup()) }
 	cmd.WaitDelay = browserShutdownGrace
 	stderr := &browserOutput{limit: browserDiagnosticBytes}
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
-		_ = os.RemoveAll(profile)
-		return nil, fmt.Errorf("start renderer %s: %w", filepath.Base(path), err)
+		return nil, errors.Join(fmt.Errorf("start renderer %s: %w", filepath.Base(path), err), cleanupProfile())
 	}
 	p := &browserProcess{cmd: cmd, done: make(chan struct{})}
 	go func() {
 		p.waitErr = cmd.Wait()
 		_ = killBrowserProcess(cmd)
-		p.cleanupErr = os.RemoveAll(profile)
+		p.cleanupErr = cleanupProfile()
 		close(p.done)
 	}()
 	tick := time.NewTicker(browserStartupPoll)
@@ -150,7 +153,11 @@ func captureBrowserDOM(ctx context.Context, req BrowserDOMRequest) (data []byte,
 	}
 	cmd := exec.CommandContext(ctx, req.Path, append(args, req.URL)...)
 	cmd.Cancel = func() error { return killBrowserProcess(cmd) }
-	configureBrowserProcess(cmd)
+	cleanup, err := prepareBrowserProcess(cmd)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { err = errors.Join(err, cleanup()) }()
 	cmd.WaitDelay = browserShutdownGrace
 	stdout := &browserOutput{limit: int(req.MaxBytes) + 1}
 	stderr := &browserOutput{limit: browserDiagnosticBytes}
