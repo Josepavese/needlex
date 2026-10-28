@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,21 +18,46 @@ const (
 	browserDiagnosticBytes = 500
 	browserStartupPoll     = 100 * time.Millisecond
 	browserShutdownGrace   = time.Second
-	devToolsActivePortFile = "DevToolsActivePort"
 	cdpLoopbackHost        = "127.0.0.1"
+	devToolsAnnouncement   = "DevTools listening on "
 )
 
 type browserOutput struct {
-	mu    sync.Mutex
-	limit int
-	data  []byte
+	mu            sync.Mutex
+	limit         int
+	data          []byte
+	watchEndpoint bool
+	pending       []byte
+	endpoint      string
 }
 
 func (b *browserOutput) Write(data []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.data = append(b.data, data[:min(len(data), max(0, b.limit-len(b.data)))]...)
+	if b.watchEndpoint && b.endpoint == "" {
+		for _, c := range data {
+			if c == '\n' {
+				if value, ok := strings.CutPrefix(strings.TrimSpace(string(b.pending)), devToolsAnnouncement); ok {
+					if u, err := url.Parse(value); err == nil && u.Scheme == "ws" && u.Hostname() == cdpLoopbackHost && strings.HasPrefix(u.Path, "/devtools/browser/") {
+						if port, err := strconv.ParseUint(u.Port(), 10, 16); err == nil && port != 0 {
+							b.endpoint = value
+						}
+					}
+				}
+				b.pending = b.pending[:0]
+			} else if len(b.pending) < b.limit {
+				b.pending = append(b.pending, c)
+			}
+		}
+	}
 	return len(data), nil
+}
+
+func (b *browserOutput) browserEndpoint() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.endpoint
 }
 
 func (b *browserOutput) bytes() []byte {
@@ -94,7 +120,7 @@ func launchBrowser(ctx context.Context, path string) (BrowserProcess, error) {
 	}
 	cleanupProfile := func() error { return errors.Join(os.RemoveAll(profile), cleanup()) }
 	cmd.WaitDelay = browserShutdownGrace
-	stderr := &browserOutput{limit: browserDiagnosticBytes}
+	stderr := &browserOutput{limit: browserDiagnosticBytes, watchEndpoint: true}
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
 		return nil, errors.Join(fmt.Errorf("start renderer %s: %w", filepath.Base(path), err), cleanupProfile())
@@ -109,19 +135,13 @@ func launchBrowser(ctx context.Context, path string) (BrowserProcess, error) {
 	tick := time.NewTicker(browserStartupPoll)
 	defer tick.Stop()
 	for {
-		if data, err := os.ReadFile(filepath.Join(profile, devToolsActivePortFile)); err == nil {
-			lines := strings.Fields(string(data))
-			if len(lines) == 2 {
-				port, parseErr := strconv.ParseUint(lines[0], 10, 16)
-				if parseErr == nil && port != 0 && strings.HasPrefix(lines[1], "/devtools/browser/") {
-					p.endpoint = "ws://" + cdpLoopbackHost + ":" + lines[0] + lines[1]
-					return p, nil
-				}
-			}
+		if endpoint := stderr.browserEndpoint(); endpoint != "" {
+			p.endpoint = endpoint
+			return p, nil
 		}
 		select {
 		case <-ctx.Done():
-			return nil, errors.Join(ctx.Err(), p.Close())
+			return nil, errors.Join(fmt.Errorf("renderer %s startup: %w: %s", filepath.Base(path), ctx.Err(), strings.TrimSpace(string(stderr.bytes()))), p.Close())
 		case <-p.done:
 			cause := p.waitErr
 			if cause == nil {

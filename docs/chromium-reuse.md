@@ -37,6 +37,11 @@ descriptor whose flags are restored at shutdown. EOF, transport errors and
 SIGTERM close the MCP renderer. Arbitrary SIGKILL of the MCP process is outside
 this graceful-cleanup qualification.
 
+Startup observes the loopback CDP endpoint announced on Chromium's stderr,
+including announcements split across writes or following a full diagnostic
+buffer. Endpoint observation is independent of profile-file visibility across
+process filesystem namespaces. Startup timeouts retain bounded browser diagnostics.
+
 Unix browser processes receive a private short `/tmp/needlex-ipc-*` directory
 for Chromium's temporary Unix sockets. Profiles still use the caller's temporary
 root. Both allocations belong to the process owner and are released on startup

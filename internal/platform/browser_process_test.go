@@ -3,9 +3,28 @@ package platform
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestBrowserEndpointAnnouncementSurvivesChunksAndDiagnosticLimit(t *testing.T) {
+	const endpoint = "ws://127.0.0.1:9223/devtools/browser/test-session"
+	out := &browserOutput{limit: browserDiagnosticBytes, watchEndpoint: true}
+	for _, part := range []string{strings.Repeat("diagnostic noise\n", 100), "DevTools lis", "tening on " + endpoint + "\n"} {
+		_, _ = out.Write([]byte(part))
+	}
+	if out.browserEndpoint() != endpoint || len(out.bytes()) > browserDiagnosticBytes || len(out.pending) > browserDiagnosticBytes {
+		t.Fatalf("endpoint=%q diagnostics=%d pending=%d", out.browserEndpoint(), len(out.bytes()), len(out.pending))
+	}
+	for _, invalid := range []string{"ws://example.com:9223/devtools/browser/session", "ws://127.0.0.1:0/devtools/browser/session", "http://127.0.0.1:9223/devtools/browser/session"} {
+		out := &browserOutput{limit: browserDiagnosticBytes, watchEndpoint: true}
+		_, _ = out.Write([]byte(devToolsAnnouncement + invalid + "\n"))
+		if out.browserEndpoint() != "" {
+			t.Fatalf("accepted invalid browser endpoint %q", invalid)
+		}
+	}
+}
 
 func TestNativeBrowserCrashRecoveryAndProfileCleanup(t *testing.T) {
 	path, err := FindBrowserPath("")

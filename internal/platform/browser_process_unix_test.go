@@ -3,6 +3,7 @@
 package platform
 
 import (
+	"context"
 	"net"
 	"os"
 	"os/exec"
@@ -10,6 +11,24 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestBrowserStartupUsesAnnouncementWithoutSharedPortFile(t *testing.T) {
+	const endpoint = "ws://127.0.0.1:9223/devtools/browser/isolated-profile"
+	path := filepath.Join(t.TempDir(), "browser")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf 'DevTools listening on "+endpoint+"\\n' >&2\nexec sleep 60\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	process, err := launchBrowser(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer process.Close() //nolint:errcheck
+	if process.Endpoint() != endpoint {
+		t.Fatalf("endpoint without port file: %q", process.Endpoint())
+	}
+}
 
 func TestBrowserProcessIsolatesShortSocketTempDirectory(t *testing.T) {
 	parent := filepath.Join(t.TempDir(), strings.Repeat("long-parent-", 10))
