@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"maps"
 	"net/url"
 	"strings"
 	"time"
@@ -306,11 +307,7 @@ func cloneStringMap(input map[string]string) map[string]string {
 	if len(input) == 0 {
 		return nil
 	}
-	out := make(map[string]string, len(input))
-	for key, value := range input {
-		out[key] = value
-	}
-	return out
+	return maps.Clone(input)
 }
 
 func maxRecoveredFloat(values ...float64) float64 {

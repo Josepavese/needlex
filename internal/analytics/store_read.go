@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -53,7 +54,30 @@ LIMIT ?
 	return out, nil
 }
 
+const rollupMetricsSelect = `
+  COUNT(*),
+  COALESCE(SUM(success), 0),
+  COALESCE(CAST(AVG(latency_ms) AS INTEGER), 0),
+  COALESCE(SUM(MAX(raw_fetch_chars - final_context_chars, 0)), 0),
+  COALESCE(AVG(CAST(proof_usable AS REAL)), 0),
+  COALESCE(AVG(CAST(public_bootstrap_used AS REAL)), 0),
+  COALESCE(AVG(CAST(local_memory_used AS REAL)), 0)
+`
+
 func (s SQLiteStore) Hosts(ctx context.Context, limit int) ([]HostRollup, error) {
+	return dimensionRollups(ctx, s, "host", limit, func(label string, metrics RollupMetrics) HostRollup {
+		return HostRollup{Host: label, RollupMetrics: metrics}
+	})
+}
+
+func (s SQLiteStore) Providers(ctx context.Context, limit int) ([]ProviderRollup, error) {
+	return dimensionRollups(ctx, s, "provider", limit, func(label string, metrics RollupMetrics) ProviderRollup {
+		return ProviderRollup{Provider: label, RollupMetrics: metrics}
+	})
+}
+
+// dimension is an adapter-owned column, supplied only by Hosts and Providers.
+func dimensionRollups[T any](ctx context.Context, s SQLiteStore, dimension string, limit int, build func(string, RollupMetrics) T) ([]T, error) {
 	if limit <= 0 {
 		limit = 20
 	}
@@ -62,83 +86,37 @@ func (s SQLiteStore) Hosts(ctx context.Context, limit int) ([]HostRollup, error)
 		return nil, err
 	}
 	defer platform.Close(conn)
-	rows, err := conn.QueryContext(ctx, `
-SELECT
-  host,
-  COUNT(*),
-  COALESCE(SUM(success), 0),
-  COALESCE(CAST(AVG(latency_ms) AS INTEGER), 0),
-  COALESCE(SUM(MAX(raw_fetch_chars - final_context_chars, 0)), 0),
-  COALESCE(AVG(CAST(proof_usable AS REAL)), 0),
-  COALESCE(AVG(CAST(public_bootstrap_used AS REAL)), 0),
-  COALESCE(AVG(CAST(local_memory_used AS REAL)), 0)
+	query := fmt.Sprintf(`SELECT %[1]s,`+rollupMetricsSelect+`
 FROM analytics_runs
-WHERE TRIM(COALESCE(host, '')) != ''
-GROUP BY host
-ORDER BY COUNT(*) DESC, host ASC
-LIMIT ?
-`, limit)
+WHERE TRIM(COALESCE(%[1]s, '')) != ''
+GROUP BY %[1]s
+ORDER BY COUNT(*) DESC, %[1]s ASC
+LIMIT ?`, dimension)
+	rows, err := conn.QueryContext(ctx, query, limit)
 	if err != nil {
-		return nil, fmt.Errorf("query analytics hosts: %w", err)
+		return nil, fmt.Errorf("query analytics %ss: %w", dimension, err)
 	}
 	defer platform.Close(rows)
-	out := []HostRollup{}
+	out := []T{}
 	for rows.Next() {
-		var item HostRollup
-		if err := rows.Scan(&item.Host, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
-			return nil, fmt.Errorf("scan analytics host rollup: %w", err)
+		label, metrics, err := readRollup(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan analytics %s rollup: %w", dimension, err)
 		}
-		item.TotalAgentTokensSaved = TokenEstimateFromChars(item.TotalAgentCharsSaved)
-		out = append(out, item)
+		out = append(out, build(label, metrics))
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate analytics host rollups: %w", err)
+		return nil, fmt.Errorf("iterate analytics %s rollups: %w", dimension, err)
 	}
 	return out, nil
 }
 
-func (s SQLiteStore) Providers(ctx context.Context, limit int) ([]ProviderRollup, error) {
-	if limit <= 0 {
-		limit = 20
-	}
-	conn, err := s.open(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer platform.Close(conn)
-	rows, err := conn.QueryContext(ctx, `
-SELECT
-  provider,
-  COUNT(*),
-  COALESCE(SUM(success), 0),
-  COALESCE(CAST(AVG(latency_ms) AS INTEGER), 0),
-  COALESCE(SUM(MAX(raw_fetch_chars - final_context_chars, 0)), 0),
-  COALESCE(AVG(CAST(proof_usable AS REAL)), 0),
-  COALESCE(AVG(CAST(public_bootstrap_used AS REAL)), 0),
-  COALESCE(AVG(CAST(local_memory_used AS REAL)), 0)
-FROM analytics_runs
-WHERE TRIM(COALESCE(provider, '')) != ''
-GROUP BY provider
-ORDER BY COUNT(*) DESC, provider ASC
-LIMIT ?
-`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("query analytics providers: %w", err)
-	}
-	defer platform.Close(rows)
-	out := []ProviderRollup{}
-	for rows.Next() {
-		var item ProviderRollup
-		if err := rows.Scan(&item.Provider, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
-			return nil, fmt.Errorf("scan analytics provider rollup: %w", err)
-		}
-		item.TotalAgentTokensSaved = TokenEstimateFromChars(item.TotalAgentCharsSaved)
-		out = append(out, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate analytics provider rollups: %w", err)
-	}
-	return out, nil
+func readRollup(rows *sql.Rows) (string, RollupMetrics, error) {
+	var label string
+	var metrics RollupMetrics
+	err := rows.Scan(&label, &metrics.RunCount, &metrics.SuccessfulRuns, &metrics.AvgLatencyMS, &metrics.TotalAgentCharsSaved, &metrics.ProofBackedRate, &metrics.PublicBootstrapUsedRate, &metrics.LocalMemoryUsedRate)
+	metrics.TotalAgentTokensSaved = TokenEstimateFromChars(metrics.TotalAgentCharsSaved)
+	return label, metrics, err
 }
 
 func (s SQLiteStore) Failures(ctx context.Context, limit int) ([]FailureRollup, error) {
@@ -192,14 +170,7 @@ func (s SQLiteStore) Daily(ctx context.Context, limit int) ([]DailyRollup, error
 	rows, err := conn.QueryContext(ctx, `
 SELECT
   substr(completed_at, 1, 10) AS day,
-  COUNT(*),
-  COALESCE(SUM(success), 0),
-  COALESCE(CAST(AVG(latency_ms) AS INTEGER), 0),
-  COALESCE(SUM(MAX(raw_fetch_chars - final_context_chars, 0)), 0),
-  COALESCE(AVG(CAST(proof_usable AS REAL)), 0),
-  COALESCE(AVG(CAST(public_bootstrap_used AS REAL)), 0),
-  COALESCE(AVG(CAST(local_memory_used AS REAL)), 0)
-FROM analytics_runs
+`+rollupMetricsSelect+`FROM analytics_runs
 GROUP BY substr(completed_at, 1, 10)
 ORDER BY day DESC
 LIMIT ?
@@ -210,12 +181,11 @@ LIMIT ?
 	defer platform.Close(rows)
 	out := []DailyRollup{}
 	for rows.Next() {
-		var item DailyRollup
-		if err := rows.Scan(&item.Day, &item.RunCount, &item.SuccessfulRuns, &item.AvgLatencyMS, &item.TotalAgentCharsSaved, &item.ProofBackedRate, &item.PublicBootstrapUsedRate, &item.LocalMemoryUsedRate); err != nil {
+		label, metrics, err := readRollup(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan analytics daily rollup: %w", err)
 		}
-		item.TotalAgentTokensSaved = TokenEstimateFromChars(item.TotalAgentCharsSaved)
-		out = append(out, item)
+		out = append(out, DailyRollup{Day: label, RollupMetrics: metrics})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate analytics daily rollups: %w", err)

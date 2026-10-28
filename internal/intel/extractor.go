@@ -2,6 +2,7 @@ package intel
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -110,22 +111,12 @@ func bestFocusSpan(ctx context.Context, cfg config.Config, semantic SemanticAlig
 	if len(selected) <= 1 {
 		return sentences[bestIdx]
 	}
-	sortInts(selected)
+	slices.Sort(selected)
 	out := make([]string, 0, len(selected))
 	for _, idx := range selected {
 		out = append(out, sentences[idx])
 	}
 	return strings.Join(out, ". ")
-}
-
-func sortInts(items []int) {
-	for i := 0; i < len(items); i++ {
-		for j := i + 1; j < len(items); j++ {
-			if items[j] < items[i] {
-				items[i], items[j] = items[j], items[i]
-			}
-		}
-	}
 }
 
 func splitSentences(text string) []string {

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -47,7 +48,7 @@ func (w WebIRNode) Validate() error {
 	if w.HeadingLevel < 0 || w.HeadingLevel > 6 {
 		errs = append(errs, fmt.Errorf("web_ir.nodes.heading_level must be between 0 and 6"))
 	}
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (s WebIRSignals) Validate() error {
@@ -68,7 +69,7 @@ func (s WebIRSignals) Validate() error {
 			errs = append(errs, fmt.Errorf("web_ir.signals.substrate_class %q is not supported", s.SubstrateClass))
 		}
 	}
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (w WebIR) Validate() error {
@@ -94,7 +95,7 @@ func (w WebIR) Validate() error {
 			errs = append(errs, fmt.Errorf("web_ir.nodes[%d]: %w", i, err))
 		}
 	}
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func validateUnit(value float64) error {

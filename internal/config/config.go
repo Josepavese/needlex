@@ -106,6 +106,8 @@ type AgentConfig struct {
 }
 
 type RenderConfig struct {
+	BrowserIdleTimeoutMS    int64  `json:"browser_idle_timeout_ms,omitempty"`
+	BrowserMaxUses          int    `json:"browser_max_uses,omitempty"`
 	Enabled                 bool   `json:"enabled,omitempty"`
 	Provider                string `json:"provider,omitempty"`
 	BrowserPath             string `json:"browser_path,omitempty"`

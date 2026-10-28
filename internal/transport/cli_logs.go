@@ -45,7 +45,7 @@ func (r Runner) runLogs(args []string, stdout, stderr io.Writer) int {
 func (r Runner) runLogsPath(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("logs path", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
@@ -61,7 +61,7 @@ func (r Runner) runLogsStats(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	var jsonOut bool
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
@@ -96,7 +96,7 @@ func (r Runner) runLogsTail(args []string, stdout, stderr io.Writer) int {
 	var limit int
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.IntVar(&limit, "limit", 20, "number of events")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--limit": {}, "-limit": {}})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {

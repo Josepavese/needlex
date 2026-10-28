@@ -62,25 +62,11 @@ func PlanResolveAmbiguityTask(cfg config.Config, input ResolveAmbiguityInput) (T
 		FailureClass: FailureClassAmbiguityConflict,
 		ModelClass:   ModelClassMicroSolver,
 		Budget: TaskBudget{
-			MaxInputTokens:  minInt(cfg.Budget.MaxTokens, 256),
+			MaxInputTokens:  min(cfg.Budget.MaxTokens, 256),
 			MaxOutputTokens: 64,
-			TimeoutMS:       minInt64(cfg.Budget.MaxLatencyMS, cfg.Models.MicroTimeoutMS),
+			TimeoutMS:       min(cfg.Budget.MaxLatencyMS, cfg.Models.MicroTimeoutMS),
 		},
 		ReasonCode: ReasonAmbiguityTriggered,
 	}
 	return route, route.Validate() == nil
-}
-
-func minInt(left, right int) int {
-	if left < right {
-		return left
-	}
-	return right
-}
-
-func minInt64(left, right int64) int64 {
-	if left < right {
-		return left
-	}
-	return right
 }

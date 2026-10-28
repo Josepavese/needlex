@@ -1,0 +1,183 @@
+{
+  "measured_at": "2026-10-27T09:32:55.275316+00:00",
+  "scope": "First page of the public JS application; local source candidate, installed runtime unchanged.",
+  "method": {
+    "oracle": "Independent native Chromium DOM capture, 3000 ms virtual-time budget; expected quote/author pairs extracted from that DOM. Site selectors are confined to the test oracle.",
+    "comparison": "Exact normalized-text coverage of all 10 quotes and their 10 author occurrences, across WebIR, agent context and compact output.",
+    "proof": "Actual web_proof resolves every agent chunk reference, matching chunk ID, source selector, source URL and UTF-8 text length; every selector component exists in WebIR.",
+    "baseline": "Actual pre-fix worktree including previous consolidation and browser-reuse changes, not Git HEAD or the installed release.",
+    "limits": "One public page; no assertion about pagination, arbitrary sites or unrelated pruning budgets."
+  },
+  "browser": "Chrome Headless Shell 153.0.8010.52",
+  "toolchain": "Go 1.27.1",
+  "profile": "standard",
+  "config": {
+    "render": {
+      "browser_idle_timeout_ms": 30000,
+      "browser_max_uses": 32,
+      "enabled": true,
+      "provider": "exec-dump-dom",
+      "timeout_ms": 30000,
+      "max_concurrency": 1,
+      "network_idle_ms": 1500,
+      "network_max_bytes": 64000000,
+      "network_resource_max_bytes": 64000000,
+      "network_max_resources": 32,
+      "network_max_messages": 4096,
+      "browser_path": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell"
+    },
+    "generative_backend": "noop",
+    "semantic_memory_enabled": false
+  },
+  "sha256": {
+    "needlex-before": "3ee24533b6fa1058e07e9dc0f0e9675ca4e41746acf5b3e5ab67ca0024038a7d",
+    "needlex-after": "98f7792d5d74dc848039d06cef8de1fbee99d524260d4f16af141c3428c5f1ac"
+  },
+  "reducer_sha256": "dcefc39928b74a97a7c50386f235aa64f8133d3d56eee82ab47d45ae7c943544",
+  "url": "https://quotes.toscrape.com/js/",
+  "oracle": {
+    "quotes": 10,
+    "authors": 10,
+    "html_sha256": "53dca00a6ee6729f0cc7b82f882c7d41599d3aaecef34a80bf6b138f9448a0f8"
+  },
+  "before": [
+    {
+      "binary": "before",
+      "render": "required",
+      "node_count": 1,
+      "signals": {
+        "confidence": 0.8300000000000001,
+        "substrate_class": "rendered_html",
+        "content_source": "dom"
+      },
+      "coverage": {
+        "web_ir": {
+          "quotes": 0,
+          "authors": 0
+        },
+        "agent_context": {
+          "quotes": 0,
+          "authors": 0
+        },
+        "compact": {
+          "quotes": 0,
+          "authors": 0
+        }
+      }
+    },
+    {
+      "binary": "before",
+      "render": "auto",
+      "node_count": 1,
+      "signals": {
+        "confidence": 0.8300000000000001,
+        "substrate_class": "rendered_html",
+        "content_source": "dom"
+      },
+      "coverage": {
+        "web_ir": {
+          "quotes": 0,
+          "authors": 0
+        },
+        "agent_context": {
+          "quotes": 0,
+          "authors": 0
+        },
+        "compact": {
+          "quotes": 0,
+          "authors": 0
+        }
+      }
+    }
+  ],
+  "after": [
+    {
+      "binary": "after",
+      "render": "required",
+      "node_count": 71,
+      "signals": {
+        "confidence": 0.93,
+        "substrate_class": "rendered_html",
+        "content_source": "dom"
+      },
+      "coverage": {
+        "web_ir": {
+          "quotes": 10,
+          "authors": 10
+        },
+        "agent_context": {
+          "quotes": 10,
+          "authors": 10
+        },
+        "compact": {
+          "quotes": 10,
+          "authors": 10
+        }
+      },
+      "verified_proof_refs": 2,
+      "compact_chunk_count": 2
+    },
+    {
+      "binary": "after",
+      "render": "auto",
+      "node_count": 71,
+      "signals": {
+        "confidence": 0.93,
+        "substrate_class": "rendered_html",
+        "content_source": "dom"
+      },
+      "coverage": {
+        "web_ir": {
+          "quotes": 10,
+          "authors": 10
+        },
+        "agent_context": {
+          "quotes": 10,
+          "authors": 10
+        },
+        "compact": {
+          "quotes": 10,
+          "authors": 10
+        }
+      },
+      "verified_proof_refs": 2,
+      "compact_chunk_count": 2
+    }
+  ],
+  "cli": [
+    {
+      "json_mode": "compact",
+      "render": "auto",
+      "coverage": {
+        "quotes": 10,
+        "authors": 10
+      }
+    },
+    {
+      "json_mode": "full",
+      "render": "auto",
+      "coverage": {
+        "quotes": 10,
+        "authors": 10
+      }
+    }
+  ],
+  "validation": {
+    "command": "bash scripts/check_governance.sh .",
+    "exit_code": 0,
+    "status": "PASS_WITH_WARNINGS",
+    "full_test_suite": "pass, native Chromium available on PATH",
+    "go_vet": "pass",
+    "staticcheck": "pass",
+    "structure_issues": 0,
+    "runtime_go_lines": 35004,
+    "hard_runtime_go_lines": 35100,
+    "warnings": "Existing advisory complexity, concentration, package/dependency/LOC targets and shared Go build-cache size; no thresholds changed for this fix.",
+    "log_sha256": "3f731575435244f91f2040f0bbc153c8619dab65f5b9373eeeb96bfef8050d60"
+  },
+  "cleanup": {
+    "owned_scratch": "/tmp/needlex-reducer.6GDkh9",
+    "retired": true,
+    "method": "Verified owner, directory identity and absence of live executable/profile/file consumers; fd-relative removal after final consumer. Shared caches, installed runtime and original WIP preserved."
+  }
+}

@@ -179,36 +179,40 @@ type adapter interface {
 }
 
 func main() {
-	opts := parseCompetitiveOptions()
+	if err := runCompetitive(parseCompetitiveOptions()); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func runCompetitive(opts competitiveOptions) (err error) {
 	c, err := loadCorpus(opts.casesPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "load corpus: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("load corpus: %w", err)
 	}
 
 	adapters, err := resolveAdapters(splitCSV(opts.competitorsArg))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "resolve adapters: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("resolve adapters: %w", err)
 	}
+
+	defer func() { err = errors.Join(err, closeAdapters(adapters)) }()
 
 	cache, err := loadRunCache(opts.cachePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "load cache: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("load cache: %w", err)
 	}
 
 	results := runCompetitiveCases(c, adapters, cache)
 	rep := report{GeneratedAtUTC: time.Now().UTC().Format(time.RFC3339), CorpusVersion: c.Version, Competitors: summarizeByCompetitor(results, adapters), Cases: results}
 	if err := evalutil.WriteJSON(opts.outPath, rep); err != nil {
-		fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("write report: %w", err)
 	}
 	if err := saveRunCache(opts.cachePath, cache); err != nil {
-		fmt.Fprintf(os.Stderr, "write cache: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("write cache: %w", err)
 	}
 	fmt.Printf("Competitive benchmark written to %s\n", opts.outPath)
+	return nil
 }
 
 func parseCompetitiveOptions() competitiveOptions {
@@ -330,10 +334,20 @@ func resolveAdapters(names []string) ([]adapter, error) {
 		case "vercel-browser-agent":
 			out = append(out, vercelBrowserAgentAdapter{})
 		default:
-			return nil, fmt.Errorf("unknown competitor %q", name)
+			return nil, errors.Join(fmt.Errorf("unknown competitor %q", name), closeAdapters(out))
 		}
 	}
 	return out, nil
+}
+
+func closeAdapters(adapters []adapter) error {
+	var err error
+	for _, a := range adapters {
+		if closer, ok := a.(io.Closer); ok {
+			err = errors.Join(err, closer.Close())
+		}
+	}
+	return err
 }
 
 func cacheableCompetitor(name string) bool {
@@ -360,15 +374,28 @@ func makeCacheKey(corpusVersion string, competitor string, item seededCase) stri
 	return fmt.Sprintf("%x", sum.Sum64())
 }
 
+// needleXAdapter owns its build directory. Run and Close are serial operations;
+// the benchmark closes adapters after their synchronous calls have returned.
 type needleXAdapter struct {
 	binaryPath string
-	cleanup    func()
+	cleanup    func() error
 	err        error
 }
 
 func newNeedleXAdapter() *needleXAdapter {
 	path, cleanup, err := buildNeedleBinary()
 	return &needleXAdapter{binaryPath: path, cleanup: cleanup, err: err}
+}
+
+func (a *needleXAdapter) Close() error {
+	if a.cleanup == nil {
+		return nil
+	}
+	if err := a.cleanup(); err != nil {
+		return err
+	}
+	a.cleanup = nil
+	return nil
 }
 
 func (a *needleXAdapter) Name() string          { return "needlex" }
@@ -849,7 +876,7 @@ func classifyExecutionError(errText string) string {
 	}
 }
 
-func buildNeedleBinary() (string, func(), error) {
+func buildNeedleBinary() (string, func() error, error) {
 	tempDir, err := os.MkdirTemp("", "needlex-competitive-benchmark-*")
 	if err != nil {
 		return "", nil, err
@@ -858,17 +885,15 @@ func buildNeedleBinary() (string, func(), error) {
 	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/needle")
 	root, err := findRepoRoot()
 	if err != nil {
-		_ = os.RemoveAll(tempDir)
-		return "", nil, err
+		return "", nil, errors.Join(err, os.RemoveAll(tempDir))
 	}
 	cmd.Dir = root
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		_ = os.RemoveAll(tempDir)
-		return "", nil, err
+		return "", nil, errors.Join(err, os.RemoveAll(tempDir))
 	}
-	return binaryPath, func() { _ = os.RemoveAll(tempDir) }, nil
+	return binaryPath, func() error { return os.RemoveAll(tempDir) }, nil
 }
 
 func findRepoRoot() (string, error) {

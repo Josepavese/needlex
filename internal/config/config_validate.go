@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -23,7 +24,7 @@ func (c Config) Validate() error {
 	if len(errs) == 0 {
 		return nil
 	}
-	return errorsJoin(errs...)
+	return errors.Join(errs...)
 }
 
 func validateFetch(fetch FetchConfig) []error {

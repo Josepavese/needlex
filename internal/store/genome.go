@@ -1,12 +1,9 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -42,17 +39,14 @@ type GenomeObservation struct {
 }
 
 type GenomeStore struct {
-	root string
-	now  func() time.Time
+	documents platform.JSONDocuments
+	now       func() time.Time
 }
 
 func NewGenomeStore(root string) GenomeStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
-	}
 	return GenomeStore{
-		root: root,
-		now:  time.Now,
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).GenomeDir, "genome", "genome"),
+		now:       time.Now,
 	}
 }
 
@@ -65,18 +59,12 @@ func (s GenomeStore) LoadByURL(rawURL string) (DomainGenome, error) {
 }
 
 func (s GenomeStore) Load(domain string) (DomainGenome, error) {
-	path := filepath.Join(s.root, "genome", sanitizeID(domain)+".json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+	var genome DomainGenome
+	if err := s.documents.Load(sanitizeID(domain), &genome); err != nil {
+		if errors.Is(err, platform.ErrDocumentNotFound) {
 			return DomainGenome{}, fmt.Errorf("%w: %s", ErrGenomeNotFound, domain)
 		}
-		return DomainGenome{}, fmt.Errorf("read genome: %w", err)
-	}
-
-	var genome DomainGenome
-	if err := json.Unmarshal(data, &genome); err != nil {
-		return DomainGenome{}, fmt.Errorf("decode genome: %w", err)
+		return DomainGenome{}, err
 	}
 	if err := genome.Validate(); err != nil {
 		return DomainGenome{}, err
@@ -129,17 +117,9 @@ func (s GenomeStore) Observe(observation GenomeObservation) (DomainGenome, strin
 		return DomainGenome{}, "", err
 	}
 
-	dir := filepath.Join(s.root, "genome")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return DomainGenome{}, "", fmt.Errorf("create genome dir: %w", err)
-	}
-	path := filepath.Join(dir, sanitizeID(domain)+".json")
-	data, err := json.MarshalIndent(genome, "", "  ")
+	path, err := s.documents.Save(sanitizeID(domain), genome)
 	if err != nil {
-		return DomainGenome{}, "", fmt.Errorf("encode genome: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return DomainGenome{}, "", fmt.Errorf("write genome: %w", err)
+		return DomainGenome{}, "", err
 	}
 	return genome, path, nil
 }

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/internal/core/vectorindex"
+
 	"github.com/josepavese/needlex/internal/platform"
 )
 
@@ -120,7 +122,7 @@ WHERE vector_space = ?
 		if err != nil {
 			return semanticFamilyRow{}, false, 0, fmt.Errorf("decode semantic family vector: %w", err)
 		}
-		similarity := cosineSimilarity(vector, storedVector)
+		similarity := vectorindex.Cosine(vector, storedVector)
 		if !found || similarity > bestScore {
 			best = row
 			bestScore = similarity
@@ -191,7 +193,7 @@ func mergeFamilyCentroid(current, incoming []float32, supportCount int) []float3
 	if len(current) == 0 || len(current) != len(incoming) {
 		return incoming
 	}
-	weight := float32(maxInt(1, supportCount))
+	weight := float32(max(1, supportCount))
 	out := make([]float32, len(current))
 	for i := range current {
 		out[i] = (current[i]*weight + incoming[i]) / (weight + 1)
@@ -263,7 +265,7 @@ func semanticFamilyCandidate(row semanticFamilyRow, vector []float32, hints []st
 	if err != nil {
 		return Candidate{}, false, fmt.Errorf("decode semantic family vector: %w", err)
 	}
-	similarity := cosineSimilarity(vector, storedVector)
+	similarity := vectorindex.Cosine(vector, storedVector)
 	if similarity <= 0 {
 		return Candidate{}, false, nil
 	}

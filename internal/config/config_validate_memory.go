@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -59,8 +58,14 @@ func validateRender(render RenderConfig) []error {
 	if render.TimeoutMS < 0 {
 		errs = append(errs, fmt.Errorf("render.timeout_ms must be >= 0"))
 	}
-	if render.MaxConcurrency < 0 {
-		errs = append(errs, fmt.Errorf("render.max_concurrency must be >= 0"))
+	if render.BrowserIdleTimeoutMS <= 0 {
+		errs = append(errs, fmt.Errorf("render.browser_idle_timeout_ms must be > 0"))
+	}
+	if render.BrowserMaxUses <= 0 {
+		errs = append(errs, fmt.Errorf("render.browser_max_uses must be > 0"))
+	}
+	if render.MaxConcurrency <= 0 {
+		errs = append(errs, fmt.Errorf("render.max_concurrency must be > 0"))
 	}
 	if render.NetworkIdleMS < 0 {
 		errs = append(errs, fmt.Errorf("render.network_idle_ms must be >= 0"))
@@ -85,17 +90,4 @@ func validateRatio(field string, value float64) error {
 		return fmt.Errorf("%s must be between 0 and 1", field)
 	}
 	return nil
-}
-
-func errorsJoin(errs ...error) error {
-	filtered := make([]error, 0, len(errs))
-	for _, err := range errs {
-		if err != nil {
-			filtered = append(filtered, err)
-		}
-	}
-	if len(filtered) == 0 {
-		return nil
-	}
-	return errors.Join(filtered...)
 }

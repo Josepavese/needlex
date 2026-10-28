@@ -1,6 +1,10 @@
 package service
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/josepavese/needlex/internal/core"
+)
 
 func applyBoilerplatePenalty(ranked []rankedSegment) []rankedSegment {
 	for i := range ranked {
@@ -32,7 +36,7 @@ func boilerplateWeight(item rankedSegment) float64 {
 	if len(tokens) < 5 {
 		return 0
 	}
-	if sentencePunctuationCount(text) > 0 {
+	if core.SentencePunctuationCount(text) > 0 {
 		return 0
 	}
 	weight := 0.0
@@ -52,10 +56,6 @@ func boilerplateWeight(item rankedSegment) float64 {
 		return 1
 	}
 	return weight
-}
-
-func sentencePunctuationCount(text string) int {
-	return strings.Count(text, ".") + strings.Count(text, "!") + strings.Count(text, "?") + strings.Count(text, ";") + strings.Count(text, ":")
 }
 
 func averageTokenLength(tokens []string) float64 {

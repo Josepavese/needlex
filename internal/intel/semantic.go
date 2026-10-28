@@ -3,7 +3,6 @@ package intel
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
 	"strings"
 	"sync"
@@ -161,22 +160,4 @@ func reduceSemanticScores(model string, cfg config.SemanticConfig, scores []Sema
 
 func semanticCandidateText(candidate SemanticCandidate) string {
 	return strings.TrimSpace(strings.Join(candidate.Heading, " ") + " " + candidate.Text)
-}
-
-func cosineSimilarity(a, b []float64) float64 {
-	if len(a) == 0 || len(a) != len(b) {
-		return 0
-	}
-	dot := 0.0
-	normA := 0.0
-	normB := 0.0
-	for i := range a {
-		dot += a[i] * b[i]
-		normA += a[i] * a[i]
-		normB += b[i] * b[i]
-	}
-	if normA == 0 || normB == 0 {
-		return 0
-	}
-	return dot / (math.Sqrt(normA) * math.Sqrt(normB))
 }

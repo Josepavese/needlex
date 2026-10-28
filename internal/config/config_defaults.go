@@ -30,7 +30,7 @@ func Defaults() Config {
 		Semantic:  defaultSemanticConfig(baseline),
 		Memory:    defaultMemoryConfig(baseline),
 		Agent:     defaultAgentConfig(),
-		Render:    defaultRenderConfig(),
+		Render:    DefaultRenderConfig(),
 	}
 }
 
@@ -165,8 +165,11 @@ func defaultAgentConfig() AgentConfig {
 	}
 }
 
-func defaultRenderConfig() RenderConfig {
+// DefaultRenderConfig owns render defaults for configuration and native adapters.
+func DefaultRenderConfig() RenderConfig {
 	return RenderConfig{
+		BrowserIdleTimeoutMS:    30000,
+		BrowserMaxUses:          32,
 		Enabled:                 true,
 		Provider:                "exec-dump-dom",
 		TimeoutMS:               30000,

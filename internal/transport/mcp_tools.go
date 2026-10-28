@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
@@ -574,7 +573,7 @@ func mcpAnalyticsTool() mcpTool {
 }
 
 func (r Runner) callMCPAnalyticsStatsTool(_ map[string]any) (map[string]any, error) {
-	stats, err := analytics.NewSQLiteStore(r.storeRoot).Stats(context.Background())
+	stats, err := r.analyticsStore(r.storeRoot).Stats(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +585,7 @@ func (r Runner) callMCPAnalyticsStatsTool(_ map[string]any) (map[string]any, err
 }
 
 func (r Runner) callMCPAnalyticsRecentRunsTool(args map[string]any) (map[string]any, error) {
-	runs, err := analytics.NewSQLiteStore(r.storeRoot).RecentRuns(context.Background(), intDefault(args, "limit", 10))
+	runs, err := r.analyticsStore(r.storeRoot).RecentRuns(context.Background(), intDefault(args, "limit", analyticsRecentLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -598,7 +597,7 @@ func (r Runner) callMCPAnalyticsRecentRunsTool(args map[string]any) (map[string]
 }
 
 func (r Runner) callMCPAnalyticsValueReportTool(_ map[string]any) (map[string]any, error) {
-	report, err := analytics.NewSQLiteStore(r.storeRoot).ValueReport(context.Background())
+	report, err := r.analyticsStore(r.storeRoot).ValueReport(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +609,7 @@ func (r Runner) callMCPAnalyticsValueReportTool(_ map[string]any) (map[string]an
 }
 
 func (r Runner) callMCPAnalyticsHostsTool(args map[string]any) (map[string]any, error) {
-	hosts, err := analytics.NewSQLiteStore(r.storeRoot).Hosts(context.Background(), intDefault(args, "limit", 20))
+	hosts, err := r.analyticsStore(r.storeRoot).Hosts(context.Background(), intDefault(args, "limit", analyticsRollupLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -622,7 +621,7 @@ func (r Runner) callMCPAnalyticsHostsTool(args map[string]any) (map[string]any, 
 }
 
 func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]any, error) {
-	providers, err := analytics.NewSQLiteStore(r.storeRoot).Providers(context.Background(), intDefault(args, "limit", 20))
+	providers, err := r.analyticsStore(r.storeRoot).Providers(context.Background(), intDefault(args, "limit", analyticsRollupLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -634,7 +633,7 @@ func (r Runner) callMCPAnalyticsProvidersTool(args map[string]any) (map[string]a
 }
 
 func (r Runner) callMCPAnalyticsFailuresTool(args map[string]any) (map[string]any, error) {
-	failures, err := analytics.NewSQLiteStore(r.storeRoot).Failures(context.Background(), intDefault(args, "limit", 20))
+	failures, err := r.analyticsStore(r.storeRoot).Failures(context.Background(), intDefault(args, "limit", analyticsRollupLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +645,7 @@ func (r Runner) callMCPAnalyticsFailuresTool(args map[string]any) (map[string]an
 }
 
 func (r Runner) callMCPAnalyticsDailyTool(args map[string]any) (map[string]any, error) {
-	days, err := analytics.NewSQLiteStore(r.storeRoot).Daily(context.Background(), intDefault(args, "limit", 30))
+	days, err := r.analyticsStore(r.storeRoot).Daily(context.Background(), intDefault(args, "limit", analyticsDailyLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -662,7 +661,7 @@ func (r Runner) callMCPAnalyticsExportTool(args map[string]any) (map[string]any,
 	if outDir == "" {
 		return nil, fmt.Errorf("analytics_export requires out_dir")
 	}
-	exported, err := analytics.NewSQLiteStore(r.storeRoot).ExportJSON(context.Background(), outDir)
+	exported, err := r.analyticsStore(r.storeRoot).ExportJSON(context.Background(), outDir)
 	if err != nil {
 		return nil, err
 	}

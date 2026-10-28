@@ -133,8 +133,8 @@ type RecentRun struct {
 	PublicBootstrapUsed  bool      `json:"public_bootstrap_used"`
 }
 
-type HostRollup struct {
-	Host                    string  `json:"host"`
+// RollupMetrics is shared by host, provider, and daily aggregates.
+type RollupMetrics struct {
 	RunCount                int     `json:"run_count"`
 	SuccessfulRuns          int     `json:"successful_runs"`
 	AvgLatencyMS            int64   `json:"avg_latency_ms"`
@@ -145,16 +145,14 @@ type HostRollup struct {
 	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
 }
 
+type HostRollup struct {
+	Host string `json:"host"`
+	RollupMetrics
+}
+
 type ProviderRollup struct {
-	Provider                string  `json:"provider"`
-	RunCount                int     `json:"run_count"`
-	SuccessfulRuns          int     `json:"successful_runs"`
-	AvgLatencyMS            int64   `json:"avg_latency_ms"`
-	TotalAgentCharsSaved    int64   `json:"total_agent_chars_saved"`
-	TotalAgentTokensSaved   int64   `json:"total_agent_tokens_saved_estimated"`
-	ProofBackedRate         float64 `json:"proof_backed_rate"`
-	PublicBootstrapUsedRate float64 `json:"public_bootstrap_used_rate"`
-	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
+	Provider string `json:"provider"`
+	RollupMetrics
 }
 
 type FailureRollup struct {
@@ -165,15 +163,8 @@ type FailureRollup struct {
 }
 
 type DailyRollup struct {
-	Day                     string  `json:"day"`
-	RunCount                int     `json:"run_count"`
-	SuccessfulRuns          int     `json:"successful_runs"`
-	AvgLatencyMS            int64   `json:"avg_latency_ms"`
-	TotalAgentCharsSaved    int64   `json:"total_agent_chars_saved"`
-	TotalAgentTokensSaved   int64   `json:"total_agent_tokens_saved_estimated"`
-	ProofBackedRate         float64 `json:"proof_backed_rate"`
-	PublicBootstrapUsedRate float64 `json:"public_bootstrap_used_rate"`
-	LocalMemoryUsedRate     float64 `json:"local_memory_used_rate"`
+	Day string `json:"day"`
+	RollupMetrics
 }
 
 type ExportStats struct {

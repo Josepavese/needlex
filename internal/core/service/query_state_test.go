@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/platform"
+
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
@@ -42,11 +45,11 @@ func TestPrepareQueryRequestWithLocalStateGraphExpansionNeedsConfidence(t *testi
 	if _, _, err := graph.Observe("https://seed.example/root", "https://expansion.example/docs", "query_discovery"); err != nil {
 		t.Fatalf("seed graph once: %v", err)
 	}
-	first := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	first := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://seed.example/root",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, testConfig(), noScoreSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{}, localQueryMemory(root, testConfig()))
 	if containsString(first.DomainHints, "expansion.example") {
 		t.Fatalf("did not expect low-confidence expansion hint, got %#v", first.DomainHints)
 	}
@@ -54,11 +57,11 @@ func TestPrepareQueryRequestWithLocalStateGraphExpansionNeedsConfidence(t *testi
 	if _, _, err := graph.Observe("https://seed.example/root", "https://expansion.example/docs", "query_discovery"); err != nil {
 		t.Fatalf("seed graph twice: %v", err)
 	}
-	second := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	second := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://seed.example/root",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, testConfig(), noScoreSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{}, localQueryMemory(root, testConfig()))
 	if !containsString(second.DomainHints, "expansion.example") {
 		t.Fatalf("expected confident expansion hint, got %#v", second.DomainHints)
 	}
@@ -93,7 +96,7 @@ func TestObserveQueryResponseWithLocalStatePersistsFingerprintGraph(t *testing.T
 		CostReport: core.CostReport{LanePath: []int{0}},
 	}
 
-	ObserveQueryResponseWithLocalState(root, req, resp)
+	ObserveQueryResponseWithLocalState(store.NewLocalState(root), req, resp)
 
 	graph, err := store.NewFingerprintGraphStore(root).Load("https://example.com/docs")
 	if err != nil {
@@ -112,11 +115,11 @@ func TestPrepareQueryRequestWithLocalStateLoadsFingerprintEvidence(t *testing.T)
 	if err != nil {
 		t.Fatalf("seed fingerprint graph: %v", err)
 	}
-	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://example.com/docs",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, testConfig(), noScoreSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{}, localQueryMemory(root, testConfig()))
 	if req.SeedTraceID != "trace_1" {
 		t.Fatalf("expected seed trace trace_1, got %#v", req)
 	}
@@ -140,11 +143,11 @@ func TestPrepareQueryRequestWithLocalStateAppliesFetchGenomeHints(t *testing.T) 
 	if err != nil {
 		t.Fatalf("seed genome: %v", err)
 	}
-	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal:          "proof replay deterministic",
 		SeedURL:       "https://example.com/docs",
 		DiscoveryMode: QueryDiscoverySameSite,
-	}, testConfig(), noScoreSemanticAligner{})
+	}, testConfig(), noScoreSemanticAligner{}, localQueryMemory(root, testConfig()))
 	if req.FetchProfile != "hardened" || req.FetchRetryProfile != "hardened" {
 		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
 	}
@@ -158,7 +161,7 @@ func TestNewFingerprintEvidenceLoaderLoadsGraphEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed fingerprint graph: %v", err)
 	}
-	evidence, ok := NewFingerprintEvidenceLoader(root)("https://example.com/docs")
+	evidence, ok := NewFingerprintEvidenceLoader(store.NewLocalState(root).Fingerprints)("https://example.com/docs")
 	if !ok {
 		t.Fatal("expected fingerprint evidence")
 	}
@@ -173,8 +176,8 @@ func TestPrepareQueryRequestWithLocalStateLoadsMemoryCandidates(t *testing.T) {
 	enableDiscoverSemantic(&cfg, "")
 	cfg.Memory.Enabled = true
 
-	store := memory.NewSQLiteStore(root, cfg.Memory.Path)
-	svc := memory.NewService(cfg.Memory, store, intel.NewTextEmbedder(cfg, nil))
+	memoryStore := memory.NewSQLiteStore(root, cfg.Memory.Path)
+	svc := memory.NewService(cfg.Memory, memoryStore, intel.NewTextEmbedder(cfg, nil))
 	err := svc.Observe(context.Background(), memory.Observation{
 		Document: core.Document{
 			URL:       "https://playwright.dev/docs/intro",
@@ -204,10 +207,10 @@ func TestPrepareQueryRequestWithLocalStateLoadsMemoryCandidates(t *testing.T) {
 		t.Fatalf("observe memory: %v", err)
 	}
 
-	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal:          "playwright installation",
 		DiscoveryMode: QueryDiscoveryWeb,
-	}, cfg, noScoreSemanticAligner{})
+	}, cfg, noScoreSemanticAligner{}, localQueryMemory(root, cfg))
 
 	if len(req.MemoryCandidates) == 0 {
 		t.Fatalf("expected memory candidates, got %#v", req)
@@ -258,10 +261,10 @@ func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedOverMemoryCandidates(t 
 		t.Fatalf("seed candidate store: %v", err)
 	}
 
-	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal:          "playwright installation",
 		DiscoveryMode: QueryDiscoveryWeb,
-	}, cfg, intel.NewSemanticAligner(cfg, nil))
+	}, cfg, intel.NewSemanticAligner(cfg, nil), localQueryMemory(root, cfg))
 
 	if len(req.MemoryCandidates) == 0 {
 		t.Fatalf("expected memory candidates, got %#v", req)
@@ -284,9 +287,9 @@ func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedImplicitSeedlessQuery(t
 
 	cfg := testConfig()
 	cfg.Memory.Enabled = false
-	req := PrepareQueryRequestWithLocalState(root, QueryRequest{
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(root), QueryRequest{
 		Goal: "proof replay deterministic",
-	}, cfg, fakeSemanticAligner{suppressed: true})
+	}, cfg, fakeSemanticAligner{suppressed: true}, localQueryMemory(root, cfg))
 
 	if req.SeedURL != "" || len(req.DomainHints) != 0 || len(req.MemoryCandidates) != 0 {
 		t.Fatalf("implicit seedless query must not be auto-seeded or expanded, got %#v", req)
@@ -466,4 +469,9 @@ func TestResolveDiscoveryModeErrorMentionsValidValues(t *testing.T) {
 			t.Fatalf("expected %q in error %q", token, msg)
 		}
 	}
+}
+
+// localQueryMemory composes the native integration fixture, outside core policy.
+func localQueryMemory(root string, cfg config.Config) memory.Searcher {
+	return memory.NewService(cfg.Memory, memory.NewSQLiteStore(root, cfg.Memory.Path), intel.NewTextEmbedderWithCacheDir(cfg, nil, platform.NewStateLayout(root).EmbeddingCacheDir))
 }

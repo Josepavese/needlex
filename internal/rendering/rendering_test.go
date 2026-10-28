@@ -13,6 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/platform"
+
 	"github.com/coder/websocket"
 )
 
@@ -26,7 +29,7 @@ func TestExecRendererCapturesRenderedDOMAndFinalLocationWhenBrowserAvailable(t *
 	serverURL = server.URL
 	defer server.Close()
 
-	page, err := ExecDumpDOMRenderer{BrowserPath: browserPath, Timeout: 15 * time.Second}.Render(context.Background(), Request{
+	page, err := testRenderer(browserPath, 15*time.Second).Render(context.Background(), Request{
 		URL:      server.URL,
 		Timeout:  15 * time.Second,
 		MaxBytes: 1_000_000,
@@ -80,7 +83,7 @@ func TestExecRendererCapturesApplicationNetworkDataWhenBrowserAvailable(t *testi
 	}))
 	defer server.Close()
 
-	page, err := ExecDumpDOMRenderer{BrowserPath: browserPath, Timeout: 8 * time.Second}.Render(context.Background(), Request{
+	page, err := testRenderer(browserPath, 8*time.Second).Render(context.Background(), Request{
 		URL:                 server.URL,
 		Timeout:             8 * time.Second,
 		MaxBytes:            1_000_000,
@@ -132,7 +135,7 @@ func TestExecRendererCapturesStreamingFetchBodyWhenBrowserAvailable(t *testing.T
 	}))
 	defer server.Close()
 
-	page, err := ExecDumpDOMRenderer{BrowserPath: browserPath, Timeout: 8 * time.Second}.Render(context.Background(), Request{
+	page, err := testRenderer(browserPath, 8*time.Second).Render(context.Background(), Request{
 		URL:                 server.URL,
 		Timeout:             8 * time.Second,
 		MaxBytes:            1_000_000,
@@ -183,7 +186,7 @@ func TestExecRendererCapturesSlowEventSourceWhenBrowserAvailable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	page, err := ExecDumpDOMRenderer{BrowserPath: browserPath, Timeout: 20 * time.Second}.Render(context.Background(), Request{
+	page, err := testRenderer(browserPath, 20*time.Second).Render(context.Background(), Request{
 		URL:                 server.URL,
 		Timeout:             20 * time.Second,
 		MaxBytes:            1_000_000,
@@ -213,7 +216,7 @@ func TestExecRendererReportsDegradedDumpDOMFallback(t *testing.T) {
 		t.Fatalf("write fake browser: %v", err)
 	}
 
-	page, err := ExecDumpDOMRenderer{BrowserPath: scriptPath}.Render(context.Background(), Request{
+	page, err := testRenderer(scriptPath, 0).Render(context.Background(), Request{
 		URL:     "https://example.com/app",
 		Timeout: 1200 * time.Millisecond,
 	})
@@ -233,14 +236,14 @@ func TestExecRendererReportsDegradedDumpDOMFallback(t *testing.T) {
 
 func runnableBrowserOrSkip(t *testing.T) string {
 	t.Helper()
-	browserPath, err := FindBrowserPath("")
+	browserPath, err := platform.FindBrowserPath("")
 	if err != nil {
 		t.Skipf("render browser unavailable: %v", err)
 	}
 	probeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	args := []string{}
-	if !isHeadlessShell(browserPath) {
+	if !platform.IsHeadlessShell(browserPath) {
 		args = append(args, "--headless=new")
 	}
 	args = append(args,
@@ -384,4 +387,13 @@ func TestNetworkCollectorFiltersStaticAssetsAndUnknownMessageSources(t *testing.
 	if len(resources) != 1 || !strings.Contains(resources[0].Body, "Application JSON payload") {
 		t.Fatalf("expected same-site application JSON resource, got %#v", resources)
 	}
+}
+
+func testRenderer(path string, timeout time.Duration) Renderer {
+	cfg := config.DefaultRenderConfig()
+	cfg.BrowserPath = path
+	if timeout > 0 {
+		cfg.TimeoutMS = timeout.Milliseconds()
+	}
+	return New(cfg)
 }

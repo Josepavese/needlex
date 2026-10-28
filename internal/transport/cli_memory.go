@@ -73,57 +73,83 @@ func writeMemoryUsage(w io.Writer) {
 	writeUsage(w, "needlex memory <stats|search|prune|export|import|rebuild-index> [args]", "subcommands: stats, search, prune, export, import, rebuild-index", "maintenance: rebuild-index accepts --force-embeddings")
 }
 
+type memoryCLIOptions struct {
+	jsonOut, forceEmbeddings      bool
+	query, directory, domainHints string
+	limit                         int
+}
+
 func (r Runner) runMemory(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		writeMemoryUsage(stderr)
 		return 2
 	}
-	switch args[0] {
-	case "stats":
-		return r.runMemoryStats(args[1:], stdout, stderr)
-	case "search":
-		return r.runMemorySearch(args[1:], stdout, stderr)
-	case "prune":
-		return r.runMemoryPrune(args[1:], stdout, stderr)
-	case "export":
-		return r.runMemoryExport(args[1:], stdout, stderr)
-	case "import":
-		return r.runMemoryImport(args[1:], stdout, stderr)
-	case "rebuild-index":
-		return r.runMemoryRebuildIndex(args[1:], stdout, stderr)
+	name := args[0]
+	switch name {
 	case "-h", "--help", "help":
 		writeMemoryUsage(stdout)
 		return 0
-	default:
-		fmt.Fprintf(stderr, "unknown memory subcommand %q\n\n", args[0])
+	}
+	commands := map[string]struct {
+		run         func(memoryCLIOptions, config.Config, io.Writer, io.Writer) int
+		usage       string
+		positionals int
+	}{
+		"stats":         {r.runMemoryStats, "needlex memory stats [--json] [--config path]", 0},
+		"search":        {r.runMemorySearch, "needlex memory search <query> [--json] [--config path] [--limit N] [--domain-hints host1,host2]", 1},
+		"prune":         {r.runMemoryPrune, "needlex memory prune [--json] [--config path]", 0},
+		"export":        {r.runMemoryExport, "needlex memory export --out DIR [--json] [--config path]", 0},
+		"import":        {r.runMemoryImport, "needlex memory import --in DIR [--json] [--config path]", 0},
+		"rebuild-index": {r.runMemoryRebuildIndex, "needlex memory rebuild-index [--json] [--config path] [--force-embeddings]", 0},
+	}
+	command, ok := commands[name]
+	if !ok {
+		fmt.Fprintf(stderr, "unknown memory subcommand %q\n\n", name)
 		writeMemoryUsage(stderr)
 		return 2
 	}
-}
-
-func (r Runner) runMemoryStats(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("memory stats", flag.ContinueOnError)
+	fs := flag.NewFlagSet("memory "+name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var configPath string
-	var jsonOut bool
+	opts := memoryCLIOptions{}
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	fs.BoolVar(&opts.jsonOut, "json", false, "emit JSON output")
+	switch name {
+	case "search":
+		fs.IntVar(&opts.limit, "limit", 5, "candidate limit")
+		fs.StringVar(&opts.domainHints, "domain-hints", "", "comma-separated domain hints")
+	case "export", "import":
+		flagName, help := "out", "export directory"
+		if name == "import" {
+			flagName, help = "in", "import directory"
+		}
+		fs.StringVar(&opts.directory, flagName, "", help)
+	case "rebuild-index":
+		fs.BoolVar(&opts.forceEmbeddings, "force-embeddings", false, "recompute memory embeddings before rebuilding acceleration state")
+	}
+	if err := fs.Parse(normalizeArgs(fs, args[1:])); err != nil {
 		return 2
 	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex memory stats [--json] [--config path]")
+	if fs.NArg() != command.positionals || ((name == "export" || name == "import") && strings.TrimSpace(opts.directory) == "") {
+		writeUsage(stderr, command.usage)
 		return 2
 	}
 	cfg, ok := r.loadConfigOrExit(configPath, stderr)
 	if !ok {
 		return 1
 	}
+	if name == "search" {
+		opts.query = strings.TrimSpace(fs.Arg(0))
+	}
+	return command.run(opts, cfg, stdout, stderr)
+}
+
+func (r Runner) runMemoryStats(opts memoryCLIOptions, cfg config.Config, stdout, stderr io.Writer) int {
 	stats, err := r.loadMemoryStats(cfg)
 	if err != nil {
 		return r.reportCLIError(stderr, "memory_stats", err, nil)
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "memory_stats", memoryStatsResult{Stats: compactStats(stats)})
 	}
 	fmt.Fprintf(stdout, "Documents: %d\n", stats.DocumentCount)
@@ -145,37 +171,15 @@ func (r Runner) runMemoryStats(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func (r Runner) runMemorySearch(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("memory search", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var configPath string
-	var jsonOut bool
-	var limit int
-	var domainHints string
-	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.IntVar(&limit, "limit", 5, "candidate limit")
-	fs.StringVar(&domainHints, "domain-hints", "", "comma-separated domain hints")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 1 {
-		writeUsage(stderr, "needlex memory search <query> [--json] [--config path] [--limit N] [--domain-hints host1,host2]")
-		return 2
-	}
-	cfg, ok := r.loadConfigOrExit(configPath, stderr)
-	if !ok {
-		return 1
-	}
-	query := strings.TrimSpace(fs.Arg(0))
-	candidates, err := r.searchMemory(cfg, query, limit, splitCSV(domainHints))
+func (r Runner) runMemorySearch(opts memoryCLIOptions, cfg config.Config, stdout, stderr io.Writer) int {
+	candidates, err := r.searchMemory(cfg, opts.query, opts.limit, splitCSV(opts.domainHints))
 	if err != nil {
-		return r.reportCLIError(stderr, "memory_search", err, map[string]any{"query": query, "limit": limit})
+		return r.reportCLIError(stderr, "memory_search", err, map[string]any{"query": opts.query, "limit": opts.limit})
 	}
-	if jsonOut {
-		return r.writeJSON(stdout, stderr, "memory_search", memorySearchResult{Query: query, Candidates: compactMemoryCandidates(candidates)})
+	if opts.jsonOut {
+		return r.writeJSON(stdout, stderr, "memory_search", memorySearchResult{Query: opts.query, Candidates: compactMemoryCandidates(candidates)})
 	}
-	fmt.Fprintf(stdout, "Query: %s\n", query)
+	fmt.Fprintf(stdout, "Query: %s\n", opts.query)
 	fmt.Fprintf(stdout, "Candidates: %d\n", len(candidates))
 	for i, candidate := range candidates {
 		fmt.Fprintf(stdout, "%d. %s\n", i+1, candidate.URL)
@@ -196,24 +200,7 @@ func (r Runner) runMemorySearch(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func (r Runner) runMemoryPrune(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("memory prune", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var configPath string
-	var jsonOut bool
-	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex memory prune [--json] [--config path]")
-		return 2
-	}
-	cfg, ok := r.loadConfigOrExit(configPath, stderr)
-	if !ok {
-		return 1
-	}
+func (r Runner) runMemoryPrune(opts memoryCLIOptions, cfg config.Config, stdout, stderr io.Writer) int {
 	before, after, policy, err := r.pruneMemory(cfg)
 	if err != nil {
 		return r.reportCLIError(stderr, "memory_prune", err, nil)
@@ -223,7 +210,7 @@ func (r Runner) runMemoryPrune(args []string, stdout, stderr io.Writer) int {
 		"edges":      before.EdgeCount - after.EdgeCount,
 		"embeddings": before.EmbeddingCount - after.EmbeddingCount,
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "memory_prune", memoryPruneResult{Before: compactStats(before), After: compactStats(after), Policy: policy, Removed: removed})
 	}
 	fmt.Fprintf(stdout, "Documents: %d -> %d\n", before.DocumentCount, after.DocumentCount)
@@ -232,31 +219,12 @@ func (r Runner) runMemoryPrune(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func (r Runner) runMemoryExport(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("memory export", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var configPath string
-	var jsonOut bool
-	var outDir string
-	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.StringVar(&outDir, "out", "", "export directory")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--out": {}, "-out": {}, "--config": {}, "-config": {}})); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 || strings.TrimSpace(outDir) == "" {
-		writeUsage(stderr, "needlex memory export --out DIR [--json] [--config path]")
-		return 2
-	}
-	cfg, ok := r.loadConfigOrExit(configPath, stderr)
-	if !ok {
-		return 1
-	}
-	result, err := r.exportMemory(cfg, outDir)
+func (r Runner) runMemoryExport(opts memoryCLIOptions, cfg config.Config, stdout, stderr io.Writer) int {
+	result, err := r.exportMemory(cfg, opts.directory)
 	if err != nil {
-		return r.reportCLIError(stderr, "memory_export", err, map[string]any{"out_dir": outDir})
+		return r.reportCLIError(stderr, "memory_export", err, map[string]any{"out_dir": opts.directory})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "memory_export", memoryExportResult{Export: result})
 	}
 	fmt.Fprintf(stdout, "Documents: %s (%d)\n", result.DocumentsPath, result.DocumentCount)
@@ -265,31 +233,12 @@ func (r Runner) runMemoryExport(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func (r Runner) runMemoryImport(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("memory import", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var configPath string
-	var jsonOut bool
-	var inDir string
-	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.StringVar(&inDir, "in", "", "import directory")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--in": {}, "-in": {}, "--config": {}, "-config": {}})); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 || strings.TrimSpace(inDir) == "" {
-		writeUsage(stderr, "needlex memory import --in DIR [--json] [--config path]")
-		return 2
-	}
-	cfg, ok := r.loadConfigOrExit(configPath, stderr)
-	if !ok {
-		return 1
-	}
-	result, err := r.importMemory(cfg, inDir)
+func (r Runner) runMemoryImport(opts memoryCLIOptions, cfg config.Config, stdout, stderr io.Writer) int {
+	result, err := r.importMemory(cfg, opts.directory)
 	if err != nil {
-		return r.reportCLIError(stderr, "memory_import", err, map[string]any{"in_dir": inDir})
+		return r.reportCLIError(stderr, "memory_import", err, map[string]any{"in_dir": opts.directory})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "memory_import", memoryImportResult{Import: result})
 	}
 	fmt.Fprintf(stdout, "Imported documents: %d\n", result.DocumentCount)
@@ -298,29 +247,10 @@ func (r Runner) runMemoryImport(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func (r Runner) runMemoryRebuildIndex(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("memory rebuild-index", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var configPath string
-	var jsonOut bool
-	var forceEmbeddings bool
-	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.BoolVar(&forceEmbeddings, "force-embeddings", false, "recompute memory embeddings before rebuilding acceleration state")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex memory rebuild-index [--json] [--config path] [--force-embeddings]")
-		return 2
-	}
-	cfg, ok := r.loadConfigOrExit(configPath, stderr)
-	if !ok {
-		return 1
-	}
+func (r Runner) runMemoryRebuildIndex(opts memoryCLIOptions, cfg config.Config, stdout, stderr io.Writer) int {
 	refresh := memory.EmbeddingRefreshStats{}
 	var err error
-	if forceEmbeddings {
+	if opts.forceEmbeddings {
 		refresh, err = r.refreshMemoryEmbeddings(cfg, true)
 		if err != nil {
 			return r.reportCLIError(stderr, "memory_refresh_embeddings", err, nil)
@@ -330,11 +260,11 @@ func (r Runner) runMemoryRebuildIndex(args []string, stdout, stderr io.Writer) i
 	if err != nil {
 		return r.reportCLIError(stderr, "memory_rebuild_index", err, nil)
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "memory_rebuild_index", memoryRebuildResult{Stats: compactStats(stats), EmbeddingRefresh: refresh})
 	}
 	fmt.Fprintf(stdout, "Rebuilt discovery memory acceleration state.\n")
-	if forceEmbeddings {
+	if opts.forceEmbeddings {
 		fmt.Fprintf(stdout, "Embedding Refresh: documents=%d embedded=%d reused=%d failed=%d\n", refresh.DocumentCount, refresh.EmbeddedCount, refresh.ReusedCount, refresh.FailedCount)
 	}
 	if !stats.LastRebuildAt.IsZero() {
@@ -360,13 +290,12 @@ func splitCSV(raw string) []string {
 }
 
 func (r Runner) loadMemoryStats(cfg config.Config) (memory.Stats, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
+	store := r.memoryStore(r.storeRoot, cfg.Memory.Path)
 	return store.GetStats(context.Background())
 }
 
 func (r Runner) searchMemory(cfg config.Config, query string, limit int, domainHints []string) ([]memory.Candidate, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
-	service := memory.NewService(cfg.Memory, store, r.textEmbedder(cfg))
+	service := r.memoryRuntime(cfg)
 	return service.Search(context.Background(), query, memory.SearchOptions{
 		Limit:       limit,
 		ExpandLimit: 2,
@@ -376,7 +305,7 @@ func (r Runner) searchMemory(cfg config.Config, query string, limit int, domainH
 }
 
 func (r Runner) pruneMemory(cfg config.Config) (memory.Stats, memory.Stats, memory.PrunePolicy, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
+	store := r.memoryStore(r.storeRoot, cfg.Memory.Path)
 	before, err := store.GetStats(context.Background())
 	if err != nil {
 		return memory.Stats{}, memory.Stats{}, memory.PrunePolicy{}, err
@@ -397,17 +326,17 @@ func (r Runner) pruneMemory(cfg config.Config) (memory.Stats, memory.Stats, memo
 }
 
 func (r Runner) exportMemory(cfg config.Config, outDir string) (memory.ExportStats, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
+	store := r.memoryStore(r.storeRoot, cfg.Memory.Path)
 	return store.ExportJSONL(context.Background(), outDir)
 }
 
 func (r Runner) importMemory(cfg config.Config, inDir string) (memory.ImportStats, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
+	store := r.memoryStore(r.storeRoot, cfg.Memory.Path)
 	return store.ImportJSONL(context.Background(), inDir)
 }
 
 func (r Runner) rebuildMemoryIndex(cfg config.Config) (memory.Stats, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
+	store := r.memoryStore(r.storeRoot, cfg.Memory.Path)
 	if err := store.RebuildIndex(context.Background()); err != nil {
 		return memory.Stats{}, err
 	}
@@ -415,8 +344,7 @@ func (r Runner) rebuildMemoryIndex(cfg config.Config) (memory.Stats, error) {
 }
 
 func (r Runner) refreshMemoryEmbeddings(cfg config.Config, force bool) (memory.EmbeddingRefreshStats, error) {
-	store := memory.NewSQLiteStore(r.storeRoot, cfg.Memory.Path)
-	service := memory.NewService(cfg.Memory, store, r.textEmbedder(cfg))
+	service := r.memoryRuntime(cfg)
 	return service.RefreshEmbeddings(context.Background(), force)
 }
 

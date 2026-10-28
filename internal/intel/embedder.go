@@ -390,23 +390,3 @@ func zeroFloat32Vector(vector []float32) bool {
 	}
 	return true
 }
-
-func cosineSimilarityFloat32(left, right []float32) float64 {
-	if len(left) == 0 || len(left) != len(right) {
-		return 0
-	}
-	dot := 0.0
-	normLeft := 0.0
-	normRight := 0.0
-	for i := range left {
-		leftValue := float64(left[i])
-		rightValue := float64(right[i])
-		dot += leftValue * rightValue
-		normLeft += leftValue * leftValue
-		normRight += rightValue * rightValue
-	}
-	if normLeft == 0 || normRight == 0 {
-		return 0
-	}
-	return dot / (math.Sqrt(normLeft) * math.Sqrt(normRight))
-}

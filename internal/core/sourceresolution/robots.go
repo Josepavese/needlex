@@ -178,6 +178,7 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 	metadata := map[string]string{
 		"rendered":              "true",
 		"render_path":           renderPath(rendered),
+		"browser_reused":        fmt.Sprintf("%t", rendered.BrowserReused),
 		"browser":               renderMetadataValue(rendered.Browser, "unknown_renderer"),
 		"duration_ms":           fmt.Sprintf("%d", rendered.Duration.Milliseconds()),
 		"partial":               fmt.Sprintf("%t", rendered.Partial),

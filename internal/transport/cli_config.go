@@ -57,7 +57,7 @@ func (r Runner) runConfigPath(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	var path string
 	fs.StringVar(&path, "path", "", "override config path")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--path": {}, "-path": {}})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
@@ -75,7 +75,7 @@ func (r Runner) runConfigShow(args []string, stdout, stderr io.Writer) int {
 	var jsonOut bool
 	fs.StringVar(&path, "path", "", "override config path")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--path": {}, "-path": {}})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
@@ -101,7 +101,7 @@ func (r Runner) runConfigInit(args []string, stdout, stderr io.Writer) int {
 	var force bool
 	fs.StringVar(&path, "path", "", "override config path")
 	fs.BoolVar(&force, "force", false, "overwrite existing config")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--path": {}, "-path": {}})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
@@ -131,7 +131,7 @@ func (r Runner) runConfigSet(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	var path string
 	fs.StringVar(&path, "path", "", "override config path")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--path": {}, "-path": {}})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 2 {
@@ -214,12 +214,24 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 		cfg.Render.Provider = value
 	case "render.browser_path":
 		cfg.Render.BrowserPath = value
+	case "render.browser_idle_timeout_ms":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.BrowserIdleTimeoutMS = parsed
 	case "render.timeout_ms":
 		parsed, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return fmt.Errorf("%s must be an integer", key)
 		}
 		cfg.Render.TimeoutMS = parsed
+	case "render.browser_max_uses":
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("%s must be an integer", key)
+		}
+		cfg.Render.BrowserMaxUses = parsed
 	case "render.max_concurrency":
 		parsed, err := strconv.Atoi(value)
 		if err != nil {

@@ -13,6 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/josepavese/needlex/internal/memory"
+	"github.com/josepavese/needlex/internal/platform"
+
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
@@ -72,7 +75,10 @@ type discoveryStats struct {
 }
 
 func TestExportDiscoveryEval(t *testing.T) {
-	outPath := getenv("NEEDLEX_DISCOVERY_EVAL_OUT", "improvements/discovery-eval-latest.json")
+	outPath := strings.TrimSpace(os.Getenv("NEEDLEX_DISCOVERY_EVAL_OUT"))
+	if outPath == "" {
+		outPath = filepath.Join(t.TempDir(), "discovery-eval.json")
+	}
 	baselinePath := getenv("NEEDLEX_DISCOVERY_EVAL_BASELINE", "improvements/discovery-eval-baseline.json")
 	corpusPath := getenv("NEEDLEX_DISCOVERY_EVAL_CORPUS", "benchmarks/corpora/discovery-corpus-v1.json")
 	updateBaseline := strings.EqualFold(strings.TrimSpace(os.Getenv("NEEDLEX_DISCOVERY_EVAL_UPDATE_BASELINE")), "1")
@@ -161,7 +167,7 @@ func runDiscoveryCase(t *testing.T, item discoveryCase) (discoveryRow, error) {
 		}
 		defer func() { _ = os.RemoveAll(root) }()
 		_, _, _ = store.NewCandidateStore(root).Observe(store.CandidateObservation{URL: seedURL, Title: "Proof Replay Deterministic Guide", Source: "seedless_eval"})
-		req := coreservice.PrepareQueryRequestWithLocalState(root, coreservice.QueryRequest{Goal: item.Goal, DiscoveryMode: coreservice.QueryDiscoveryWeb}, cfg, intel.NewSemanticAligner(cfg, seed.Client()))
+		req := coreservice.PrepareQueryRequestWithLocalState(store.NewLocalState(root), coreservice.QueryRequest{Goal: item.Goal, DiscoveryMode: coreservice.QueryDiscoveryWeb}, cfg, intel.NewSemanticAligner(cfg, seed.Client()), localQueryMemory(root, cfg))
 		resp, err := svc.Query(context.Background(), req)
 		if err != nil {
 			return row, err
@@ -562,4 +568,9 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// localQueryMemory composes the native integration fixture, outside core policy.
+func localQueryMemory(root string, cfg config.Config) memory.Searcher {
+	return memory.NewService(cfg.Memory, memory.NewSQLiteStore(root, cfg.Memory.Path), intel.NewTextEmbedderWithCacheDir(cfg, nil, platform.NewStateLayout(root).EmbeddingCacheDir))
 }

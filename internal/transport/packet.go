@@ -6,6 +6,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/discovery"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -234,13 +235,14 @@ func compactAnalyticsFromTrace(trace proof.RunTrace, proofRefCount int, provider
 	if rawChars > 0 {
 		compressionRatio = float64(charsSaved) / float64(rawChars)
 	}
+	usage := discovery.ClassifyProviderUsage(provider)
 	return compactAnalyticsFooter{
 		CharsSaved:           charsSaved,
 		TokensSavedEstimated: analytics.TokenEstimateFromChars(int64(charsSaved)),
 		CompressionRatio:     compressionRatio,
 		ProofBacked:          proofRefCount > 0,
-		PublicBootstrapUsed:  compactUsesPublicBootstrap(provider),
-		LocalMemoryUsed:      compactUsesLocalMemory(provider),
+		PublicBootstrapUsed:  usage.PublicBootstrap,
+		LocalMemoryUsed:      usage.LocalMemory,
 		TopicNodeUsed:        topicNodeUsed,
 	}
 }
@@ -253,21 +255,4 @@ func atoiSafe(raw string) int {
 	value := 0
 	_, _ = fmt.Sscanf(raw, "%d", &value)
 	return value
-}
-
-func compactUsesPublicBootstrap(provider string) bool {
-	for _, part := range strings.Split(strings.TrimSpace(provider), ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		if !strings.HasPrefix(part, "local_") && !strings.HasPrefix(part, "discovery_memory") {
-			return true
-		}
-	}
-	return false
-}
-
-func compactUsesLocalMemory(provider string) bool {
-	return strings.Contains(strings.TrimSpace(provider), "discovery_memory")
 }

@@ -1,6 +1,10 @@
 package service
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/josepavese/needlex/internal/core"
+)
 
 func applyIndexLikeDemotion(ranked []rankedSegment) []rankedSegment {
 	if len(ranked) < 2 {
@@ -57,7 +61,7 @@ func explanatoryAnchorWeight(item rankedSegment) float64 {
 	if len(text) >= 140 {
 		weight += 0.35
 	}
-	if sentencePunctuationCount(text) >= 2 {
+	if core.SentencePunctuationCount(text) >= 2 {
 		weight += 0.30
 	}
 	if len(item.segment.NodePaths) <= 4 {
@@ -66,7 +70,7 @@ func explanatoryAnchorWeight(item rankedSegment) float64 {
 	if len(item.segment.HeadingPath) > 0 {
 		weight += 0.10
 	}
-	if averageLineLength(text) >= 48 {
+	if core.AverageLineLength(text) >= 48 {
 		weight += 0.15
 	}
 	if weight > 1 {
@@ -89,10 +93,10 @@ func indexLikeWeight(item rankedSegment) float64 {
 	if shortEntryRatio(text) >= 0.65 {
 		weight += 0.35
 	}
-	if sentencePunctuationCount(text) == 0 {
+	if core.SentencePunctuationCount(text) == 0 {
 		weight += 0.15
 	}
-	if averageLineLength(text) <= 28 {
+	if core.AverageLineLength(text) <= 28 {
 		weight += 0.15
 	}
 	if len(item.segment.HeadingPath) <= 2 {
@@ -122,22 +126,4 @@ func shortEntryRatio(text string) float64 {
 		return 0
 	}
 	return float64(shortEntries) / float64(entries)
-}
-
-func averageLineLength(text string) float64 {
-	lines := strings.Split(text, "\n")
-	count := 0
-	total := 0
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		count++
-		total += len([]rune(line))
-	}
-	if count == 0 {
-		return 0
-	}
-	return float64(total) / float64(count)
 }

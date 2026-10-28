@@ -68,24 +68,7 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, profile,
 	fs.StringVar(&renderMode, "render", "", "JS rendering mode for selected page: auto (default; renders and captures application data when needed), off, or required")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
-		"--config":           {},
-		"-config":            {},
-		"--json-mode":        {},
-		"-json-mode":         {},
-		"--goal":             {},
-		"-goal":              {},
-		"--profile":          {},
-		"-profile":           {},
-		"--user-agent":       {},
-		"-user-agent":        {},
-		"--discovery":        {},
-		"-discovery":         {},
-		"--retrieval-effort": {},
-		"-retrieval-effort":  {},
-		"--render":           {},
-		"-render":            {},
-	})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return "", "", "", "", "", "", "", "", "", false, false
 	}
 	if fs.NArg() > 1 || goal == "" {

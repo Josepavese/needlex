@@ -1,6 +1,10 @@
 package service
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/josepavese/needlex/internal/core"
+)
 
 func applySubordinateFragmentDemotion(ranked []rankedSegment) []rankedSegment {
 	if len(ranked) < 2 {
@@ -46,10 +50,10 @@ func subordinateFragmentWeight(item rankedSegment) float64 {
 	} else if len(item.segment.NodePaths) <= 4 {
 		weight += 0.12
 	}
-	if averageLineLength(text) >= 70 {
+	if core.AverageLineLength(text) >= 70 {
 		weight += 0.15
 	}
-	if sentencePunctuationCount(text) <= 2 {
+	if core.SentencePunctuationCount(text) <= 2 {
 		weight += 0.10
 	}
 	if !item.ir.headingBacked && len(item.segment.HeadingPath) >= 3 {

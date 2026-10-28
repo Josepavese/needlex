@@ -1,6 +1,10 @@
 package service
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/josepavese/needlex/internal/core"
+)
 
 func applyCodeLikeDemotion(ranked []rankedSegment) []rankedSegment {
 	if len(ranked) < 2 {
@@ -42,10 +46,10 @@ func codeLikeWeight(item rankedSegment) float64 {
 	if symbolicLineRatio(text) >= 0.50 {
 		weight += 0.25
 	}
-	if sentencePunctuationCount(text) == 0 {
+	if core.SentencePunctuationCount(text) == 0 {
 		weight += 0.10
 	}
-	if averageLineLength(text) <= 36 {
+	if core.AverageLineLength(text) <= 36 {
 		weight += 0.10
 	}
 	if len(item.segment.NodePaths) <= 4 {

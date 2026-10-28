@@ -22,6 +22,7 @@ var noiseTags = map[string]struct{}{
 	"noscript": {},
 	"script":   {},
 	"style":    {},
+	"template": {},
 	"svg":      {},
 }
 
@@ -73,9 +74,9 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 	}
 
 	walker := domWalker{
-		title: extractTitle(root),
+		title: extractTitle(root, profile),
 	}
-	walker.walk(body, pathState{}, profile)
+	walker.walk(body, pathState{}, profile, false)
 	structuredNodes := extractStructuredDataNodes(root)
 	if len(structuredNodes) > 0 {
 		walker.nodes = append(walker.nodes, structuredNodes...)
@@ -292,9 +293,17 @@ type domWalker struct {
 	preserved int
 }
 
-func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
+func (w *domWalker) walk(node *html.Node, state pathState, profile string, covered bool) {
 	siblingCounts := map[string]int{}
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == html.TextNode {
+			siblingCounts["text()"]++
+			if !covered {
+				path := append(clonePath(state), fmt.Sprintf("text()[%d]", siblingCounts["text()"]))
+				w.appendTextNode(child, path, node.Data, textTags["p"], profile)
+			}
+			continue
+		}
 		if child.Type != html.ElementNode {
 			continue
 		}
@@ -308,11 +317,11 @@ func (w *domWalker) walk(node *html.Node, state pathState, profile string) {
 			continue
 		}
 
-		if kind, ok := textTags[tag]; ok {
-			w.appendTextNode(child, path, tag, kind)
+		kind, ownsText := textTags[tag]
+		if ownsText {
+			w.appendTextNode(child, path, tag, kind, profile)
 		}
-
-		w.walk(child, path, profile)
+		w.walk(child, path, profile, covered || ownsText)
 	}
 }
 
@@ -320,8 +329,8 @@ type pathState []string
 
 func clonePath(path pathState) []string { return append([]string{}, path...) }
 
-func (w *domWalker) appendTextNode(node *html.Node, path []string, tag, kind string) {
-	if text := normalizeWhitespace(extractText(node)); text != "" {
+func (w *domWalker) appendTextNode(node *html.Node, path []string, tag, kind, profile string) {
+	if text := normalizeWhitespace(extractText(node, profile)); text != "" {
 		w.nodes = append(w.nodes, SimplifiedNode{
 			Path:         "/" + strings.Join(path, "/"),
 			Tag:          tag,
@@ -425,12 +434,12 @@ func isNoiseHint(value, profile string) bool {
 	return false
 }
 
-func extractTitle(root *html.Node) string {
+func extractTitle(root *html.Node, profile string) string {
 	titleNode := findElement(root, "title")
 	if titleNode == nil {
 		return ""
 	}
-	return normalizeWhitespace(extractText(titleNode))
+	return normalizeWhitespace(extractText(titleNode, profile))
 }
 
 func findElement(node *html.Node, name string) *html.Node {
@@ -446,7 +455,7 @@ func findElement(node *html.Node, name string) *html.Node {
 	return nil
 }
 
-func extractText(node *html.Node) string {
+func extractText(node *html.Node, profile string) string {
 	var parts []string
 	var walk func(*html.Node)
 	walk = func(current *html.Node) {
@@ -457,7 +466,7 @@ func extractText(node *html.Node) string {
 		}
 		if current.Type == html.ElementNode {
 			tag := strings.ToLower(current.Data)
-			if _, blocked := noiseTags[tag]; blocked {
+			if shouldSkipNode(current, tag, profile) {
 				return
 			}
 		}

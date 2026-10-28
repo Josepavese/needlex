@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -107,7 +108,7 @@ func BuildProofRecord(input BuildInput) (ProofRecord, error) {
 }
 
 func (r ProofRecord) Validate() error {
-	return core.JoinErrors(core.RequireNonEmpty("proof_record.id", r.ID), r.Proof.Validate())
+	return errors.Join(core.RequireNonEmpty("proof_record.id", r.ID), r.Proof.Validate())
 }
 
 func (e TraceEvent) Validate() error {
@@ -129,7 +130,7 @@ func (e TraceEvent) Validate() error {
 		}
 	}
 	errs = append(errs, validateStringMap("trace_event.data", e.Data)...)
-	return core.JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (s StageSnapshot) Validate() error {
@@ -143,7 +144,7 @@ func (s StageSnapshot) Validate() error {
 		errs = append(errs, fmt.Errorf("stage_snapshot.completed_at must be >= started_at"))
 	}
 	errs = append(errs, core.RequireNonNegative("stage_snapshot.item_count", s.ItemCount))
-	return core.JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (r RunTrace) Validate() error {
@@ -159,7 +160,7 @@ func (r RunTrace) Validate() error {
 	}
 	errs = append(errs, core.ValidateIndexed("run_trace.stages", r.Stages, func(stage StageSnapshot) error { return stage.Validate() })...)
 	errs = append(errs, core.ValidateIndexed("run_trace.events", r.Events, func(event TraceEvent) error { return event.Validate() })...)
-	return core.JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (r RunTrace) ReplayReport() (ReplayReport, error) {

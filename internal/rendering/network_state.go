@@ -2,14 +2,7 @@ package rendering
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"net"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -75,7 +68,7 @@ func (c *networkCollector) settled(readyElapsed, totalElapsed, idle time.Duratio
 		if totalElapsed < streamMinObservation {
 			return false
 		}
-		streamIdle := maxDuration(idle*4, 6*time.Second)
+		streamIdle := max(idle*4, 6*time.Second)
 		if time.Since(c.streamQuietSince()) < streamIdle {
 			return false
 		}
@@ -89,7 +82,7 @@ func (c *networkCollector) settled(readyElapsed, totalElapsed, idle time.Duratio
 		if totalElapsed < streamMinObservation {
 			return false
 		}
-		if time.Since(c.lastActivity) < maxDuration(idle*4, 6*time.Second) {
+		if time.Since(c.lastActivity) < max(idle*4, 6*time.Second) {
 			return false
 		}
 		c.idleReason = "network_idle_with_active_requests"
@@ -173,80 +166,6 @@ func headerValue(headers map[string]any, key string) string {
 	return ""
 }
 
-func freeLocalPort() (int, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, fmt.Errorf("allocate renderer cdp port: %w", err)
-	}
-	defer listener.Close() //nolint:errcheck
-	addr, ok := listener.Addr().(*net.TCPAddr)
-	if !ok {
-		return 0, errors.New("renderer cdp port is not tcp")
-	}
-	return addr.Port, nil
-}
-
-func waitForCDPWebSocketURL(ctx context.Context, port int) (string, error) {
-	endpoint := fmt.Sprintf("http://127.0.0.1:%d/json/version", port)
-	client := http.Client{Timeout: 250 * time.Millisecond}
-	tick := time.NewTicker(100 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-		if err != nil {
-			return "", err
-		}
-		resp, err := client.Do(req)
-		if err == nil && resp != nil {
-			func() {
-				defer resp.Body.Close() //nolint:errcheck
-				var payload struct {
-					WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
-				}
-				if resp.StatusCode >= 200 && resp.StatusCode < 300 && json.NewDecoder(resp.Body).Decode(&payload) == nil && strings.TrimSpace(payload.WebSocketDebuggerURL) != "" {
-					endpoint = strings.TrimSpace(payload.WebSocketDebuggerURL)
-				}
-			}()
-			if strings.HasPrefix(endpoint, "ws://") {
-				return endpoint, nil
-			}
-		}
-		select {
-		case <-tick.C:
-		case <-ctx.Done():
-			return "", ctx.Err()
-		}
-	}
-}
-
-func FindBrowserPath(configured string) (string, error) {
-	if strings.TrimSpace(configured) != "" {
-		if _, err := os.Stat(strings.TrimSpace(configured)); err != nil {
-			return "", fmt.Errorf("configured browser path unavailable: %w", err)
-		}
-		return strings.TrimSpace(configured), nil
-	}
-	for _, name := range []string{
-		"chrome-headless-shell",
-		"chromium",
-		"chromium-browser",
-		"google-chrome",
-		"google-chrome-stable",
-		"chrome",
-		"msedge",
-	} {
-		if path, err := exec.LookPath(name); err == nil {
-			return path, nil
-		}
-	}
-	return "", errors.New("no Chrome/Chromium executable found for JS rendering")
-}
-
-func isHeadlessShell(browserPath string) bool {
-	base := strings.ToLower(filepath.Base(browserPath))
-	return strings.Contains(base, "chrome-headless-shell") || base == "headless_shell"
-}
-
 func firstPositiveDuration(values ...time.Duration) time.Duration {
 	for _, value := range values {
 		if value > 0 {
@@ -285,13 +204,6 @@ func minPositiveInt64(values ...int64) int64 {
 		}
 	}
 	return out
-}
-
-func maxDuration(left, right time.Duration) time.Duration {
-	if left > right {
-		return left
-	}
-	return right
 }
 
 const streamMinObservation = 8 * time.Second

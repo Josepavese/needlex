@@ -21,7 +21,6 @@ import (
 	"github.com/josepavese/needlex/internal/observability"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/platform/buildinfo"
-	"github.com/josepavese/needlex/internal/rendering"
 )
 
 type doctorReport struct {
@@ -94,7 +93,7 @@ func (r Runner) runDoctor(args []string, stdout, stderr io.Writer) int {
 	var configPath string
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
@@ -120,8 +119,8 @@ func (r Runner) buildDoctorReport(configPath string) doctorReport {
 	if cfgErr != nil {
 		cfg = config.Defaults()
 	}
-	analyticsStore := analytics.NewSQLiteStore(stateRoot)
-	memoryStore := memory.NewSQLiteStore(stateRoot, cfg.Memory.Path)
+	analyticsStore := r.analyticsStore(stateRoot)
+	memoryStore := r.memoryStore(stateRoot, cfg.Memory.Path)
 	layout := platform.NewStateLayout(stateRoot)
 	stats, statsErr := analyticsStore.Stats(context.Background())
 	memoryStats, memoryErr := memoryStore.GetStats(context.Background())
@@ -281,7 +280,7 @@ func probeDoctorRender(cfg config.Config) doctorRender {
 		Enabled:  cfg.Render.Enabled,
 		Provider: doctorFirstNonEmpty(cfg.Render.Provider, "exec-dump-dom"),
 	}
-	path, err := rendering.FindBrowserPath(cfg.Render.BrowserPath)
+	path, err := platform.FindBrowserPath(cfg.Render.BrowserPath)
 	if err != nil {
 		out.Error = err.Error()
 		return out
@@ -291,7 +290,7 @@ func probeDoctorRender(cfg config.Config) doctorRender {
 	return out
 }
 
-func buildDoctorDiagnostics(ctx context.Context, analyticsStore analytics.SQLiteStore, logger observability.Logger) (doctorDiagnostics, []string) {
+func buildDoctorDiagnostics(ctx context.Context, analyticsStore analytics.Reports, logger observability.Logger) (doctorDiagnostics, []string) {
 	warnings := []string{}
 	events, err := logger.Tail(100)
 	if err != nil {

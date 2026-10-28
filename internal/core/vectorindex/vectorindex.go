@@ -97,6 +97,9 @@ func (e Exact) Search(ctx context.Context, query []float32, opts SearchOptions) 
 	return hits, nil
 }
 
+// Cosine is shared by dense alignment, exact search, and discovery memory.
+// It accumulates in float64, returns zero for empty, mismatched, or zero-norm
+// vectors, and preserves negative similarities for callers to interpret.
 func Cosine(left, right []float32) float64 {
 	if len(left) == 0 || len(left) != len(right) {
 		return 0

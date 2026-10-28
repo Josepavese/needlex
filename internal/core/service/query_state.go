@@ -11,16 +11,13 @@ import (
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/memory"
-	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/store"
 )
 
 const graphExpansionMinScore = 2.0
 
-func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg config.Config, semantic intel.SemanticAligner) QueryRequest {
-	candidateStore := store.NewCandidateStore(storeRoot)
-	domainGraphStore := store.NewDomainGraphStore(storeRoot)
+func PrepareQueryRequestWithLocalState(state store.LocalState, req QueryRequest, cfg config.Config, semantic intel.SemanticAligner, recall memory.Searcher) QueryRequest {
 	requestedMode := strings.TrimSpace(strings.ToLower(req.DiscoveryMode))
 	autoSeed := requestedMode != QueryDiscoveryOff && (strings.TrimSpace(req.SeedURL) != "" || requestedMode == QueryDiscoveryWeb)
 
@@ -28,9 +25,7 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Semantic.TimeoutMS)*time.Millisecond)
 		defer cancel()
 		if cfg.Memory.Enabled {
-			memoryStore := memory.NewSQLiteStore(storeRoot, cfg.Memory.Path)
-			memoryService := memory.NewService(cfg.Memory, memoryStore, intel.NewTextEmbedderWithCacheDir(cfg, nil, platform.NewStateLayout(storeRoot).EmbeddingCacheDir))
-			if matches, err := memoryService.Search(ctx, req.Goal, memory.SearchOptions{
+			if matches, err := recall.Search(ctx, req.Goal, memory.SearchOptions{
 				Limit:         5,
 				ExpandLimit:   3,
 				MinScore:      0.15,
@@ -41,7 +36,7 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 				req.DomainHints = mergeDomainHints(req.DomainHints, domainHintsFromDiscoverCandidates(req.MemoryCandidates)...)
 			}
 		}
-		if matches, err := candidateStore.Search(ctx, req.Goal, 3, semantic); err == nil && len(matches) > 0 {
+		if matches, err := state.Candidates.Search(ctx, req.Goal, 3, semantic); err == nil && len(matches) > 0 {
 			req.DomainHints = mergeDomainHints(req.DomainHints, domainHintsFromCandidateMatches(matches)...)
 			if strings.TrimSpace(req.SeedURL) == "" && len(req.MemoryCandidates) == 0 {
 				req.SeedURL = matches[0].URL
@@ -54,34 +49,32 @@ func PrepareQueryRequestWithLocalState(storeRoot string, req QueryRequest, cfg c
 		}
 	}
 	if autoSeed && len(req.DomainHints) > 0 {
-		if matches, err := domainGraphStore.Expand(req.DomainHints, 2); err == nil && len(matches) > 0 {
+		if matches, err := state.Domains.Expand(req.DomainHints, 2); err == nil && len(matches) > 0 {
 			req.DomainHints = mergeDomainHints(req.DomainHints, domainsFromGraphMatches(selectGraphExpansionMatches(matches))...)
 		}
 	}
-	if evidence, ok := loadQueryFingerprintEvidence(storeRoot, req.SeedURL); ok {
+	if evidence, ok := loadQueryFingerprintEvidence(state.Fingerprints, req.SeedURL); ok {
 		req.SeedTraceID, req.SeedStable, req.SeedNovelty, req.SeedChanged = evidence.TraceID, evidence.Stable, evidence.Novelty, evidence.Changed
 	}
-	loadGenomeHints(storeRoot, req.SeedURL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.PruningProfile, &req.RenderHint)
+	loadGenomeHints(state.Genomes, req.SeedURL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.PruningProfile, &req.RenderHint)
 	return req
 }
 
-func ObserveQueryResponseWithLocalState(storeRoot string, req QueryRequest, resp QueryResponse) {
-	candidateStore := store.NewCandidateStore(storeRoot)
-	domainGraphStore := store.NewDomainGraphStore(storeRoot)
-	observeStoredPage(storeRoot, "query", resp.Document, resp.TraceID, resp.ResultPack.Chunks)
+func ObserveQueryResponseWithLocalState(state store.LocalState, req QueryRequest, resp QueryResponse) {
+	observeStoredPage(state, "query", resp.Document, resp.TraceID, resp.ResultPack.Chunks)
 	for _, candidateURL := range resp.Plan.CandidateURLs {
-		_ = observeCandidate(candidateStore, core.Document{FinalURL: candidateURL}, "query_discovery")
+		_ = observeCandidate(state.Candidates, core.Document{FinalURL: candidateURL}, "query_discovery")
 		if strings.TrimSpace(req.SeedURL) != "" {
-			_, _, _ = domainGraphStore.Observe(req.SeedURL, candidateURL, "query_discovery")
+			_, _, _ = state.Domains.Observe(req.SeedURL, candidateURL, "query_discovery")
 		}
 		if strings.TrimSpace(resp.Plan.SelectedURL) != "" {
-			_, _, _ = domainGraphStore.Observe(resp.Plan.SelectedURL, candidateURL, "query_related")
+			_, _, _ = state.Domains.Observe(resp.Plan.SelectedURL, candidateURL, "query_related")
 		}
 	}
-	observeGenome(storeRoot, genomeObservation(resp.Document, resp.Trace, resp.ResultPack, req.PruningProfile, req.RenderHint))
+	observeGenome(state.Genomes, genomeObservation(resp.Document, resp.Trace, resp.ResultPack, req.PruningProfile, req.RenderHint))
 }
 
-func observeCandidate(candidateStore store.CandidateStore, document core.Document, source string) error {
+func observeCandidate(candidateStore store.Candidates, document core.Document, source string) error {
 	url := strings.TrimSpace(document.FinalURL)
 	if url == "" {
 		url = strings.TrimSpace(document.URL)
@@ -186,16 +179,6 @@ func maxLane(path []int) int {
 	return max
 }
 
-func packMetadata(trace proof.RunTrace, key string) string {
-	for _, stage := range trace.Stages {
-		if stage.Stage != "pack" {
-			continue
-		}
-		return stage.Metadata[key]
-	}
-	return ""
-}
-
 func traceMetadata(trace proof.RunTrace, stageName, key string) string {
 	for _, stage := range trace.Stages {
 		if stage.Stage != stageName {
@@ -206,16 +189,18 @@ func traceMetadata(trace proof.RunTrace, stageName, key string) string {
 	return ""
 }
 
-func NewFingerprintEvidenceLoader(storeRoot string) func(string) (QueryFingerprintEvidence, bool) {
-	return func(url string) (QueryFingerprintEvidence, bool) { return loadQueryFingerprintEvidence(storeRoot, url) }
+func NewFingerprintEvidenceLoader(fingerprints store.FingerprintGraphs) func(string) (QueryFingerprintEvidence, bool) {
+	return func(url string) (QueryFingerprintEvidence, bool) {
+		return loadQueryFingerprintEvidence(fingerprints, url)
+	}
 }
 
-func loadQueryFingerprintEvidence(storeRoot, seedURL string) (QueryFingerprintEvidence, bool) {
+func loadQueryFingerprintEvidence(fingerprints store.FingerprintGraphs, seedURL string) (QueryFingerprintEvidence, bool) {
 	cleanURL := strings.TrimSpace(seedURL)
 	if cleanURL == "" {
 		return QueryFingerprintEvidence{}, false
 	}
-	graph, err := store.NewFingerprintGraphStore(storeRoot).Load(cleanURL)
+	graph, err := fingerprints.Load(cleanURL)
 	if err != nil || len(graph.LatestNodes) == 0 {
 		return QueryFingerprintEvidence{}, false
 	}

@@ -40,7 +40,7 @@ Sitemap: https://example.com/sitemap.xml
 Sitemap: https://other.example.net/sitemap.xml
 Sitemap: /nested-sitemap.xml
 `
-	got := SitemapURLsFromRobots("https://example.com/docs/reference", robots)
+	got := ParseRobots("https://example.com/docs/reference", robots).Sitemaps
 	want := []string{"https://example.com/sitemap.xml", "https://example.com/nested-sitemap.xml"}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("unexpected sitemap URLs\nwant=%#v\ngot=%#v", want, got)

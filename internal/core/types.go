@@ -115,7 +115,7 @@ func (d Document) Validate() error {
 	if d.FetchedAt.IsZero() {
 		errs = append(errs, fmt.Errorf("document.fetched_at is required"))
 	}
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (c Chunk) Validate() error {
@@ -129,7 +129,7 @@ func (c Chunk) Validate() error {
 		validateUnitInterval("chunk.confidence", c.Confidence),
 	}
 	errs = append(errs, ValidateStringSlice("chunk.heading_path", c.HeadingPath)...)
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (s SourceSpan) Validate() error {
@@ -142,7 +142,7 @@ func (s SourceSpan) Validate() error {
 	if s.CharEnd <= s.CharStart {
 		errs = append(errs, fmt.Errorf("proof.source_span.char_end must be > char_start"))
 	}
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (m ModelInvocation) Validate() error {
@@ -154,7 +154,7 @@ func (m ModelInvocation) Validate() error {
 		RequireNonNegative("proof.model_invocations.latency_ms", m.LatencyMS),
 	}
 	errs = append(errs, ValidateStringSlice("proof.model_invocations.affected_chunk_ids", m.AffectedChunkIDs)...)
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (p Proof) Validate() error {
@@ -171,7 +171,7 @@ func (p Proof) Validate() error {
 	errs = append(errs, ValidateStringSlice("proof.transform_chain", p.TransformChain)...)
 	errs = append(errs, ValidateIndexed("proof.model_invocations", p.ModelInvocations, func(invocation ModelInvocation) error { return invocation.Validate() })...)
 	errs = append(errs, ValidateStringSlice("proof.risk_flags", p.RiskFlags)...)
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (s SourceRef) Validate() error {
@@ -180,7 +180,7 @@ func (s SourceRef) Validate() error {
 		RequireNonEmpty("result_pack.sources.url", s.URL),
 	}
 	errs = append(errs, ValidateStringSlice("result_pack.sources.chunk_ids", s.ChunkIDs)...)
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (c CostReport) Validate() error {
@@ -193,7 +193,7 @@ func (c CostReport) Validate() error {
 		errs = append(errs, fmt.Errorf("result_pack.cost_report.lane_path must not be empty"))
 	}
 	errs = append(errs, ValidateIndexed("result_pack.cost_report.lane_path", c.LanePath, func(lane int) error { return ValidateLane("", lane) })...)
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func (r ResultPack) Validate() error {
@@ -227,7 +227,7 @@ func (r ResultPack) Validate() error {
 	errs = append(errs,
 		ValidateStringSlice("result_pack.links", r.Links)...,
 	)
-	return JoinErrors(errs...)
+	return errors.Join(errs...)
 }
 
 func RequireNonEmpty(field, value string) error {
@@ -280,19 +280,6 @@ func requireFinite(field string, value float64) error {
 		return fmt.Errorf("%s must be finite", field)
 	}
 	return nil
-}
-
-func JoinErrors(errs ...error) error {
-	filtered := make([]error, 0, len(errs))
-	for _, err := range errs {
-		if err != nil {
-			filtered = append(filtered, err)
-		}
-	}
-	if len(filtered) == 0 {
-		return nil
-	}
-	return errors.Join(filtered...)
 }
 
 func ValidateStringSlice(field string, values []string) []error {

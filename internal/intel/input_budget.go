@@ -50,7 +50,7 @@ func compactResolveAmbiguityInput(input ResolveAmbiguityInput, maxInputTokens in
 		if idx == 4 {
 			break
 		}
-		textBudget := boundedTextBudget(remaining, maxIntBudget(1, len(input.Candidates)-idx), 48, 16)
+		textBudget := boundedTextBudget(remaining, max(1, len(input.Candidates)-idx), 48, 16)
 		text := trimTextTokens(candidate.Text, textBudget)
 		if text == "" {
 			text = trimTextTokens(candidate.Text, 16)
@@ -71,11 +71,4 @@ func compactResolveAmbiguityInput(input ResolveAmbiguityInput, maxInputTokens in
 		return input
 	}
 	return out
-}
-
-func maxIntBudget(left, right int) int {
-	if left > right {
-		return left
-	}
-	return right
 }

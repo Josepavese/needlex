@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/josepavese/needlex/internal/store"
+
 	"github.com/josepavese/needlex/benchmarks/internal/evalutil"
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
@@ -367,12 +369,12 @@ func liveReadRequest(item evalCase) coreservice.ReadRequest {
 }
 
 func readWithWarmMemory(svc *coreservice.Service, storeRoot string, readReq coreservice.ReadRequest) (coreservice.ReadResponse, error) {
-	readResp, err := svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq))
+	readResp, err := svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(store.NewLocalState(storeRoot), readReq))
 	if err != nil {
 		return coreservice.ReadResponse{}, err
 	}
-	coreservice.ObserveReadResponseWithLocalState(storeRoot, readReq, readResp)
-	return svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(storeRoot, readReq))
+	coreservice.ObserveReadResponseWithLocalState(store.NewLocalState(storeRoot), readReq, readResp)
+	return svc.Read(context.Background(), coreservice.PrepareReadRequestWithLocalState(store.NewLocalState(storeRoot), readReq))
 }
 
 func liveReadMetrics(item evalCase, backend string, warmResp coreservice.ReadResponse, client *http.Client) readMetrics {

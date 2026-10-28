@@ -1,11 +1,8 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -49,32 +46,24 @@ type DiscoveryProviderObservation struct {
 }
 
 type DiscoveryProviderStateStore struct {
-	root string
-	now  func() time.Time
+	documents platform.JSONDocuments
+	now       func() time.Time
 }
 
 func NewDiscoveryProviderStateStore(root string) DiscoveryProviderStateStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
-	}
 	return DiscoveryProviderStateStore{
-		root: root,
-		now:  time.Now,
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).DiscoveryProvidersDir, "discovery provider state", "discovery provider"),
+		now:       time.Now,
 	}
 }
 
 func (s DiscoveryProviderStateStore) Load(name string) (DiscoveryProviderState, error) {
-	path := filepath.Join(s.root, "discovery", "providers", sanitizeID(name)+".json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+	var state DiscoveryProviderState
+	if err := s.documents.Load(sanitizeID(name), &state); err != nil {
+		if errors.Is(err, platform.ErrDocumentNotFound) {
 			return DiscoveryProviderState{}, fmt.Errorf("%w: %s", ErrDiscoveryProviderStateNotFound, name)
 		}
-		return DiscoveryProviderState{}, fmt.Errorf("read discovery provider state: %w", err)
-	}
-	var state DiscoveryProviderState
-	if err := json.Unmarshal(data, &state); err != nil {
-		return DiscoveryProviderState{}, fmt.Errorf("decode discovery provider state: %w", err)
+		return DiscoveryProviderState{}, err
 	}
 	if err := state.Validate(); err != nil {
 		return DiscoveryProviderState{}, err
@@ -114,19 +103,7 @@ func (s DiscoveryProviderStateStore) loadOrNewProviderState(name string) (Discov
 }
 
 func (s DiscoveryProviderStateStore) saveProviderState(state DiscoveryProviderState) (string, error) {
-	dir := filepath.Join(s.root, "discovery", "providers")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create discovery provider dir: %w", err)
-	}
-	path := filepath.Join(dir, sanitizeID(state.Name)+".json")
-	data, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode discovery provider state: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return "", fmt.Errorf("write discovery provider state: %w", err)
-	}
-	return path, nil
+	return s.documents.Save(sanitizeID(state.Name), state)
 }
 
 func (s *DiscoveryProviderState) applyObservation(observation DiscoveryProviderObservation, now time.Time) error {

@@ -68,6 +68,47 @@ Default paths:
 3. state root: `%LOCALAPPDATA%\NeedleX`
 4. config: `%LOCALAPPDATA%\NeedleX\configs\needlex.json`
 
+## MCP clients
+
+Configure clients to launch the installed `needlex` wrapper with the single
+argument `mcp`. Use the absolute wrapper path reported by `command -v needlex`
+on Linux/macOS, or `Get-Command needlex` on Windows. The wrapper supplies the
+installed state root and SSOT config. A binary left in an old checkout can run
+an older protocol implementation even after the installed command is upgraded.
+
+For [OpenCode 2](https://dev.opencode.ai/v2/docs/mcp-servers/), merge this entry
+into `~/.config/opencode/opencode.json`, replacing the placeholder with that
+absolute wrapper path:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "needlex": {
+        "type": "local",
+        "command": ["/absolute/path/to/needlex", "mcp"]
+      }
+    }
+  }
+}
+```
+
+After changing a running OpenCode installation, reload configuration and check
+the connection:
+
+```bash
+opencode reload
+opencode mcp list
+```
+
+If startup reports `Request timed out`, run the configured executable's
+`version` and `mcp --help` commands, rather than checking a different binary
+from your shell. Current Needle-X accepts newline-delimited JSON-RPC over
+stdio and also supports Content-Length framing. Old binaries that only accept
+Content-Length can wait indefinitely when a client sends JSON on separate
+lines. Use `opencode debug config` to check for a higher-precedence command
+override before changing transport timeouts.
+
 ## Semantic Prerequisites
 
 Needle-X is embeddings-first and has no production mode without dense embeddings.

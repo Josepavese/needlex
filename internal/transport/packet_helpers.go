@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/discovery"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -103,7 +104,7 @@ func compactChunkSelection(chunks []coreservice.AgentChunk) []coreservice.AgentC
 	if len(chunks) == 0 {
 		return nil
 	}
-	selected := make([]coreservice.AgentChunk, 0, minInt(len(chunks), compactChunkLimit))
+	selected := make([]coreservice.AgentChunk, 0, min(len(chunks), compactChunkLimit))
 	anchorStrong := false
 	for _, chunk := range chunks {
 		if len(selected) >= compactChunkLimit {
@@ -121,7 +122,7 @@ func compactChunkSelection(chunks []coreservice.AgentChunk) []coreservice.AgentC
 		}
 	}
 	if len(selected) == 0 {
-		return append([]coreservice.AgentChunk{}, chunks[:minInt(len(chunks), compactChunkLimit)]...)
+		return append([]coreservice.AgentChunk{}, chunks[:min(len(chunks), compactChunkLimit)]...)
 	}
 	return selected
 }
@@ -172,19 +173,12 @@ func commonPrefixRatio(a, b string) float64 {
 	if len(ar) == 0 || len(br) == 0 {
 		return 0
 	}
-	limit := minInt(len(ar), len(br))
+	limit := min(len(ar), len(br))
 	count := 0
 	for count < limit && ar[count] == br[count] {
 		count++
 	}
 	return float64(count) / float64(limit)
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func isLowUtilityCompactChunk(chunk coreservice.AgentChunk) bool {
@@ -218,14 +212,14 @@ func compactChunkUtility(chunk coreservice.AgentChunk) float64 {
 	default:
 		weight += 0.02
 	}
-	punctuation := sentencePunctuationCountForDisplay(text)
+	punctuation := core.SentencePunctuationCount(text)
 	switch {
 	case punctuation >= 2:
 		weight += 0.20
 	case punctuation == 1:
 		weight += 0.12
 	}
-	if averageLineLengthForDisplay(text) >= 48 {
+	if core.AverageLineLength(text) >= 48 {
 		weight += 0.10
 	}
 	if len(cleanDisplayPath(chunk.HeadingPath)) >= 3 && runeLen <= 180 {
@@ -258,30 +252,8 @@ func shouldPrefixTitleInSummary(title, summary string) bool {
 	return true
 }
 
-func sentencePunctuationCountForDisplay(text string) int {
-	return strings.Count(text, ".") + strings.Count(text, "!") + strings.Count(text, "?") + strings.Count(text, ";") + strings.Count(text, ":")
-}
-
-func averageLineLengthForDisplay(text string) float64 {
-	lines := strings.Split(text, "\n")
-	count := 0
-	total := 0
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		count++
-		total += len([]rune(line))
-	}
-	if count == 0 {
-		return 0
-	}
-	return float64(total) / float64(count)
-}
-
 func isNavLikeTokenLine(text string, headingPath []string) bool {
-	if sentencePunctuationCountForDisplay(text) != 0 {
+	if core.SentencePunctuationCount(text) != 0 {
 		return false
 	}
 	if len(cleanDisplayPath(headingPath)) > 1 {
@@ -380,7 +352,7 @@ func isTightPunctuation(r rune) bool {
 func deriveReadUncertainty(chunks []coreservice.AgentChunk, webIR core.WebIR) compactUncertainty {
 	reasons := make([]string, 0, 4)
 	for _, reason := range core.WebIRUtilityReasons(webIR) {
-		reasons = appendUniqueStrings(reasons, reason)
+		reasons = discovery.AppendUniqueReason(reasons, reason)
 	}
 	confidence := topChunkConfidence(chunks)
 	switch {
@@ -409,13 +381,13 @@ func deriveQueryUncertainty(chunks []coreservice.AgentChunk, candidates []corese
 	if delta, ok := selectedCandidateDelta(candidates, selectedURL); ok {
 		switch {
 		case delta <= 0.08:
-			reasons = appendUniqueStrings(reasons, "ambiguous_candidate_selection")
+			reasons = discovery.AppendUniqueReason(reasons, "ambiguous_candidate_selection")
 		case delta <= 0.18:
-			reasons = appendUniqueStrings(reasons, "narrow_candidate_margin")
+			reasons = discovery.AppendUniqueReason(reasons, "narrow_candidate_margin")
 		}
 	}
 	if len(candidates) == 1 {
-		reasons = appendUniqueStrings(reasons, "single_candidate_path")
+		reasons = discovery.AppendUniqueReason(reasons, "single_candidate_path")
 	}
 	return compactUncertainty{
 		Level:   uncertaintyLevel(reasons),
@@ -466,24 +438,4 @@ func selectedCandidateDelta(candidates []coreservice.AgentCandidate, selectedURL
 		nextScore = candidates[0].Score
 	}
 	return selectedScore - nextScore, true
-}
-
-func appendUniqueStrings(existing []string, incoming ...string) []string {
-	seen := make(map[string]struct{}, len(existing))
-	out := append([]string{}, existing...)
-	for _, value := range existing {
-		seen[value] = struct{}{}
-	}
-	for _, value := range incoming {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
-	}
-	return out
 }

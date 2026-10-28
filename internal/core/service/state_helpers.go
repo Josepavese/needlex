@@ -29,14 +29,14 @@ func applyGenomeHints(forceLane *int, profile, fetchProfile, fetchRetryProfile, 
 	}
 }
 
-func loadGenomeHints(storeRoot, rawURL string, forceLane *int, profile, fetchProfile, fetchRetryProfile, pruningProfile *string, renderHint *bool) {
-	if genome, err := store.NewGenomeStore(storeRoot).LoadByURL(rawURL); err == nil {
+func loadGenomeHints(genomes store.Genomes, rawURL string, forceLane *int, profile, fetchProfile, fetchRetryProfile, pruningProfile *string, renderHint *bool) {
+	if genome, err := genomes.LoadByURL(rawURL); err == nil {
 		applyGenomeHints(forceLane, profile, fetchProfile, fetchRetryProfile, pruningProfile, renderHint, genome)
 	}
 }
 
-func stableFingerprintsForURL(storeRoot, rawURL string) []string {
-	graph, err := store.NewFingerprintGraphStore(storeRoot).Load(rawURL)
+func stableFingerprintsForURL(fingerprints store.FingerprintGraphs, rawURL string) []string {
+	graph, err := fingerprints.Load(rawURL)
 	if err != nil || len(graph.LatestNodes) == 0 {
 		return nil
 	}
@@ -47,15 +47,15 @@ func stableFingerprintsForURL(storeRoot, rawURL string) []string {
 	return out
 }
 
-func observeStoredPage(storeRoot, source string, document core.Document, traceID string, chunks []core.Chunk) {
-	_ = observeCandidate(store.NewCandidateStore(storeRoot), document, source)
+func observeStoredPage(state store.LocalState, source string, document core.Document, traceID string, chunks []core.Chunk) {
+	_ = observeCandidate(state.Candidates, document, source)
 	if strings.TrimSpace(document.FinalURL) != "" && strings.TrimSpace(traceID) != "" && len(chunks) > 0 {
-		_, _, _ = store.NewFingerprintGraphStore(storeRoot).Observe(document.FinalURL, traceID, chunks)
+		_, _, _ = state.Fingerprints.Observe(document.FinalURL, traceID, chunks)
 	}
 }
 
-func observeGenome(storeRoot string, observation store.GenomeObservation) {
-	_, _, _ = store.NewGenomeStore(storeRoot).Observe(observation)
+func observeGenome(genomes store.Genomes, observation store.GenomeObservation) {
+	_, _, _ = genomes.Observe(observation)
 }
 
 func genomeObservation(document core.Document, trace proof.RunTrace, pack core.ResultPack, pruningProfile string, renderHint bool) store.GenomeObservation {
@@ -68,6 +68,6 @@ func genomeObservation(document core.Document, trace proof.RunTrace, pack core.R
 		PruningProfile:    pruningProfile,
 		RenderNeeded:      renderHint,
 		FetchMode:         document.FetchMode,
-		NoiseLevel:        packMetadata(trace, "noise_level"),
+		NoiseLevel:        traceMetadata(trace, "pack", "noise_level"),
 	}
 }

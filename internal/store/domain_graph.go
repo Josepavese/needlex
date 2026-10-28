@@ -1,11 +1,7 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -30,17 +26,14 @@ type DomainMatch struct {
 }
 
 type DomainGraphStore struct {
-	root string
-	now  func() time.Time
+	documents platform.JSONDocuments
+	now       func() time.Time
 }
 
 func NewDomainGraphStore(root string) DomainGraphStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
-	}
 	return DomainGraphStore{
-		root: root,
-		now:  time.Now,
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).DomainGraphDir, "domain graph", "domain graph"),
+		now:       time.Now,
 	}
 }
 
@@ -57,7 +50,10 @@ func (s DomainGraphStore) Observe(fromURL, toURL, source string) (DomainTransiti
 		return DomainTransition{}, "", nil
 	}
 
-	graph, _ := s.loadAll()
+	graph, err := s.loadAll()
+	if err != nil && !errors.Is(err, ErrDomainGraphNotFound) {
+		return DomainTransition{}, "", err
+	}
 	now := s.now().UTC()
 	updated := DomainTransition{}
 	found := false
@@ -179,35 +175,18 @@ func sortDomainMatches(matches []DomainMatch) {
 }
 
 func (s DomainGraphStore) loadAll() ([]DomainTransition, error) {
-	path := filepath.Join(s.root, "domain_graph", "index.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+	var graph []DomainTransition
+	if err := s.documents.Load("index", &graph); err != nil {
+		if errors.Is(err, platform.ErrDocumentNotFound) {
 			return nil, ErrDomainGraphNotFound
 		}
-		return nil, fmt.Errorf("read domain graph: %w", err)
-	}
-	var graph []DomainTransition
-	if err := json.Unmarshal(data, &graph); err != nil {
-		return nil, fmt.Errorf("decode domain graph: %w", err)
+		return nil, err
 	}
 	return graph, nil
 }
 
 func (s DomainGraphStore) saveAll(graph []DomainTransition) (string, error) {
-	dir := filepath.Join(s.root, "domain_graph")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create domain graph dir: %w", err)
-	}
-	path := filepath.Join(dir, "index.json")
-	data, err := json.MarshalIndent(graph, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode domain graph: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return "", fmt.Errorf("write domain graph: %w", err)
-	}
-	return path, nil
+	return s.documents.Save("index", graph)
 }
 
 func normalizeSeedDomains(values []string) []string {

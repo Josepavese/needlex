@@ -75,7 +75,7 @@ func (r Runner) runSupportBundle(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.IntVar(&logLimit, "log-limit", 200, "runtime log events to include")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--out": {}, "-out": {}, "--config": {}, "-config": {}, "--log-limit": {}, "-log-limit": {}})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 || outDir == "" {
@@ -136,7 +136,7 @@ func (r Runner) buildSupportBundle(ctx context.Context, outDir, configPath strin
 	if err != nil {
 		return supportBundleResult{}, err
 	}
-	analyticsExport, err := analytics.NewSQLiteStore(r.storeRoot).ExportJSON(ctx, filepath.Join(outDir, "analytics"))
+	analyticsExport, err := r.analyticsStore(r.storeRoot).ExportJSON(ctx, filepath.Join(outDir, "analytics"))
 	if err != nil {
 		return supportBundleResult{}, fmt.Errorf("analytics export: %w", err)
 	}

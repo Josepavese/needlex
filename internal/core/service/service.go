@@ -59,6 +59,11 @@ func New(cfg config.Config, client *http.Client) (*Service, error) {
 }
 
 func NewWithStateRoot(cfg config.Config, client *http.Client, storeRoot string) (*Service, error) {
+	return NewWithRenderer(cfg, client, storeRoot, rendering.New(cfg.Render))
+}
+
+// NewWithRenderer borrows a renderer whose lifetime belongs to the caller.
+func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, renderer rendering.Renderer) (*Service, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -74,7 +79,7 @@ func NewWithStateRoot(cfg config.Config, client *http.Client, storeRoot string) 
 		segmenter: pipeline.Segmenter{
 			MaxSegmentChars: 1200,
 		},
-		renderer:           rendering.New(cfg.Render),
+		renderer:           renderer,
 		runtime:            intel.NewRuntime(cfg, client),
 		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, platform.NewStateLayout(cleanRoot).EmbeddingCacheDir),
 		now:                time.Now,

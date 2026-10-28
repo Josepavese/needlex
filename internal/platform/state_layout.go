@@ -8,25 +8,26 @@ import (
 const DefaultDiscoveryDBRelativePath = "discovery/discovery.db"
 
 type StateLayout struct {
-	Root                string `json:"root"`
-	AnalyticsDir        string `json:"analytics_dir"`
-	AnalyticsDB         string `json:"analytics_db"`
-	BrowsersDir         string `json:"browsers_dir"`
-	CandidatesDir       string `json:"candidates_dir"`
-	ConfigsDir          string `json:"configs_dir"`
-	ConfigPath          string `json:"config_path"`
-	DiscoveryDir        string `json:"discovery_dir"`
-	DiscoveryDB         string `json:"discovery_db"`
-	EmbeddingsDir       string `json:"embeddings_dir"`
-	EmbeddingCacheDir   string `json:"embedding_cache_dir"`
-	DomainGraphDir      string `json:"domain_graph_dir"`
-	FingerprintGraphDir string `json:"fingerprint_graph_dir"`
-	FingerprintsDir     string `json:"fingerprints_dir"`
-	GenomeDir           string `json:"genome_dir"`
-	LogsDir             string `json:"logs_dir"`
-	RuntimeLog          string `json:"runtime_log"`
-	ProofsDir           string `json:"proofs_dir"`
-	TracesDir           string `json:"traces_dir"`
+	Root                  string `json:"root"`
+	AnalyticsDir          string `json:"analytics_dir"`
+	AnalyticsDB           string `json:"analytics_db"`
+	BrowsersDir           string `json:"browsers_dir"`
+	CandidatesDir         string `json:"candidates_dir"`
+	ConfigsDir            string `json:"configs_dir"`
+	ConfigPath            string `json:"config_path"`
+	DiscoveryDir          string `json:"discovery_dir"`
+	DiscoveryProvidersDir string `json:"discovery_providers_dir"`
+	DiscoveryDB           string `json:"discovery_db"`
+	EmbeddingsDir         string `json:"embeddings_dir"`
+	EmbeddingCacheDir     string `json:"embedding_cache_dir"`
+	DomainGraphDir        string `json:"domain_graph_dir"`
+	FingerprintGraphDir   string `json:"fingerprint_graph_dir"`
+	FingerprintsDir       string `json:"fingerprints_dir"`
+	GenomeDir             string `json:"genome_dir"`
+	LogsDir               string `json:"logs_dir"`
+	RuntimeLog            string `json:"runtime_log"`
+	ProofsDir             string `json:"proofs_dir"`
+	TracesDir             string `json:"traces_dir"`
 }
 
 func NewStateLayout(root string) StateLayout {
@@ -35,25 +36,26 @@ func NewStateLayout(root string) StateLayout {
 		cleanRoot = DefaultStateRoot()
 	}
 	return StateLayout{
-		Root:                cleanRoot,
-		AnalyticsDir:        filepath.Join(cleanRoot, "analytics"),
-		AnalyticsDB:         filepath.Join(cleanRoot, "analytics", "analytics.db"),
-		BrowsersDir:         filepath.Join(cleanRoot, "browsers"),
-		CandidatesDir:       filepath.Join(cleanRoot, "candidates"),
-		ConfigsDir:          filepath.Join(cleanRoot, "configs"),
-		ConfigPath:          filepath.Join(cleanRoot, "configs", "needlex.json"),
-		DiscoveryDir:        filepath.Join(cleanRoot, "discovery"),
-		DiscoveryDB:         filepath.Join(cleanRoot, DefaultDiscoveryDBRelativePath),
-		EmbeddingsDir:       filepath.Join(cleanRoot, "data", "embeddings"),
-		EmbeddingCacheDir:   filepath.Join(cleanRoot, "data", "embeddings", "cache"),
-		DomainGraphDir:      filepath.Join(cleanRoot, "domain_graph"),
-		FingerprintGraphDir: filepath.Join(cleanRoot, "fingerprint_graph"),
-		FingerprintsDir:     filepath.Join(cleanRoot, "fingerprints"),
-		GenomeDir:           filepath.Join(cleanRoot, "genome"),
-		LogsDir:             filepath.Join(cleanRoot, "logs"),
-		RuntimeLog:          filepath.Join(cleanRoot, "logs", "needlex.jsonl"),
-		ProofsDir:           filepath.Join(cleanRoot, "proofs"),
-		TracesDir:           filepath.Join(cleanRoot, "traces"),
+		Root:                  cleanRoot,
+		AnalyticsDir:          filepath.Join(cleanRoot, "analytics"),
+		AnalyticsDB:           filepath.Join(cleanRoot, "analytics", "analytics.db"),
+		BrowsersDir:           filepath.Join(cleanRoot, "browsers"),
+		CandidatesDir:         filepath.Join(cleanRoot, "candidates"),
+		ConfigsDir:            filepath.Join(cleanRoot, "configs"),
+		ConfigPath:            filepath.Join(cleanRoot, "configs", "needlex.json"),
+		DiscoveryDir:          filepath.Join(cleanRoot, "discovery"),
+		DiscoveryProvidersDir: filepath.Join(cleanRoot, "discovery", "providers"),
+		DiscoveryDB:           filepath.Join(cleanRoot, DefaultDiscoveryDBRelativePath),
+		EmbeddingsDir:         filepath.Join(cleanRoot, "data", "embeddings"),
+		EmbeddingCacheDir:     filepath.Join(cleanRoot, "data", "embeddings", "cache"),
+		DomainGraphDir:        filepath.Join(cleanRoot, "domain_graph"),
+		FingerprintGraphDir:   filepath.Join(cleanRoot, "fingerprint_graph"),
+		FingerprintsDir:       filepath.Join(cleanRoot, "fingerprints"),
+		GenomeDir:             filepath.Join(cleanRoot, "genome"),
+		LogsDir:               filepath.Join(cleanRoot, "logs"),
+		RuntimeLog:            filepath.Join(cleanRoot, "logs", "needlex.jsonl"),
+		ProofsDir:             filepath.Join(cleanRoot, "proofs"),
+		TracesDir:             filepath.Join(cleanRoot, "traces"),
 	}
 }
 

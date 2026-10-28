@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/core/vectorindex"
+
 	"github.com/josepavese/needlex/internal/config"
 )
 
@@ -55,7 +57,7 @@ func (a DenseSemanticAligner) Score(ctx context.Context, objective string, candi
 	for i, candidate := range candidateIndex {
 		scores = append(scores, SemanticScore{
 			ID:         candidate.ID,
-			Similarity: cosineSimilarityFloat32(objectiveVector, vectors[i+1]),
+			Similarity: vectorindex.Cosine(objectiveVector, vectors[i+1]),
 		})
 	}
 	return scores, nil
@@ -97,7 +99,7 @@ func (a DenseSemanticAligner) ScoreCross(ctx context.Context, left, right []Sema
 			if zeroFloat32Vector(rightVector) {
 				continue
 			}
-			similarity := cosineSimilarityFloat32(vectors[i], rightVector)
+			similarity := vectorindex.Cosine(vectors[i], rightVector)
 			if similarity < 0 {
 				similarity = 0
 			}

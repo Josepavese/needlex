@@ -1,17 +1,93 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestCompetitiveRunReleasesBuildOnSuccessAndFailure(t *testing.T) {
+	for _, failReport := range []bool{false, true} {
+		t.Run(fmt.Sprintf("report_failure=%t", failReport), func(t *testing.T) {
+			root := t.TempDir()
+			t.Setenv("TMPDIR", root)
+			corpusPath := filepath.Join(root, "corpus.json")
+			if err := os.WriteFile(corpusPath, []byte(`{"version":"cleanup-fixture","cases":[]}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			outPath := filepath.Join(root, "report.json")
+			if failReport {
+				outPath = filepath.Join(corpusPath, "report.json")
+			}
+			err := runCompetitive(competitiveOptions{casesPath: corpusPath, outPath: outPath, competitorsArg: "needlex"})
+			if failReport && (err == nil || !strings.HasPrefix(err.Error(), "write report:")) {
+				t.Fatalf("expected report failure: %v", err)
+			}
+			if !failReport && err != nil {
+				t.Fatal(err)
+			}
+			paths, err := filepath.Glob(filepath.Join(root, "needlex-competitive-benchmark-*"))
+			if err != nil || len(paths) != 0 {
+				t.Fatalf("build directory survived run: %v, %v", paths, err)
+			}
+		})
+	}
+}
+
+func TestCloseAdaptersPreservesFailureAndRetriesCleanup(t *testing.T) {
+	failure := errors.New("cleanup unavailable")
+	calls := 0
+	a := &needleXAdapter{cleanup: func() error {
+		calls++
+		if calls == 1 {
+			return failure
+		}
+		return nil
+	}}
+	if err := closeAdapters([]adapter{a}); !errors.Is(err, failure) {
+		t.Fatalf("cleanup failure lost: %v", err)
+	}
+	if err := closeAdapters([]adapter{a}); err != nil {
+		t.Fatal(err)
+	}
+	if err := closeAdapters([]adapter{a}); err != nil || calls != 2 {
+		t.Fatalf("successful cleanup repeated: calls=%d error=%v", calls, err)
+	}
+}
+
+func TestResolveAdaptersCleansPartialInitialization(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("TMPDIR", root)
+	if _, err := resolveAdapters([]string{"needlex", "unknown"}); err == nil || !strings.HasPrefix(err.Error(), "unknown competitor") {
+		t.Fatalf("expected resolution failure: %v", err)
+	}
+	paths, err := filepath.Glob(filepath.Join(root, "needlex-competitive-benchmark-*"))
+	if err != nil || len(paths) != 0 {
+		t.Fatalf("partially initialized build survived: %v, %v", paths, err)
+	}
+}
 
 func TestResolveAdapters(t *testing.T) {
 	adapters, err := resolveAdapters([]string{"needlex", "jina", "firecrawl", "tavily", "exa", "brave-search", "vercel-browser-agent"})
 	if err != nil {
 		t.Fatalf("resolveAdapters failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := closeAdapters(adapters); err != nil {
+			t.Errorf("close adapters: %v", err)
+		}
+	})
+	binaryDir := filepath.Dir(adapters[0].(*needleXAdapter).binaryPath)
+	if err := closeAdapters(adapters); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(binaryDir); !os.IsNotExist(err) {
+		t.Fatalf("owned build directory still exists: %v", err)
 	}
 	if len(adapters) != 7 {
 		t.Fatalf("expected 7 adapters, got %d", len(adapters))

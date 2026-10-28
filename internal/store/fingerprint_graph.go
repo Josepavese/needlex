@@ -2,10 +2,8 @@ package store
 
 import (
 	"crypto/sha256"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -43,15 +41,15 @@ type FingerprintGraph struct {
 }
 
 type FingerprintGraphStore struct {
-	root string
-	now  func() time.Time
+	documents platform.JSONDocuments
+	now       func() time.Time
 }
 
 func NewFingerprintGraphStore(root string) FingerprintGraphStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
+	return FingerprintGraphStore{
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).FingerprintGraphDir, "fingerprint graph", "fingerprint graph"),
+		now:       time.Now,
 	}
-	return FingerprintGraphStore{root: root, now: time.Now}
 }
 
 func (s FingerprintGraphStore) Observe(url, traceID string, chunks []core.Chunk) (FingerprintGraphDelta, string, error) {
@@ -67,7 +65,10 @@ func (s FingerprintGraphStore) Observe(url, traceID string, chunks []core.Chunk)
 	if err != nil {
 		return FingerprintGraphDelta{}, "", err
 	}
-	graph, _ := s.Load(cleanURL)
+	graph, err := s.Load(cleanURL)
+	if err != nil && !errors.Is(err, platform.ErrDocumentNotFound) {
+		return FingerprintGraphDelta{}, "", err
+	}
 	now := s.now().UTC()
 	delta := fingerprintGraphDelta(graph.LatestTraceID, cleanTraceID, graph.LatestNodes, nodes, now)
 	graph.URL = cleanURL
@@ -79,33 +80,17 @@ func (s FingerprintGraphStore) Observe(url, traceID string, chunks []core.Chunk)
 	}
 	graph.History = append(graph.History, delta)
 
-	dir := filepath.Join(s.root, "fingerprint_graph")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return FingerprintGraphDelta{}, "", fmt.Errorf("create fingerprint graph dir: %w", err)
-	}
-	path := filepath.Join(dir, fingerprintGraphID(cleanURL)+".json")
-	data, err := json.MarshalIndent(graph, "", "  ")
+	path, err := s.documents.Save(fingerprintGraphID(cleanURL), graph)
 	if err != nil {
-		return FingerprintGraphDelta{}, "", fmt.Errorf("encode fingerprint graph: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return FingerprintGraphDelta{}, "", fmt.Errorf("write fingerprint graph: %w", err)
+		return FingerprintGraphDelta{}, "", err
 	}
 	return delta, path, nil
 }
 
 func (s FingerprintGraphStore) Load(url string) (FingerprintGraph, error) {
-	path := filepath.Join(s.root, "fingerprint_graph", fingerprintGraphID(strings.TrimSpace(url))+".json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return FingerprintGraph{}, err
-		}
-		return FingerprintGraph{}, fmt.Errorf("read fingerprint graph: %w", err)
-	}
 	var graph FingerprintGraph
-	if err := json.Unmarshal(data, &graph); err != nil {
-		return FingerprintGraph{}, fmt.Errorf("decode fingerprint graph: %w", err)
+	if err := s.documents.Load(fingerprintGraphID(strings.TrimSpace(url)), &graph); err != nil {
+		return FingerprintGraph{}, err
 	}
 	if err := graph.Validate(); err != nil {
 		return FingerprintGraph{}, err

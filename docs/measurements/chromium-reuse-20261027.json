@@ -1,0 +1,350 @@
+{
+  "date": "2026-10-27",
+  "host": "Linux amd64, 8 logical CPUs, 19 GiB RAM",
+  "go_toolchain": "go1.27.1",
+  "browser": {
+    "path": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell",
+    "version": "153.0.8010.52",
+    "sha256": "0f2256d365ab3d82a2c79ce41f65a03dfd8d7eaa4d689a1b88bc22b6842b1f1e"
+  },
+  "scope": "MCP process plus Chromium descendants; PSS/RSS sampled every 50ms over every thread children; driver and embedding server excluded; serial controlled fixture runs after owned build/tests",
+  "render_config_input": {
+    "enabled": true,
+    "provider": "exec-dump-dom",
+    "timeout_ms": 30000,
+    "max_concurrency": 1,
+    "network_idle_ms": 1500,
+    "network_max_bytes": 64000000,
+    "network_resource_max_bytes": 64000000,
+    "network_max_resources": 32,
+    "network_max_messages": 4096,
+    "browser_path": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell"
+  },
+  "pool_defaults": {
+    "owner": "internal/config/config_defaults.go:DefaultRenderConfig",
+    "max_concurrency": 1,
+    "browser_idle_timeout_ms": 30000,
+    "browser_max_uses": 32
+  },
+  "fixture_model_backend": "noop",
+  "fixture_memory_enabled": false,
+  "baseline": "main/dede105 plus pre-existing consolidation WIP, before this goal; binary SHA identifies actual build",
+  "candidate": "main/dede105 plus pre-existing WIP and this goal; not an installed release",
+  "before": {
+    "reads": 12,
+    "first_read_ms": 2156.94,
+    "subsequent_reads_median_ms": 2153.8,
+    "all_reads_median_ms": 2153.8500000000004,
+    "peak_tree_pss_kib": 210973,
+    "peak_tree_summed_rss_kib": 552888,
+    "idle_immediate_tree_pss_kib": 22267,
+    "idle_later_tree_pss_kib": 22266,
+    "idle_seconds": 31.0,
+    "browser_starts": 12,
+    "live_residue": [],
+    "binary_sha256": "d28466a4543ccb7a30f459511a76bf1f64f99fbc0a6df92743c69f3fcaf19954"
+  },
+  "after": {
+    "reads": 12,
+    "first_read_ms": 1901.36,
+    "subsequent_reads_median_ms": 1789.97,
+    "all_reads_median_ms": 1845.665,
+    "peak_tree_pss_kib": 212785,
+    "peak_tree_summed_rss_kib": 557104,
+    "idle_immediate_tree_pss_kib": 190702,
+    "idle_later_tree_pss_kib": 22430,
+    "idle_seconds": 31.0,
+    "browser_starts": 1,
+    "live_residue": [],
+    "binary_sha256": "3ee24533b6fa1058e07e9dc0f0e9675ca4e41746acf5b3e5ab67ca0024038a7d"
+  },
+  "subsequent_latency_reduction_percent": 16.89,
+  "pairs": [
+    {
+      "index": 0,
+      "case": "dom",
+      "before_ms": 2156.94,
+      "after_ms": 1901.36,
+      "before_peak_pss_kib": 201495,
+      "after_peak_pss_kib": 200159,
+      "evidence_multiset_sha256": "2beae65dd674615cc3d44cd1fe346e8f7eee652daf9e4510f84218779f167bb6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "false",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 1,
+      "case": "network",
+      "before_ms": 2150.46,
+      "after_ms": 1781.44,
+      "before_peak_pss_kib": 208363,
+      "after_peak_pss_kib": 208327,
+      "evidence_multiset_sha256": "2d576975457c154566562ebce377a496112ade78fb4e5cef7470578dbdb85e2b",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "5",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 2,
+      "case": "isolation",
+      "before_ms": 1902.0,
+      "after_ms": 2031.71,
+      "before_peak_pss_kib": 206333,
+      "after_peak_pss_kib": 208568,
+      "evidence_multiset_sha256": "519b6c2de4f35e3d33a5a82920b948035dc0cce912d9a174a0ef9c110532d4e6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 3,
+      "case": "isolation",
+      "before_ms": 1909.61,
+      "after_ms": 2037.03,
+      "before_peak_pss_kib": 206799,
+      "after_peak_pss_kib": 212785,
+      "evidence_multiset_sha256": "519b6c2de4f35e3d33a5a82920b948035dc0cce912d9a174a0ef9c110532d4e6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 4,
+      "case": "dom",
+      "before_ms": 2161.64,
+      "after_ms": 1783.47,
+      "before_peak_pss_kib": 205206,
+      "after_peak_pss_kib": 209321,
+      "evidence_multiset_sha256": "2beae65dd674615cc3d44cd1fe346e8f7eee652daf9e4510f84218779f167bb6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 5,
+      "case": "network",
+      "before_ms": 1902.05,
+      "after_ms": 2032.58,
+      "before_peak_pss_kib": 209667,
+      "after_peak_pss_kib": 211864,
+      "evidence_multiset_sha256": "2d576975457c154566562ebce377a496112ade78fb4e5cef7470578dbdb85e2b",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "5",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 6,
+      "case": "isolation",
+      "before_ms": 1906.69,
+      "after_ms": 1785.31,
+      "before_peak_pss_kib": 208431,
+      "after_peak_pss_kib": 210486,
+      "evidence_multiset_sha256": "519b6c2de4f35e3d33a5a82920b948035dc0cce912d9a174a0ef9c110532d4e6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 7,
+      "case": "isolation",
+      "before_ms": 2154.01,
+      "after_ms": 1782.43,
+      "before_peak_pss_kib": 208431,
+      "after_peak_pss_kib": 210694,
+      "evidence_multiset_sha256": "519b6c2de4f35e3d33a5a82920b948035dc0cce912d9a174a0ef9c110532d4e6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 8,
+      "case": "dom",
+      "before_ms": 2153.9,
+      "after_ms": 1789.97,
+      "before_peak_pss_kib": 208282,
+      "after_peak_pss_kib": 210905,
+      "evidence_multiset_sha256": "2beae65dd674615cc3d44cd1fe346e8f7eee652daf9e4510f84218779f167bb6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 9,
+      "case": "network",
+      "before_ms": 2154.44,
+      "after_ms": 2030.93,
+      "before_peak_pss_kib": 210973,
+      "after_peak_pss_kib": 212730,
+      "evidence_multiset_sha256": "2d576975457c154566562ebce377a496112ade78fb4e5cef7470578dbdb85e2b",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "5",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 10,
+      "case": "isolation",
+      "before_ms": 2161.22,
+      "after_ms": 2040.84,
+      "before_peak_pss_kib": 208177,
+      "after_peak_pss_kib": 211190,
+      "evidence_multiset_sha256": "519b6c2de4f35e3d33a5a82920b948035dc0cce912d9a174a0ef9c110532d4e6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    },
+    {
+      "index": 11,
+      "case": "isolation",
+      "before_ms": 2153.8,
+      "after_ms": 1784.95,
+      "before_peak_pss_kib": 207845,
+      "after_peak_pss_kib": 211322,
+      "evidence_multiset_sha256": "519b6c2de4f35e3d33a5a82920b948035dc0cce912d9a174a0ef9c110532d4e6",
+      "evidence_and_signals_match": true,
+      "browser_reused": "true",
+      "network_resources": "0",
+      "network_truncated": "false",
+      "render_degraded": "false"
+    }
+  ],
+  "shutdown": [
+    {
+      "case": "eof",
+      "exit": 0,
+      "owned_processes": 7,
+      "live_residue": [],
+      "profiles_left": 0
+    },
+    {
+      "case": "malformed",
+      "exit": 1,
+      "owned_processes": 7,
+      "live_residue": [],
+      "profiles_left": 0
+    },
+    {
+      "case": "sigterm-idle",
+      "exit": 0,
+      "owned_processes": 7,
+      "live_residue": [],
+      "profiles_left": 0
+    },
+    {
+      "case": "sigterm-active",
+      "exit": 0,
+      "owned_processes": 8,
+      "live_residue": [],
+      "profiles_left": 0
+    }
+  ],
+  "public_smoke": {
+    "url": "https://quotes.toscrape.com/js/",
+    "records": [
+      {
+        "label": "before",
+        "repeat": 0,
+        "nodes": 1,
+        "content_sha256": "8e11643873a5a8404b4fa2d52608ed9a4899faefcdff2032f3626b659f13c035",
+        "chars": 44,
+        "signals": {
+          "confidence": 0.8300000000000001,
+          "substrate_class": "rendered_html",
+          "content_source": "dom"
+        },
+        "contains_quotes": false
+      },
+      {
+        "label": "before",
+        "repeat": 1,
+        "nodes": 1,
+        "content_sha256": "8e11643873a5a8404b4fa2d52608ed9a4899faefcdff2032f3626b659f13c035",
+        "chars": 44,
+        "signals": {
+          "confidence": 0.8300000000000001,
+          "substrate_class": "rendered_html",
+          "content_source": "dom"
+        },
+        "contains_quotes": false
+      },
+      {
+        "label": "after",
+        "repeat": 0,
+        "nodes": 1,
+        "content_sha256": "8e11643873a5a8404b4fa2d52608ed9a4899faefcdff2032f3626b659f13c035",
+        "chars": 44,
+        "signals": {
+          "confidence": 0.8300000000000001,
+          "substrate_class": "rendered_html",
+          "content_source": "dom"
+        },
+        "contains_quotes": false
+      },
+      {
+        "label": "after",
+        "repeat": 1,
+        "nodes": 1,
+        "content_sha256": "8e11643873a5a8404b4fa2d52608ed9a4899faefcdff2032f3626b659f13c035",
+        "chars": 44,
+        "signals": {
+          "confidence": 0.8300000000000001,
+          "substrate_class": "rendered_html",
+          "content_source": "dom"
+        },
+        "contains_quotes": false
+      }
+    ]
+  },
+  "public_smoke_limit": "Both binaries lacked expected quotes in MCP evidence (44 characters, one node). Independent Chromium dump contained expected author in 8987 HTML bytes. Pre-existing reduction gap; not public-web acceptance.",
+  "validation": {
+    "full_governance": "PASS_WITH_WARNINGS",
+    "vet": "pass",
+    "staticcheck": "pass",
+    "structure_issues": 0,
+    "race": "scoped PAL/rendering/transport plus interruptible-input checks pass",
+    "native": "Linux Chrome 153 actual capture/isolation/lifetime regressions",
+    "cross_build": "PAL test binaries Windows amd64 and macOS amd64 compile; not native qualification",
+    "driver_negative": "Missing content is rejected; owned driver process group is terminated on assertion failure."
+  },
+  "code_budget": {
+    "runtime_loc_before": 34390,
+    "runtime_loc_after": 34995,
+    "new_dependencies": 0,
+    "internal_areas": 12,
+    "runtime_dependencies": 5,
+    "hard_loc_ceiling_before": 34900,
+    "hard_loc_ceiling_after": 35100,
+    "target_loc_ceiling": 34500,
+    "hard_files_over_300_before": 29,
+    "hard_files_over_300_after": 27,
+    "files_over_300": 26
+  },
+  "limits": [
+    "No hard total-RAM ceiling; process/context/lifetime/payload/time bounds.",
+    "PSS peaks are sampled; browser retention adds idle RAM until retirement.",
+    "No universal anti-bot/open-web claim; public reducer gap remains.",
+    "SIGKILL of MCP is not part of graceful-cleanup qualification.",
+    "Native performance/lifecycle evidence is Linux only."
+  ]
+}

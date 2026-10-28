@@ -55,10 +55,6 @@ func ConventionalSitemapURLs(baseURL string) []string {
 	return out
 }
 
-func SitemapURLsFromRobots(baseURL, robots string) []string {
-	return ParseRobots(baseURL, robots).Sitemaps
-}
-
 func ParseRobots(baseURL, robots string) RobotsPolicy {
 	base, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || base.Scheme == "" || base.Host == "" {

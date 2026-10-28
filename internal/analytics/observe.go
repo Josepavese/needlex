@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/core/discovery"
 	"github.com/josepavese/needlex/internal/core/failure"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/memory"
@@ -29,17 +31,17 @@ type FailureObservation struct {
 	MemoryStats   memory.Stats
 }
 
-func ObserveRead(ctx context.Context, store SQLiteStore, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
+func ObserveRead(ctx context.Context, store Recorder, surface string, req coreservice.ReadRequest, resp coreservice.ReadResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
 	run, stages := buildRunRecord("read", surface, strings.TrimSpace(req.Objective), "", req.Profile, "", false, "", resp.Trace, packetBytes, resp.Document.FinalURL, "", resp.ResultPack, len(resp.AgentContext.Candidates), memoryStats, cacheCounters)
 	return store.AppendRun(ctx, run, stages)
 }
 
-func ObserveQuery(ctx context.Context, store SQLiteStore, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
+func ObserveQuery(ctx context.Context, store Recorder, surface string, req coreservice.QueryRequest, resp coreservice.QueryResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
 	run, stages := buildRunRecord("query", surface, req.Goal, req.SeedURL, req.Profile, resp.Plan.DiscoveryMode, strings.TrimSpace(req.SeedURL) != "", resp.Plan.DiscoveryProvider, resp.Trace, packetBytes, resp.Document.FinalURL, resp.Plan.SelectedURL, resp.ResultPack, len(resp.AgentContext.Candidates), memoryStats, cacheCounters)
 	return store.AppendRun(ctx, run, stages)
 }
 
-func ObserveCrawl(ctx context.Context, store SQLiteStore, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
+func ObserveCrawl(ctx context.Context, store Recorder, surface string, req coreservice.CrawlRequest, resp coreservice.CrawlResponse, packetBytes int, memoryStats memory.Stats, cacheCounters EmbeddingCacheCounters) error {
 	startedAt, completedAt := crawlWindow(resp)
 	trace := proof.RunTrace{
 		RunID:      prefixedHash("analytics", req.SeedURL, "crawl"),
@@ -86,7 +88,7 @@ func ObserveCrawl(ctx context.Context, store SQLiteStore, surface string, req co
 	return store.AppendRun(ctx, run, embeddingCacheStageEvents(run.RunID, startedAt, completedAt, cacheCounters))
 }
 
-func ObserveFailure(ctx context.Context, store SQLiteStore, obs FailureObservation) error {
+func ObserveFailure(ctx context.Context, store Recorder, obs FailureObservation) error {
 	completedAt := time.Now().UTC()
 	startedAt := obs.StartedAt
 	if startedAt.IsZero() {
@@ -177,6 +179,7 @@ func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode st
 	for _, chunk := range pack.Chunks {
 		finalContextChars += len(chunk.Text)
 	}
+	usage := discovery.ClassifyProviderUsage(provider)
 	return RunRecord{
 		RunID:                trace.RunID,
 		StartedAt:            trace.StartedAt,
@@ -201,10 +204,10 @@ func buildRunRecord(operation, surface, goal, seedURL, profile, discoveryMode st
 		LinkCount:            len(pack.Links),
 		ProofRefCount:        len(pack.ProofRefs),
 		ProofUsable:          len(pack.ProofRefs) > 0,
-		PublicBootstrapUsed:  usesPublicBootstrap(provider),
-		LocalMemoryUsed:      strings.Contains(strings.TrimSpace(provider), "discovery_memory"),
+		PublicBootstrapUsed:  usage.PublicBootstrap,
+		LocalMemoryUsed:      usage.LocalMemory,
 		TopicNodeUsed:        traceReasonPresent(trace, "topic_node_retrieval"),
-		SameSiteRecoveryUsed: strings.Contains(provider, "same_site"),
+		SameSiteRecoveryUsed: usage.SameSiteRecovery,
 		CandidateCount:       candidateCount,
 		RawFetchChars:        rawFetchChars,
 		RawFetchBytes:        rawFetchBytes,
@@ -259,6 +262,10 @@ func stageEventsFromTrace(trace proof.RunTrace) []StageEvent {
 		if stage.CompletedAt.IsZero() {
 			status = "started"
 		}
+		var metadata map[string]string
+		if len(stage.Metadata) > 0 {
+			metadata = maps.Clone(stage.Metadata)
+		}
 		out = append(out, StageEvent{
 			RunID:       trace.RunID,
 			Stage:       stage.Stage,
@@ -267,7 +274,7 @@ func stageEventsFromTrace(trace proof.RunTrace) []StageEvent {
 			LatencyMS:   stage.CompletedAt.Sub(stage.StartedAt).Milliseconds(),
 			ItemCount:   stage.ItemCount,
 			Status:      status,
-			Metadata:    cloneMetadata(stage.Metadata),
+			Metadata:    metadata,
 		})
 	}
 	return out
@@ -283,19 +290,6 @@ func traceMetrics(trace proof.RunTrace, stageName, firstKey, secondKey string) (
 	return 0, 0
 }
 
-func usesPublicBootstrap(provider string) bool {
-	for _, part := range strings.Split(strings.TrimSpace(provider), ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		if !strings.HasPrefix(part, "local_") && !strings.HasPrefix(part, "discovery_memory") {
-			return true
-		}
-	}
-	return false
-}
-
 func traceReasonPresent(trace proof.RunTrace, needle string) bool {
 	for _, stage := range trace.Stages {
 		for key, value := range stage.Metadata {
@@ -305,17 +299,6 @@ func traceReasonPresent(trace proof.RunTrace, needle string) bool {
 		}
 	}
 	return false
-}
-
-func cloneMetadata(input map[string]string) map[string]string {
-	if len(input) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(input))
-	for key, value := range input {
-		out[key] = value
-	}
-	return out
 }
 
 func prefixedHash(prefix string, parts ...string) string {

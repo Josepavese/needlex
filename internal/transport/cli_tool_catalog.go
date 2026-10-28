@@ -19,10 +19,7 @@ func (r Runner) runToolCatalog(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&provider, "provider", "openai", "tool catalog provider: openai or anthropic")
 	fs.BoolVar(&strict, "strict", false, "emit OpenAI strict function definitions")
 
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
-		"--provider": {},
-		"-provider":  {},
-	})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {

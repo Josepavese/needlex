@@ -10,15 +10,26 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
+	"github.com/josepavese/needlex/internal/memory"
 	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/platform/buildinfo"
 	"github.com/josepavese/needlex/internal/proof"
+	"github.com/josepavese/needlex/internal/rendering"
+	"github.com/josepavese/needlex/internal/store"
 )
 
 type Runner struct {
+	operationContext   context.Context
+	renderers          *renderRuntime
+	newRenderRuntime   func(config.RenderConfig) (rendering.Runtime, error)
+	newLocalState      func(string) store.LocalState
+	newMemoryStore     func(string, string) memory.LocalStore
+	newMemoryRuntime   func(config.Config) memory.Runtime
+	newAnalyticsStore  func(string) analytics.Store
 	loadConfig         func(path string) (config.Config, error)
 	newSemanticAligner func(cfg config.Config) intel.SemanticAligner
 	read               func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error)
@@ -34,6 +45,54 @@ func NewRunner() Runner {
 		stdin:      os.Stdin,
 		storeRoot:  platform.DefaultStateRoot(),
 	}
+}
+
+// analyticsStore is the analytics composition point shared by every transport.
+func (r Runner) analyticsStore(root string) analytics.Store {
+	if r.newAnalyticsStore != nil {
+		return r.newAnalyticsStore(root)
+	}
+	return analytics.NewSQLiteStore(root)
+}
+
+func (r Runner) localState() store.LocalState {
+	if r.newLocalState != nil {
+		return r.newLocalState(r.storeRoot)
+	}
+	return store.NewLocalState(r.storeRoot)
+}
+
+func (r Runner) memoryStore(root, path string) memory.LocalStore {
+	if r.newMemoryStore != nil {
+		return r.newMemoryStore(root, path)
+	}
+	return memory.NewSQLiteStore(root, path)
+}
+
+func (r Runner) memoryRuntime(cfg config.Config) memory.Runtime {
+	if r.newMemoryRuntime != nil {
+		return r.newMemoryRuntime(cfg)
+	}
+	return memory.NewService(cfg.Memory, r.memoryStore(r.storeRoot, cfg.Memory.Path), r.textEmbedder(cfg))
+}
+
+func (r Runner) newMCPRenderRuntime() *renderRuntime {
+	factory := r.newRenderRuntime
+	if factory == nil {
+		factory = rendering.NewRuntime
+	}
+	return &renderRuntime{new: factory}
+}
+
+func (r Runner) runtimeService(cfg config.Config) (*coreservice.Service, error) {
+	if r.renderers == nil {
+		return coreservice.NewWithStateRoot(cfg, nil, r.storeRoot)
+	}
+	renderer, err := r.renderers.get(cfg.Render)
+	if err != nil {
+		return nil, err
+	}
+	return coreservice.NewWithRenderer(cfg, nil, r.storeRoot, renderer)
 }
 
 func (r Runner) Run(args []string, stdout, stderr io.Writer) (exitCode int) {
@@ -126,7 +185,7 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 
-	if err := fs.Parse(normalizeArgs(args, readValueFlags)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	mode, err := normalizeJSONMode(jsonMode)
@@ -224,7 +283,7 @@ func (r Runner) runReplay(args []string, stdout, stderr io.Writer) int {
 	var jsonOut bool
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 1 {
@@ -251,7 +310,7 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 	var jsonOut bool
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 2 {
@@ -374,43 +433,33 @@ func (r Runner) loadConfigOrExit(path string, stderr io.Writer) (config.Config, 
 	return cfg, true
 }
 
-func normalizeArgs(args []string, valueFlags map[string]struct{}) []string {
-	if valueFlags == nil {
-		valueFlags = map[string]struct{}{}
-	}
+// normalizeArgs permits interspersed positionals while preserving values using
+// the registered flag schema. No second list of value-taking options is needed.
+func normalizeArgs(fs *flag.FlagSet, args []string) []string {
 	flags := make([]string, 0, len(args))
 	positionals := make([]string, 0, len(args))
-
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if !strings.HasPrefix(arg, "-") {
+		if arg == "--" {
+			flags = append(flags, "--")
+			positionals = append(positionals, args[i+1:]...)
+			break
+		}
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
 			positionals = append(positionals, arg)
 			continue
 		}
-
 		flags = append(flags, arg)
-		if _, ok := valueFlags[arg]; ok && i+1 < len(args) {
-			i++
-			flags = append(flags, args[i])
+		name, _, assigned := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-"), "=")
+		option := fs.Lookup(name)
+		if option == nil || assigned || i+1 == len(args) {
+			continue
 		}
+		if boolean, ok := option.Value.(interface{ IsBoolFlag() bool }); ok && boolean.IsBoolFlag() {
+			continue
+		}
+		i++
+		flags = append(flags, args[i])
 	}
-
 	return append(flags, positionals...)
-}
-
-var readValueFlags = map[string]struct{}{
-	"--config":           {},
-	"-config":            {},
-	"--json-mode":        {},
-	"-json-mode":         {},
-	"--objective":        {},
-	"-objective":         {},
-	"--profile":          {},
-	"-profile":           {},
-	"--user-agent":       {},
-	"-user-agent":        {},
-	"--retrieval-effort": {},
-	"-retrieval-effort":  {},
-	"--render":           {},
-	"-render":            {},
 }

@@ -2,6 +2,7 @@ package transport
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -104,7 +105,7 @@ func (c *mcpConn) WriteResponse(value any) error {
 	return writeMCPFrame(c.writer, value)
 }
 
-func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
+func (r Runner) runMCP(args []string, stdout, stderr io.Writer) (exitCode int) {
 	if len(args) == 1 {
 		switch strings.TrimSpace(args[0]) {
 		case "-h", "--help", "help":
@@ -120,6 +121,40 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 	if r.stdin == nil {
 		return r.reportCLIError(stderr, "mcp", fmt.Errorf("mcp stdin is not configured"), nil)
 	}
+	input, err := platform.PrepareProcessInput(r.stdin)
+	if err != nil {
+		return r.reportCLIError(stderr, "mcp", err, map[string]any{"phase": "stdin_setup"})
+	}
+	r.stdin = input
+	defer func() {
+		if err := input.Close(); err != nil {
+			r.logMCPError("mcp_shutdown", "mcp.input_cleanup_failed", err, nil)
+			exitCode = 1
+		}
+	}()
+
+	r.renderers = r.newMCPRenderRuntime()
+	defer func() {
+		if err := r.renderers.Close(); err != nil {
+			r.logMCPError("mcp_shutdown", "mcp.render_cleanup_failed", err, nil)
+			exitCode = 1
+		}
+	}()
+
+	operation, cancelOperations := context.WithCancel(context.Background())
+	r.operationContext = operation
+	defer cancelOperations()
+	stopShutdown := platform.WatchShutdown(func() {
+		cancelOperations()
+		if err := r.renderers.Close(); err != nil {
+			r.logMCPError("mcp_shutdown", "mcp.render_cleanup_failed", err, nil)
+		}
+		if input, ok := r.stdin.(io.Closer); ok {
+			_ = input.Close()
+		}
+	})
+	defer stopShutdown()
+
 	r.storeRoot = resolveMCPStoreRoot(r.storeRoot)
 	if err := os.MkdirAll(r.storeRoot, 0o755); err != nil {
 		return r.reportCLIError(stderr, "mcp", err, map[string]any{"phase": "state_root_setup", "state_root": r.storeRoot})
@@ -128,7 +163,7 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) int {
 	for {
 		payload, err := conn.ReadPayload()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) || operation.Err() != nil {
 				return 0
 			}
 			r.logMCPError("mcp_read", "mcp.read_failed", err, nil)

@@ -25,7 +25,7 @@ func TestPrepareReadRequestWithLocalStateAppliesGenome(t *testing.T) {
 		t.Fatalf("seed genome: %v", err)
 	}
 
-	req := PrepareReadRequestWithLocalState(root, ReadRequest{URL: "https://example.com/docs"})
+	req := PrepareReadRequestWithLocalState(store.NewLocalState(root), ReadRequest{URL: "https://example.com/docs"})
 	if req.ForceLane != 2 {
 		t.Fatalf("expected force lane 2, got %d", req.ForceLane)
 	}
@@ -51,7 +51,7 @@ func TestPrepareReadRequestWithLocalStateLoadsStableFingerprints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed fingerprint graph: %v", err)
 	}
-	req := PrepareReadRequestWithLocalState(root, ReadRequest{URL: "https://example.com/docs"})
+	req := PrepareReadRequestWithLocalState(store.NewLocalState(root), ReadRequest{URL: "https://example.com/docs"})
 	if len(req.StableFingerprints) != 1 || req.StableFingerprints[0] != "fp_1" {
 		t.Fatalf("expected stable fingerprint hint fp_1, got %#v", req.StableFingerprints)
 	}
@@ -99,7 +99,7 @@ func TestObserveReadResponseWithLocalStatePersistsArtifacts(t *testing.T) {
 		},
 	}
 
-	ObserveReadResponseWithLocalState(root, req, resp)
+	ObserveReadResponseWithLocalState(store.NewLocalState(root), req, resp)
 
 	matches, err := store.NewCandidateStore(root).Search(context.Background(), "example docs", 1, fakeSemanticAligner{suppressed: true})
 	if err != nil {
@@ -135,7 +135,7 @@ func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 		t.Fatalf("seed genome: %v", err)
 	}
 
-	req := PrepareCrawlRequestWithLocalState(root, CrawlRequest{SeedURL: "https://example.com/root"})
+	req := PrepareCrawlRequestWithLocalState(store.NewLocalState(root), CrawlRequest{SeedURL: "https://example.com/root"})
 	if req.ForceLane != 1 {
 		t.Fatalf("expected force lane 1, got %d", req.ForceLane)
 	}
@@ -189,7 +189,7 @@ func TestObserveCrawlResponseWithLocalStatePersistsGenome(t *testing.T) {
 		},
 	}
 
-	ObserveCrawlResponseWithLocalState(root, req, resp)
+	ObserveCrawlResponseWithLocalState(store.NewLocalState(root), req, resp)
 
 	genome, err := store.NewGenomeStore(root).LoadByURL("https://example.com/x")
 	if err != nil {
@@ -228,7 +228,7 @@ func TestObserveReadResponseWithLocalStatePersistsFingerprintGraph(t *testing.T)
 		Trace: proof.RunTrace{TraceID: "trace_1", Stages: []proof.StageSnapshot{{Stage: "pack", StartedAt: time.Unix(1700000000, 0).UTC(), CompletedAt: time.Unix(1700000001, 0).UTC(), OutputHash: "hash"}}},
 	}
 
-	ObserveReadResponseWithLocalState(root, req, resp)
+	ObserveReadResponseWithLocalState(store.NewLocalState(root), req, resp)
 
 	graph, err := store.NewFingerprintGraphStore(root).Load("https://example.com/docs")
 	if err != nil {
@@ -257,7 +257,7 @@ func TestObserveCrawlResponseWithLocalStatePersistsFingerprintGraph(t *testing.T
 		}},
 	}
 
-	ObserveCrawlResponseWithLocalState(root, req, resp)
+	ObserveCrawlResponseWithLocalState(store.NewLocalState(root), req, resp)
 
 	graph, err := store.NewFingerprintGraphStore(root).Load("https://example.com/a")
 	if err != nil {

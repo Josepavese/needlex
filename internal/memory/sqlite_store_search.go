@@ -183,7 +183,7 @@ func topicNodeCandidate(row topicNodeRow, vector []float32, hints []string) (Can
 	if err != nil {
 		return Candidate{}, false, fmt.Errorf("decode topic node vector: %w", err)
 	}
-	similarity := cosineSimilarity(vector, storedVector)
+	similarity := vectorindex.Cosine(vector, storedVector)
 	if similarity <= 0 {
 		return Candidate{}, false, nil
 	}

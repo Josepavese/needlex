@@ -18,30 +18,88 @@ Canonical flow:
 Acquire -> AgentReadableResolve -> Reduce -> RenderIfNeeded -> Segment -> ExtractDet -> SemanticGate -> (+ResolveAmbiguity) -> ChunkRank -> Pack -> Proof -> Trace
 ```
 
-## Internal Package Plan
+## Current Internal Responsibilities
 
-The repo should converge on these `internal/` packages and stay below the package budget:
+The runtime has twelve top-level `internal/` areas. Subpackages in `core`
+separate retrieval policies and pure transformations from service orchestration.
 
-1. `config`
-Load config, defaults, policy thresholds, and runtime budgets.
+| Area | Responsibility |
+| --- | --- |
+| `config` | Configuration, defaults, policy thresholds, budgets, and model baseline |
+| `core` | Domain types, read/query/crawl orchestration, source resolution, discovery, ranking, and WebIR |
+| `pipeline` | HTTP acquisition, content reduction, and segmentation |
+| `intel` | Dense embeddings, semantic alignment, bounded model tasks, and model adapters |
+| `rendering` | Headless browser execution, CDP, and application-data capture |
+| `proof` | Proof artifacts, trace recording, replay, and diff |
+| `store` | Domain validation and persistence rules for traces, proofs, fingerprints, candidates, graphs, genomes, and provider health |
+| `memory` | Semantic discovery memory and its SQLite adapter |
+| `analytics` | Run observations, aggregate reports, and their SQLite adapter |
+| `observability` | Runtime diagnostic logging |
+| `platform` | Platform state layout, JSON document backend, and shared native primitives |
+| `transport` | CLI/MCP input, shared runtime invocation, persistence wiring, and packet presentation |
 
-2. `core`
-Own canonical domain types and the main application service entrypoints.
+Analytics consumers use `analytics.Reports` for views and exports and
+`analytics.Recorder` for observations. The Runner composition point assembles
+the SQLite adapter for CLI, MCP, doctor, support, and runtime observations;
+those consumers do not instantiate or depend on its concrete type. Instances
+are synchronous operation-scoped handles; transactions and connection cleanup
+belong to the adapter.
 
-3. `pipeline`
-Own deterministic stages: acquire, reduce, segment, extract_det, chunk, rank, pack.
+Host, provider, and daily aggregates share `RollupMetrics`, one SQL metric
+projection and decoder, and one textual rendering of those metrics. Host and
+provider grouping share their query; daily grouping keeps its time ordering.
+JSON fields remain flat and the database schema is unchanged. Analytics CLI
+commands share one argument parser, with their supported flags and validation
+preserved; CLI and MCP use the same client limit defaults.
 
-4. `intel`
-Own model adapter, router, judge, formatter, and ambiguity policy logic.
+Local-state preparation and observation consume the candidate, domain-graph,
+genome and fingerprint repository contracts in `store.LocalState`. Semantic
+recall consumes `memory.Searcher`; runtime observations and embedding refresh
+consume `memory.Runtime`; maintenance consumes `memory.LocalStore`. The Runner
+composes these adapters once per operation boundary. State policies do not
+construct stores or embedding clients. The JSON repositories remain active,
+including recovery paths when SQLite discovery memory is disabled.
+Candidate and graph observations initialize missing files only. Invalid or
+unreadable existing state returns an error and is preserved; observation never
+silently replaces it with an empty repository.
 
-5. `proof`
-Own proof artifacts, trace events, replay, and diff.
+All memory commands share CLI parsing and configuration loading. Across CLI
+families, interspersed argument normalization reads value-taking and boolean
+options from the registered `flag.FlagSet`, with no parallel flag-name lists.
+It preserves assigned values, negative numeric values, and the `--` terminator.
+This also fixes previously documented value flags being reordered incorrectly
+when followed by boolean flags, such as `--config path --json`.
 
-6. `store`
-Own local persistence for traces, fingerprints, cache, and domain genome.
+JSON domain stores consume the `platform.JSONDocuments` contract. Their
+factories compose the filesystem backend using directories from `StateLayout`;
+they do not perform native file I/O or JSON serialization themselves. The
+backend owns file naming, indented encoding, directory creation, reads, writes,
+and ordered enumeration. Schema validation and domain-specific missing-record
+errors stay in each store. Both proof-ID and chunk-ID lookup use one validated,
+ordered scan of the proof collection.
 
-7. `transport`
-Own thin CLI and MCP adapters that call `core`.
+This consolidation preserves existing JSON schemas, filenames, permissions,
+and diagnostic context. Reads do not create state; writes remain synchronous
+and require the same caller coordination as before. No data conversion is
+needed. State pruning is a separate existing filesystem operation.
+
+Dense alignment, exact vector search, and semantic memory share the pure
+`core/vectorindex.Cosine` operation. It accumulates float32 vector products in
+float64 and leaves interpretation of negative scores to the caller. Memory
+family policies and cross-alignment therefore keep their own domain decisions
+without separate implementations of vector arithmetic.
+
+Provider-chain usage is classified in `core/discovery`, shared by analytics
+and compact packets. This classification describes provenance only and never
+affects relevance ranking.
+
+Structural text measurements (average trimmed nonempty line length in runes,
+and sentence punctuation count) belong to `core` and are reused by selection
+and packet presentation. Each consumer retains its own thresholds. Fingerprint
+annotations clone candidate metadata before writing; discovery metadata merge
+keeps its distinct provider-provenance aggregation and blank-value policy.
+Validation uses `errors.Join`; integer bounds and map copying use the standard
+operations rather than parallel implementations.
 
 ## Design Invariants
 
@@ -108,6 +166,28 @@ Rules:
 
 ## Render Budget and Network Evidence
 
+MCP owns a lazy rendering runtime across read, query and crawl operations.
+It reuses one Chromium process, with a fresh CDP browser context per render.
+Cookies, storage, caches and service workers belong to that isolated context;
+the context is disposed before releasing its browser lease. Each render keeps
+its own CDP connection and network collector. Configuration changes replace
+the runtime between operations. EOF, transport failure and shutdown close it.
+
+`config.DefaultRenderConfig` owns lifecycle defaults. `render.max_concurrency`
+bounds active contexts; `render.browser_idle_timeout_ms` retires an unused
+browser; `render.browser_max_uses` bounds its total acquisitions before recycle.
+These limits must be positive. Network/content/time budgets still apply to
+every operation. They bound process count, concurrency, payloads and lifetime;
+they are not an operating-system limit on the browser's total resident memory.
+The degraded dump-DOM fallback reserves the same native process slot exclusively.
+
+The PAL owns native launch, endpoint discovery, bounded logs, scheduling,
+process/profile retirement and process-group cleanup where supported. The
+renderer consumes that resource contract and owns the CDP capture protocol.
+CLI services use the same capture implementation with operation-scoped browsers
+and retain their service-wide concurrency gate. No browser singleton or second
+capture pipeline is introduced. See [reuse qualification](chromium-reuse.md).
+
 Rendering runs only in `auto` or `required` mode, and only for HTML-like content in `auto`.
 
 Escalation in `auto` mode is structural and semantic:
@@ -146,6 +226,11 @@ Canonical layout:
   analytics/
   browsers/
   candidates/
+  configs/
+    needlex.json
+  data/
+    embeddings/
+      cache/
   discovery/
     discovery.db
     providers/

@@ -47,55 +47,78 @@ func writeAnalyticsUsage(w io.Writer) {
 	writeUsage(w, "needlex analytics <stats|recent|value-report|hosts|providers|failures|daily|export> [args]")
 }
 
+const (
+	analyticsRecentLimit = 10
+	analyticsRollupLimit = 20
+	analyticsDailyLimit  = 30
+)
+
+type analyticsCLIOptions struct {
+	jsonOut bool
+	limit   int
+	outDir  string
+}
+
 func (r Runner) runAnalytics(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		writeAnalyticsUsage(stderr)
 		return 2
 	}
-	switch args[0] {
-	case "stats":
-		return r.runAnalyticsStats(args[1:], stdout, stderr)
-	case "recent":
-		return r.runAnalyticsRecent(args[1:], stdout, stderr)
-	case "value-report":
-		return r.runAnalyticsValueReport(args[1:], stdout, stderr)
-	case "hosts":
-		return r.runAnalyticsHosts(args[1:], stdout, stderr)
-	case "providers":
-		return r.runAnalyticsProviders(args[1:], stdout, stderr)
-	case "failures":
-		return r.runAnalyticsFailures(args[1:], stdout, stderr)
-	case "daily":
-		return r.runAnalyticsDaily(args[1:], stdout, stderr)
-	case "export":
-		return r.runAnalyticsExport(args[1:], stdout, stderr)
+	name := args[0]
+	switch name {
 	case "-h", "--help", "help":
 		writeAnalyticsUsage(stdout)
 		return 0
-	default:
-		fmt.Fprintf(stderr, "unknown analytics subcommand %q\n\n", args[0])
+	}
+	commands := map[string]struct {
+		run       func(analyticsCLIOptions, io.Writer, io.Writer) int
+		limit     int
+		limitHelp string
+	}{
+		"stats":        {run: r.runAnalyticsStats},
+		"recent":       {r.runAnalyticsRecent, analyticsRecentLimit, "number of recent runs"},
+		"value-report": {run: r.runAnalyticsValueReport},
+		"hosts":        {r.runAnalyticsHosts, analyticsRollupLimit, "number of hosts"},
+		"providers":    {r.runAnalyticsProviders, analyticsRollupLimit, "number of providers"},
+		"failures":     {r.runAnalyticsFailures, analyticsRollupLimit, "number of failure classes"},
+		"daily":        {r.runAnalyticsDaily, analyticsDailyLimit, "number of days"},
+		"export":       {run: r.runAnalyticsExport},
+	}
+	command, ok := commands[name]
+	if !ok {
+		fmt.Fprintf(stderr, "unknown analytics subcommand %q\n\n", name)
 		writeAnalyticsUsage(stderr)
 		return 2
 	}
+	fs := flag.NewFlagSet("analytics "+name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	opts := analyticsCLIOptions{}
+	fs.BoolVar(&opts.jsonOut, "json", false, "emit JSON output")
+	usage := "needlex analytics " + name + " [--json]"
+	if command.limitHelp != "" {
+		fs.IntVar(&opts.limit, "limit", command.limit, command.limitHelp)
+		usage = "needlex analytics " + name + " [--limit N] [--json]"
+	}
+	if name == "export" {
+		fs.StringVar(&opts.outDir, "out", "", "export directory")
+		usage = "needlex analytics export --out DIR [--json]"
+	}
+	if err := fs.Parse(normalizeArgs(fs, args[1:])); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || (name == "export" && strings.TrimSpace(opts.outDir) == "") {
+		writeUsage(stderr, usage)
+		return 2
+	}
+	return command.run(opts, stdout, stderr)
 }
 
-func (r Runner) runAnalyticsStats(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics stats", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics stats [--json]")
-		return 2
-	}
-	stats, err := analytics.NewSQLiteStore(r.storeRoot).Stats(context.Background())
+func (r Runner) runAnalyticsStats(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	stats, err := r.analyticsStore(r.storeRoot).Stats(context.Background())
 	if err != nil {
 		return r.reportCLIError(stderr, "analytics_stats", err, nil)
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_stats", analyticsStatsResult{Stats: stats})
 	}
 	fmt.Fprintf(stdout, "Runs: %d\n", stats.RunCount)
@@ -119,25 +142,12 @@ func (r Runner) runAnalyticsStats(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func (r Runner) runAnalyticsRecent(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics recent", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	var limit int
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.IntVar(&limit, "limit", 10, "number of recent runs")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics recent [--limit N] [--json]")
-		return 2
-	}
-	runs, err := analytics.NewSQLiteStore(r.storeRoot).RecentRuns(context.Background(), limit)
+func (r Runner) runAnalyticsRecent(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	runs, err := r.analyticsStore(r.storeRoot).RecentRuns(context.Background(), opts.limit)
 	if err != nil {
-		return r.reportCLIError(stderr, "analytics_recent", err, map[string]any{"limit": limit})
+		return r.reportCLIError(stderr, "analytics_recent", err, map[string]any{"limit": opts.limit})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_recent", analyticsRecentResult{Runs: runs})
 	}
 	fmt.Fprintf(stdout, "Recent Runs: %d\n", len(runs))
@@ -159,23 +169,12 @@ func (r Runner) runAnalyticsRecent(args []string, stdout, stderr io.Writer) int 
 	return 0
 }
 
-func (r Runner) runAnalyticsValueReport(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics value-report", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics value-report [--json]")
-		return 2
-	}
-	report, err := analytics.NewSQLiteStore(r.storeRoot).ValueReport(context.Background())
+func (r Runner) runAnalyticsValueReport(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	report, err := r.analyticsStore(r.storeRoot).ValueReport(context.Background())
 	if err != nil {
 		return r.reportCLIError(stderr, "analytics_value_report", err, nil)
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_value_report", analyticsValueReportResult{Report: report})
 	}
 	fmt.Fprintln(stdout, "Value")
@@ -200,95 +199,44 @@ func (r Runner) runAnalyticsValueReport(args []string, stdout, stderr io.Writer)
 	return 0
 }
 
-func (r Runner) runAnalyticsHosts(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics hosts", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	var limit int
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.IntVar(&limit, "limit", 20, "number of hosts")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics hosts [--limit N] [--json]")
-		return 2
-	}
-	hosts, err := analytics.NewSQLiteStore(r.storeRoot).Hosts(context.Background(), limit)
+func (r Runner) runAnalyticsHosts(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	hosts, err := r.analyticsStore(r.storeRoot).Hosts(context.Background(), opts.limit)
 	if err != nil {
-		return r.reportCLIError(stderr, "analytics_hosts", err, map[string]any{"limit": limit})
+		return r.reportCLIError(stderr, "analytics_hosts", err, map[string]any{"limit": opts.limit})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_hosts", analyticsHostsResult{Hosts: hosts})
 	}
 	fmt.Fprintf(stdout, "Hosts: %d\n", len(hosts))
 	for i, host := range hosts {
 		fmt.Fprintf(stdout, "%d. %s\n", i+1, host.Host)
-		fmt.Fprintf(stdout, "   Runs: %d (%d successful)\n", host.RunCount, host.SuccessfulRuns)
-		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", host.AvgLatencyMS)
-		fmt.Fprintf(stdout, "   Chars Saved: %d\n", host.TotalAgentCharsSaved)
-		fmt.Fprintf(stdout, "   Estimated Tokens Saved: %d\n", host.TotalAgentTokensSaved)
-		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", host.ProofBackedRate*100)
-		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", host.PublicBootstrapUsedRate*100)
-		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", host.LocalMemoryUsedRate*100)
+		renderAnalyticsRollup(stdout, host.RollupMetrics)
 	}
 	return 0
 }
 
-func (r Runner) runAnalyticsProviders(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics providers", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	var limit int
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.IntVar(&limit, "limit", 20, "number of providers")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics providers [--limit N] [--json]")
-		return 2
-	}
-	providers, err := analytics.NewSQLiteStore(r.storeRoot).Providers(context.Background(), limit)
+func (r Runner) runAnalyticsProviders(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	providers, err := r.analyticsStore(r.storeRoot).Providers(context.Background(), opts.limit)
 	if err != nil {
-		return r.reportCLIError(stderr, "analytics_providers", err, map[string]any{"limit": limit})
+		return r.reportCLIError(stderr, "analytics_providers", err, map[string]any{"limit": opts.limit})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_providers", analyticsProvidersResult{Providers: providers})
 	}
 	fmt.Fprintf(stdout, "Providers: %d\n", len(providers))
 	for i, provider := range providers {
 		fmt.Fprintf(stdout, "%d. %s\n", i+1, provider.Provider)
-		fmt.Fprintf(stdout, "   Runs: %d (%d successful)\n", provider.RunCount, provider.SuccessfulRuns)
-		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", provider.AvgLatencyMS)
-		fmt.Fprintf(stdout, "   Chars Saved: %d\n", provider.TotalAgentCharsSaved)
-		fmt.Fprintf(stdout, "   Estimated Tokens Saved: %d\n", provider.TotalAgentTokensSaved)
-		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", provider.ProofBackedRate*100)
-		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", provider.PublicBootstrapUsedRate*100)
-		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", provider.LocalMemoryUsedRate*100)
+		renderAnalyticsRollup(stdout, provider.RollupMetrics)
 	}
 	return 0
 }
 
-func (r Runner) runAnalyticsFailures(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics failures", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	var limit int
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.IntVar(&limit, "limit", 20, "number of failure classes")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics failures [--limit N] [--json]")
-		return 2
-	}
-	failures, err := analytics.NewSQLiteStore(r.storeRoot).Failures(context.Background(), limit)
+func (r Runner) runAnalyticsFailures(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	failures, err := r.analyticsStore(r.storeRoot).Failures(context.Background(), opts.limit)
 	if err != nil {
-		return r.reportCLIError(stderr, "analytics_failures", err, map[string]any{"limit": limit})
+		return r.reportCLIError(stderr, "analytics_failures", err, map[string]any{"limit": opts.limit})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_failures", analyticsFailuresResult{Failures: failures})
 	}
 	fmt.Fprintf(stdout, "Failures: %d\n", len(failures))
@@ -303,60 +251,28 @@ func (r Runner) runAnalyticsFailures(args []string, stdout, stderr io.Writer) in
 	return 0
 }
 
-func (r Runner) runAnalyticsDaily(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics daily", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	var limit int
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.IntVar(&limit, "limit", 30, "number of days")
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		writeUsage(stderr, "needlex analytics daily [--limit N] [--json]")
-		return 2
-	}
-	days, err := analytics.NewSQLiteStore(r.storeRoot).Daily(context.Background(), limit)
+func (r Runner) runAnalyticsDaily(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	days, err := r.analyticsStore(r.storeRoot).Daily(context.Background(), opts.limit)
 	if err != nil {
-		return r.reportCLIError(stderr, "analytics_daily", err, map[string]any{"limit": limit})
+		return r.reportCLIError(stderr, "analytics_daily", err, map[string]any{"limit": opts.limit})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_daily", analyticsDailyResult{Days: days})
 	}
 	fmt.Fprintf(stdout, "Days: %d\n", len(days))
 	for i, day := range days {
 		fmt.Fprintf(stdout, "%d. %s\n", i+1, day.Day)
-		fmt.Fprintf(stdout, "   Runs: %d (%d successful)\n", day.RunCount, day.SuccessfulRuns)
-		fmt.Fprintf(stdout, "   Avg Latency: %dms\n", day.AvgLatencyMS)
-		fmt.Fprintf(stdout, "   Chars Saved: %d\n", day.TotalAgentCharsSaved)
-		fmt.Fprintf(stdout, "   Estimated Tokens Saved: %d\n", day.TotalAgentTokensSaved)
-		fmt.Fprintf(stdout, "   Proof-Backed Rate: %.2f%%\n", day.ProofBackedRate*100)
-		fmt.Fprintf(stdout, "   Public Bootstrap Rate: %.2f%%\n", day.PublicBootstrapUsedRate*100)
-		fmt.Fprintf(stdout, "   Local Memory Rate: %.2f%%\n", day.LocalMemoryUsedRate*100)
+		renderAnalyticsRollup(stdout, day.RollupMetrics)
 	}
 	return 0
 }
 
-func (r Runner) runAnalyticsExport(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("analytics export", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var jsonOut bool
-	var outDir string
-	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	fs.StringVar(&outDir, "out", "", "export directory")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{"--out": {}, "-out": {}})); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 || strings.TrimSpace(outDir) == "" {
-		writeUsage(stderr, "needlex analytics export --out DIR [--json]")
-		return 2
-	}
-	exported, err := analytics.NewSQLiteStore(r.storeRoot).ExportJSON(context.Background(), outDir)
+func (r Runner) runAnalyticsExport(opts analyticsCLIOptions, stdout, stderr io.Writer) int {
+	exported, err := r.analyticsStore(r.storeRoot).ExportJSON(context.Background(), opts.outDir)
 	if err != nil {
-		return r.reportCLIError(stderr, "analytics_export", err, map[string]any{"out_dir": outDir})
+		return r.reportCLIError(stderr, "analytics_export", err, map[string]any{"out_dir": opts.outDir})
 	}
-	if jsonOut {
+	if opts.jsonOut {
 		return r.writeJSON(stdout, stderr, "analytics_export", analyticsExportResult{Export: exported})
 	}
 	fmt.Fprintf(stdout, "Directory: %s\n", exported.Directory)
@@ -367,4 +283,14 @@ func (r Runner) runAnalyticsExport(args []string, stdout, stderr io.Writer) int 
 	fmt.Fprintf(stdout, "Daily: %s (%d)\n", exported.DailyPath, exported.DailyCount)
 	fmt.Fprintf(stdout, "Value Report: %s\n", exported.ValueReportPath)
 	return 0
+}
+
+func renderAnalyticsRollup(w io.Writer, metrics analytics.RollupMetrics) {
+	fmt.Fprintf(w, "   Runs: %d (%d successful)\n", metrics.RunCount, metrics.SuccessfulRuns)
+	fmt.Fprintf(w, "   Avg Latency: %dms\n", metrics.AvgLatencyMS)
+	fmt.Fprintf(w, "   Chars Saved: %d\n", metrics.TotalAgentCharsSaved)
+	fmt.Fprintf(w, "   Estimated Tokens Saved: %d\n", metrics.TotalAgentTokensSaved)
+	fmt.Fprintf(w, "   Proof-Backed Rate: %.2f%%\n", metrics.ProofBackedRate*100)
+	fmt.Fprintf(w, "   Public Bootstrap Rate: %.2f%%\n", metrics.PublicBootstrapUsedRate*100)
+	fmt.Fprintf(w, "   Local Memory Rate: %.2f%%\n", metrics.LocalMemoryUsedRate*100)
 }

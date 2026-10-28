@@ -79,7 +79,7 @@ Default output is AI-first:
 3. full diagnostics only on demand
 4. browser-like fetch by default for real-world targets
 5. local memory is populated automatically by successful `read`, `query`, and `crawl` runs
-6. MCP server accepts both standard `Content-Length` framing and raw newline-delimited JSON
+6. MCP server accepts standard newline-delimited JSON and also supports `Content-Length` framing
 
 MCP advertises 9 tools: 7 core `web_*` tools plus `memory` and `analytics`.
 The non-core `memory` and `analytics` surfaces use an explicit `action` parameter to avoid bloating agent tool lists with maintenance and observability operations.

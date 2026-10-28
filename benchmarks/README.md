@@ -67,6 +67,10 @@ Discovery evaluation:
 go test ./benchmarks/discovery_eval/runner -run TestExportDiscoveryEval -count=1 -v
 ```
 
+The ordinary test writes its report to a temporary directory. Use
+`./scripts/run_discovery_eval.sh` to export to `improvements/` explicitly,
+or set `NEEDLEX_DISCOVERY_EVAL_OUT` to another destination.
+
 Experimental seedless DDG smoke with explicit profile/provider selection:
 
 ```bash
@@ -89,3 +93,28 @@ go test ./benchmarks/hard_case_matrix/runner -run TestExportHardCaseMatrix -coun
 2. product tests remain near product code
 3. reports stay in `improvements/`
 4. paid-provider cache remains local in `.needlex/`
+
+## MCP Chromium reuse
+
+`render_reuse/measure.py` runs a deterministic local JS application through the
+real MCP executable. It asserts rendered DOM, fetch, XHR, finite SSE/WebSocket,
+streamed fetch and repeated same-origin isolation content in the resulting
+WebIR. Linux RAM sampling aggregates PSS and RSS over every thread's process
+children; the embedding server and fixture driver are outside that tree.
+
+Build before/after executables outside the repository. Supply the same saved
+SSOT configuration and browser to both, and run them serially without concurrent
+build/test workloads:
+
+```bash
+python3 benchmarks/render_reuse/measure.py --binary /tmp/owned/before --config /tmp/owned/config.json --rounds 3 --idle-seconds 31 --out /tmp/owned/before.json
+python3 benchmarks/render_reuse/measure.py --binary /tmp/owned/after --config /tmp/owned/config.json --rounds 3 --idle-seconds 31 --out /tmp/owned/after.json
+```
+
+Use an idle observation longer than the effective browser idle timeout. The
+harness owns temporary state/profiles, records browser starts and surviving
+process identities, and retires its state after the run. Inspect the retained
+JSON for complete WebIR and render diagnostics. Consolidate the sufficient
+measurement evidence before retiring owned binaries and raw intermediates.
+Native regression tests separately cover active streams, truncation, crash,
+cleanup, concurrency, cancellation and browser storage isolation.

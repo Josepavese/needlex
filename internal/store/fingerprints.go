@@ -1,11 +1,8 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,17 +22,14 @@ type FingerprintRecord struct {
 }
 
 type FingerprintStore struct {
-	root string
-	now  func() time.Time
+	documents platform.JSONDocuments
+	now       func() time.Time
 }
 
 func NewFingerprintStore(root string) FingerprintStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
-	}
 	return FingerprintStore{
-		root: root,
-		now:  time.Now,
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).FingerprintsDir, "fingerprints", "fingerprint"),
+		now:       time.Now,
 	}
 }
 
@@ -59,34 +53,16 @@ func (s FingerprintStore) SaveChunks(traceID string, chunks []core.Chunk) (strin
 		})
 	}
 
-	dir := filepath.Join(s.root, "fingerprints")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create fingerprint dir: %w", err)
-	}
-
-	path := filepath.Join(dir, cleanTraceID+".json")
-	data, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode fingerprints: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return "", fmt.Errorf("write fingerprints: %w", err)
-	}
-	return path, nil
+	return s.documents.Save(cleanTraceID, records)
 }
 
 func (s FingerprintStore) Load(traceID string) ([]FingerprintRecord, error) {
-	path := filepath.Join(s.root, "fingerprints", sanitizeID(traceID)+".json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+	var records []FingerprintRecord
+	if err := s.documents.Load(sanitizeID(traceID), &records); err != nil {
+		if errors.Is(err, platform.ErrDocumentNotFound) {
 			return nil, fmt.Errorf("%w: %s", ErrFingerprintNotFound, traceID)
 		}
-		return nil, fmt.Errorf("read fingerprints: %w", err)
-	}
-	var records []FingerprintRecord
-	if err := json.Unmarshal(data, &records); err != nil {
-		return nil, fmt.Errorf("decode fingerprints: %w", err)
+		return nil, err
 	}
 	for i, record := range records {
 		if err := record.Validate(); err != nil {

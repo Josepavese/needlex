@@ -25,7 +25,7 @@ func (r Runner) runProof(args []string, stdout, stderr io.Writer) int {
 	var jsonOut bool
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 
-	if err := fs.Parse(normalizeArgs(args, nil)); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 1 {

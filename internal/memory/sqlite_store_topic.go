@@ -63,7 +63,7 @@ ORDER BY LENGTH(d.path) ASC, d.observed_at DESC, d.url ASC
 		SemanticSummary:     buildTopicSummary(rootPath, docs),
 		Language:            firstNonEmpty(rep.Language),
 		SupportCount:        len(docs),
-		ChildCount:          maxInt(0, len(docs)-1),
+		ChildCount:          max(0, len(docs)-1),
 		TopicDepth:          pathDepth(rootPath),
 		ObservedAt:          observedAt,
 		UpdatedAt:           time.Now().UTC().Format(time.RFC3339Nano),
@@ -172,7 +172,7 @@ func averageTopicVector(docs []topicDoc) []float32 {
 }
 
 func topicSupportBoost(supportCount, childCount int) float64 {
-	score := 0.18 * min(4, float64(maxInt(0, supportCount-1)))
+	score := 0.18 * min(4, float64(max(0, supportCount-1)))
 	score += 0.12 * min(3, float64(childCount))
 	return score
 }
@@ -195,13 +195,6 @@ func pathDepth(path string) int {
 func mustEncodeVector(vector []float32) []byte {
 	blob, _ := encodeVector(vector)
 	return blob
-}
-
-func maxInt(left, right int) int {
-	if left > right {
-		return left
-	}
-	return right
 }
 
 func hostPath(raw string) (string, string) {

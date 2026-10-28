@@ -1,11 +1,8 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/platform"
@@ -15,14 +12,13 @@ import (
 var ErrProofNotFound = errors.New("proof not found")
 
 type ProofStore struct {
-	root string
+	documents platform.JSONDocuments
 }
 
 func NewProofStore(root string) ProofStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
+	return ProofStore{
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).ProofsDir, "proofs", "proof"),
 	}
-	return ProofStore{root: root}
 }
 
 func (s ProofStore) SaveProofRecords(traceID string, records []proof.ProofRecord) (string, error) {
@@ -36,102 +32,55 @@ func (s ProofStore) SaveProofRecords(traceID string, records []proof.ProofRecord
 		}
 	}
 
-	dir := filepath.Join(s.root, "proofs")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create proof dir: %w", err)
-	}
-
-	path := filepath.Join(dir, cleanTraceID+".json")
-	data, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode proofs: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return "", fmt.Errorf("write proofs: %w", err)
-	}
-	return path, nil
+	return s.documents.Save(cleanTraceID, records)
 }
 
 func (s ProofStore) LoadProofRecords(traceID string) ([]proof.ProofRecord, error) {
-	path := filepath.Join(s.root, "proofs", sanitizeID(traceID)+".json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("%w: %s", ErrProofNotFound, traceID)
-		}
-		return nil, fmt.Errorf("read proofs: %w", err)
+	records, err := s.loadRecords(sanitizeID(traceID))
+	if errors.Is(err, platform.ErrDocumentNotFound) {
+		return nil, fmt.Errorf("%w: %s", ErrProofNotFound, traceID)
 	}
-	return decodeRecords(data)
+	return records, err
 }
 
 func (s ProofStore) FindProofByChunkID(chunkID string) (proof.ProofRecord, string, error) {
-	cleanChunkID := strings.TrimSpace(chunkID)
-	if cleanChunkID == "" {
-		return proof.ProofRecord{}, "", fmt.Errorf("chunk id must not be empty")
-	}
-
-	pattern := filepath.Join(s.root, "proofs", "*.json")
-	paths, err := filepath.Glob(pattern)
-	if err != nil {
-		return proof.ProofRecord{}, "", fmt.Errorf("glob proofs: %w", err)
-	}
-
-	for _, path := range paths {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return proof.ProofRecord{}, "", fmt.Errorf("read proofs: %w", err)
-		}
-		records, err := decodeRecords(data)
-		if err != nil {
-			return proof.ProofRecord{}, "", err
-		}
-		for _, record := range records {
-			if record.Proof.ChunkID == cleanChunkID {
-				traceID := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-				return record, traceID, nil
-			}
-		}
-	}
-
-	return proof.ProofRecord{}, "", fmt.Errorf("%w: %s", ErrProofNotFound, chunkID)
+	return s.findProof(chunkID, "chunk", func(record proof.ProofRecord) string { return record.Proof.ChunkID })
 }
 
 func (s ProofStore) FindProofByID(proofID string) (proof.ProofRecord, string, error) {
-	cleanProofID := strings.TrimSpace(proofID)
-	if cleanProofID == "" {
-		return proof.ProofRecord{}, "", fmt.Errorf("proof id must not be empty")
-	}
+	return s.findProof(proofID, "proof", func(record proof.ProofRecord) string { return record.ID })
+}
 
-	pattern := filepath.Join(s.root, "proofs", "*.json")
-	paths, err := filepath.Glob(pattern)
+func (s ProofStore) findProof(id, kind string, identity func(proof.ProofRecord) string) (proof.ProofRecord, string, error) {
+	cleanID := strings.TrimSpace(id)
+	if cleanID == "" {
+		return proof.ProofRecord{}, "", fmt.Errorf("%s id must not be empty", kind)
+	}
+	ids, err := s.documents.List()
 	if err != nil {
-		return proof.ProofRecord{}, "", fmt.Errorf("glob proofs: %w", err)
+		return proof.ProofRecord{}, "", err
 	}
-
-	for _, path := range paths {
-		data, err := os.ReadFile(path)
+	for _, traceID := range ids {
+		records, err := s.loadRecords(traceID)
 		if err != nil {
-			return proof.ProofRecord{}, "", fmt.Errorf("read proofs: %w", err)
-		}
-		records, err := decodeRecords(data)
-		if err != nil {
+			if errors.Is(err, platform.ErrDocumentNotFound) {
+				err = fmt.Errorf("read proofs: %w", err)
+			}
 			return proof.ProofRecord{}, "", err
 		}
 		for _, record := range records {
-			if record.ID == cleanProofID {
-				traceID := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+			if identity(record) == cleanID {
 				return record, traceID, nil
 			}
 		}
 	}
-
-	return proof.ProofRecord{}, "", fmt.Errorf("%w: %s", ErrProofNotFound, proofID)
+	return proof.ProofRecord{}, "", fmt.Errorf("%w: %s", ErrProofNotFound, id)
 }
 
-func decodeRecords(data []byte) ([]proof.ProofRecord, error) {
+func (s ProofStore) loadRecords(traceID string) ([]proof.ProofRecord, error) {
 	var records []proof.ProofRecord
-	if err := json.Unmarshal(data, &records); err != nil {
-		return nil, fmt.Errorf("decode proofs: %w", err)
+	if err := s.documents.Load(traceID, &records); err != nil {
+		return nil, err
 	}
 	for i, record := range records {
 		if err := record.Validate(); err != nil {

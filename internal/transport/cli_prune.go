@@ -33,10 +33,7 @@ func (r Runner) runPrune(args []string, stdout, stderr io.Writer) int {
 	fs.BoolVar(&embeddingCache, "embedding-cache", false, "target PAL embedding cache files")
 	fs.IntVar(&olderThanHours, "older-than-hours", 0, "remove state older than N hours")
 
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
-		"--older-than-hours": {},
-		"-older-than-hours":  {},
-	})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 || (!pruneAll && olderThanHours <= 0 && !embeddingCache) || (dryRun && !embeddingCache) {

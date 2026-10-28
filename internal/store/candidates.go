@@ -2,12 +2,9 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -41,17 +38,14 @@ type CandidateObservation struct {
 }
 
 type CandidateStore struct {
-	root string
-	now  func() time.Time
+	documents platform.JSONDocuments
+	now       func() time.Time
 }
 
 func NewCandidateStore(root string) CandidateStore {
-	if strings.TrimSpace(root) == "" {
-		root = platform.DefaultStateRoot()
-	}
 	return CandidateStore{
-		root: root,
-		now:  time.Now,
+		documents: platform.NewJSONDocuments(platform.NewStateLayout(root).CandidatesDir, "candidates", "candidates"),
+		now:       time.Now,
 	}
 }
 
@@ -65,7 +59,10 @@ func (s CandidateStore) Observe(observation CandidateObservation) (CandidateReco
 		return CandidateRecord{}, "", err
 	}
 
-	records, _ := s.loadAll()
+	records, err := s.loadAll()
+	if err != nil && !errors.Is(err, ErrCandidatesNotFound) {
+		return CandidateRecord{}, "", err
+	}
 	now := s.now().UTC()
 	updated := CandidateRecord{}
 	found := false
@@ -166,35 +163,18 @@ func (s CandidateStore) Search(ctx context.Context, goal string, limit int, sema
 }
 
 func (s CandidateStore) loadAll() ([]CandidateRecord, error) {
-	path := filepath.Join(s.root, "candidates", "index.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+	var records []CandidateRecord
+	if err := s.documents.Load("index", &records); err != nil {
+		if errors.Is(err, platform.ErrDocumentNotFound) {
 			return nil, ErrCandidatesNotFound
 		}
-		return nil, fmt.Errorf("read candidates: %w", err)
-	}
-	var records []CandidateRecord
-	if err := json.Unmarshal(data, &records); err != nil {
-		return nil, fmt.Errorf("decode candidates: %w", err)
+		return nil, err
 	}
 	return records, nil
 }
 
 func (s CandidateStore) saveAll(records []CandidateRecord) (string, error) {
-	dir := filepath.Join(s.root, "candidates")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create candidates dir: %w", err)
-	}
-	path := filepath.Join(dir, "index.json")
-	data, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode candidates: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return "", fmt.Errorf("write candidates: %w", err)
-	}
-	return path, nil
+	return s.documents.Save("index", records)
 }
 
 func scoreCandidate(record CandidateRecord, similarity float64) (float64, []string) {

@@ -72,24 +72,7 @@ func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userA
 	fs.IntVar(&maxDepth, "max-depth", 0, "maximum crawl depth")
 	fs.BoolVar(&sameDomain, "same-domain", false, "restrict crawl to the seed domain")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
-	if err := fs.Parse(normalizeArgs(args, map[string]struct{}{
-		"--config":           {},
-		"-config":            {},
-		"--json-mode":        {},
-		"-json-mode":         {},
-		"--profile":          {},
-		"-profile":           {},
-		"--max-pages":        {},
-		"-max-pages":         {},
-		"--max-depth":        {},
-		"-max-depth":         {},
-		"--user-agent":       {},
-		"-user-agent":        {},
-		"--retrieval-effort": {},
-		"-retrieval-effort":  {},
-		"--render":           {},
-		"-render":            {},
-	})); err != nil {
+	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
 		return "", "", "", "", "", "", "", 0, 0, false, false, false
 	}
 	if fs.NArg() != 1 {

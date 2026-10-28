@@ -29,6 +29,30 @@ type Store interface {
 	ImportJSONL(ctx context.Context, dir string) (ImportStats, error)
 }
 
+// LocalStore adds the location used by operator diagnostics to the storage
+// contract. No native connection or database handle crosses this boundary.
+type LocalStore interface {
+	Store
+	DBPath() string
+}
+
+type Searcher interface {
+	Search(context.Context, string, SearchOptions) ([]Candidate, error)
+}
+
+// Runtime is the semantic memory capability. Its caller uses each borrowed
+// instance synchronously; persistence and embedding resources stay in adapters.
+type Runtime interface {
+	Searcher
+	Observe(context.Context, Observation) error
+	RefreshEmbeddings(context.Context, bool) (EmbeddingRefreshStats, error)
+}
+
+var (
+	_ LocalStore = SQLiteStore{}
+	_ Runtime    = Service{}
+)
+
 type Service struct {
 	cfg      config.MemoryConfig
 	store    Store

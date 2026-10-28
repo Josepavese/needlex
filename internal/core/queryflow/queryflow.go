@@ -2,6 +2,7 @@ package queryflow
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -80,12 +81,14 @@ func applyFingerprintEvidenceToCandidate(candidate discoverycore.Candidate, evid
 	if strings.TrimSpace(evidence.TraceID) == "" {
 		return candidate
 	}
-	candidate.Metadata = mergeMetadata(candidate.Metadata, map[string]string{
-		"candidate_latest_trace_id": strings.TrimSpace(evidence.TraceID),
-		"candidate_stable_ratio":    fmt.Sprintf("%.3f", evidence.Stable),
-		"candidate_novelty_ratio":   fmt.Sprintf("%.3f", evidence.Novelty),
-		"candidate_changed":         fmt.Sprintf("%t", evidence.Changed),
-	})
+	candidate.Metadata = maps.Clone(candidate.Metadata)
+	if candidate.Metadata == nil {
+		candidate.Metadata = make(map[string]string, 4)
+	}
+	candidate.Metadata["candidate_latest_trace_id"] = strings.TrimSpace(evidence.TraceID)
+	candidate.Metadata["candidate_stable_ratio"] = fmt.Sprintf("%.3f", evidence.Stable)
+	candidate.Metadata["candidate_novelty_ratio"] = fmt.Sprintf("%.3f", evidence.Novelty)
+	candidate.Metadata["candidate_changed"] = fmt.Sprintf("%t", evidence.Changed)
 	switch {
 	case evidence.Stable >= 0.80 && !evidence.Changed:
 		candidate.Score -= 0.20
@@ -103,20 +106,6 @@ func applyFingerprintEvidenceToCandidate(candidate discoverycore.Candidate, evid
 		}
 	}
 	return candidate
-}
-
-func mergeMetadata(existing, incoming map[string]string) map[string]string {
-	if len(existing) == 0 && len(incoming) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(existing)+len(incoming))
-	for key, value := range existing {
-		out[key] = value
-	}
-	for key, value := range incoming {
-		out[key] = value
-	}
-	return out
 }
 
 func candidateSemanticallyGrounded(candidate discoverycore.Candidate) bool {
