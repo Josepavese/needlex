@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.40
+version: v0.1.41
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -166,3 +166,15 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 ```
 
 Reinstalling that way requires removing or renaming the existing copy first, since the host installer refuses to overwrite; keep the old directory as a backup.
+
+## Optional local decision observations
+
+When configured, `agent_context.decision_observation` contains a local Julia audit
+of objective relevance, evidence coverage and source support. It is advisory and
+unqualified on this domain: it does not change ranking, rendering, confidence or
+content. Probability is neither cosine similarity nor verified correctness.
+Do not discard evidence or certify an external fact from this audit. Its model,
+revision, specification, calibration status, evidence IDs, distributions and
+latency are also saved in the trace. `input_budget_exceeded`,
+`prompt_budget_exceeded`, `insufficient_input` and `unavailable` mean that no
+successful audit was obtained; they do not mean the source is empty or invalid.

@@ -105,6 +105,9 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 		}
 		return QueryResponse{}, err
 	}
+	if err := s.observeReadDecision(ctx, req.Goal, &readResp); err != nil {
+		return QueryResponse{}, err
+	}
 	return finalizeQueryResponse(plan, baseCompiler, discoveryResult.candidates, readResp)
 }
 
@@ -118,7 +121,7 @@ func (s *Service) readQuerySelectedCandidate(ctx context.Context, req QueryReque
 	}
 	readCtx, cancel := s.querySelectedReadContext(ctx, req, discoveryMode)
 	defer cancel()
-	readResp, err := s.Read(readCtx, s.prepareQuerySelectedReadRequest(req, profile, discoveryMode, selected))
+	readResp, err := s.read(readCtx, s.prepareQuerySelectedReadRequest(req, profile, discoveryMode, selected))
 	if err == nil {
 		if fallbackResp, ok := s.maybePostReadSemanticFallback(ctx, req, profile, discoveryMode, plan, candidates, readResp); ok {
 			return fallbackResp, nil
@@ -140,7 +143,7 @@ func (s *Service) readQuerySelectedCandidate(ctx context.Context, req QueryReque
 		if candidateURL == "" || candidateURL == selected {
 			continue
 		}
-		nextResp, nextErr := s.Read(readCtx, s.prepareQuerySelectedReadRequest(req, profile, discoveryMode, candidateURL))
+		nextResp, nextErr := s.read(readCtx, s.prepareQuerySelectedReadRequest(req, profile, discoveryMode, candidateURL))
 		if nextErr != nil {
 			if _, ok := recoverableQueryReadErrorKind(nextErr); ok {
 				continue
@@ -197,7 +200,7 @@ func (s *Service) retryQueryReadWithResilientFetch(ctx context.Context, req Quer
 	}
 	readReq.FetchProfile = "browser_like"
 	readReq.FetchRetryProfile = "hardened"
-	resp, err := s.Read(ctx, readReq)
+	resp, err := s.read(ctx, readReq)
 	if err != nil {
 		return ReadResponse{}, false
 	}

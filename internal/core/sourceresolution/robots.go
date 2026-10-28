@@ -3,6 +3,7 @@ package sourceresolution
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -199,8 +200,9 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 		metadata["render_degraded"] = "true"
 		metadata["render_degrade_reason"] = renderMetadataValue(rendered.DegradeReason, "unspecified")
 	}
-	if semanticGap > 0 {
+	if slices.Contains(reasons, semanticRenderEscalationReason) {
 		metadata["semantic_gap_similarity"] = fmt.Sprintf("%.4f", semanticGap)
+		metadata["semantic_gap_threshold"] = fmt.Sprintf("%.4f", semanticRenderGapThreshold)
 	}
 	if err := recorder.StageCompleted(stage, page, 1, metadata, r.now().UTC()); err != nil {
 		return pipeline.RawPage{}, err

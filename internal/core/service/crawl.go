@@ -111,9 +111,8 @@ func (s *Service) crawlNext(ctx context.Context, req CrawlRequest, profile strin
 }
 
 func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, targetURL string) (ReadResponse, bool) {
-	readResp, err := s.Read(ctx, ReadRequest{
+	readResp, err := s.read(ctx, ReadRequest{
 		URL:               targetURL,
-		Objective:         "crawl",
 		Profile:           profile,
 		FetchProfile:      req.FetchProfile,
 		FetchRetryProfile: req.FetchRetryProfile,

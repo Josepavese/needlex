@@ -6,6 +6,7 @@ package sourceresolution
 
 import (
 	"context"
+	"math"
 	"strings"
 	"time"
 
@@ -66,7 +67,7 @@ func renderMetadataValue(value, fallback string) string {
 }
 
 func (r Resolver) semanticRenderGap(ctx context.Context, req Request, dom pipeline.SimplifiedDOM) (float64, bool) {
-	if r.Semantic == nil || !semanticRenderGapObjectiveUsable(req.Objective) {
+	if r.Semantic == nil || strings.TrimSpace(req.Objective) == "" {
 		return 0, false
 	}
 	text := discoverycore.CompactSemanticText(reducedSurfaceText(dom), 1600)
@@ -77,11 +78,13 @@ func (r Resolver) semanticRenderGap(ctx context.Context, req Request, dom pipeli
 	if err != nil {
 		return 0, false
 	}
-	best := 0.0
+	best := math.Inf(-1)
 	for _, score := range scored {
-		best = max(best, score.Similarity)
+		if score.ID == "static_surface" && !math.IsNaN(score.Similarity) && !math.IsInf(score.Similarity, 0) {
+			best = max(best, score.Similarity)
+		}
 	}
-	if best <= 0 || best >= semanticRenderGapThreshold {
+	if math.IsInf(best, -1) || best >= semanticRenderGapThreshold {
 		return 0, false
 	}
 	return best, true
@@ -99,16 +102,6 @@ func reducedSurfaceText(dom pipeline.SimplifiedDOM) string {
 		return title + "\n" + body
 	}
 	return body
-}
-
-// semanticRenderGapObjectiveUsable keeps placeholder objectives such as the
-// crawl lane marker from grounding a coverage comparison.
-func semanticRenderGapObjectiveUsable(objective string) bool {
-	objective = strings.TrimSpace(objective)
-	if len([]rune(objective)) < 16 {
-		return false
-	}
-	return len(strings.Fields(objective)) >= 3
 }
 
 func autoBoundedRenderTimeout(ctx context.Context, mode string, configuredMS int64) time.Duration {

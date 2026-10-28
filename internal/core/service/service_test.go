@@ -1303,7 +1303,7 @@ func TestReadServesExplicitRenderRequestWithoutUtilityReasons(t *testing.T) {
 	}
 }
 
-func TestReadSkipsSemanticRenderGapForPlaceholderObjective(t *testing.T) {
+func TestReadSkipsSemanticRenderGapWithoutObjective(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprintf(w, `<html><head><title>Registrar Overview</title></head><body><main><h1>Registrar overview</h1><p>%s</p><p>%s</p></main></body></html>`,
@@ -1327,17 +1327,17 @@ func TestReadSkipsSemanticRenderGapForPlaceholderObjective(t *testing.T) {
 
 	resp, err := svc.Read(context.Background(), ReadRequest{
 		URL:       server.URL,
-		Objective: "crawl",
+		Objective: "",
 		Profile:   core.ProfileStandard,
 	})
 	if err != nil {
 		t.Fatalf("read failed: %v", err)
 	}
 	if renderer.calls != 0 {
-		t.Fatalf("expected placeholder objective to stay out of semantic escalation, got %d calls", renderer.calls)
+		t.Fatalf("expected absent objective to stay out of semantic escalation, got %d calls", renderer.calls)
 	}
 	if resp.Document.FetchMode == core.FetchModeRender {
-		t.Fatal("did not expect render fetch mode for placeholder objective")
+		t.Fatal("did not expect render fetch mode for absent objective")
 	}
 }
 

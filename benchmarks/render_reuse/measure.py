@@ -18,6 +18,11 @@ import subprocess
 import tempfile
 import threading
 import time
+import sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
+from process_memory import memory
 
 
 class Fixture(http.server.BaseHTTPRequestHandler):
@@ -77,42 +82,6 @@ class Fixture(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(("<!doctype html><title>Atlas rendering fixture</title>"
             "<main><p id=content>Application loading</p></main><script>" + script + "</script>").encode())
-
-
-def descendants(pid):
-    found = {pid}
-    todo = [pid]
-    while todo:
-        p = todo.pop()
-        try:
-            children = []
-            for child_file in Path(f"/proc/{p}/task").glob("*/children"):
-                try:
-                    children.extend(child_file.read_text().split())
-                except FileNotFoundError:
-                    pass
-        except FileNotFoundError:
-            continue
-        for c in map(int, children):
-            if c not in found:
-                found.add(c)
-                todo.append(c)
-    return found
-
-
-def memory(pid):
-    rss = pss = 0
-    processes = descendants(pid)
-    for p in processes:
-        try:
-            for line in Path(f"/proc/{p}/smaps_rollup").read_text().splitlines():
-                if line.startswith("Rss:"):
-                    rss += int(line.split()[1])
-                elif line.startswith("Pss:"):
-                    pss += int(line.split()[1])
-        except (FileNotFoundError, ProcessLookupError, PermissionError):
-            pass
-    return {"rss_kib": rss, "pss_kib": pss, "processes": len(processes), "pids": sorted(processes)}
 
 
 def live_residue(seen):

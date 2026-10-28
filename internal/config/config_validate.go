@@ -10,6 +10,9 @@ import (
 
 func (c Config) Validate() error {
 	errs := []error{}
+	if err := c.Decision.Validate(); err != nil {
+		errs = append(errs, err)
+	}
 	errs = append(errs, validateRuntime(c.Runtime)...)
 	errs = append(errs, validateFetch(c.Fetch)...)
 	errs = append(errs, validatePolicy(c.Policy)...)

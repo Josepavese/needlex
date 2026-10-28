@@ -136,6 +136,8 @@ needlex config show
 needlex config set semantic.provider_model nomic-embed-text:latest
 ```
 
+Optional local Julia decision auditing is available in observation mode. It adds diagnostic evaluations without changing retrieval, embeddings or proofs; it is not a factual correctness guarantee. Configuration, measurements and current accuracy limits are documented in [the System One assessment](docs/system-one-assessment.md).
+
 ## Agent Skill
 
 Needle-X also ships an optional Codex skill that tells agents to obtain candidate URLs with their own search tool, compile every URL they choose with Needle-X, escalate when needed, and avoid treating compact context as full DOM coverage.

@@ -270,6 +270,8 @@ func TestReadQuerySelectedCandidateFallsBackAfterPostReadSemanticSourceValidatio
 	sourceURL := serverURL + "/source"
 	derivativeURL := serverURL + "/derivative"
 	svc := newSemanticService(t, server.Client())
+	observer := &auditObserver{}
+	svc.decisionObserver = observer
 	svc.semantic = postReadSemanticTestAligner{scores: map[string]queryreview.Score{
 		derivativeURL: {Goal: 0.74, Entity: 0.30, Origin: 0.16, Derivative: 0.54},
 		sourceURL:     {Goal: 0.70, Entity: 0.70, Origin: 0.62, Derivative: 0.18},
@@ -322,6 +324,9 @@ func TestReadQuerySelectedCandidateFallsBackAfterPostReadSemanticSourceValidatio
 	}
 	if plan.SelectedURL != sourceURL || resp.Document.FinalURL != sourceURL {
 		t.Fatalf("expected source selection after post-read validation, plan=%q final=%q", plan.SelectedURL, resp.Document.FinalURL)
+	}
+	if observer.calls != 0 {
+		t.Fatal("advisory model ran before source selection was final")
 	}
 	decision := requireCompilerDecision(t, plan.Compiler.Decisions, QueryPlanReasonSelection, func(decision QueryPlanDecision) bool {
 		return decision.Stage == "select.post_read_semantic_fallback"
@@ -758,6 +763,7 @@ func TestQueryDiscoveryOffKeepsSeedURL(t *testing.T) {
 	serverURL = server.URL
 
 	svc := newTestService(t, testConfig(), server.Client())
+	svc.decisionObserver = &auditObserver{}
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
@@ -767,6 +773,9 @@ func TestQueryDiscoveryOffKeepsSeedURL(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("query failed: %v", err)
+	}
+	if resp.AgentContext.Decision == nil || resp.AgentContext.Decision.Status != "observed" {
+		t.Fatal("query discarded the read decision observation")
 	}
 	if resp.Plan.SelectedURL != server.URL {
 		t.Fatalf("expected selected url to remain seed, got %q", resp.Plan.SelectedURL)

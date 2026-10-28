@@ -39,7 +39,7 @@ func (s *Service) maybePostReadSemanticFallback(ctx context.Context, req QueryRe
 		if !seedlessQueryHasTimeLeft(ctx, queryPostReadSemanticMinRemaining) {
 			break
 		}
-		nextResp, err := s.Read(ctx, s.prepareQuerySelectedReadRequest(req, profile, discoveryMode, challenger.URL))
+		nextResp, err := s.read(ctx, s.prepareQuerySelectedReadRequest(req, profile, discoveryMode, challenger.URL))
 		if err != nil {
 			continue
 		}

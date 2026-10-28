@@ -48,6 +48,7 @@ type Service struct {
 	renderer           rendering.Renderer
 	runtime            intel.ModelRuntime
 	semantic           intel.SemanticAligner
+	decisionObserver   intel.DecisionObserver
 	now                func() time.Time
 	storeRoot          string
 	webDiscoverBaseURL string
@@ -81,6 +82,7 @@ func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, r
 		},
 		renderer:           renderer,
 		runtime:            intel.NewRuntime(cfg, client),
+		decisionObserver:   intel.NewDecisionObserver(cfg.Decision, client),
 		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, platform.NewStateLayout(cleanRoot).EmbeddingCacheDir),
 		now:                time.Now,
 		storeRoot:          cleanRoot,
@@ -94,6 +96,16 @@ func (s *Service) SetWebDiscoverBaseURL(baseURL string) {
 }
 
 func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, error) {
+	response, err := s.read(ctx, req)
+	if err == nil {
+		err = s.observeReadDecision(ctx, req.Objective, &response)
+	}
+	return response, err
+}
+
+// read is the operational pipeline. Composite operations audit only after their
+// final source selection so advisory latency cannot consume fallback budgets.
+func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, error) {
 	var err error
 	req.Profile, err = resolveProfile(req.Profile)
 	if err != nil {

@@ -33,16 +33,12 @@ func (c *networkCollector) handleEventSourceMessage(params json.RawMessage) {
 	res.ContentType = firstNonEmptyRenderString(res.ContentType, "text/event-stream")
 	res.Source = "event_source"
 	c.activeEventSources[event.RequestID] = struct{}{}
+	res.Finished = false
 	c.eventSourceMessages++
 	res.MessageCount++
 	data := strings.TrimSpace(event.Data)
 	if c.networkMessageBudgetAvailable(res) {
 		c.appendToResource(res, "data: "+data+"\n\n")
-	}
-	if data == "end" {
-		res.Finished = true
-		delete(c.activeEventSources, event.RequestID)
-		delete(c.active, event.RequestID)
 	}
 	c.markEventSourceActivity()
 }

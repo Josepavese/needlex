@@ -359,12 +359,20 @@ func TestNetworkCollectorDoesNotCloseActiveEventSourceOnLoadingFinishedAfterMess
 	collector.handleEventSourceMessage(json.RawMessage(`{"requestId":"sse-1","data":"{\"name\":\"partial\"}"}`))
 	collector.handleLoadingDone(json.RawMessage(`{"requestId":"sse-1"}`), true)
 	if _, ok := collector.activeEventSources["sse-1"]; !ok {
-		t.Fatal("expected event source with messages to stay active until message idle or explicit end")
+		t.Fatal("expected event source with messages to stay active until message idle or transport failure")
 	}
 
 	collector.handleEventSourceMessage(json.RawMessage(`{"requestId":"sse-1","data":"end"}`))
+	if _, ok := collector.activeEventSources["sse-1"]; !ok || collector.resources["sse-1"].Finished {
+		t.Fatal("ordinary payload must not close an event source")
+	}
+	collector.handleEventSourceMessage(json.RawMessage(`{"requestId":"sse-1","data":"late payload"}`))
+	if !strings.Contains(collector.resources["sse-1"].Body, "late payload") {
+		t.Fatal("late messages must survive an ordinary end payload")
+	}
+	collector.handleLoadingDone(json.RawMessage(`{"requestId":"sse-1"}`), false)
 	if _, ok := collector.activeEventSources["sse-1"]; ok {
-		t.Fatal("expected explicit end message to close active event source")
+		t.Fatal("transport failure must end this request's observation")
 	}
 }
 

@@ -1,6 +1,7 @@
 package config
 
 type Config struct {
+	Decision  DecisionConfig  `json:"decision,omitempty"`
 	Runtime   RuntimeConfig   `json:"runtime"`
 	Fetch     FetchConfig     `json:"fetch,omitempty"`
 	Policy    PolicyConfig    `json:"policy"`
