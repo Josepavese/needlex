@@ -33,13 +33,26 @@ func TestNativeBrowserCrashRecoveryAndProfileCleanup(t *testing.T) {
 	}
 	root := t.TempDir()
 	t.Setenv("TMPDIR", root)
+	probeCtx, probeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	probe, probeErr := captureBrowserDOM(probeCtx, BrowserDOMRequest{
+		Path: path, URL: "data:text/html,<main>Needle-X%20browser%20capability%20probe</main>",
+		MaxBytes: 8192, VirtualTime: time.Second,
+	})
+	probeCancel()
+	if probeErr != nil || !strings.Contains(string(probe), "Needle-X browser capability probe") {
+		t.Skipf("browser installed but unavailable for native qualification: %s: %v", path, probeErr)
+	}
 	host, err := NewBrowserRuntime(BrowserLimits{MaxConcurrency: 1, IdleTimeout: time.Minute, MaxUses: 10})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer host.Close() //nolint:errcheck
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := t.Context()
+	if deadline, ok := t.Deadline(); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, deadline)
+		defer cancel()
+	}
 	first, err := host.Acquire(ctx, path)
 	if err != nil {
 		t.Fatal(err)
