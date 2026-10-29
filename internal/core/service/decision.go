@@ -3,22 +3,27 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/josepavese/needlex/internal/intel"
 	"github.com/josepavese/needlex/internal/proof"
 )
 
 // observeReadDecision audits only finalized operational work and continues its trace.
-func (s *Service) observeReadDecision(ctx context.Context, objective string, response *ReadResponse) error {
-	if s.decisionObserver == nil {
+func (s *Service) observeReadDecision(ctx context.Context, assertion string, response *ReadResponse) error {
+	if strings.TrimSpace(assertion) == "" {
 		return nil
 	}
-	input := intel.DecisionInput{Objective: objective}
+	input := intel.DecisionInput{Assertion: assertion}
 	for _, chunk := range response.ResultPack.Chunks {
-		input.Evidence = append(input.Evidence, intel.DecisionEvidence{ID: chunk.ID, Text: chunk.Text})
+		input.Evidence = append(input.Evidence, intel.DecisionEvidence{ID: chunk.ID, Heading: chunk.HeadingPath, Text: chunk.Text})
 	}
 	started := s.now()
-	result, err := s.decisionObserver.Observe(ctx, input)
+	result := intel.DecisionObservation{Assertion: assertion, Status: "disabled", UnassessedEvidenceCount: input.EvidenceCount(), Specification: intel.DecisionSpecification, Reason: "local decision observation is not configured"}
+	var err error
+	if s.decisionObserver != nil {
+		result, err = s.decisionObserver.Observe(ctx, input)
+	}
 	result.ElapsedMS = s.now().Sub(started).Milliseconds()
 	if err != nil {
 		result.Status = "unavailable"

@@ -33,13 +33,13 @@ func TestDecisionObserverLocalContractAndInvalidResponses(t *testing.T) {
 					return
 				}
 				var req struct {
-					State     DecisionInput               `json:"state"`
+					State     string                      `json:"state"`
 					Questions map[string]decisionQuestion `json:"questions"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 					t.Error(err)
 				}
-				if len(req.State.Evidence) != 1 || len(req.Questions) != 3 || !strings.Contains(req.Questions["coverage"].Instructions, "Prezzi") {
+				if req.State != "47 euro" || len(req.Questions) != 1 || !strings.Contains(req.Questions["support"].Instructions, "Prezzi") {
 					t.Error("request lost its typed evidence or questions")
 				}
 				answers := map[string]DecisionAnswer{}
@@ -65,7 +65,7 @@ func TestDecisionObserverLocalContractAndInvalidResponses(t *testing.T) {
 					answers[id] = DecisionAnswer{Choice: winner, Probabilities: p}
 				}
 				if mode == "missing_question" {
-					delete(answers, "coverage")
+					delete(answers, "support")
 				}
 				model := "Julia"
 				if mode == "wrong_response_model" {
@@ -75,8 +75,8 @@ func TestDecisionObserverLocalContractAndInvalidResponses(t *testing.T) {
 			}))
 			defer srv.Close()
 			cfg := config.DecisionConfig{Mode: "observe", BaseURL: srv.URL, Model: "Julia", Revision: "pinned", TimeoutMS: 1000, MaxQuestionTokens: 256, MaxInputBytes: 1000}
-			observer := NewDecisionObserver(cfg, srv.Client())
-			result, err := observer.Observe(t.Context(), DecisionInput{Objective: "Prezzi", Evidence: []DecisionEvidence{{ID: "chunk-1", Text: "47 euro"}}})
+			observer := NewDecisionObserver(cfg, srv.Client(), nil)
+			result, err := observer.Observe(t.Context(), DecisionInput{Assertion: "Prezzi", Evidence: []DecisionEvidence{{ID: "chunk-1", Text: "47 euro"}}})
 			if mode == "valid" {
 				if err != nil || result.Status != "observed" || result.Calibration != "unqualified_in_domain" || len(result.EvidenceIDs) != 1 {
 					t.Fatalf("%#v %v", result, err)
@@ -85,7 +85,7 @@ func TestDecisionObserverLocalContractAndInvalidResponses(t *testing.T) {
 				t.Fatal("invalid response accepted")
 			}
 			cfg.MaxInputBytes = 1
-			result, err = NewDecisionObserver(cfg, srv.Client()).Observe(t.Context(), DecisionInput{Objective: "Prezzi"})
+			result, err = NewDecisionObserver(cfg, srv.Client(), nil).Observe(t.Context(), DecisionInput{Assertion: "Prezzi", Evidence: []DecisionEvidence{{ID: "oversize", Text: "47 euro"}}})
 			if err != nil || result.Status != "input_budget_exceeded" {
 				t.Fatalf("oversized input must be reported, not truncated: %#v %v", result, err)
 			}
@@ -109,8 +109,8 @@ func TestDecisionObserverRejectsPromptOverflowBeforeInference(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	observer := NewDecisionObserver(config.DecisionConfig{Mode: "observe", BaseURL: server.URL, Model: "Julia", Revision: "pinned", TimeoutMS: 1000, MaxInputBytes: 6000, MaxQuestionTokens: 256}, server.Client())
-	result, err := observer.Observe(t.Context(), DecisionInput{Objective: "Warranty", Evidence: []DecisionEvidence{{ID: "source", Text: "24 months"}}})
+	observer := NewDecisionObserver(config.DecisionConfig{Mode: "observe", BaseURL: server.URL, Model: "Julia", Revision: "pinned", TimeoutMS: 1000, MaxInputBytes: 6000, MaxQuestionTokens: 256}, server.Client(), nil)
+	result, err := observer.Observe(t.Context(), DecisionInput{Assertion: "Warranty", Evidence: []DecisionEvidence{{ID: "source", Text: "24 months"}}})
 	if err != nil || result.Status != "prompt_budget_exceeded" || calls != 0 {
 		t.Fatalf("overflow was inferred or hidden: %#v, %v, calls %d", result, err, calls)
 	}
@@ -122,8 +122,8 @@ func TestDecisionObserverRefusesRedirects(t *testing.T) {
 	defer target.Close()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, target.URL, http.StatusFound) }))
 	defer server.Close()
-	observer := NewDecisionObserver(config.DecisionConfig{Mode: "observe", BaseURL: server.URL, Model: "Julia", Revision: "pinned", TimeoutMS: 1000, MaxInputBytes: 6000, MaxQuestionTokens: 256}, server.Client())
-	_, err := observer.Observe(t.Context(), DecisionInput{Objective: "Warranty", Evidence: []DecisionEvidence{{ID: "source", Text: "24 months"}}})
+	observer := NewDecisionObserver(config.DecisionConfig{Mode: "observe", BaseURL: server.URL, Model: "Julia", Revision: "pinned", TimeoutMS: 1000, MaxInputBytes: 6000, MaxQuestionTokens: 256}, server.Client(), nil)
+	_, err := observer.Observe(t.Context(), DecisionInput{Assertion: "Warranty", Evidence: []DecisionEvidence{{ID: "source", Text: "24 months"}}})
 	if err == nil || targetCalls != 0 {
 		t.Fatal("local decision request followed a redirect")
 	}

@@ -136,7 +136,7 @@ needlex config show
 needlex config set semantic.provider_model nomic-embed-text:latest
 ```
 
-Optional local Julia decision auditing is available in observation mode. It adds diagnostic evaluations without changing retrieval, embeddings or proofs; it is not a factual correctness guarantee. Configuration, measurements and current accuracy limits are documented in [the System One assessment](docs/system-one-assessment.md).
+Optional local Julia checks require an explicit `assertion` (`--assertion` in CLI). They assess one semantically selected passage in observation mode; ordinary retrieval incurs no Julia inference. The model remains unqualified for correctness decisions and does not change retrieval, embeddings or proofs. Configuration, measurements and current accuracy limits are documented in [the System One assessment](docs/system-one-assessment.md).
 
 ## Agent Skill
 

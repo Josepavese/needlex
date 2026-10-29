@@ -3,10 +3,12 @@ package intel
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -14,8 +16,10 @@ import (
 )
 
 type localDecisionObserver struct {
-	cfg    config.DecisionConfig
-	client *http.Client
+	cfg      config.DecisionConfig
+	client   *http.Client
+	semantic SemanticAligner
+	memo     decisionMemo
 }
 
 type decisionQuestion struct {
@@ -26,45 +30,63 @@ type decisionQuestion struct {
 
 // NewDecisionObserver constructs the HTTP adapter; the caller owns the shared
 // runtime and borrowed client. Disabled observation allocates no runtime.
-func NewDecisionObserver(cfg config.DecisionConfig, client *http.Client) DecisionObserver {
+func NewDecisionObserver(cfg config.DecisionConfig, client *http.Client, semantic SemanticAligner) DecisionObserver {
 	if cfg.Mode != "observe" {
 		return nil
 	}
-	return localDecisionObserver{cfg, httpClientOrDefault(client, defaultUpstreamTimeout)}
+	return &localDecisionObserver{cfg: cfg, client: httpClientOrDefault(client, defaultUpstreamTimeout), semantic: semantic}
 }
 
-func decisionQuestions(objective string) map[string]decisionQuestion {
-	prefix := "Objective: " + objective + "\n"
-	return map[string]decisionQuestion{
-		"relevance": {"choice", prefix + "Is this source evidence about the objective?", map[string]string{"related": "The evidence concerns the objective's subject", "unrelated": "The evidence concerns a different subject", "unknown": "There is insufficient evidence to judge relevance"}},
-		"coverage":  {"choice", prefix + "How much of the objective is answered by this source evidence?", map[string]string{"complete": "The evidence answers all requested aspects", "partial": "The evidence answers some requested aspects but leaves gaps", "absent": "The evidence does not answer the objective", "unknown": "The objective or evidence is insufficient to assess coverage"}},
-		"support":   {"choice", prefix + "Can an answer to this objective be supported by this source evidence?", map[string]string{"supported": "An answer can be grounded in explicit evidence", "unsupported": "The evidence does not support an answer", "conflicting": "The evidence contains conflicting answers", "unknown": "Support cannot be determined from the supplied evidence"}},
-	}
+func decisionQuestions(assertion string) map[string]decisionQuestion {
+	return map[string]decisionQuestion{"support": {"choice", "Using only the passage, assess this claim: " + assertion, map[string]string{
+		"supported":       "The passage supports the entire claim and gives no incompatible fact",
+		"contradicted":    "The passage states an incompatible fact and does not support the claim",
+		"not_established": "The passage neither supports nor refutes the entire claim, or gives conflicting statements",
+	}}}
 }
 
-func (o localDecisionObserver) Observe(ctx context.Context, input DecisionInput) (DecisionObservation, error) {
+func (o *localDecisionObserver) Observe(ctx context.Context, input DecisionInput) (DecisionObservation, error) {
 	started := time.Now()
 	result := DecisionObservation{Status: "unavailable", Model: o.cfg.Model, Revision: o.cfg.Revision, Specification: DecisionSpecification, Calibration: "unqualified_in_domain"}
-	state, err := json.Marshal(struct {
-		Evidence []DecisionEvidence `json:"evidence"`
-	}{input.Evidence})
-	if err != nil {
+	result.Assertion = input.Assertion
+	result.UnassessedEvidenceCount = input.EvidenceCount()
+	if err := o.cfg.Validate(); err != nil {
 		return result, err
 	}
-	result.InputBytes = len(state) + len(input.Objective)
-	for _, evidence := range input.Evidence {
-		result.EvidenceIDs = append(result.EvidenceIDs, evidence.ID)
-	}
-	if result.InputBytes > o.cfg.MaxInputBytes {
-		result.Status = "input_budget_exceeded"
-		return result, nil
-	}
-	if strings.TrimSpace(input.Objective) == "" || len(input.Evidence) == 0 {
+	if strings.TrimSpace(input.Assertion) == "" || len(input.Evidence) == 0 {
 		result.Status = "insufficient_input"
 		return result, nil
 	}
 	ctx, cancel := contextWithTimeoutMS(ctx, o.cfg.TimeoutMS)
 	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	unit, similarity, reason, err := o.selectEvidence(ctx, input)
+	result.SelectionSimilarity, result.Reason = similarity, reason
+	if err != nil {
+		return result, err
+	}
+	if unit == nil {
+		result.Status = reason
+		return result, nil
+	}
+	result.EvidenceIDs = []string{unit.ID}
+	state, err := json.Marshal(decisionEvidenceText(*unit))
+	if err != nil {
+		return result, err
+	}
+	result.InputBytes = len(state) + len(input.Assertion)
+	questions := decisionQuestions(input.Assertion)
+	cacheInput, _ := json.Marshal([]any{o.cfg.BaseURL, o.cfg.Model, o.cfg.Revision, DecisionSpecification, state, questions})
+	key := sha256.Sum256(cacheInput)
+	if answer, ok := o.memo.get(key); ok {
+		result.Answers = map[string]DecisionAnswer{"support": answer}
+		result.Status, result.CacheHit = "observed", true
+		result.UnassessedEvidenceCount--
+		result.ElapsedMS = time.Since(started).Milliseconds()
+		return result, nil
+	}
 	var models struct {
 		Data []struct {
 			ID   string `json:"id"`
@@ -79,7 +101,6 @@ func (o localDecisionObserver) Observe(ctx context.Context, input DecisionInput)
 	if len(models.Data) != 1 || models.Data[0].ID != o.cfg.Model {
 		return result, fmt.Errorf("local decision runtime model identity mismatch")
 	}
-	questions := decisionQuestions(input.Objective)
 	for _, question := range questions {
 		head, _ := json.Marshal(question)
 		fits, err := o.promptFits(ctx, head, state, models.Data[0].Meta.ContextTokens)
@@ -131,6 +152,8 @@ func (o localDecisionObserver) Observe(ctx context.Context, input DecisionInput)
 		}
 	}
 	result.Status = "observed"
+	result.UnassessedEvidenceCount--
+	o.memo.set(key, response.Answers["support"])
 	result.Answers = response.Answers
 	result.ElapsedMS = time.Since(started).Milliseconds()
 	return result, nil
@@ -138,7 +161,7 @@ func (o localDecisionObserver) Observe(ctx context.Context, input DecisionInput)
 
 const decisionProbabilityTolerance = 0.0001
 
-func (o localDecisionObserver) exchange(ctx context.Context, method, path string, body []byte, target any) error {
+func (o *localDecisionObserver) exchange(ctx context.Context, method, path string, body []byte, target any) error {
 	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(o.cfg.BaseURL, "/")+path, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -161,7 +184,7 @@ func (o localDecisionObserver) exchange(ctx context.Context, method, path string
 // Tokenize conservative envelopes before inference: the engine can silently cut
 // a long question to its trained head budget. Reject instead of auditing a
 // different question or an incomplete source. The deployment pins that budget.
-func (o localDecisionObserver) promptFits(ctx context.Context, head, state []byte, contextTokens int) (bool, error) {
+func (o *localDecisionObserver) promptFits(ctx context.Context, head, state []byte, contextTokens int) (bool, error) {
 	for _, part := range []struct {
 		text  string
 		limit int
@@ -184,4 +207,66 @@ func (o localDecisionObserver) promptFits(ctx context.Context, head, state []byt
 		}
 	}
 	return true, nil
+}
+
+// Select whole evidence units; no byte slicing or lexical approximation of relevance.
+func (o *localDecisionObserver) selectEvidence(ctx context.Context, input DecisionInput) (*DecisionEvidence, *float64, string, error) {
+	eligible := []DecisionEvidence{}
+	seen := map[string]string{}
+	for _, evidence := range input.Evidence {
+		if evidence.ID == "" {
+			return nil, nil, "", fmt.Errorf("decision evidence requires an identity")
+		}
+		if previous, ok := seen[evidence.ID]; ok {
+			if previous != decisionEvidenceText(evidence) {
+				return nil, nil, "", fmt.Errorf("conflicting decision evidence identity")
+			}
+			continue
+		}
+		seen[evidence.ID] = decisionEvidenceText(evidence)
+		state, _ := json.Marshal(decisionEvidenceText(evidence))
+		if strings.TrimSpace(evidence.Text) != "" && len(state)+len(input.Assertion) <= o.cfg.MaxInputBytes {
+			eligible = append(eligible, evidence)
+		}
+	}
+	if len(eligible) == 0 {
+		return nil, nil, "input_budget_exceeded", nil
+	}
+	if len(eligible) == 1 {
+		return &eligible[0], nil, "single_eligible_evidence", nil
+	}
+	if o.semantic == nil {
+		return nil, nil, "selection_unavailable", nil
+	}
+	candidates := make([]SemanticCandidate, len(eligible))
+	for i, evidence := range eligible {
+		candidates[i] = SemanticCandidate{ID: evidence.ID, Heading: evidence.Heading, Text: evidence.Text}
+	}
+	scores, err := o.semantic.Score(ctx, input.Assertion, candidates)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	byID := map[string]float64{}
+	for _, score := range scores {
+		if !math.IsNaN(score.Similarity) && !math.IsInf(score.Similarity, 0) {
+			byID[score.ID] = score.Similarity
+		}
+	}
+	sort.SliceStable(eligible, func(i, j int) bool {
+		a, aok := byID[eligible[i].ID]
+		b, bok := byID[eligible[j].ID]
+		return aok && (!bok || a > b)
+	})
+	similarity, ok := byID[eligible[0].ID]
+	if !ok {
+		return nil, nil, "selection_unavailable", nil
+	}
+	return &eligible[0], &similarity, "dense_semantic_selection", nil
+}
+
+func decisionEvidenceText(evidence DecisionEvidence) string {
+	if len(evidence.Heading) == 0 {
+		return evidence.Text
+	}
+	return strings.Join(evidence.Heading, "\n") + "\n" + evidence.Text
 }

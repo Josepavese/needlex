@@ -140,6 +140,7 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 	}
 	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
 		Goal:          stringArg(args, "goal"),
+		Assertion:     stringArg(args, "assertion"),
 		SeedURL:       seedURL,
 		Profile:       stringArg(args, "profile"),
 		UserAgent:     stringArg(args, "user_agent"),
@@ -177,6 +178,9 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 		"proof_path":       artifacts.ProofPath,
 		"fingerprint_path": artifacts.FingerprintPath,
 	}
+	if compact.Decision != nil {
+		payload["decision_observation"] = compact.Decision
+	}
 	return mcpToolResult(payload, compact), nil
 }
 
@@ -191,6 +195,7 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
 		URL:        stringArg(args, "url"),
 		Objective:  stringArg(args, "objective"),
+		Assertion:  stringArg(args, "assertion"),
 		Profile:    stringArg(args, "profile"),
 		UserAgent:  stringArg(args, "user_agent"),
 		RenderMode: stringArg(args, "render"),
@@ -221,6 +226,9 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 		"trace_path":       artifacts.TracePath,
 		"proof_path":       artifacts.ProofPath,
 		"fingerprint_path": artifacts.FingerprintPath,
+	}
+	if compact.Decision != nil {
+		payload["decision_observation"] = compact.Decision
 	}
 	return mcpToolResult(payload, compact), nil
 }
@@ -269,6 +277,7 @@ func mcpQueryTool() mcpTool {
 			"enum":        []string{"same_site_links", "web_search", "off"},
 			"description": "Discovery strategy. same_site_links = follow links from the seed site. off = do not expand beyond an exact verified seed URL. web_search = EXPERIMENTAL seedless public bootstrap and must be selected explicitly when seed_url is omitted; never choose it automatically.",
 		},
+		"assertion":        assertionSchema(),
 		"retrieval_effort": retrievalEffortSchema(),
 		"render":           renderModeSchema(),
 	}, "goal")
@@ -299,6 +308,7 @@ func mcpReadTool() mcpTool {
 			"url":              map[string]any{"type": "string"},
 			"profile":          map[string]any{"type": "string"},
 			"objective":        map[string]any{"type": "string"},
+			"assertion":        assertionSchema(),
 			"user_agent":       map[string]any{"type": "string"},
 			"retrieval_effort": retrievalEffortSchema(),
 			"render":           renderModeSchema(),
@@ -732,4 +742,11 @@ func intDefault(args map[string]any, key string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+// Assertion is an optional, source-scoped audit after retrieval; never a truth score.
+const assertionHelp = "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read."
+
+func assertionSchema() map[string]any {
+	return map[string]any{"type": "string", "description": assertionHelp}
 }

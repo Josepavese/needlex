@@ -1,8 +1,17 @@
 # System One decision models in Needle-X
 
-Assessment and implementation: 2026-10-28 to 2026-10-29. Baseline: `63eb2aa` / v0.1.40. Candidate: v0.1.41.
+Assessment and implementation: 2026-10-28 to 2026-10-29. Current candidate: v0.1.42. Historical v0.1.40/v0.1.41 measurements below retain their original scope.
 
-## Decision
+## Current decision
+
+In v0.1.42 ordinary reads do not call Julia. An explicit `assertion` requests a
+`claim-support-v1` check of one whole, semantically selected passage. The
+held-out result is 35/105 correct, with all 105 classified as not established.
+Julia is unqualified for factual-support decisions and remains advisory.
+The demonstrated content omissions are fixed in the deterministic reducer,
+independently of the model. See the final qualification section for evidence.
+
+## Original v0.1.41 decision
 
 Introduce a small local typed decision provider beside dense embeddings, initially as an observer of objective coverage and ambiguous selections. Keep Chromium as the JavaScript/application-data executor. Prioritize deterministic correctness repairs before allowing a model to skip work or discard evidence. Most current decisions use code or embeddings, and the default model-task runtime is noop: a decision provider adds cost unless it saves an expensive operation, improves evidence coverage or prevents downstream agent retries.
 
@@ -242,8 +251,9 @@ sampler is shared with the existing Chromium-reuse harness. Omit
 condition with the warm comparison.
 
 Build `./benchmarks/decision_observer/runner` outside the repository and run it
-with `--config`, `--cases benchmarks/corpora/decision-observer-v1.json` and
-`--repeats 3` to reproduce the advisory evaluation. The labels are human-defined,
+at tag `v0.1.41` with `--config`,
+`--cases benchmarks/corpora/decision-observer-v1.json` and
+`--repeats 3` to reproduce the advisory evaluation. The labels are agent-authored,
 not derived from model output. The corpus is small and synthetic; it does not
 establish open-web accuracy or factual truth.
 
@@ -325,7 +335,7 @@ paired performance comparison with v0.1.40 or the earlier four-page fixture.
 
 ### Source-scoped decision accuracy
 
-The frozen [anchor corpus](../benchmarks/corpora/decision-live-anchors-v1.json)
+The frozen [historical anchor corpus](https://github.com/Josepavese/needlex/blob/55bfaab/benchmarks/corpora/decision-live-anchors-v1.json)
 contains 52 exact-verified excerpts from 52 hosts, with source title, URL, trace
 and content hash. Questions use English, Italian, Spanish, German, French and
 Chinese, including cross-language pairs. Each excerpt produces four controls:
@@ -407,3 +417,165 @@ identifies remaining content-delivery defects. Repairing those omissions and
 then evaluating a revised decision specification on a separate labelled set
 are the next useful engineering steps. Increasing the observation budget alone
 does not address the measured judgement errors. Julia stays advisory.
+
+
+## v0.1.42: deterministic content repair and atomic observation
+
+The Python and Vue omissions reproduced with rendering required and Julia off
+were caused by the reducer: it discarded all `header` subtrees and arbitrary
+wrappers whose CSS class or ID contained navigation/sidebar-like fragments.
+Python placed its introduction inside a header under `touchnav-wrapper`; Vue
+placed its main documentation under `VPContent has-sidebar`. CSS strings do not
+establish that descendant content is irrelevant. The reducer now preserves
+these visible subtrees and keeps explicit hidden/script exclusions. Generic
+multilingual fixtures cover misleading wrapper names, useful header content
+and unrelated application-data payloads alongside the DOM. No hostname rule,
+provider workaround or lexical ranking was introduced.
+
+The retired aggressive/balanced pruning preference and its request, resolver,
+genome, test and reduction aliases have been removed together. Other genome
+preferences and stored source/proof history remain useful and preserved.
+Navigation/footer/aside context still has its existing structural budget;
+this repair does not claim that every page is now complete.
+
+Real candidate MCP reads recover the independently verified Python and Vue
+facts in both auto and required modes: four of four checks. Auto serves those
+facts without Chromium; required still uses CDP, with browser reuse on the
+second page. Full content and proofs remain independent of Julia.
+
+### Current model contract and cost boundary
+
+The old three-question whole-packet audit is replaced by one explicit factual
+`assertion`. Ordinary read/query requests do not invoke the observer. Dense
+embeddings select one whole, attributable passage that fits the configured
+budget; no text is byte-cut. Other evidence remains explicitly unassessed. The
+three alternatives distinguish support, incompatible evidence and absence or
+conflict within the selected passage. They cannot certify full-page correctness
+or detect all contradictions in other passages.
+
+The observer has its own semantic failure/cooldown state: an advisory timeout
+cannot disable semantic selection for later retrieval. MCP retains one service
+per current configuration and a 128-entry, process-local FIFO answer cache.
+Cache keys include endpoint, model, revision, specification, exact passage with
+headings and assertion/question content. Attribution and scope are reconstructed
+per request; callers cannot mutate cached probability maps. Configuration
+replacement retires this state. Browser contexts and limits are unchanged.
+
+### Separate development and held-out qualification
+
+[Versioned evidence](evidence/claim-support-2026-10-29.json) contains the frozen
+protocol and per-case receipts; [the current corpus](../benchmarks/corpora/claim-support-corpus-v1.json)
+preserves 52 exact source excerpts on 51 registrable site families. Each has
+three agent-reviewed assertions, supported/contradicted/not established. These
+156 correlated cases cover six languages, mainly software documentation. Labels
+refer to the supplied passage plus title, are not Julia outputs and have not
+received independent human review. The family split was frozen before inference:
+17 development families/51 cases and 34 held-out families/105 cases.
+
+Development tested two state encodings with identical questions and budgets.
+Plaintext scored 19/51; a JSON envelope scored 21/51. Plaintext produced 2 false
+supports versus 16 for JSON and median model-adapter time 303ms versus 496ms,
+so the production contract uses plaintext. Neither encoding qualified. A
+separate official-style routing positive control scored 8/9 across rotated
+neutral option IDs; that small control shows the runtime can execute another
+task, not that factual support works.
+
+| Held-out metric | Julia | Development-fitted dense cosine threshold |
+|---|---:|---:|
+| Three-class correct | 35/105 (33.3%) | 67/105 (63.8%) |
+| Supported claims detected | 0/35 | 32/35 |
+| False supports among 70 other cases | 0/70 | 25/70 |
+| Binary support balanced accuracy | 50.0% | 77.9% |
+
+Julia returned `not_established` for all 105 cases, matching the constant-label
+baseline; 68 wrong judgments assigned their selected option probability above
+90%. Zero false support here reflects universal abstention, not useful support
+detection. The dense reference threshold 0.6631135750621945 maximized binary
+balanced accuracy on development only; it never predicts contradiction. It is
+a comparison instrument, not a deployed factual-support rule. Embedding
+similarity still retrieves candidates and does not establish truth.
+
+All 105 held-out calls completed. Adapter wall time p50/p95/max was
+197/334/379ms; dense-reference work is measured outside that timer. Sampled
+20ms peak model PSS was 163.9MiB, runner plus model 176.2MiB; the shared embedding
+service is excluded. The first development reference attempt had four timeouts
+and then 47 cooldown skips; these failures are retained. After a recorded cold
+warmup, a separate reference-only pass produced all 51 development vectors,
+and the held-out run produced all 105. A missing score was never treated as zero.
+The held-out warmup itself cost 2429.5ms and is separate from adapter latency.
+
+Julia remains `unqualified_in_domain`, in local observation only. No active
+source selection, correctness certification or evidence deletion is justified
+by these results. The usable improvement is more faithful deterministic content
+and avoiding unsolicited inference, with bounded explicit experiments available.
+
+### Broad retrieval regression and profile repair
+
+A 176-URL candidate run produced 175 nonempty proof-backed packets; W3C remained
+HTTP 403. All 175 traces correctly report no decision audit because no assertion
+was requested. There were 22 CDP renders, 10 reuses and no reported degradation or
+truncation. Availability does not prove content correctness. The frozen excerpt
+checks found 51/52; the missing Rollup license was present in WebIR but filtered
+from the packet when context alignment was 0/unavailable. The final fix makes
+`deep` preserve annotated structural context for zero and negative scores;
+`tiny` and `standard` retain semantic filtering. This also avoids equating an
+unavailable score with evidence that context is worthless.
+
+That broad run precedes the final deep-context change and is not represented as
+a final-binary benchmark. Its latency p50/p95 was 1690.5/9665 ms and aggregate PSS
+p50/p95/max 242.3/452.9/615.8 MiB. Compared with the earlier v41 run, browser use
+and unsolicited Julia work are lower; site volatility, cache state, process
+residency and different observation policy prevent a causal performance claim.
+PSS measures resident proportional memory, not swapped pages or total committed
+memory. The shared embedding service and collector are excluded consistently.
+
+The final 52-source recheck returned 52 nonempty, proof-backed packets and no
+unsolicited observer calls. It retained 51/52 exact frozen excerpts. The remaining
+TensorFlow capture served English after CDP rendering rather than the frozen
+Chinese response; the explicit statement “Use TensorFlow.js to create new machine
+learning models and deploy existing models with JavaScript.” expresses the same
+annotated fact. This is an agent-reviewed source-language variant, not an exact
+marker pass or proof of whole-page completeness. Rollup's license now appears
+with the main article. Raw receipts retain both the original miss and the
+language-variant mismatch; neither was silently changed into a green assertion.
+
+
+### Paired fixture cost and content checks
+
+Three rounds on six fixed pages compare installed v41 with observation off to
+the final runtime with observation off, then to explicit assertion observation.
+The same local fixture server and warm dense endpoint are used. The source-fact
+checks improve from 33/42 to 42/42; the nine recovered checks are in the misleading
+CSS/ID wrapper fixture. All JavaScript and late-SSE facts remain available in all
+three phases. These are repeated fixture facts, not 42 independent web pages.
+
+| Per-case median | v41 off | Final off | Final with explicit assertion |
+|---|---:|---:|---:|
+| Short-objective JS latency |2159.2ms|2155.8ms|2311.0ms|
+| Chinese-objective JS latency |2165.6ms|2038.2ms|2293.9ms|
+| Late-SSE latency |9406.9ms|9406.6ms|9554.4ms|
+| Static latency |29.7ms|18.5ms|472.4ms|
+| Short-objective JS task PSS |237.3MiB|237.2MiB|238.0MiB|
+| Static task PSS |15.8MiB|17.4MiB|18.0MiB|
+
+These small samples show preserved dynamic content and broadly unchanged render
+cost, not a proven latency or RAM optimization. The fixed static task has about
+1.6 MiB more resident PSS. Explicit observation succeeds 18/18, adds roughly
+450 ms on static pages, and its already installed shared model has median PSS
+148.2 MiB. Task PSS includes child Chromium processes; the observation aggregate
+also includes the model, while before/fixed aggregates exclude that common
+resident service. Embedding and driver RAM are excluded. Sampling is 5 ms.
+Model RAM is not claimed to disappear when an ordinary read omits inference.
+Raw warmup times, all per-case measurements and unqualified verdicts are retained
+in the versioned evidence. No source content was filtered based on Julia.
+
+
+The installed-candidate smoke passed six CLI/MCP checks, including a normal read
+without an audit, an explicit assertion, a repeated assertion served from the
+same MCP memo (118 ms to 0 ms observation time), and one audit after query source
+selection. Source text was unchanged, and proof lookup/replay succeeded. The
+public tool catalogs are regenerated from the runtime schema. The synthetic
+hard-case benchmark also required new exact fixture annotations for retained
+header/punctuation variants; unknown reference fixtures now error instead of
+becoming zero similarity. Its original acceptance thresholds pass unchanged.
+These offline fixture embeddings are test controls, not Julia calibration.

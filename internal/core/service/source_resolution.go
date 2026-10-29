@@ -14,8 +14,8 @@ func (s *Service) sourceResolver() sourceresolution.Resolver {
 		Renderer: s.renderer,
 		Semantic: s.semantic,
 		Now:      s.now,
-		Reduce: func(recorder *proof.Recorder, page pipeline.RawPage, pruningProfile string) (pipeline.SimplifiedDOM, error) {
-			return s.reduce(recorder, page, ReadRequest{PruningProfile: pruningProfile})
+		Reduce: func(recorder *proof.Recorder, page pipeline.RawPage) (pipeline.SimplifiedDOM, error) {
+			return s.reduce(recorder, page)
 		},
 	}
 }
@@ -24,7 +24,6 @@ func sourceResolutionRequest(req ReadRequest) sourceresolution.Request {
 	return sourceresolution.Request{
 		Objective:         req.Objective,
 		UserAgent:         req.UserAgent,
-		PruningProfile:    req.PruningProfile,
 		FetchProfile:      req.FetchProfile,
 		FetchRetryProfile: req.FetchRetryProfile,
 		RenderHint:        req.RenderHint,

@@ -56,7 +56,7 @@ func PrepareQueryRequestWithLocalState(state store.LocalState, req QueryRequest,
 	if evidence, ok := loadQueryFingerprintEvidence(state.Fingerprints, req.SeedURL); ok {
 		req.SeedTraceID, req.SeedStable, req.SeedNovelty, req.SeedChanged = evidence.TraceID, evidence.Stable, evidence.Novelty, evidence.Changed
 	}
-	loadGenomeHints(state.Genomes, req.SeedURL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.PruningProfile, &req.RenderHint)
+	loadGenomeHints(state.Genomes, req.SeedURL, &req.ForceLane, &req.Profile, &req.FetchProfile, &req.FetchRetryProfile, &req.RenderHint)
 	return req
 }
 
@@ -71,7 +71,7 @@ func ObserveQueryResponseWithLocalState(state store.LocalState, req QueryRequest
 			_, _, _ = state.Domains.Observe(resp.Plan.SelectedURL, candidateURL, "query_related")
 		}
 	}
-	observeGenome(state.Genomes, genomeObservation(resp.Document, resp.Trace, resp.ResultPack, req.PruningProfile, req.RenderHint))
+	observeGenome(state.Genomes, genomeObservation(resp.Document, resp.Trace, resp.ResultPack, req.RenderHint))
 }
 
 func observeCandidate(candidateStore store.Candidates, document core.Document, source string) error {

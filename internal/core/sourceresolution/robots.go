@@ -109,7 +109,7 @@ func (r Resolver) MaybeRender(ctx context.Context, recorder *proof.Recorder, req
 	if r.Reduce == nil {
 		return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, fmt.Errorf("source resolver reduce callback is required")
 	}
-	renderedDOM, err := r.Reduce(recorder, rendered, req.PruningProfile)
+	renderedDOM, err := r.Reduce(recorder, rendered)
 	if err != nil {
 		if mode == "required" {
 			return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, err

@@ -9,13 +9,13 @@ import (
 	"github.com/josepavese/needlex/internal/proof"
 )
 
-func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage, req ReadRequest) (pipeline.SimplifiedDOM, error) {
+func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage) (pipeline.SimplifiedDOM, error) {
 	const stage = "reduce"
 	if err := recorder.StageStarted(stage, rawPage, s.now().UTC()); err != nil {
 		return pipeline.SimplifiedDOM{}, err
 	}
 
-	dom, err := s.reducer.ReduceProfile(rawPage, req.PruningProfile)
+	dom, err := s.reducer.Reduce(rawPage)
 	if err != nil {
 		recorder.Error(stage, "NX_REDUCE_FAILED", err.Error(), nil, s.now().UTC())
 		return pipeline.SimplifiedDOM{}, err

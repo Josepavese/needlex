@@ -50,8 +50,8 @@ func TestReduceRemovesNoiseAndKeepsMainContent(t *testing.T) {
 	for _, node := range dom.Nodes {
 		allText += node.Text + "\n"
 	}
-	if strings.Contains(allText, "cookies") || strings.Contains(allText, "footer text") || strings.Contains(allText, "brand chrome") {
-		t.Fatalf("expected noise to be removed, got %q", allText)
+	if !strings.Contains(allText, "Accept cookies") || !strings.Contains(allText, "brand chrome") {
+		t.Fatalf("visible DOM was removed using CSS/tag names: %q", allText)
 	}
 	if !strings.Contains(allText, "First paragraph.") || !strings.Contains(allText, "Point A") {
 		t.Fatalf("expected core content to remain, got %q", allText)
@@ -119,8 +119,14 @@ func TestSegmentBuildsHeadingAwareSegments(t *testing.T) {
 	if len(segments) < 3 {
 		t.Fatalf("expected multiple segments, got %d", len(segments))
 	}
-	if len(segments[0].HeadingPath) == 0 || segments[0].HeadingPath[0] != "Main Title" {
-		t.Fatalf("expected first segment to inherit h1 path, got %#v", segments[0].HeadingPath)
+	foundMain := false
+	for _, segment := range segments {
+		if strings.Contains(segment.Text, "First paragraph.") {
+			foundMain = len(segment.HeadingPath) > 0 && segment.HeadingPath[0] == "Main Title"
+		}
+	}
+	if !foundMain {
+		t.Fatal("main paragraph lost its h1 heading after retained header/context nodes")
 	}
 	last := segments[len(segments)-1]
 	if last.Kind != "code" {
@@ -131,13 +137,13 @@ func TestSegmentBuildsHeadingAwareSegments(t *testing.T) {
 	}
 }
 
-func TestReduceProfileAggressiveRemovesAdditionalNoiseHints(t *testing.T) {
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+func TestReducePreservesVisibleContentInDecorativeContainers(t *testing.T) {
+	dom, err := Reducer{}.Reduce(RawPage{
 		URL:       "https://example.com/spec",
 		FinalURL:  "https://example.com/spec",
 		HTML:      `<html><body><div class="hero-banner">Hero chrome</div><article><h1>Main</h1><p>Useful core text.</p></article></body></html>`,
 		FetchMode: "http",
-	}, "aggressive")
+	})
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
 	}
@@ -146,20 +152,45 @@ func TestReduceProfileAggressiveRemovesAdditionalNoiseHints(t *testing.T) {
 	for _, node := range dom.Nodes {
 		allText += node.Text + "\n"
 	}
-	if strings.Contains(allText, "Hero chrome") {
-		t.Fatalf("expected aggressive profile to remove hero content, got %q", allText)
+	if !strings.Contains(allText, "Hero chrome") {
+		t.Fatalf("expected visible content to survive decorative class names, got %q", allText)
 	}
 	if !strings.Contains(allText, "Useful core text.") {
 		t.Fatalf("expected core content to remain, got %q", allText)
 	}
 }
 
+func TestReduceKeepsMainTextThroughLayoutNamesAndHeader(t *testing.T) {
+	page := RawPage{
+		FinalURL: "https://example.com/", ContentType: "text/html", HTML: `<html><body>
+	<div id="touch-navigation-wrapper" class="has-sidebar advert-layout"><header><p>Aster is a language for building applications.</p></header>
+	<main class="content-with-sidebar"><p>Il prodotto ha una garanzia di 37 mesi.</p><p>这个框架用于构建用户界面。</p></main></div>
+	<p hidden>Explicitly hidden secret.</p><p aria-hidden="true">Accessibility-hidden text.</p>
+	<script>const ignored = "Unexecuted program text";</script></body></html>`,
+		NetworkText: "Unrelated account widget status: ready.",
+	}
+	dom, err := (Reducer{}).Reduce(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, text := range []string{"Aster is a language", "garanzia di 37 mesi", "构建用户界面", "account widget status"} {
+		if !containsNodeText(dom.Nodes, text) {
+			t.Fatalf("lost visible DOM or application data %q", text)
+		}
+	}
+	for _, text := range []string{"hidden secret", "Accessibility-hidden", "Unexecuted program"} {
+		if containsNodeText(dom.Nodes, text) {
+			t.Fatalf("non-visible/program text became evidence: %q", text)
+		}
+	}
+}
+
 func TestReduceDoesNotExtractCustomEmbeddedPayloadWhenSemanticDOMIsSparse(t *testing.T) {
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+	dom, err := Reducer{}.Reduce(RawPage{
 		URL:      "https://example.com/app",
 		FinalURL: "https://example.com/app",
 		HTML:     `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/bundle.js"></script></head><body><main></main><script type="application/json">{"items":[{"title":"Needle Runtime Update","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}]}</script></body></html>`,
-	}, "standard")
+	})
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
 	}
@@ -176,11 +207,11 @@ func TestReduceDoesNotExtractCustomEmbeddedPayloadWhenSemanticDOMIsSparse(t *tes
 
 func TestReduceClassifiesClientRenderedShellWithBoilerplateText(t *testing.T) {
 	boilerplate := strings.Repeat("Search Help Center Guides API Reference Changelog Sign In Status Contact ", 6)
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+	dom, err := Reducer{}.Reduce(RawPage{
 		URL:      "https://example.com/app",
 		FinalURL: "https://example.com/app",
 		HTML:     `<html><head><title>App Shell</title><script src="/runtime.js"></script><script src="/chunk-a.js"></script><script src="/chunk-b.js"></script><script src="/chunk-c.js"></script></head><body><header>` + boilerplate + `</header><main></main><script src="/app.js"></script></body></html>`,
-	}, "standard")
+	})
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
 	}
@@ -190,11 +221,11 @@ func TestReduceClassifiesClientRenderedShellWithBoilerplateText(t *testing.T) {
 }
 
 func TestReduceExtractsStandardJSONLD(t *testing.T) {
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+	dom, err := Reducer{}.Reduce(RawPage{
 		URL:      "https://example.com/article",
 		FinalURL: "https://example.com/article",
 		HTML:     `<html><head><title>Article</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Needle Runtime Update","description":"Needle-X compiles noisy pages into compact proof-carrying context for agents."}</script></head><body><article><h1>Article</h1></article></body></html>`,
-	}, "standard")
+	})
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
 	}
@@ -204,13 +235,13 @@ func TestReduceExtractsStandardJSONLD(t *testing.T) {
 }
 
 func TestReduceMarkdownBuildsHeadingAwareNodes(t *testing.T) {
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+	dom, err := Reducer{}.Reduce(RawPage{
 		URL:         "https://example.com/docs/cli-reference.md",
 		FinalURL:    "https://example.com/docs/cli-reference.md",
 		ContentType: "text/markdown; charset=utf-8",
 		SourceKind:  "markdown_variant",
 		HTML:        "# CLI reference\n\nThe CLI can create OAuth apps and run a local test server.\n\n## Commands\n\n- brevo login\n- brevo app create\n",
-	}, "standard")
+	})
 	if err != nil {
 		t.Fatalf("reduce markdown: %v", err)
 	}
@@ -235,11 +266,11 @@ func containsNodeText(nodes []SimplifiedNode, expected string) bool {
 }
 
 func TestReduceClassifiesThemeHeavyWordPressSubstrate(t *testing.T) {
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+	dom, err := Reducer{}.Reduce(RawPage{
 		URL:      "https://example.com/agency",
 		FinalURL: "https://example.com/agency",
 		HTML:     `<html><head><title>Agency</title><link rel="stylesheet" href="/assets/base.css"><link rel="stylesheet" href="/assets/theme.css"><script src="/assets/runtime.js"></script><script src="/assets/widgets.js"></script></head><body><div><div><div><article><h1>Agency</h1><p>Digital marketing and websites for small businesses need clear messaging, service pages, technical reliability, and conversion-oriented content that agents can summarize without relying on decorative chrome.</p></article></div></div></div><img src="/assets/hero.jpg"><img src="/assets/team.jpg"><script src="/assets/gallery.js"></script><script src="/assets/forms.js"></script></body></html>`,
-	}, "standard")
+	})
 	if err != nil {
 		t.Fatalf("reduce failed: %v", err)
 	}
@@ -248,12 +279,12 @@ func TestReduceClassifiesThemeHeavyWordPressSubstrate(t *testing.T) {
 	}
 }
 
-func TestReduceProfileBuildsSyntheticDOMForPlainTextCode(t *testing.T) {
-	dom, err := Reducer{}.ReduceProfile(RawPage{
+func TestReduceBuildsSyntheticDOMForPlainTextCode(t *testing.T) {
+	dom, err := Reducer{}.Reduce(RawPage{
 		FinalURL:    "https://raw.githubusercontent.com/openai/codex/main/codex-rs/protocol/src/lib.rs",
 		ContentType: "text/plain; charset=utf-8",
 		HTML:        "pub fn answer() -> i32 {\n    42\n}\n",
-	}, "standard")
+	})
 	if err != nil {
 		t.Fatalf("reduce plain text: %v", err)
 	}

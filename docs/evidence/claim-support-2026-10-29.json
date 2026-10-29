@@ -1,0 +1,5878 @@
+{
+  "protocol": {
+    "specification": "claim-support-v1",
+    "encoding": "plain",
+    "encoding_decision": "19/51 vs 21/51 development correctness does not qualify either; plaintext reduces false supports 16 to 2 and median latency496 to303ms",
+    "family_split": "sha256(family)[:2] as big-endian integer %3==0 development, otherwise heldout; frozen before model output",
+    "corpus_sha256": "e84943f9362dfbb55af4b1192307de0c3f76f4b173dbac73af174b5de292ce0d",
+    "development_cases": 51,
+    "heldout_cases": 105,
+    "reference": {
+      "kind": "dense cosine threshold for support/not-established; cannot distinguish contradiction from absence",
+      "threshold": 0.6631135750621945,
+      "development_binary_balanced_accuracy": 0.8235294117647058,
+      "selection": "maximize binary balanced accuracy on development only, ties minimize false support then prefer higher threshold"
+    },
+    "labels": "agent-reviewed source excerpts, not independently human-reviewed; no model-generated labels",
+    "qualification": "unqualified_in_domain; no active decisions promoted"
+  },
+  "heldout": {
+    "cases": 105,
+    "source_excerpts": 35,
+    "source_hosts": 35,
+    "source_families": 34,
+    "observed_cases": 105,
+    "statuses": {
+      "observed": 105
+    },
+    "correct": 35,
+    "total": 105,
+    "constant_label_correct": 35,
+    "support_detection": {
+      "true_positive": 0,
+      "false_positive": 0,
+      "false_negative": 35,
+      "true_negative": 70,
+      "precision": null,
+      "recall": 0.0,
+      "false_support_rate": 0.0
+    },
+    "abstentions": 105,
+    "wrong_above_probability_threshold": 68,
+    "probability_threshold": 0.9,
+    "by_question": {
+      "support": {
+        "correct": 35,
+        "total": 105,
+        "confusion": {
+          "supported -> not_established": 35,
+          "contradicted -> not_established": 35,
+          "not_established -> not_established": 35
+        },
+        "expected": {
+          "supported": 35,
+          "contradicted": 35,
+          "not_established": 35
+        },
+        "constant_label_correct": 35,
+        "balanced_recall": 0.3333333333333333
+      }
+    },
+    "by_variant": {
+      "supported": {
+        "correct": 0,
+        "total": 35,
+        "cases": 35,
+        "all_correct": 0
+      },
+      "contradicted": {
+        "correct": 0,
+        "total": 35,
+        "cases": 35,
+        "all_correct": 0
+      },
+      "not_established": {
+        "correct": 35,
+        "total": 35,
+        "cases": 35,
+        "all_correct": 35
+      }
+    },
+    "wall_ms": {
+      "samples": 105,
+      "p50": 197,
+      "p95": 334,
+      "maximum": 379
+    },
+    "scope": "Three correlated source-scoped assertion pairs per anchor; agent-reviewed labels, not Julia judgments or independently human-reviewed open-web truth",
+    "dense_reference": {
+      "valid": 105,
+      "errors": [],
+      "threshold": 0.6631135750621945,
+      "three_class_correct": 67,
+      "support_detection": {
+        "julia": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 35,
+          "tn": 70,
+          "binary_balanced_accuracy": 0.5
+        },
+        "dense_threshold": {
+          "tp": 32,
+          "fp": 25,
+          "fn": 3,
+          "tn": 45,
+          "binary_balanced_accuracy": 0.7785714285714286
+        }
+      }
+    }
+  },
+  "resources": {
+    "warmup": {
+      "ms": 2429.5,
+      "dimensions": 768
+    },
+    "peaks": {
+      "runner_pss_kib": 13089,
+      "model_pss_kib": 167884,
+      "aggregate_pss_kib": 180429
+    },
+    "sample_ms": 20,
+    "embedding_ram": "external shared service excluded",
+    "model_pid": 2520104
+  },
+  "receipts": [
+    {
+      "phase": "development-plain",
+      "case": "sqlite-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.030548829688627745,
+        "not_established": 0.9401757113495611,
+        "supported": 0.029275458961811072
+      },
+      "wall_ms": 482,
+      "reference_similarity": null,
+      "reference_error": "semantic scoring failed: send embedding request: Post \"http://127.0.0.1:11434/api/embed\": context deadline exceeded",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "sqlite-home-contradicted",
+      "status": "observed",
+      "choice": "contradicted",
+      "probabilities": {
+        "contradicted": 0.8791157281812585,
+        "not_established": 0.10453280197353988,
+        "supported": 0.016351469845201617
+      },
+      "wall_ms": 307,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "sqlite-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0005462159195921875,
+        "not_established": 0.6096010798583205,
+        "supported": 0.38985270422208734
+      },
+      "wall_ms": 295,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "redis-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.315027460565595e-06,
+        "not_established": 6.644885227120055e-06,
+        "supported": 0.9999920400873125
+      },
+      "wall_ms": 306,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "redis-docs-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 2.535687537703412e-06,
+        "not_established": 0.0035005699708167953,
+        "supported": 0.9964968943416456
+      },
+      "wall_ms": 397,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "redis-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.01775999366617e-06,
+        "not_established": 0.39027889442474495,
+        "supported": 0.6097200878152613
+      },
+      "wall_ms": 389,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "git-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.10522957342047e-06,
+        "not_established": 0.9996957996143367,
+        "supported": 0.00029809515608969375
+      },
+      "wall_ms": 286,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "git-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.203057399954064e-06,
+        "not_established": 0.9995503750574447,
+        "supported": 0.00044542188515522255
+      },
+      "wall_ms": 292,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "git-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.6394391340644071e-06,
+        "not_established": 0.9980860379894033,
+        "supported": 0.001912322571462537
+      },
+      "wall_ms": 305,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "npm-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.184404026209205e-07,
+        "not_established": 0.9999985015943008,
+        "supported": 7.799652963914217e-07
+      },
+      "wall_ms": 303,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "npm-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.0516084263892278e-05,
+        "not_established": 0.9998700226617969,
+        "supported": 9.946125393917928e-05
+      },
+      "wall_ms": 213,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "npm-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.5261557722818225e-07,
+        "not_established": 0.9999979425846638,
+        "supported": 1.9047997590160416e-06
+      },
+      "wall_ms": 204,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "svelte-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0009204851020128629,
+        "not_established": 0.9990755056932218,
+        "supported": 4.009204765341275e-06
+      },
+      "wall_ms": 308,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "svelte-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.14905398631127895,
+        "not_established": 0.8046754981337109,
+        "supported": 0.046270515555010196
+      },
+      "wall_ms": 371,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "svelte-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0010961266291585768,
+        "not_established": 0.9988923321802301,
+        "supported": 1.154119061135472e-05
+      },
+      "wall_ms": 289,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "webpack-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.285170563111257e-05,
+        "not_established": 0.9999760762971448,
+        "supported": 1.10719972241459e-05
+      },
+      "wall_ms": 303,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "webpack-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.909537642034932e-06,
+        "not_established": 0.999989624552494,
+        "supported": 5.4659098638799e-06
+      },
+      "wall_ms": 230,
+      "reference_similarity": null,
+      "reference_error": "semantic scoring failed: send embedding request: Post \"http://127.0.0.1:11434/api/embed\": context deadline exceeded",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "webpack-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.458595125674449e-05,
+        "not_established": 0.9999611442614383,
+        "supported": 1.4269787304975945e-05
+      },
+      "wall_ms": 372,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "rollup-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.627762660006666e-07,
+        "not_established": 0.9999915715260049,
+        "supported": 8.065697728981311e-06
+      },
+      "wall_ms": 237,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "rollup-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.616999475642429e-07,
+        "not_established": 0.9982413219832753,
+        "supported": 0.0017585163167770962
+      },
+      "wall_ms": 355,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "rollup-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3648782542549185e-06,
+        "not_established": 0.9998853173202176,
+        "supported": 0.00011331780152810195
+      },
+      "wall_ms": 221,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "bootstrap-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.4417402294809296e-06,
+        "not_established": 0.9998507842849718,
+        "supported": 0.00014677397479886614
+      },
+      "wall_ms": 316,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "bootstrap-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.4101502451422202e-05,
+        "not_established": 0.9939795895758875,
+        "supported": 0.006006308921661192
+      },
+      "wall_ms": 272,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "bootstrap-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.4756747857018964e-07,
+        "not_established": 0.99979034135751,
+        "supported": 0.00020921107501133967
+      },
+      "wall_ms": 290,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "perl-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.008331796831900669,
+        "not_established": 0.9072934266427847,
+        "supported": 0.08437477652531468
+      },
+      "wall_ms": 321,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "perl-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.713543723424103e-05,
+        "not_established": 0.9996500389529247,
+        "supported": 0.0002828256098410989
+      },
+      "wall_ms": 378,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "perl-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0001441039123637555,
+        "not_established": 0.9992982066061731,
+        "supported": 0.0005576894814630928
+      },
+      "wall_ms": 313,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "julia-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0003675567186149261,
+        "not_established": 0.9904534065666464,
+        "supported": 0.00917903671473875
+      },
+      "wall_ms": 586,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "julia-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0006118261654580589,
+        "not_established": 0.9988082960471539,
+        "supported": 0.000579877787388036
+      },
+      "wall_ms": 304,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "julia-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.291539347084564e-06,
+        "not_established": 0.9999868686533369,
+        "supported": 6.839807316144747e-06
+      },
+      "wall_ms": 240,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "pandas-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 5.147568497086885e-05,
+        "not_established": 0.9967319588734601,
+        "supported": 0.003216565441569063
+      },
+      "wall_ms": 381,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "pandas-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0008193032853964867,
+        "not_established": 0.9945630647737811,
+        "supported": 0.004617631940822371
+      },
+      "wall_ms": 485,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "pandas-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.6859856630949692e-05,
+        "not_established": 0.998417044850545,
+        "supported": 0.001556095292823926
+      },
+      "wall_ms": 210,
+      "reference_similarity": null,
+      "reference_error": "semantic scoring failed: send embedding request: Post \"http://127.0.0.1:11434/api/embed\": context deadline exceeded",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "scipy-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.7333841725374556e-05,
+        "not_established": 0.9999082703064341,
+        "supported": 7.439585184048097e-05
+      },
+      "wall_ms": 378,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "scipy-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.163620738022301e-05,
+        "not_established": 0.9998413581393532,
+        "supported": 0.00013700565326670925
+      },
+      "wall_ms": 300,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "scipy-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 5.538344809068231e-07,
+        "not_established": 0.9999463567784417,
+        "supported": 5.308938707728003e-05
+      },
+      "wall_ms": 305,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "matplotlib-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.1067922296040637e-06,
+        "not_established": 0.999951325062837,
+        "supported": 4.7568144933310554e-05
+      },
+      "wall_ms": 316,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "matplotlib-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.292544637050023e-05,
+        "not_established": 0.9997315826982804,
+        "supported": 0.0002554918553490409
+      },
+      "wall_ms": 290,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "matplotlib-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.638619475762574e-07,
+        "not_established": 0.9999937749434492,
+        "supported": 5.561194603324522e-06
+      },
+      "wall_ms": 316,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "tensorflow-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.317882916483894e-05,
+        "not_established": 0.9965201032809762,
+        "supported": 0.0034467178898588374
+      },
+      "wall_ms": 303,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "tensorflow-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.06335853653007419,
+        "not_established": 0.9293755668430389,
+        "supported": 0.0072658966268869425
+      },
+      "wall_ms": 302,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "tensorflow-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.631366704528232e-05,
+        "not_established": 0.9995539452588131,
+        "supported": 0.0004097410741415516
+      },
+      "wall_ms": 371,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "vitest-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0004045905721981792,
+        "not_established": 0.9833274909850116,
+        "supported": 0.016267918442790293
+      },
+      "wall_ms": 392,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "vitest-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.908016054791314e-06,
+        "not_established": 0.9960855306836166,
+        "supported": 0.0039065613003285826
+      },
+      "wall_ms": 298,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "vitest-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00017587936533425703,
+        "not_established": 0.9994671915169918,
+        "supported": 0.00035692911767398
+      },
+      "wall_ms": 215,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "llvm-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.5787667591284436e-06,
+        "not_established": 0.9114841631552865,
+        "supported": 0.08851125807795449
+      },
+      "wall_ms": 295,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "llvm-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.605354266461715e-06,
+        "not_established": 0.9616601059009013,
+        "supported": 0.03833228874483219
+      },
+      "wall_ms": 299,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "llvm-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.016402499741611e-07,
+        "not_established": 0.9081670978210032,
+        "supported": 0.09183210053874698
+      },
+      "wall_ms": 232,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "mongodb-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.1730833956706766,
+        "not_established": 0.7790595444749623,
+        "supported": 0.04785705985436121
+      },
+      "wall_ms": 461,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "mongodb-docs-contradicted",
+      "status": "observed",
+      "choice": "contradicted",
+      "probabilities": {
+        "contradicted": 0.7352208725407899,
+        "not_established": 0.1935029032544569,
+        "supported": 0.07127622420475306
+      },
+      "wall_ms": 192,
+      "reference_similarity": null,
+      "reference_error": "semantic scoring failed: send embedding request: Post \"http://127.0.0.1:11434/api/embed\": context deadline exceeded",
+      "error": ""
+    },
+    {
+      "phase": "development-plain",
+      "case": "mongodb-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.04300999566441354,
+        "not_established": 0.904644872644732,
+        "supported": 0.05234513169085437
+      },
+      "wall_ms": 202,
+      "reference_similarity": null,
+      "reference_error": "dense reference unavailable",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "sqlite-home-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.00119488416707208,
+        "not_established": 0.026743096977288675,
+        "supported": 0.9720620188556393
+      },
+      "wall_ms": 625,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "sqlite-home-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.08606115778571834,
+        "not_established": 0.07298042512903566,
+        "supported": 0.840958417085246
+      },
+      "wall_ms": 775,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "sqlite-home-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0011874052244528314,
+        "not_established": 0.37851824146297053,
+        "supported": 0.6202943533125767
+      },
+      "wall_ms": 504,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "redis-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.00016962756074546096,
+        "not_established": 3.403495445204798e-05,
+        "supported": 0.9997963374848026
+      },
+      "wall_ms": 525,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "redis-docs-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.021612090294024097,
+        "not_established": 0.011532763181033467,
+        "supported": 0.9668551465249425
+      },
+      "wall_ms": 493,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "redis-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0020671747678957762,
+        "not_established": 0.17943535342055406,
+        "supported": 0.8184974718115502
+      },
+      "wall_ms": 658,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "git-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.7735499481015967e-05,
+        "not_established": 0.8511327302924544,
+        "supported": 0.1488395342080645
+      },
+      "wall_ms": 517,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "git-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.823103073207855e-07,
+        "not_established": 0.6073675366540291,
+        "supported": 0.3926316810356635
+      },
+      "wall_ms": 488,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "git-home-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.8099981648961193e-06,
+        "not_established": 0.2522193790767455,
+        "supported": 0.7477788109250896
+      },
+      "wall_ms": 429,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "npm-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0005642626689828679,
+        "not_established": 0.48834754657059704,
+        "supported": 0.51108819076042
+      },
+      "wall_ms": 485,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "npm-docs-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0008734766356028238,
+        "not_established": 0.49736173610084855,
+        "supported": 0.5017647872635486
+      },
+      "wall_ms": 423,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "npm-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.476671633268494e-06,
+        "not_established": 0.9126086486711561,
+        "supported": 0.08738187465721067
+      },
+      "wall_ms": 470,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "svelte-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.5214266344278127e-05,
+        "not_established": 0.00045676058298357955,
+        "supported": 0.9995280251506721
+      },
+      "wall_ms": 414,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "svelte-docs-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.185730288412372e-05,
+        "not_established": 0.01386243668835446,
+        "supported": 0.9861257060087614
+      },
+      "wall_ms": 589,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "svelte-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.00194322310692291,
+        "not_established": 0.057841097051615296,
+        "supported": 0.9402156798414617
+      },
+      "wall_ms": 997,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "webpack-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0005868200028482276,
+        "not_established": 0.8399202317762402,
+        "supported": 0.15949294822091165
+      },
+      "wall_ms": 398,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "webpack-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.2047630882390968,
+        "not_established": 0.6180720226730128,
+        "supported": 0.17716488908789038
+      },
+      "wall_ms": 331,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "webpack-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.000722140450078074,
+        "not_established": 0.5111582461237182,
+        "supported": 0.4881196134262037
+      },
+      "wall_ms": 500,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "rollup-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 2.6416451543357212e-05,
+        "not_established": 0.0007101463660068455,
+        "supported": 0.9992634371824498
+      },
+      "wall_ms": 367,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "rollup-docs-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0004638955685221587,
+        "not_established": 0.07253843342411975,
+        "supported": 0.9269976710073581
+      },
+      "wall_ms": 386,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "rollup-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0006828242594035988,
+        "not_established": 0.007030173283456082,
+        "supported": 0.9922870024571403
+      },
+      "wall_ms": 424,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "bootstrap-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.02114701376655614,
+        "not_established": 0.38296044161629444,
+        "supported": 0.5958925446171494
+      },
+      "wall_ms": 488,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "bootstrap-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0039126597525640195,
+        "not_established": 0.8310271241461521,
+        "supported": 0.1650602161012839
+      },
+      "wall_ms": 498,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "bootstrap-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0044713299597043295,
+        "not_established": 0.8084895592127737,
+        "supported": 0.18703911082752203
+      },
+      "wall_ms": 536,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "perl-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.0741191621886736e-06,
+        "not_established": 0.6169667294563052,
+        "supported": 0.3830291964245326
+      },
+      "wall_ms": 484,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "perl-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0006749401171876736,
+        "not_established": 0.9963288357583837,
+        "supported": 0.0029962241244285235
+      },
+      "wall_ms": 484,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "perl-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.828036572456758e-05,
+        "not_established": 0.9991676744077909,
+        "supported": 0.0007640452264846094
+      },
+      "wall_ms": 523,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "julia-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.004317671792446049,
+        "not_established": 0.461139494454125,
+        "supported": 0.5345428337534289
+      },
+      "wall_ms": 472,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "julia-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.06711409923142045,
+        "not_established": 0.5268072251239154,
+        "supported": 0.40607867564466416
+      },
+      "wall_ms": 417,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "julia-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.6348304256906923e-06,
+        "not_established": 0.9993846142775319,
+        "supported": 0.0006117508920423339
+      },
+      "wall_ms": 513,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "pandas-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.754921232935143e-05,
+        "not_established": 0.9992705819963777,
+        "supported": 0.0006518687912928182
+      },
+      "wall_ms": 755,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "pandas-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.939515717493184e-05,
+        "not_established": 0.9995393959581246,
+        "supported": 0.00037120888470050495
+      },
+      "wall_ms": 545,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "pandas-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3673517438342954e-05,
+        "not_established": 0.9999313470055186,
+        "supported": 5.4979477043149534e-05
+      },
+      "wall_ms": 763,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "scipy-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 5.508268605607087e-05,
+        "not_established": 0.0940289137726412,
+        "supported": 0.9059160035413028
+      },
+      "wall_ms": 432,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "scipy-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.434863757062906e-05,
+        "not_established": 0.6055349544942007,
+        "supported": 0.39437069686822857
+      },
+      "wall_ms": 696,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "scipy-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 8.11722497260798e-06,
+        "not_established": 0.01056512591812656,
+        "supported": 0.9894267568569008
+      },
+      "wall_ms": 685,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "matplotlib-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.5403798499670168e-05,
+        "not_established": 0.30318976710025924,
+        "supported": 0.6967948291012411
+      },
+      "wall_ms": 510,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "matplotlib-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.7216606698985324e-05,
+        "not_established": 0.7696766985805172,
+        "supported": 0.23030608481278378
+      },
+      "wall_ms": 383,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "matplotlib-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.593537943667911e-05,
+        "not_established": 0.5793222665279575,
+        "supported": 0.42059179809260594
+      },
+      "wall_ms": 408,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "tensorflow-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 4.623513526190086e-05,
+        "not_established": 0.11569868993755889,
+        "supported": 0.8842550749271793
+      },
+      "wall_ms": 499,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "tensorflow-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00015490874833755755,
+        "not_established": 0.9588546270758804,
+        "supported": 0.04099046417578216
+      },
+      "wall_ms": 510,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "tensorflow-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 3.8227155320124775e-05,
+        "not_established": 0.09190786893154446,
+        "supported": 0.9080539039131355
+      },
+      "wall_ms": 562,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "vitest-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0072493641783372715,
+        "not_established": 0.022586860597064922,
+        "supported": 0.9701637752245977
+      },
+      "wall_ms": 500,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "vitest-docs-contradicted",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.006827412443871387,
+        "not_established": 0.007613965320213656,
+        "supported": 0.985558622235915
+      },
+      "wall_ms": 505,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "vitest-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.014587009852074076,
+        "not_established": 0.34383052871297975,
+        "supported": 0.6415824614349462
+      },
+      "wall_ms": 431,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "llvm-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.010315987602685942,
+        "not_established": 0.43939980312341853,
+        "supported": 0.5502842092738955
+      },
+      "wall_ms": 488,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "llvm-docs-contradicted",
+      "status": "observed",
+      "choice": "contradicted",
+      "probabilities": {
+        "contradicted": 0.5897840963110728,
+        "not_established": 0.3374451934674512,
+        "supported": 0.07277071022147609
+      },
+      "wall_ms": 496,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "llvm-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 0.0007402272864603235,
+        "not_established": 0.28469607433596916,
+        "supported": 0.7145636983775705
+      },
+      "wall_ms": 416,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "mongodb-docs-supported",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 4.389867570001525e-05,
+        "not_established": 0.019363868548892146,
+        "supported": 0.9805922327754079
+      },
+      "wall_ms": 476,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "mongodb-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00171092728895279,
+        "not_established": 0.9361571125490674,
+        "supported": 0.06213196016197985
+      },
+      "wall_ms": 496,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-json",
+      "case": "mongodb-docs-not_established",
+      "status": "observed",
+      "choice": "supported",
+      "probabilities": {
+        "contradicted": 1.7347067836734116e-05,
+        "not_established": 0.4733036278913485,
+        "supported": 0.5266790250408148
+      },
+      "wall_ms": 500,
+      "reference_similarity": null,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "development-reference",
+      "case": "sqlite-home-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5955030034727079,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "sqlite-home-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5958448966921843,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "sqlite-home-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.41316030545009924,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "redis-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6195942083153496,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "redis-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5878955847266722,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "redis-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.42310997423354296,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "git-home-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7613059014026062,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "git-home-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5465215084873114,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "git-home-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.4707690209788805,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "npm-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8382310262479107,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "npm-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7431159500382005,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "npm-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.4863652698023686,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "svelte-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8730223529784796,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "svelte-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7733415962170386,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "svelte-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.3967672213238547,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "webpack-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.748230456130185,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "webpack-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6021388543398365,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "webpack-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.3873875817563251,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "rollup-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6120834837504683,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "rollup-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5913020398112738,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "rollup-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5814012544894699,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "bootstrap-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6631135750621945,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "bootstrap-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6428519588636991,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "bootstrap-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.4498870169140205,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "perl-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8646422403282066,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "perl-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8064041823296497,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "perl-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5286895233492873,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "julia-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8660073305440431,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "julia-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7377199133116411,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "julia-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.4515421494731918,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "pandas-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.720679201169643,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "pandas-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5716318335336263,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "pandas-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.43044918154027845,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "scipy-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7266079487194463,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "scipy-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6396826800862488,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "scipy-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5150037370581652,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "matplotlib-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.70802207119923,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "matplotlib-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6330954883010519,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "matplotlib-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.49928143819528636,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "tensorflow-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8517893934420271,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "tensorflow-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7414968666957547,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "tensorflow-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.5744914698735398,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "vitest-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7524508188554897,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "vitest-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6620120319075036,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "vitest-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.591950518956002,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "llvm-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6829198829980816,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "llvm-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.6280498289090767,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "llvm-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.4185976542456012,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "mongodb-docs-supported",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.8711875490999837,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "mongodb-docs-contradicted",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.7535757568341295,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "development-reference",
+      "case": "mongodb-docs-not_established",
+      "status": null,
+      "choice": null,
+      "probabilities": null,
+      "wall_ms": null,
+      "reference_similarity": 0.49654822940411947,
+      "reference_error": "",
+      "error": null
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "go-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.9154889317656338e-07,
+        "not_established": 0.9999992613983038,
+        "supported": 5.47052803035294e-07
+      },
+      "wall_ms": 203,
+      "reference_similarity": 0.8789951362806923,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "go-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.7509379398017394e-05,
+        "not_established": 0.9999599999030696,
+        "supported": 1.2490717532343367e-05
+      },
+      "wall_ms": 81,
+      "reference_similarity": 0.7881433108627716,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "go-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.934074522542027e-06,
+        "not_established": 0.9999948883233649,
+        "supported": 1.7760211248394265e-07
+      },
+      "wall_ms": 155,
+      "reference_similarity": 0.38691981970501216,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "postgresql-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0026101651668451516,
+        "not_established": 0.9568323390919535,
+        "supported": 0.04055749574120132
+      },
+      "wall_ms": 156,
+      "reference_similarity": 0.8249215963478137,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "postgresql-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0009853570599526096,
+        "not_established": 0.9693261308354107,
+        "supported": 0.02968851210463664
+      },
+      "wall_ms": 97,
+      "reference_similarity": 0.6714066992278024,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "postgresql-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.5011057956027017e-06,
+        "not_established": 0.9995474930977953,
+        "supported": 0.00045100579640900383
+      },
+      "wall_ms": 145,
+      "reference_similarity": 0.41715315951589116,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "kubernetes-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.587996480283685e-06,
+        "not_established": 0.9955424024555978,
+        "supported": 0.004453009547921896
+      },
+      "wall_ms": 149,
+      "reference_similarity": 0.7670605465032083,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "kubernetes-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00024084426829677842,
+        "not_established": 0.9986939217287487,
+        "supported": 0.0010652340029546118
+      },
+      "wall_ms": 231,
+      "reference_similarity": 0.6265388552112882,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "kubernetes-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.508516330492768e-06,
+        "not_established": 0.9999915549103725,
+        "supported": 9.365732971711917e-07
+      },
+      "wall_ms": 241,
+      "reference_similarity": 0.5174884290123548,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "podman-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.835851985883141e-06,
+        "not_established": 0.9983722953303182,
+        "supported": 0.0016228688176957045
+      },
+      "wall_ms": 209,
+      "reference_similarity": 0.8197688937211252,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "podman-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0002365844458704646,
+        "not_established": 0.9908501530016387,
+        "supported": 0.008913262552490728
+      },
+      "wall_ms": 173,
+      "reference_similarity": 0.6531334691803011,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "podman-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.480013310103254e-07,
+        "not_established": 0.9991245151887932,
+        "supported": 0.0008750368098757239
+      },
+      "wall_ms": 303,
+      "reference_similarity": 0.433205844638538,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nginx-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.416024143579129e-07,
+        "not_established": 0.5500388813509034,
+        "supported": 0.4499607770466823
+      },
+      "wall_ms": 242,
+      "reference_similarity": 0.7779225250152487,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nginx-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.76962601028319e-08,
+        "not_established": 0.5030324888485672,
+        "supported": 0.49696743345517264
+      },
+      "wall_ms": 161,
+      "reference_similarity": 0.7271787889084964,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nginx-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.1345577751494183e-07,
+        "not_established": 0.6199216191140914,
+        "supported": 0.38007826743013107
+      },
+      "wall_ms": 157,
+      "reference_similarity": 0.499869105268551,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "curl-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0020696688306037075,
+        "not_established": 0.9943055199545879,
+        "supported": 0.0036248112148084288
+      },
+      "wall_ms": 191,
+      "reference_similarity": 0.818943997481026,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "curl-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.8808206337231724e-05,
+        "not_established": 0.9999698874050847,
+        "supported": 1.3043885780106205e-06
+      },
+      "wall_ms": 145,
+      "reference_similarity": 0.7189160902549898,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "curl-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.7048830657579006e-05,
+        "not_established": 0.9999757484556683,
+        "supported": 7.202713674189334e-06
+      },
+      "wall_ms": 165,
+      "reference_similarity": 0.40184535859157194,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "github-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00013180835301503324,
+        "not_established": 0.9997559907432836,
+        "supported": 0.00011220090370140387
+      },
+      "wall_ms": 98,
+      "reference_similarity": 0.6851479257775369,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "github-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.814951937594284e-07,
+        "not_established": 0.9999884344200466,
+        "supported": 1.0884084759652259e-05
+      },
+      "wall_ms": 93,
+      "reference_similarity": 0.6929014609941626,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "github-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.293017922460482e-06,
+        "not_established": 0.9999296489480733,
+        "supported": 6.80580340042058e-05
+      },
+      "wall_ms": 85,
+      "reference_similarity": 0.48982973572162497,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "gitlab-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3590924308728385e-06,
+        "not_established": 0.9999831178523605,
+        "supported": 1.5523055208635888e-05
+      },
+      "wall_ms": 95,
+      "reference_similarity": 0.7778568118483327,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "gitlab-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.78811767357695e-07,
+        "not_established": 0.9999990370673404,
+        "supported": 1.841208920983155e-07
+      },
+      "wall_ms": 89,
+      "reference_similarity": 0.6783000888996011,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "gitlab-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.606130397279513e-08,
+        "not_established": 0.9999996758721861,
+        "supported": 2.2806651001989566e-07
+      },
+      "wall_ms": 148,
+      "reference_similarity": 0.42705069403183643,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rust-home-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.33008027670357e-06,
+        "not_established": 0.9999884245376073,
+        "supported": 2.2453821160550305e-06
+      },
+      "wall_ms": 176,
+      "reference_similarity": 0.7068665754936387,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rust-home-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.724783674882147e-07,
+        "not_established": 0.999997777662608,
+        "supported": 1.3498590245363597e-06
+      },
+      "wall_ms": 186,
+      "reference_similarity": 0.6803507992994413,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rust-home-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.097859909480619e-07,
+        "not_established": 0.9999993706499484,
+        "supported": 2.195640605517606e-07
+      },
+      "wall_ms": 205,
+      "reference_similarity": 0.4132700486028588,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rust-book-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.824609487779539e-05,
+        "not_established": 0.9997958528859642,
+        "supported": 0.00010590101915792629
+      },
+      "wall_ms": 283,
+      "reference_similarity": 0.824410415857591,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rust-book-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.6039809025899593e-05,
+        "not_established": 0.9982741966315277,
+        "supported": 0.0016997635594463588
+      },
+      "wall_ms": 186,
+      "reference_similarity": 0.7169019815448989,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rust-book-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0005341308012057585,
+        "not_established": 0.999024079990859,
+        "supported": 0.00044178920793519976
+      },
+      "wall_ms": 112,
+      "reference_similarity": 0.3432135306120449,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "deno-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0014659905424573559,
+        "not_established": 0.9984683439662675,
+        "supported": 6.566549127497811e-05
+      },
+      "wall_ms": 302,
+      "reference_similarity": 0.7958385016840157,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "deno-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.05102357383634e-05,
+        "not_established": 0.9998917034407642,
+        "supported": 2.778632349739736e-05
+      },
+      "wall_ms": 200,
+      "reference_similarity": 0.7658893926570428,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "deno-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.6171264155695096e-05,
+        "not_established": 0.9999326932261073,
+        "supported": 2.11355097370001e-05
+      },
+      "wall_ms": 174,
+      "reference_similarity": 0.49787503701745534,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "bun-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.650601494477279e-06,
+        "not_established": 0.9999671254965451,
+        "supported": 3.0223901960303648e-05
+      },
+      "wall_ms": 174,
+      "reference_similarity": 0.8553846589923051,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "bun-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.668230389008743e-06,
+        "not_established": 0.9999813298273692,
+        "supported": 9.001942241696463e-06
+      },
+      "wall_ms": 116,
+      "reference_similarity": 0.6484137758340288,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "bun-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.7604467019817e-07,
+        "not_established": 0.9999981355643563,
+        "supported": 9.88390973573335e-07
+      },
+      "wall_ms": 155,
+      "reference_similarity": 0.3644901457614509,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "angular-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 5.431499717491064e-05,
+        "not_established": 0.9998641147414703,
+        "supported": 8.157026135482959e-05
+      },
+      "wall_ms": 100,
+      "reference_similarity": 0.848225771732498,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "angular-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0007425352132207812,
+        "not_established": 0.9989793940214973,
+        "supported": 0.00027807076528181594
+      },
+      "wall_ms": 96,
+      "reference_similarity": 0.8095584327890514,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "angular-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0003049494225402749,
+        "not_established": 0.9996948185691499,
+        "supported": 2.320083097811073e-07
+      },
+      "wall_ms": 95,
+      "reference_similarity": 0.4613484630245412,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nextjs-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.9821577594383508e-06,
+        "not_established": 0.9999949898494069,
+        "supported": 2.027992833573952e-06
+      },
+      "wall_ms": 152,
+      "reference_similarity": 0.9266226029542225,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nextjs-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.4112826964199773e-06,
+        "not_established": 0.9999834291777957,
+        "supported": 1.3159539507806675e-05
+      },
+      "wall_ms": 145,
+      "reference_similarity": 0.6767061296100815,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nextjs-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.5599356401700393e-06,
+        "not_established": 0.9999960805342941,
+        "supported": 1.3595300656047307e-06
+      },
+      "wall_ms": 119,
+      "reference_similarity": 0.5181045307001979,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nuxt-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.89239209354324e-07,
+        "not_established": 0.999971945686376,
+        "supported": 2.766507441470352e-05
+      },
+      "wall_ms": 135,
+      "reference_similarity": 0.7042276746012626,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nuxt-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.4565219272343981e-06,
+        "not_established": 0.9999870050292347,
+        "supported": 1.153844883808238e-05
+      },
+      "wall_ms": 124,
+      "reference_similarity": 0.6221701849368803,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "nuxt-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.487863281309214e-07,
+        "not_established": 0.9999975907283837,
+        "supported": 1.6604852881845425e-06
+      },
+      "wall_ms": 85,
+      "reference_similarity": 0.2801772644133113,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "vite-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.8609581748897492e-05,
+        "not_established": 0.9865945620651339,
+        "supported": 0.013386828353117044
+      },
+      "wall_ms": 249,
+      "reference_similarity": 0.7192045422380736,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "vite-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00016837534831005011,
+        "not_established": 0.9997899629374908,
+        "supported": 4.16617141992654e-05
+      },
+      "wall_ms": 99,
+      "reference_similarity": 0.6786267856743172,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "vite-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.812312585822827e-05,
+        "not_established": 0.9952189437900502,
+        "supported": 0.004702933084091513
+      },
+      "wall_ms": 195,
+      "reference_similarity": 0.2950739948152587,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "tailwind-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0001852250735188366,
+        "not_established": 0.9865996484285408,
+        "supported": 0.013215126497940394
+      },
+      "wall_ms": 330,
+      "reference_similarity": 0.7588832843939719,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "tailwind-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.210335733465536e-05,
+        "not_established": 0.9996432635838527,
+        "supported": 0.00031463305881261123
+      },
+      "wall_ms": 249,
+      "reference_similarity": 0.6947532010930191,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "tailwind-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.62892069766268e-07,
+        "not_established": 0.9999802110374916,
+        "supported": 1.8926070438622137e-05
+      },
+      "wall_ms": 172,
+      "reference_similarity": 0.5112708480036564,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "fastapi-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00012030723169355125,
+        "not_established": 0.9995463027748648,
+        "supported": 0.000333389993441541
+      },
+      "wall_ms": 155,
+      "reference_similarity": 0.6161702360390277,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "fastapi-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00013522789095572196,
+        "not_established": 0.9998043454770623,
+        "supported": 6.042663198193696e-05
+      },
+      "wall_ms": 162,
+      "reference_similarity": 0.5974471750468405,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "fastapi-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3972015853891139e-06,
+        "not_established": 0.9999760163467111,
+        "supported": 2.2586451703534762e-05
+      },
+      "wall_ms": 197,
+      "reference_similarity": 0.5410741096517858,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rails-guides-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.5635360421728864e-06,
+        "not_established": 0.9999905736973023,
+        "supported": 6.862766655743878e-06
+      },
+      "wall_ms": 201,
+      "reference_similarity": 0.8767232693230955,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rails-guides-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.1285531861135825e-05,
+        "not_established": 0.9999535435868264,
+        "supported": 2.5170881312337725e-05
+      },
+      "wall_ms": 171,
+      "reference_similarity": 0.786169349566647,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "rails-guides-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.749491888992185e-07,
+        "not_established": 0.9999842599408837,
+        "supported": 1.4865109927417808e-05
+      },
+      "wall_ms": 230,
+      "reference_similarity": 0.49917965447485535,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "laravel-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.988479955801513e-05,
+        "not_established": 0.9999750930802308,
+        "supported": 5.022120211193518e-06
+      },
+      "wall_ms": 305,
+      "reference_similarity": 0.6919117070558677,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "laravel-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00556473155756847,
+        "not_established": 0.9936324681941773,
+        "supported": 0.000802800248254225
+      },
+      "wall_ms": 299,
+      "reference_similarity": 0.6599858952544982,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "laravel-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 7.29585069071711e-07,
+        "not_established": 0.9999851119982647,
+        "supported": 1.4158416666412897e-05
+      },
+      "wall_ms": 306,
+      "reference_similarity": 0.5438259024785871,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "spring-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.764626504236244e-06,
+        "not_established": 0.9999569605375742,
+        "supported": 3.327483592154252e-05
+      },
+      "wall_ms": 293,
+      "reference_similarity": 0.7477001576407395,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "spring-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.1674404992612209e-05,
+        "not_established": 0.9999793962255475,
+        "supported": 8.929369460031444e-06
+      },
+      "wall_ms": 310,
+      "reference_similarity": 0.5986585486866718,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "spring-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.331111290519836e-06,
+        "not_established": 0.999980234971953,
+        "supported": 1.8433916756303217e-05
+      },
+      "wall_ms": 340,
+      "reference_similarity": 0.39006215183244825,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "dotnet-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3595888467596492e-05,
+        "not_established": 0.9998874176968242,
+        "supported": 9.898641470815573e-05
+      },
+      "wall_ms": 292,
+      "reference_similarity": 0.6432532358650032,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "dotnet-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0018603970096562254,
+        "not_established": 0.9980027403841971,
+        "supported": 0.00013686260614664855
+      },
+      "wall_ms": 280,
+      "reference_similarity": 0.5718588804301411,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "dotnet-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.99411999998221e-07,
+        "not_established": 0.999988038269696,
+        "supported": 1.0962318303953815e-05
+      },
+      "wall_ms": 199,
+      "reference_similarity": 0.5009349643850785,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "java-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.459736424281245e-06,
+        "not_established": 0.9996929848066892,
+        "supported": 0.0003035554568864475
+      },
+      "wall_ms": 152,
+      "reference_similarity": 0.7564928408153776,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "java-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.002019906962328572,
+        "not_established": 0.9954886984337863,
+        "supported": 0.002491394603885179
+      },
+      "wall_ms": 271,
+      "reference_similarity": 0.7245831492881828,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "java-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3974741109225416e-06,
+        "not_established": 0.9999953335335988,
+        "supported": 3.268992290094665e-06
+      },
+      "wall_ms": 217,
+      "reference_similarity": 0.3558275094802208,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "php-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00011843583609652551,
+        "not_established": 0.9995497621493915,
+        "supported": 0.0003318020145119668
+      },
+      "wall_ms": 139,
+      "reference_similarity": 0.7881920012393102,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "php-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.004016870794244606,
+        "not_established": 0.9902747015452679,
+        "supported": 0.00570842766048764
+      },
+      "wall_ms": 101,
+      "reference_similarity": 0.6811369623201817,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "php-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.5220320528749269e-05,
+        "not_established": 0.99980108957596,
+        "supported": 0.0001836901035113463
+      },
+      "wall_ms": 91,
+      "reference_similarity": 0.5549896003300531,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "lua-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.4582558604679985e-07,
+        "not_established": 0.9999973336449177,
+        "supported": 2.5205294961014492e-06
+      },
+      "wall_ms": 237,
+      "reference_similarity": 0.8720379986963517,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "lua-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.0416521314171523e-06,
+        "not_established": 0.9999931174846951,
+        "supported": 5.840863173469871e-06
+      },
+      "wall_ms": 114,
+      "reference_similarity": 0.7462486534306436,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "lua-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.9181666864427058e-06,
+        "not_established": 0.9999971613789147,
+        "supported": 9.204543989318618e-07
+      },
+      "wall_ms": 165,
+      "reference_similarity": 0.3844683719704629,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "r-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.0984051670621165e-06,
+        "not_established": 0.9999938384929262,
+        "supported": 5.063101906750307e-06
+      },
+      "wall_ms": 99,
+      "reference_similarity": 0.9060645738292593,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "r-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.4173010752413324e-07,
+        "not_established": 0.9999962629007848,
+        "supported": 3.49536910755286e-06
+      },
+      "wall_ms": 146,
+      "reference_similarity": 0.8647487922480533,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "r-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.2695261700377197e-07,
+        "not_established": 0.9999874394583933,
+        "supported": 1.2433588989692e-05
+      },
+      "wall_ms": 116,
+      "reference_similarity": 0.31216845038001195,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "requests-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.517910322801237e-06,
+        "not_established": 0.998085759322823,
+        "supported": 0.0019077227668542192
+      },
+      "wall_ms": 185,
+      "reference_similarity": 0.8321515672856036,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "requests-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.3735940172926668e-05,
+        "not_established": 0.9995989223243995,
+        "supported": 0.00038734173542743654
+      },
+      "wall_ms": 242,
+      "reference_similarity": 0.7192691616617818,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "requests-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.0532401516820382e-05,
+        "not_established": 0.9999781972865116,
+        "supported": 1.1270311971479737e-05
+      },
+      "wall_ms": 193,
+      "reference_similarity": 0.5679442862677007,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "playwright-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.861094478633877e-06,
+        "not_established": 0.999984425395018,
+        "supported": 1.1713510503477712e-05
+      },
+      "wall_ms": 340,
+      "reference_similarity": 0.8673845937619321,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "playwright-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 9.285095437007949e-07,
+        "not_established": 0.9999975921941027,
+        "supported": 1.4792963535237406e-06
+      },
+      "wall_ms": 262,
+      "reference_similarity": 0.6205650107750916,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "playwright-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.917864279445761e-07,
+        "not_established": 0.9999984511745429,
+        "supported": 1.2570390292139008e-06
+      },
+      "wall_ms": 300,
+      "reference_similarity": 0.5235345628899801,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "selenium-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.1665236817405075e-07,
+        "not_established": 0.9999984683436974,
+        "supported": 1.3150039343980095e-06
+      },
+      "wall_ms": 379,
+      "reference_similarity": 0.7852744865394626,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "selenium-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.3015735114083434e-06,
+        "not_established": 0.999944536166267,
+        "supported": 5.316226022155432e-05
+      },
+      "wall_ms": 313,
+      "reference_similarity": 0.683458680103161,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "selenium-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.671860345591643e-07,
+        "not_established": 0.9999971399120695,
+        "supported": 2.592901895883982e-06
+      },
+      "wall_ms": 332,
+      "reference_similarity": 0.4529612093311517,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "jest-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0016701646977080975,
+        "not_established": 0.9939567132844535,
+        "supported": 0.004373122017838466
+      },
+      "wall_ms": 264,
+      "reference_similarity": 0.7177420782000277,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "jest-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.014153224415549923,
+        "not_established": 0.983523926485123,
+        "supported": 0.002322849099327138
+      },
+      "wall_ms": 242,
+      "reference_similarity": 0.6788354292942667,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "jest-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 1.108789705012406e-06,
+        "not_established": 0.9999796524817988,
+        "supported": 1.9238728496068883e-05
+      },
+      "wall_ms": 224,
+      "reference_similarity": 0.4660402177552112,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "pytest-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 8.741881617531579e-05,
+        "not_established": 0.9998896032875659,
+        "supported": 2.2977896258666398e-05
+      },
+      "wall_ms": 202,
+      "reference_similarity": 0.8617836345239153,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "pytest-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.3049651432538845e-05,
+        "not_established": 0.9998732800682066,
+        "supported": 0.00010367028036090686
+      },
+      "wall_ms": 211,
+      "reference_similarity": 0.7479755504528238,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "pytest-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.2075438102551713e-06,
+        "not_established": 0.9999854768720117,
+        "supported": 1.1315584178193084e-05
+      },
+      "wall_ms": 249,
+      "reference_similarity": 0.3979764282896785,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "linux-man-pages-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 5.4349780354081e-07,
+        "not_established": 0.9999989144351425,
+        "supported": 5.420670538724334e-07
+      },
+      "wall_ms": 286,
+      "reference_similarity": 0.6588645568610462,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "linux-man-pages-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.0001042632274309552,
+        "not_established": 0.9998938236141263,
+        "supported": 1.91315844263111e-06
+      },
+      "wall_ms": 296,
+      "reference_similarity": 0.4741684912016779,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "linux-man-pages-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.18633530422029e-07,
+        "not_established": 0.9999978435402248,
+        "supported": 1.5378262446701594e-06
+      },
+      "wall_ms": 306,
+      "reference_similarity": 0.417456129774589,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "gcc-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.8187971447699464e-07,
+        "not_established": 0.9999527279593867,
+        "supported": 4.689016089869065e-05
+      },
+      "wall_ms": 271,
+      "reference_similarity": 0.7738139755072021,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "gcc-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 2.234283959439645e-07,
+        "not_established": 0.9994754185527562,
+        "supported": 0.0005243580188478956
+      },
+      "wall_ms": 365,
+      "reference_similarity": 0.7183187842255384,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "gcc-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.5468913959268347e-07,
+        "not_established": 0.9991949304443586,
+        "supported": 0.0008047148665018866
+      },
+      "wall_ms": 356,
+      "reference_similarity": 0.4830654085591776,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "python-fr-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 5.228079750399526e-06,
+        "not_established": 0.9778846388881071,
+        "supported": 0.022110133032142477
+      },
+      "wall_ms": 281,
+      "reference_similarity": 0.9067557680961932,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "python-fr-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 6.626970144253699e-06,
+        "not_established": 0.9888797929521522,
+        "supported": 0.011113580077703637
+      },
+      "wall_ms": 323,
+      "reference_similarity": 0.7609149195681932,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "python-fr-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.767878175007539e-05,
+        "not_established": 0.9799439647546281,
+        "supported": 0.02000835646362182
+      },
+      "wall_ms": 325,
+      "reference_similarity": 0.5917319781879091,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "debian-docs-supported",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 0.00012292812632963993,
+        "not_established": 0.9985304636077101,
+        "supported": 0.0013466082659602597
+      },
+      "wall_ms": 261,
+      "reference_similarity": 0.7698850004124221,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "debian-docs-contradicted",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 3.8471143847083704e-05,
+        "not_established": 0.999281465673424,
+        "supported": 0.0006800631827289679
+      },
+      "wall_ms": 334,
+      "reference_similarity": 0.689841234467014,
+      "reference_error": "",
+      "error": ""
+    },
+    {
+      "phase": "heldout-plain",
+      "case": "debian-docs-not_established",
+      "status": "observed",
+      "choice": "not_established",
+      "probabilities": {
+        "contradicted": 4.644039737962259e-06,
+        "not_established": 0.9999331309195378,
+        "supported": 6.222504072409026e-05
+      },
+      "wall_ms": 302,
+      "reference_similarity": 0.35884714207661983,
+      "reference_error": "",
+      "error": ""
+    }
+  ],
+  "routing_positive_control": [
+    {
+      "state": "I was charged twice for the same order.",
+      "rotation": 0,
+      "expected": "billing",
+      "choice": "billing",
+      "probabilities": {
+        "billing": 0.8220803166673902,
+        "shipping": 0.17423891359792698,
+        "access": 0.0036807697346829017
+      }
+    },
+    {
+      "state": "I was charged twice for the same order.",
+      "rotation": 1,
+      "expected": "billing",
+      "choice": "shipping",
+      "probabilities": {
+        "shipping": 0.7339918943214553,
+        "access": 0.02902901326760986,
+        "billing": 0.23697909241093496
+      }
+    },
+    {
+      "state": "I was charged twice for the same order.",
+      "rotation": 2,
+      "expected": "billing",
+      "choice": "billing",
+      "probabilities": {
+        "access": 0.017868073056732832,
+        "billing": 0.7543520132242111,
+        "shipping": 0.227779913719056
+      }
+    },
+    {
+      "state": "My parcel has not been delivered.",
+      "rotation": 0,
+      "expected": "shipping",
+      "choice": "shipping",
+      "probabilities": {
+        "billing": 9.67272297332608e-07,
+        "shipping": 0.9999986553810022,
+        "access": 3.7734670044315157e-07
+      }
+    },
+    {
+      "state": "My parcel has not been delivered.",
+      "rotation": 1,
+      "expected": "shipping",
+      "choice": "shipping",
+      "probabilities": {
+        "shipping": 0.9999995427721581,
+        "access": 8.267913467093414e-08,
+        "billing": 3.745487072911374e-07
+      }
+    },
+    {
+      "state": "My parcel has not been delivered.",
+      "rotation": 2,
+      "expected": "shipping",
+      "choice": "shipping",
+      "probabilities": {
+        "access": 4.831424948848429e-08,
+        "billing": 1.5800050215182825e-07,
+        "shipping": 0.9999997936852484
+      }
+    },
+    {
+      "state": "I cannot log into my account.",
+      "rotation": 0,
+      "expected": "access",
+      "choice": "access",
+      "probabilities": {
+        "billing": 2.402073179957118e-06,
+        "shipping": 3.6065939847183e-07,
+        "access": 0.9999972372674216
+      }
+    },
+    {
+      "state": "I cannot log into my account.",
+      "rotation": 1,
+      "expected": "access",
+      "choice": "access",
+      "probabilities": {
+        "shipping": 1.6223497909956467e-07,
+        "access": 0.9999991052300109,
+        "billing": 7.325350101005335e-07
+      }
+    },
+    {
+      "state": "I cannot log into my account.",
+      "rotation": 2,
+      "expected": "access",
+      "choice": "access",
+      "probabilities": {
+        "access": 0.9999990920063098,
+        "billing": 7.9818231956677e-07,
+        "shipping": 1.0981137070967204e-07
+      }
+    }
+  ],
+  "content_smoke": [
+    {
+      "case": "python",
+      "render_mode": "auto",
+      "fact_retained": true,
+      "chunks": 34,
+      "trace_id": "trace_a52b69ab2f5bc518",
+      "trace_path": "/home/jose/.local/share/needlex/traces/trace_a52b69ab2f5bc518.json",
+      "proof_path": "/home/jose/.local/share/needlex/proofs/trace_a52b69ab2f5bc518.json",
+      "render": [],
+      "trace_path_sha256": "d506d489680ede00b443c6a13e035dbac5927529599198653ae7c600773f7504",
+      "proof_path_sha256": "32e14d6e420fcecedb14bee742fa3804b3c52e3353c6834050607d5ce149d371"
+    },
+    {
+      "case": "vue",
+      "render_mode": "auto",
+      "fact_retained": true,
+      "chunks": 55,
+      "trace_id": "trace_6acc4598362230f1",
+      "trace_path": "/home/jose/.local/share/needlex/traces/trace_6acc4598362230f1.json",
+      "proof_path": "/home/jose/.local/share/needlex/proofs/trace_6acc4598362230f1.json",
+      "render": [],
+      "trace_path_sha256": "771b636cde05816b1df0873a609885b591ae3bef940962fb13bc408c91fad82f",
+      "proof_path_sha256": "2709b40fc5fe1355235eafe8236bc1af92d1e001e2382661015ae58683f92d89"
+    },
+    {
+      "case": "python",
+      "render_mode": "required",
+      "fact_retained": true,
+      "chunks": 37,
+      "trace_id": "trace_7c6d24d684591c22",
+      "trace_path": "/home/jose/.local/share/needlex/traces/trace_7c6d24d684591c22.json",
+      "proof_path": "/home/jose/.local/share/needlex/proofs/trace_7c6d24d684591c22.json",
+      "render": [
+        {
+          "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+          "browser_reused": "false",
+          "duration_ms": "3864",
+          "event_source_messages": "0",
+          "network_body_missing": "0",
+          "network_bytes": "609",
+          "network_idle_reason": "network_idle",
+          "network_observed": "2",
+          "network_resources": "2",
+          "network_streams_open": "0",
+          "network_truncated": "false",
+          "partial": "false",
+          "render_path": "cdp",
+          "rendered": "true",
+          "websocket_messages": "0"
+        }
+      ],
+      "trace_path_sha256": "8553dc3bf002872920b19548515e41fb8482e33e2ca7d537301f3101a683679f",
+      "proof_path_sha256": "d3f9057c5377a577e07cf97d7f265d8abaf10625a31e8ad73bc85372f9e9a979"
+    },
+    {
+      "case": "vue",
+      "render_mode": "required",
+      "fact_retained": true,
+      "chunks": 56,
+      "trace_id": "trace_a467f3f77fccf263",
+      "trace_path": "/home/jose/.local/share/needlex/traces/trace_a467f3f77fccf263.json",
+      "proof_path": "/home/jose/.local/share/needlex/proofs/trace_a467f3f77fccf263.json",
+      "render": [
+        {
+          "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+          "browser_reused": "true",
+          "duration_ms": "2982",
+          "event_source_messages": "0",
+          "network_body_missing": "0",
+          "network_bytes": "5927",
+          "network_idle_reason": "network_idle",
+          "network_observed": "1",
+          "network_resources": "1",
+          "network_streams_open": "0",
+          "network_truncated": "false",
+          "partial": "false",
+          "render_path": "cdp",
+          "rendered": "true",
+          "websocket_messages": "0"
+        }
+      ],
+      "trace_path_sha256": "eac0de9ef4c58335c8b1bc0fc92f008968391cb04c3ace1cbe46d5766bf49d51",
+      "proof_path_sha256": "e3df7b390fb624bd9e5aa3db09eda58939bab814b5f6d89a499b8f1b3a27a9be"
+    }
+  ],
+  "broad_candidate_live": {
+    "urls": 176,
+    "hosts": 109,
+    "nonempty_packets": 175,
+    "transport_errors": {
+      "provider_blocked": 1
+    },
+    "audit_statuses": {
+      "not_requested": 175,
+      "tool_error": 1
+    },
+    "audit_trace_matches": 175,
+    "proof_files_nonempty": 175,
+    "rendered": 22,
+    "reused": 10,
+    "network_truncated": 0,
+    "render_degraded": 0,
+    "latency_ms": {
+      "samples": 176,
+      "p50": 1690.5,
+      "p95": 9665,
+      "maximum": 20571
+    },
+    "aggregate_pss_kib": {
+      "samples": 176,
+      "p50": 248131.5,
+      "p95": 463772,
+      "maximum": 630626
+    },
+    "model_pss_kib": {
+      "samples": 176,
+      "p50": 96882.0,
+      "p95": 167807,
+      "maximum": 167824
+    },
+    "families": {
+      "docs": 105,
+      "classic_homepage": 13,
+      "corporate": 13,
+      "multilingual": 15,
+      "package_registry": 1,
+      "specs": 6,
+      "government": 1,
+      "same_site_query": 22
+    },
+    "declared_languages": {
+      "en": 160,
+      "fr": 2,
+      "ja": 4,
+      "it": 2,
+      "zh-CN": 2,
+      "de": 1,
+      "ru": 1,
+      "es": 2,
+      "pt-BR": 1,
+      "ko": 1
+    },
+    "coverage": {
+      "checks": 52,
+      "hits": 51,
+      "misses": [
+        "rollup-docs"
+      ]
+    },
+    "scope": "176 reads before final deep-context retention fix; ordinary reads, no Julia assertion requested"
+  },
+  "broad_candidate_binary_sha256": "feaa05e06c08d8f08d2363a27bca68bd379d2a98eb79fc27648433e5058da063",
+  "final_anchor_live": {
+    "urls": 52,
+    "hosts": 52,
+    "nonempty_packets": 52,
+    "transport_errors": {},
+    "audit_statuses": {
+      "not_requested": 52
+    },
+    "audit_trace_matches": 52,
+    "proof_files_nonempty": 52,
+    "rendered": 4,
+    "reused": 2,
+    "network_truncated": 0,
+    "render_degraded": 0,
+    "latency_ms": {
+      "samples": 52,
+      "p50": 1248.0,
+      "p95": 5109,
+      "maximum": 11304
+    },
+    "aggregate_pss_kib": {
+      "samples": 52,
+      "p50": 123398.5,
+      "p95": 407282,
+      "maximum": 464403
+    },
+    "model_pss_kib": {
+      "samples": 52,
+      "p50": 92769.0,
+      "p95": 92945,
+      "maximum": 92945
+    },
+    "families": {
+      "docs": 45,
+      "classic_homepage": 5,
+      "corporate": 1,
+      "multilingual": 1
+    },
+    "declared_languages": {
+      "en": 51,
+      "fr": 1
+    },
+    "exact_excerpt_checks": 52,
+    "exact_excerpt_hits": 51,
+    "reviewed_source_variant": {
+      "case": "tensorflow-docs",
+      "reason": "The rendered source served English instead of the frozen Chinese excerpt; equivalent explicit source statement present",
+      "observed_statement": "Use TensorFlow.js to create new machine learning models and deploy existing models with JavaScript.",
+      "trace_id": "trace_298a0909a8bb130b",
+      "text_sha256": "1e0182783db2232c4233bf856de3e2df42e764d89ca52944163d6cf852466f21",
+      "review": "agent-reviewed exact observed English statement against the frozen Chinese fact, not model-scored or an exact-marker pass"
+    },
+    "ordinary_decision_observations": 0
+  },
+  "final_anchor_binary_sha256": "f0120ccb5e81676368d4a76f708e9982bcc783bbd128722463548090173fc84c",
+  "paired_measurement": {
+    "scope": "v41 observation off vs final observation off; explicit assertion observation is a separate phase; 6 fixtures x3 rounds, current common warm embedding, external embedding/driver RAM excluded; common persistent model only included in observation aggregate",
+    "summary": {
+      "before": {
+        "fact_hits": 33,
+        "fact_checks": 42,
+        "latency_ms": {
+          "samples": 18,
+          "p50": 1239.05,
+          "p95": 9679.6,
+          "maximum": 9679.6
+        },
+        "task_pss_kib": {
+          "samples": 18,
+          "p50": 127601.5,
+          "p95": 243978,
+          "maximum": 243978
+        },
+        "aggregate_pss_kib": {
+          "samples": 18,
+          "p50": 127601.5,
+          "p95": 243978,
+          "maximum": 243978
+        },
+        "model_pss_kib": {
+          "samples": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "observation_statuses": {
+          "not_requested": 18
+        },
+        "by_case": {
+          "header": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 19.1,
+              "p95": 558.1,
+              "maximum": 558.1
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 16468,
+              "p95": 17998,
+              "maximum": 17998
+            }
+          },
+          "short": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 2159.2,
+              "p95": 2517.5,
+              "maximum": 2517.5
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 243037,
+              "p95": 243170,
+              "maximum": 243170
+            }
+          },
+          "sse": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 9406.9,
+              "p95": 9679.6,
+              "maximum": 9679.6
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 238262,
+              "p95": 239185,
+              "maximum": 239185
+            }
+          },
+          "static": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 29.7,
+              "p95": 138.9,
+              "maximum": 138.9
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 16170,
+              "p95": 16518,
+              "maximum": 16518
+            }
+          },
+          "wrapper": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 21.6,
+              "p95": 23.0,
+              "maximum": 23.0
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 16112,
+              "p95": 16434,
+              "maximum": 16434
+            }
+          },
+          "zh": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 2165.6,
+              "p95": 2260.4,
+              "maximum": 2260.4
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 243416,
+              "p95": 243978,
+              "maximum": 243978
+            }
+          }
+        }
+      },
+      "fixed": {
+        "fact_hits": 42,
+        "fact_checks": 42,
+        "latency_ms": {
+          "samples": 18,
+          "p50": 1355.35,
+          "p95": 9683.4,
+          "maximum": 9683.4
+        },
+        "task_pss_kib": {
+          "samples": 18,
+          "p50": 128335.5,
+          "p95": 243988,
+          "maximum": 243988
+        },
+        "aggregate_pss_kib": {
+          "samples": 18,
+          "p50": 128335.5,
+          "p95": 243988,
+          "maximum": 243988
+        },
+        "model_pss_kib": {
+          "samples": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "observation_statuses": {
+          "not_requested": 18
+        },
+        "by_case": {
+          "header": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 18.6,
+              "p95": 803.9,
+              "maximum": 803.9
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 17773,
+              "p95": 20053,
+              "maximum": 20053
+            }
+          },
+          "short": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 2155.8,
+              "p95": 2928.2,
+              "maximum": 2928.2
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 242905,
+              "p95": 243607,
+              "maximum": 243607
+            }
+          },
+          "sse": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 9406.6,
+              "p95": 9683.4,
+              "maximum": 9683.4
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 238445,
+              "p95": 239581,
+              "maximum": 239581
+            }
+          },
+          "static": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 18.5,
+              "p95": 131.4,
+              "maximum": 131.4
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 17801,
+              "p95": 18077,
+              "maximum": 18077
+            }
+          },
+          "wrapper": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 20.0,
+              "p95": 22.1,
+              "maximum": 22.1
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 17989,
+              "p95": 18269,
+              "maximum": 18269
+            }
+          },
+          "zh": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 2038.2,
+              "p95": 2158.7,
+              "maximum": 2158.7
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 243212,
+              "p95": 243988,
+              "maximum": 243988
+            }
+          }
+        }
+      },
+      "observation": {
+        "fact_hits": 42,
+        "fact_checks": 42,
+        "latency_ms": {
+          "samples": 18,
+          "p50": 1719.3,
+          "p95": 9907.5,
+          "maximum": 9907.5
+        },
+        "task_pss_kib": {
+          "samples": 18,
+          "p50": 128668.0,
+          "p95": 244031,
+          "maximum": 244031
+        },
+        "aggregate_pss_kib": {
+          "samples": 18,
+          "p50": 254164.5,
+          "p95": 395646,
+          "maximum": 395646
+        },
+        "model_pss_kib": {
+          "samples": 18,
+          "p50": 151716.0,
+          "p95": 151716,
+          "maximum": 151716
+        },
+        "observation_statuses": {
+          "observed": 18
+        },
+        "by_case": {
+          "header": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 495.8,
+              "p95": 1394.5,
+              "maximum": 1394.5
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 18369,
+              "p95": 19833,
+              "maximum": 19833
+            }
+          },
+          "short": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 2311.0,
+              "p95": 2808.7,
+              "maximum": 2808.7
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 243682,
+              "p95": 244031,
+              "maximum": 244031
+            }
+          },
+          "sse": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 9554.4,
+              "p95": 9907.5,
+              "maximum": 9907.5
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 239317,
+              "p95": 240358,
+              "maximum": 240358
+            }
+          },
+          "static": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 472.4,
+              "p95": 510.6,
+              "maximum": 510.6
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 18469,
+              "p95": 18737,
+              "maximum": 18737
+            }
+          },
+          "wrapper": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 486.7,
+              "p95": 494.6,
+              "maximum": 494.6
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 18185,
+              "p95": 18893,
+              "maximum": 18893
+            }
+          },
+          "zh": {
+            "latency_ms": {
+              "samples": 3,
+              "p50": 2293.9,
+              "p95": 2303.1,
+              "maximum": 2303.1
+            },
+            "task_pss_kib": {
+              "samples": 3,
+              "p50": 243525,
+              "p95": 243937,
+              "maximum": 243937
+            }
+          }
+        }
+      }
+    },
+    "warmups": [
+      {
+        "phase": "before",
+        "ms": 130.3,
+        "dimensions": 768
+      },
+      {
+        "phase": "fixed",
+        "ms": 103.6,
+        "dimensions": 768
+      },
+      {
+        "phase": "observation",
+        "ms": 93.5,
+        "dimensions": 768
+      }
+    ],
+    "rows": [
+      {
+        "phase": "before",
+        "case": "short",
+        "repeat": 0,
+        "ms": 2517.5,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243170,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243170
+      },
+      {
+        "phase": "before",
+        "case": "zh",
+        "repeat": 0,
+        "ms": 2260.4,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243978,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243978
+      },
+      {
+        "phase": "before",
+        "case": "sse",
+        "repeat": 0,
+        "ms": 9679.6,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": null,
+        "pss_kib": 239185,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 239185
+      },
+      {
+        "phase": "before",
+        "case": "header",
+        "repeat": 0,
+        "ms": 558.1,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "0241e154f1d6408b76cc76e903a8b4d89ad8503df6c52dca494b783824682231",
+        "observation": null,
+        "pss_kib": 17998,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17998
+      },
+      {
+        "phase": "before",
+        "case": "wrapper",
+        "repeat": 0,
+        "ms": 23.0,
+        "hits": 0,
+        "total": 3,
+        "text_sha256": "83b0c00bda1f7f13e2be065efcb369e6e8ef708a5efeab632081fa2558c00144",
+        "observation": null,
+        "pss_kib": 15758,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 15758
+      },
+      {
+        "phase": "before",
+        "case": "static",
+        "repeat": 0,
+        "ms": 138.9,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "83b0c00bda1f7f13e2be065efcb369e6e8ef708a5efeab632081fa2558c00144",
+        "observation": null,
+        "pss_kib": 16518,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16518
+      },
+      {
+        "phase": "before",
+        "case": "short",
+        "repeat": 1,
+        "ms": 2159.2,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243037,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243037
+      },
+      {
+        "phase": "before",
+        "case": "zh",
+        "repeat": 1,
+        "ms": 2162.4,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243416,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243416
+      },
+      {
+        "phase": "before",
+        "case": "sse",
+        "repeat": 1,
+        "ms": 9406.9,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": null,
+        "pss_kib": 238262,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 238262
+      },
+      {
+        "phase": "before",
+        "case": "header",
+        "repeat": 1,
+        "ms": 18.9,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "aa5a06c7f7f32b8cfc356b814d86baf4cc33151cc2094bc630faf7b008562a39",
+        "observation": null,
+        "pss_kib": 16468,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16468
+      },
+      {
+        "phase": "before",
+        "case": "wrapper",
+        "repeat": 1,
+        "ms": 20.7,
+        "hits": 0,
+        "total": 3,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": null,
+        "pss_kib": 16112,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16112
+      },
+      {
+        "phase": "before",
+        "case": "static",
+        "repeat": 1,
+        "ms": 21.7,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": null,
+        "pss_kib": 16076,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16076
+      },
+      {
+        "phase": "before",
+        "case": "short",
+        "repeat": 2,
+        "ms": 1920.0,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 242395,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 242395
+      },
+      {
+        "phase": "before",
+        "case": "zh",
+        "repeat": 2,
+        "ms": 2165.6,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 242060,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 242060
+      },
+      {
+        "phase": "before",
+        "case": "sse",
+        "repeat": 2,
+        "ms": 9406.3,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": null,
+        "pss_kib": 237205,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 237205
+      },
+      {
+        "phase": "before",
+        "case": "header",
+        "repeat": 2,
+        "ms": 19.1,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "aa5a06c7f7f32b8cfc356b814d86baf4cc33151cc2094bc630faf7b008562a39",
+        "observation": null,
+        "pss_kib": 16248,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16248
+      },
+      {
+        "phase": "before",
+        "case": "wrapper",
+        "repeat": 2,
+        "ms": 21.6,
+        "hits": 0,
+        "total": 3,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": null,
+        "pss_kib": 16434,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16434
+      },
+      {
+        "phase": "before",
+        "case": "static",
+        "repeat": 2,
+        "ms": 29.7,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": null,
+        "pss_kib": 16170,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 16170
+      },
+      {
+        "phase": "fixed",
+        "case": "short",
+        "repeat": 0,
+        "ms": 2928.2,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243607,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243607
+      },
+      {
+        "phase": "fixed",
+        "case": "zh",
+        "repeat": 0,
+        "ms": 2038.2,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243988,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243988
+      },
+      {
+        "phase": "fixed",
+        "case": "sse",
+        "repeat": 0,
+        "ms": 9683.4,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": null,
+        "pss_kib": 236618,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 236618
+      },
+      {
+        "phase": "fixed",
+        "case": "header",
+        "repeat": 0,
+        "ms": 803.9,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "0291316c908a9594fa41e01688ac631cb7f5d836aee457693838bb2a7d9ba876",
+        "observation": null,
+        "pss_kib": 20053,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 20053
+      },
+      {
+        "phase": "fixed",
+        "case": "wrapper",
+        "repeat": 0,
+        "ms": 22.1,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "0291316c908a9594fa41e01688ac631cb7f5d836aee457693838bb2a7d9ba876",
+        "observation": null,
+        "pss_kib": 17989,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17989
+      },
+      {
+        "phase": "fixed",
+        "case": "static",
+        "repeat": 0,
+        "ms": 131.4,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "83b0c00bda1f7f13e2be065efcb369e6e8ef708a5efeab632081fa2558c00144",
+        "observation": null,
+        "pss_kib": 18077,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 18077
+      },
+      {
+        "phase": "fixed",
+        "case": "short",
+        "repeat": 1,
+        "ms": 2155.8,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 242905,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 242905
+      },
+      {
+        "phase": "fixed",
+        "case": "zh",
+        "repeat": 1,
+        "ms": 1906.8,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 242804,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 242804
+      },
+      {
+        "phase": "fixed",
+        "case": "sse",
+        "repeat": 1,
+        "ms": 9405.5,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": null,
+        "pss_kib": 239581,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 239581
+      },
+      {
+        "phase": "fixed",
+        "case": "header",
+        "repeat": 1,
+        "ms": 18.6,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": null,
+        "pss_kib": 17773,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17773
+      },
+      {
+        "phase": "fixed",
+        "case": "wrapper",
+        "repeat": 1,
+        "ms": 19.5,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": null,
+        "pss_kib": 17905,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17905
+      },
+      {
+        "phase": "fixed",
+        "case": "static",
+        "repeat": 1,
+        "ms": 18.3,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": null,
+        "pss_kib": 17801,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17801
+      },
+      {
+        "phase": "fixed",
+        "case": "short",
+        "repeat": 2,
+        "ms": 1907.0,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 242688,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 242688
+      },
+      {
+        "phase": "fixed",
+        "case": "zh",
+        "repeat": 2,
+        "ms": 2158.7,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": null,
+        "pss_kib": 243212,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 243212
+      },
+      {
+        "phase": "fixed",
+        "case": "sse",
+        "repeat": 2,
+        "ms": 9406.6,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": null,
+        "pss_kib": 238445,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 238445
+      },
+      {
+        "phase": "fixed",
+        "case": "header",
+        "repeat": 2,
+        "ms": 18.4,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": null,
+        "pss_kib": 17589,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17589
+      },
+      {
+        "phase": "fixed",
+        "case": "wrapper",
+        "repeat": 2,
+        "ms": 20.0,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": null,
+        "pss_kib": 18269,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 18269
+      },
+      {
+        "phase": "fixed",
+        "case": "static",
+        "repeat": 2,
+        "ms": 18.5,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": null,
+        "pss_kib": 17541,
+        "model_pss_kib": null,
+        "aggregate_pss_kib": 17541
+      },
+      {
+        "phase": "observation",
+        "case": "short",
+        "repeat": 0,
+        "ms": 2808.7,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 266,
+          "input_bytes": 99,
+          "evidence_ids": [
+            "chk_3e65263662b2bc33"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.04109907252650978,
+                "not_established": 0.9580873877800725,
+                "supported": 0.000813539693417637
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 244031,
+        "model_pss_kib": 149096,
+        "aggregate_pss_kib": 336800
+      },
+      {
+        "phase": "observation",
+        "case": "zh",
+        "repeat": 0,
+        "ms": 2136.4,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 120,
+          "input_bytes": 99,
+          "evidence_ids": [
+            "chk_3e65263662b2bc33"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.04109907252650978,
+                "not_established": 0.9580873877800725,
+                "supported": 0.000813539693417637
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 243525,
+        "model_pss_kib": 149096,
+        "aggregate_pss_kib": 392614
+      },
+      {
+        "phase": "observation",
+        "case": "sse",
+        "repeat": 0,
+        "ms": 9907.5,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": {
+          "assertion": "The warranty lasts for 37 months.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 210,
+          "input_bytes": 182,
+          "evidence_ids": [
+            "chk_96799db21ec38b82"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.0005896510941831692,
+                "not_established": 0.998562697561848,
+                "supported": 0.0008476513439688736
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 239317,
+        "model_pss_kib": 150140,
+        "aggregate_pss_kib": 388406
+      },
+      {
+        "phase": "observation",
+        "case": "header",
+        "repeat": 0,
+        "ms": 1394.5,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "0291316c908a9594fa41e01688ac631cb7f5d836aee457693838bb2a7d9ba876",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 1,
+          "selection_similarity": 0.28569125492351977,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 566,
+          "input_bytes": 1173,
+          "evidence_ids": [
+            "chk_e71efa5ed452dad9"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.10034797787353661,
+                "not_established": 0.8970749504154888,
+                "supported": 0.0025770717109746726
+              }
+            }
+          },
+          "reason": "dense_semantic_selection"
+        },
+        "pss_kib": 19833,
+        "model_pss_kib": 151696,
+        "aggregate_pss_kib": 171529
+      },
+      {
+        "phase": "observation",
+        "case": "wrapper",
+        "repeat": 0,
+        "ms": 467.5,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "0291316c908a9594fa41e01688ac631cb7f5d836aee457693838bb2a7d9ba876",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 1,
+          "selection_similarity": 0.28569125492351977,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 443,
+          "input_bytes": 1173,
+          "evidence_ids": [
+            "chk_84196d88730dae1c"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.10034797787353661,
+                "not_established": 0.8970749504154888,
+                "supported": 0.0025770717109746726
+              }
+            }
+          },
+          "reason": "dense_semantic_selection"
+        },
+        "pss_kib": 18185,
+        "model_pss_kib": 151696,
+        "aggregate_pss_kib": 169881
+      },
+      {
+        "phase": "observation",
+        "case": "static",
+        "repeat": 0,
+        "ms": 510.6,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "83b0c00bda1f7f13e2be065efcb369e6e8ef708a5efeab632081fa2558c00144",
+        "observation": {
+          "assertion": "Ancient astronomers documented movements of stars.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 375,
+          "input_bytes": 1142,
+          "evidence_ids": [
+            "chk_439ba83f317a9faa"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.006366616087565421,
+                "not_established": 0.9297710470394824,
+                "supported": 0.06386233687295217
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 18737,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 170453
+      },
+      {
+        "phase": "observation",
+        "case": "short",
+        "repeat": 1,
+        "ms": 2311.0,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 148,
+          "input_bytes": 99,
+          "evidence_ids": [
+            "chk_3e65263662b2bc33"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.04109907252650978,
+                "not_established": 0.9580873877800725,
+                "supported": 0.000813539693417637
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 243682,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 395391
+      },
+      {
+        "phase": "observation",
+        "case": "zh",
+        "repeat": 1,
+        "ms": 2293.9,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 135,
+          "input_bytes": 99,
+          "evidence_ids": [
+            "chk_3e65263662b2bc33"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.04109907252650978,
+                "not_established": 0.9580873877800725,
+                "supported": 0.000813539693417637
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 243112,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 394821
+      },
+      {
+        "phase": "observation",
+        "case": "sse",
+        "repeat": 1,
+        "ms": 9525.7,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": {
+          "assertion": "The warranty lasts for 37 months.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 117,
+          "input_bytes": 182,
+          "evidence_ids": [
+            "chk_96799db21ec38b82"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.0005896510941831692,
+                "not_established": 0.998562697561848,
+                "supported": 0.0008476513439688736
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 240358,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 392067
+      },
+      {
+        "phase": "observation",
+        "case": "header",
+        "repeat": 1,
+        "ms": 495.8,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 1,
+          "selection_similarity": 0.28569125492351977,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 471,
+          "input_bytes": 1173,
+          "evidence_ids": [
+            "chk_e71efa5ed452dad9"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.10034797787353661,
+                "not_established": 0.8970749504154888,
+                "supported": 0.0025770717109746726
+              }
+            }
+          },
+          "reason": "dense_semantic_selection"
+        },
+        "pss_kib": 16345,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 168061
+      },
+      {
+        "phase": "observation",
+        "case": "wrapper",
+        "repeat": 1,
+        "ms": 494.6,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 1,
+          "selection_similarity": 0.28569125492351977,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 470,
+          "input_bytes": 1173,
+          "evidence_ids": [
+            "chk_84196d88730dae1c"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.10034797787353661,
+                "not_established": 0.8970749504154888,
+                "supported": 0.0025770717109746726
+              }
+            }
+          },
+          "reason": "dense_semantic_selection"
+        },
+        "pss_kib": 15405,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 167121
+      },
+      {
+        "phase": "observation",
+        "case": "static",
+        "repeat": 1,
+        "ms": 461.6,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": {
+          "assertion": "Ancient astronomers documented movements of stars.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 440,
+          "input_bytes": 1142,
+          "evidence_ids": [
+            "chk_439ba83f317a9faa"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.006366616087565421,
+                "not_established": 0.9297710470394824,
+                "supported": 0.06386233687295217
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 18025,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 169741
+      },
+      {
+        "phase": "observation",
+        "case": "short",
+        "repeat": 2,
+        "ms": 2044.1,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 135,
+          "input_bytes": 99,
+          "evidence_ids": [
+            "chk_3e65263662b2bc33"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.04109907252650978,
+                "not_established": 0.9580873877800725,
+                "supported": 0.000813539693417637
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 243159,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 394868
+      },
+      {
+        "phase": "observation",
+        "case": "zh",
+        "repeat": 2,
+        "ms": 2303.1,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "c4968b45cd8cb08838b46e1549bfa200ef5df24f0231e042ef33b8ab536751a4",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 135,
+          "input_bytes": 99,
+          "evidence_ids": [
+            "chk_3e65263662b2bc33"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.04109907252650978,
+                "not_established": 0.9580873877800725,
+                "supported": 0.000813539693417637
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 243937,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 395646
+      },
+      {
+        "phase": "observation",
+        "case": "sse",
+        "repeat": 2,
+        "ms": 9554.4,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "11111c4d850eb21a60f2cb39dd1318325ad4889747dea96bf712a2c22e6ea4b2",
+        "observation": {
+          "assertion": "The warranty lasts for 37 months.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 147,
+          "input_bytes": 182,
+          "evidence_ids": [
+            "chk_96799db21ec38b82"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.0005896510941831692,
+                "not_established": 0.998562697561848,
+                "supported": 0.0008476513439688736
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 237503,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 389212
+      },
+      {
+        "phase": "observation",
+        "case": "header",
+        "repeat": 2,
+        "ms": 451.3,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 1,
+          "selection_similarity": 0.28569125492351977,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 423,
+          "input_bytes": 1173,
+          "evidence_ids": [
+            "chk_e71efa5ed452dad9"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.10034797787353661,
+                "not_established": 0.8970749504154888,
+                "supported": 0.0025770717109746726
+              }
+            }
+          },
+          "reason": "dense_semantic_selection"
+        },
+        "pss_kib": 18369,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 170085
+      },
+      {
+        "phase": "observation",
+        "case": "wrapper",
+        "repeat": 2,
+        "ms": 486.7,
+        "hits": 3,
+        "total": 3,
+        "text_sha256": "745753007e73bb4a3267aed49020a8db57b61797c45d99c29c7d785acd935106",
+        "observation": {
+          "assertion": "La garanzia dura 37 mesi.",
+          "unassessed_evidence_count": 1,
+          "selection_similarity": 0.28569125492351977,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 461,
+          "input_bytes": 1173,
+          "evidence_ids": [
+            "chk_84196d88730dae1c"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.10034797787353661,
+                "not_established": 0.8970749504154888,
+                "supported": 0.0025770717109746726
+              }
+            }
+          },
+          "reason": "dense_semantic_selection"
+        },
+        "pss_kib": 18893,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 170609
+      },
+      {
+        "phase": "observation",
+        "case": "static",
+        "repeat": 2,
+        "ms": 472.4,
+        "hits": 1,
+        "total": 1,
+        "text_sha256": "df3e0d88c2bd0292731fe342f16c13a5a9510519f3308295a5d8e87f6d4b9319",
+        "observation": {
+          "assertion": "Ancient astronomers documented movements of stars.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 448,
+          "input_bytes": 1142,
+          "evidence_ids": [
+            "chk_439ba83f317a9faa"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 0.006366616087565421,
+                "not_established": 0.9297710470394824,
+                "supported": 0.06386233687295217
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "pss_kib": 18469,
+        "model_pss_kib": 151716,
+        "aggregate_pss_kib": 170185
+      }
+    ]
+  },
+  "local_release_archives": {
+    "version": "v0.1.42",
+    "go": "go1.27.1",
+    "archives": [
+      {
+        "name": "needlex_darwin_amd64.tar.gz",
+        "sha256": "352466ffcaa647f34c570f7f70e5201075fc294ed0c10d63a11705654f4c9616",
+        "bytes": 15694271,
+        "architecture_verified": true,
+        "binary_only": true
+      },
+      {
+        "name": "needlex_darwin_arm64.tar.gz",
+        "sha256": "9bbb80f0de0dfaae4cacc09a8bb6178d3d566fbf04f39e06c6b5e3e7b15de389",
+        "bytes": 14915925,
+        "architecture_verified": true,
+        "binary_only": true
+      },
+      {
+        "name": "needlex_linux_amd64.tar.gz",
+        "sha256": "302455003320638e9ad5633170e748074af48f36b1fe28c3c50a23a391a3222e",
+        "bytes": 15563139,
+        "architecture_verified": true,
+        "binary_only": true
+      },
+      {
+        "name": "needlex_linux_arm64.tar.gz",
+        "sha256": "a451f75a13131c36d96e0a8b20da9b02112f1ed19bee786defb38fa0930b4765",
+        "bytes": 14414102,
+        "architecture_verified": true,
+        "binary_only": true
+      },
+      {
+        "name": "needlex_windows_amd64.zip",
+        "sha256": "c6aef2365f33fbeb6d42036d5ff4056b6371732c0d266663a27c0f2d29182dcd",
+        "bytes": 15634629,
+        "architecture_verified": true,
+        "binary_only": true
+      },
+      {
+        "name": "needlex_windows_arm64.zip",
+        "sha256": "15eea837e24d3c8dd3c82102b6f0ff9c4e021a70e5e87502a58c8d04095c8cae",
+        "bytes": 14420022,
+        "architecture_verified": true,
+        "binary_only": true
+      }
+    ]
+  },
+  "private_installed_smoke": {
+    "binary": "/tmp/needlex-refine.cyx2SW/private-bin/needlex",
+    "checks": [
+      {
+        "surface": "mcp",
+        "phase": "ordinary",
+        "observation": null,
+        "trace_id": "trace_65fcdf085334b726",
+        "text_sha256": "c2c5bfd7a9165ed4b2bcad7f2ffb0d033d879be61ae32f0f4a154dae2461b6f3",
+        "proof_and_replay": true
+      },
+      {
+        "surface": "mcp",
+        "phase": "assertion",
+        "observation": {
+          "assertion": "The product warranty lasts for 37 months.",
+          "unassessed_evidence_count": 0,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 118,
+          "input_bytes": 158,
+          "evidence_ids": [
+            "chk_6ea44badeaf704e3"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 3.327367668368997e-06,
+                "not_established": 0.999991770964834,
+                "supported": 4.9016674974467186e-06
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "trace_id": "trace_2a627f2ba934e7dc",
+        "text_sha256": "c2c5bfd7a9165ed4b2bcad7f2ffb0d033d879be61ae32f0f4a154dae2461b6f3",
+        "proof_and_replay": true
+      },
+      {
+        "surface": "mcp",
+        "phase": "repeated",
+        "observation": {
+          "assertion": "The product warranty lasts for 37 months.",
+          "unassessed_evidence_count": 0,
+          "cache_hit": true,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 0,
+          "input_bytes": 158,
+          "evidence_ids": [
+            "chk_6ea44badeaf704e3"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 3.327367668368997e-06,
+                "not_established": 0.999991770964834,
+                "supported": 4.9016674974467186e-06
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        },
+        "trace_id": "trace_e29ec3aadd6adc08",
+        "text_sha256": "c2c5bfd7a9165ed4b2bcad7f2ffb0d033d879be61ae32f0f4a154dae2461b6f3",
+        "proof_and_replay": true
+      },
+      {
+        "surface": "mcp",
+        "phase": "query_final_only",
+        "observation": {
+          "assertion": "The product warranty lasts for 37 months.",
+          "unassessed_evidence_count": 0,
+          "cache_hit": true,
+          "status": "observed",
+          "model": "Julia-1-Q8_0",
+          "revision": "ggml-org/Julia-1-GGUF@1e6b48a6983d7467f8eedc2cb0d21267b5fc052d;sha256:1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069;llama.cpp:b11968;Q8_0",
+          "specification": "claim-support-v1",
+          "calibration": "unqualified_in_domain",
+          "elapsed_ms": 0,
+          "input_bytes": 158,
+          "evidence_ids": [
+            "chk_6ea44badeaf704e3"
+          ],
+          "answers": {
+            "support": {
+              "choice": "not_established",
+              "probabilities": {
+                "contradicted": 3.327367668368997e-06,
+                "not_established": 0.999991770964834,
+                "supported": 4.9016674974467186e-06
+              }
+            }
+          },
+          "reason": "single_eligible_evidence"
+        }
+      },
+      {
+        "surface": "cli",
+        "phase": "read",
+        "observation": {
+          "assertion": "The product warranty lasts for 37 months.",
+          "status": "observed",
+          "verdict": "not_established",
+          "evidence_ids": [
+            "chk_6ea44badeaf704e3"
+          ],
+          "unassessed_evidence_count": 0,
+          "calibration": "unqualified_in_domain",
+          "reason": "single_eligible_evidence"
+        }
+      },
+      {
+        "surface": "cli",
+        "phase": "query",
+        "observation": {
+          "assertion": "The product warranty lasts for 37 months.",
+          "status": "observed",
+          "verdict": "not_established",
+          "evidence_ids": [
+            "chk_6ea44badeaf704e3"
+          ],
+          "unassessed_evidence_count": 0,
+          "calibration": "unqualified_in_domain",
+          "reason": "single_eligible_evidence"
+        }
+      }
+    ],
+    "server": {
+      "name": "needlex",
+      "version": "v0.1.42"
+    },
+    "binary_sha256": "edb46dc4dff9b9fac7cc71ef5ebf930400d459bcf5f8578cf5f87bcf860376c9"
+  },
+  "verification": {
+    "full_suite": "pass",
+    "governance": "pass with advisory warnings",
+    "race": "pass, scoped observer memo/cancellation and MCP reuse",
+    "semantic_functional_smoke": "pass",
+    "runtime_loc": 35537,
+    "runtime_loc_hard_limit": 35600,
+    "files_over_350": 20,
+    "files_over_350_hard_limit": 21,
+    "files_over_350_target": 20,
+    "runtime_packages": 12,
+    "runtime_dependencies": 5,
+    "structural_issues": 0,
+    "toolchain": "go1.27.1, compatible with existing analyzers; installed shadowing Go1.26 analyzers and Go1.27.3 export format failed the initial check"
+  },
+  "synthetic_benchmark_observer": {
+    "invalid_before_fixture_identity_repair": {
+      "passed": false,
+      "pass_rate": 1,
+      "lane_lift_rate": 0.3333333333333333,
+      "objective_lift_avg": 0.08000000217213658,
+      "medium_or_high_risk_rate": 0,
+      "backend_case_rate": 1,
+      "backend_intervention_rate": 0.16666666666666666,
+      "backend_acceptance_rate": 1,
+      "failures": [
+        "lane_lift_rate 0.333 < 0.500"
+      ],
+      "failure_class_counts": [
+        {
+          "id": "FC02_LANE_LIFT",
+          "description": "higher lanes are not producing measurable uplift",
+          "integration_gate": "block_slm_rollout",
+          "count": 1
+        }
+      ],
+      "thresholds": {
+        "min_pass_rate": 1,
+        "min_lane_lift_rate": 0.5,
+        "min_objective_lift_avg": 0.035,
+        "max_medium_or_high_risk_rate": 0.2,
+        "min_backend_case_rate": 1
+      }
+    },
+    "corrected": {
+      "passed": true,
+      "pass_rate": 1,
+      "lane_lift_rate": 0.5,
+      "objective_lift_avg": 0.10666666918018414,
+      "medium_or_high_risk_rate": 0,
+      "backend_case_rate": 1,
+      "backend_intervention_rate": 0.16666666666666666,
+      "backend_acceptance_rate": 1,
+      "thresholds": {
+        "min_pass_rate": 1,
+        "min_lane_lift_rate": 0.5,
+        "min_objective_lift_avg": 0.035,
+        "max_medium_or_high_risk_rate": 0.2,
+        "min_backend_case_rate": 1
+      }
+    },
+    "policy_changed": false,
+    "meaning": "Fixture identity repair only; not real model calibration or Julia qualification"
+  },
+  "development_reference_warmup": {
+    "ms": 3168,
+    "dimensions": 768,
+    "nonzero": true
+  },
+  "pre_upgrade_config_sha256": "b1d40beb6a52e311b0338696b0ec40bdee3f0fe278cc7a6d69032ab13739020e"
+}

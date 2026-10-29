@@ -99,7 +99,6 @@ func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL str
 		FetchRetryProfile: req.FetchRetryProfile,
 		UserAgent:         req.UserAgent,
 		ForceLane:         req.ForceLane,
-		PruningProfile:    req.PruningProfile,
 		RenderHint:        req.RenderHint,
 		RenderMode:        req.RenderMode,
 	}

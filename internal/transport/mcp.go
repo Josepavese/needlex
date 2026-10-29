@@ -134,6 +134,7 @@ func (r Runner) runMCP(args []string, stdout, stderr io.Writer) (exitCode int) {
 	}()
 
 	r.renderers = r.newMCPRenderRuntime()
+	r.services = &serviceRuntime{}
 	defer func() {
 		if err := r.renderers.Close(); err != nil {
 			r.logMCPError("mcp_shutdown", "mcp.render_cleanup_failed", err, nil)

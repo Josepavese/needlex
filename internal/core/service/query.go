@@ -25,16 +25,16 @@ const (
 )
 
 type QueryRequest struct {
-	Goal, SeedURL, SeedTraceID, Profile, UserAgent, DiscoveryMode, PruningProfile string
-	RenderMode                                                                    string
-	FetchProfile, FetchRetryProfile                                               string
-	DomainHints                                                                   []string
-	SearchQueries                                                                 []string            `json:"-"`
-	MemoryCandidates                                                              []DiscoverCandidate `json:"-"`
-	SeedStable, SeedNovelty                                                       float64
-	SeedChanged, RenderHint                                                       bool
-	ForceLane                                                                     int
-	FingerprintEvidenceLoader                                                     func(string) (QueryFingerprintEvidence, bool) `json:"-"`
+	Goal, Assertion, SeedURL, SeedTraceID, Profile, UserAgent, DiscoveryMode string
+	RenderMode                                                               string
+	FetchProfile, FetchRetryProfile                                          string
+	DomainHints                                                              []string
+	SearchQueries                                                            []string            `json:"-"`
+	MemoryCandidates                                                         []DiscoverCandidate `json:"-"`
+	SeedStable, SeedNovelty                                                  float64
+	SeedChanged, RenderHint                                                  bool
+	ForceLane                                                                int
+	FingerprintEvidenceLoader                                                func(string) (QueryFingerprintEvidence, bool) `json:"-"`
 }
 
 type QueryFingerprintEvidence = queryflow.FingerprintEvidence
@@ -105,7 +105,7 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 		}
 		return QueryResponse{}, err
 	}
-	if err := s.observeReadDecision(ctx, req.Goal, &readResp); err != nil {
+	if err := s.observeReadDecision(ctx, req.Assertion, &readResp); err != nil {
 		return QueryResponse{}, err
 	}
 	return finalizeQueryResponse(plan, baseCompiler, discoveryResult.candidates, readResp)
@@ -247,25 +247,8 @@ func annotateQueryReadFallback(plan *QueryPlan, previousURL, selectedURL, errorK
 }
 
 func (r QueryRequest) withQueries(queries []string) QueryRequest {
-	return QueryRequest{
-		Goal:                      r.Goal,
-		SeedURL:                   r.SeedURL,
-		SeedTraceID:               r.SeedTraceID,
-		Profile:                   r.Profile,
-		FetchProfile:              r.FetchProfile,
-		FetchRetryProfile:         r.FetchRetryProfile,
-		UserAgent:                 r.UserAgent,
-		DiscoveryMode:             r.DiscoveryMode,
-		PruningProfile:            r.PruningProfile,
-		DomainHints:               append([]string{}, r.DomainHints...),
-		SearchQueries:             append([]string{}, queries...),
-		MemoryCandidates:          append([]DiscoverCandidate{}, r.MemoryCandidates...),
-		SeedStable:                r.SeedStable,
-		SeedNovelty:               r.SeedNovelty,
-		SeedChanged:               r.SeedChanged,
-		RenderHint:                r.RenderHint,
-		RenderMode:                r.RenderMode,
-		ForceLane:                 r.ForceLane,
-		FingerprintEvidenceLoader: r.FingerprintEvidenceLoader,
-	}
+	r.DomainHints = append([]string{}, r.DomainHints...)
+	r.SearchQueries = append([]string{}, queries...)
+	r.MemoryCandidates = append([]DiscoverCandidate{}, r.MemoryCandidates...)
+	return r
 }

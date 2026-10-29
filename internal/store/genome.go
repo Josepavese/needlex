@@ -18,7 +18,6 @@ type DomainGenome struct {
 	PreferredProfile  string    `json:"preferred_profile,omitempty"`
 	FetchProfile      string    `json:"fetch_profile,omitempty"`
 	FetchRetryProfile string    `json:"fetch_retry_profile,omitempty"`
-	PruningProfile    string    `json:"pruning_profile,omitempty"`
 	RenderNeeded      bool      `json:"render_needed,omitempty"`
 	NoiseLevel        string    `json:"noise_level,omitempty"`
 	SeenCount         int       `json:"seen_count"`
@@ -32,7 +31,6 @@ type GenomeObservation struct {
 	PreferredProfile  string
 	FetchProfile      string
 	FetchRetryProfile string
-	PruningProfile    string
 	RenderNeeded      bool
 	FetchMode         string
 	NoiseLevel        string
@@ -103,9 +101,6 @@ func (s GenomeStore) Observe(observation GenomeObservation) (DomainGenome, strin
 	if strings.TrimSpace(observation.FetchRetryProfile) != "" {
 		genome.FetchRetryProfile = observation.FetchRetryProfile
 	}
-	if pruningProfile := resolvePruningProfile(observation); pruningProfile != "" {
-		genome.PruningProfile = pruningProfile
-	}
 	if observation.FetchMode == "render" || observation.RenderNeeded {
 		genome.RenderNeeded = true
 	}
@@ -133,11 +128,6 @@ func (g DomainGenome) Validate() error {
 	}
 	if g.SeenCount < 0 {
 		return fmt.Errorf("seen_count must be >= 0")
-	}
-	switch strings.TrimSpace(g.PruningProfile) {
-	case "", "standard", "aggressive", "forum":
-	default:
-		return fmt.Errorf("pruning_profile must be one of %q, %q, or %q", "standard", "aggressive", "forum")
 	}
 	switch strings.TrimSpace(g.FetchProfile) {
 	case "", "standard", "browser_like", "hardened":
@@ -167,16 +157,4 @@ func domainFromURL(rawURL string) (string, error) {
 		return "", fmt.Errorf("url hostname is required")
 	}
 	return strings.ToLower(parsed.Hostname()), nil
-}
-
-func resolvePruningProfile(observation GenomeObservation) string {
-	if strings.TrimSpace(observation.PruningProfile) != "" {
-		return observation.PruningProfile
-	}
-	switch {
-	case strings.EqualFold(observation.NoiseLevel, "high"):
-		return "aggressive"
-	default:
-		return "standard"
-	}
 }

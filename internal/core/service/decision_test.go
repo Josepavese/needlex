@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync/atomic"
 	"testing"
 
+	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
 )
@@ -16,6 +19,38 @@ type auditObserver struct {
 	input intel.DecisionInput
 	fail  bool
 	calls int
+}
+
+func TestDecisionSelectionFailureDoesNotCoolDownLaterRetrieval(t *testing.T) {
+	var attempted atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !attempted.Swap(true) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		var request struct {
+			Input []string `json:"input"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&request)
+		vectors := make([][]float32, len(request.Input))
+		for i := range vectors {
+			vectors[i] = []float32{1, 0, 0}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": vectors})
+	}))
+	defer server.Close()
+	cfg := testConfig()
+	cfg.Semantic.EmbeddingURL = server.URL
+	cfg.Decision = config.DecisionConfig{Mode: "observe", BaseURL: server.URL, Model: "Julia", Revision: "pin", TimeoutMS: 1000, MaxQuestionTokens: 256, MaxInputBytes: 1000}
+	svc := newTestService(t, cfg, server.Client())
+	_, err := svc.decisionObserver.Observe(t.Context(), intel.DecisionInput{Assertion: "audit assertion", Evidence: []intel.DecisionEvidence{{ID: "a", Text: "first audit passage"}, {ID: "b", Text: "second audit passage"}}})
+	if err == nil {
+		t.Fatal("failed advisory semantic request was hidden")
+	}
+	scores, err := svc.semantic.Score(t.Context(), "independent retrieval objective", []intel.SemanticCandidate{{ID: "new", Text: "independent retrieval passage"}})
+	if err != nil || len(scores) != 1 {
+		t.Fatalf("advisory failure disabled later dense retrieval: %#v %v", scores, err)
+	}
 }
 
 func (o *auditObserver) Observe(_ context.Context, input intel.DecisionInput) (intel.DecisionObservation, error) {
@@ -35,7 +70,7 @@ func TestReadDecisionObserverCannotChangeCompiledEvidence(t *testing.T) {
 	}))
 	defer server.Close()
 	svc := newTestService(t, testConfig(), server.Client())
-	request := ReadRequest{URL: server.URL, Objective: "Warranty and returns", Profile: core.ProfileDeep, RenderMode: "off"}
+	request := ReadRequest{URL: server.URL, Objective: "Warranty and returns", Assertion: "Warranty lasts37months", Profile: core.ProfileDeep, RenderMode: "off"}
 	baseline, err := svc.Read(t.Context(), request)
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +82,7 @@ func TestReadDecisionObserverCannotChangeCompiledEvidence(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if observer.calls != 1 || observer.input.Objective != request.Objective || len(observer.input.Evidence) != len(response.ResultPack.Chunks) {
+		if observer.calls != 1 || observer.input.Assertion != request.Assertion || len(observer.input.Evidence) != len(response.ResultPack.Chunks) {
 			t.Fatal("audit lost evidence or was repeated")
 		}
 		if fail && response.AgentContext.Decision.Status != "unavailable" {

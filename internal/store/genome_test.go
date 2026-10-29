@@ -29,9 +29,6 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 	if genome.ForceLane != 1 {
 		t.Fatalf("expected force lane 1, got %d", genome.ForceLane)
 	}
-	if genome.PruningProfile != "standard" {
-		t.Fatalf("expected standard pruning profile, got %q", genome.PruningProfile)
-	}
 
 	loaded, err := store.LoadByURL("https://example.com/anything")
 	if err != nil {
@@ -42,7 +39,7 @@ func TestGenomeStoreObserveAndLoad(t *testing.T) {
 	}
 }
 
-func TestGenomeStoreDerivesAggressiveNoiseAndRenderHints(t *testing.T) {
+func TestGenomeStorePreservesNoiseAndRenderObservations(t *testing.T) {
 	root := t.TempDir()
 	store := NewGenomeStore(root)
 	store.now = func() time.Time { return time.Unix(1700000000, 0).UTC() }
@@ -57,8 +54,8 @@ func TestGenomeStoreDerivesAggressiveNoiseAndRenderHints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("observe genome: %v", err)
 	}
-	if genome.PruningProfile != "aggressive" {
-		t.Fatalf("expected aggressive pruning profile, got %q", genome.PruningProfile)
+	if genome.NoiseLevel != "high" {
+		t.Fatal("noise observations must remain available without destructive pruning")
 	}
 	if !genome.RenderNeeded {
 		t.Fatal("expected render hint to be persisted")

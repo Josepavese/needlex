@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.41
+version: v0.1.42
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -169,12 +169,29 @@ Reinstalling that way requires removing or renaming the existing copy first, sin
 
 ## Optional local decision observations
 
-When configured, `agent_context.decision_observation` contains a local Julia audit
-of objective relevance, evidence coverage and source support. It is advisory and
-unqualified on this domain: it does not change ranking, rendering, confidence or
-content. Probability is neither cosine similarity nor verified correctness.
-Do not discard evidence or certify an external fact from this audit. Its model,
-revision, specification, calibration status, evidence IDs, distributions and
-latency are also saved in the trace. `input_budget_exceeded`,
-`prompt_budget_exceeded`, `insufficient_input` and `unavailable` mean that no
-successful audit was obtained; they do not mean the source is empty or invalid.
+Ordinary reads and queries do not invoke Julia. To request an experimental,
+source-scoped check, supply one factual `assertion` to `web_read`/`web_query`
+(CLI: `--assertion`). Keep `objective`/`goal` focused on the evidence you need;
+the assertion does not change retrieval or its objective.
+
+With local observation configured, dense embeddings select one whole evidence
+unit that fits the model budget, including its headings. `claim-support-v1`
+returns `supported`, `contradicted` or `not_established` for that passage only.
+The compact packet exposes `decision_observation` with the assertion, status,
+verdict, evidence IDs, calibration and count of unassessed units. Other units
+were not checked. A contradiction elsewhere may remain unexamined; a missing
+fact in one passage is not proof that the full page lacks it.
+
+Julia remains `unqualified_in_domain`. On the held-out qualification set it
+never identified a supported claim; do not use it to certify truth, filter
+content, skip rendering or change ranking. Probabilities are not verified
+correctness or embedding similarity. Full distributions, model/revision,
+selection similarity, cache status and latency remain in
+`agent_context.decision_observation` and the trace.
+
+`disabled`, `input_budget_exceeded`, `prompt_budget_exceeded`,
+`insufficient_input`, `selection_unavailable` and `unavailable` mean no successful
+check, not invalid or empty source content. Text is never cut to fit. Successful
+answers are cached in memory for the current MCP service and model/specification;
+configuration replacement invalidates that bounded cache. Ordinary retrieval,
+Chromium contexts, proofs and captured application data retain their contracts.

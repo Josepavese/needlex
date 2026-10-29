@@ -64,8 +64,8 @@ func TestReadGoldenForumDeep(t *testing.T) {
 	if resp.ResultPack.Profile != core.ProfileDeep {
 		t.Fatalf("expected deep profile, got %q", resp.ResultPack.Profile)
 	}
-	if len(resp.ResultPack.Chunks) != 3 {
-		t.Fatalf("expected deep profile to keep all 3 forum chunks, got %d", len(resp.ResultPack.Chunks))
+	if len(resp.ResultPack.Chunks) != 4 {
+		t.Fatalf("expected all 3 forum chunks plus retained header context, got %d", len(resp.ResultPack.Chunks))
 	}
 	if !containsLine(resp.ResultPack.Outline, "Troubleshooting") {
 		t.Fatalf("expected troubleshooting heading, got %#v", resp.ResultPack.Outline)
@@ -517,12 +517,12 @@ func naiveBaselineText(rawHTML string) string {
 }
 
 func reducedBaselineText(rawHTML string) string {
-	dom, err := pipeline.Reducer{}.ReduceProfile(pipeline.RawPage{
+	dom, err := pipeline.Reducer{}.Reduce(pipeline.RawPage{
 		URL:       "https://example.com/article",
 		FinalURL:  "https://example.com/article",
 		HTML:      rawHTML,
 		FetchMode: core.FetchModeHTTP,
-	}, "standard")
+	})
 	if err != nil {
 		return ""
 	}

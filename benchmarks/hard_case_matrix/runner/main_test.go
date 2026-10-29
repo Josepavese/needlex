@@ -451,8 +451,14 @@ func runReadMetrics(html string, expected []string, objectiveReference string, r
 		return metrics{}, err
 	}
 	packed := mergeChunkText(resp.ResultPack.Chunks)
-	fidelity := semanticReferenceScore(cfg, client, strings.Join(expected, "\n"), packed)
-	objectiveScore := semanticReferenceScore(cfg, client, objectiveReference, packed)
+	fidelity, err := semanticReferenceScore(cfg, client, strings.Join(expected, "\n"), packed)
+	if err != nil {
+		return metrics{}, err
+	}
+	objectiveScore, err := semanticReferenceScore(cfg, client, objectiveReference, packed)
+	if err != nil {
+		return metrics{}, err
+	}
 	interventions, accepted, rejected, tasks := interventionMetrics(resp.Trace)
 	result := metrics{
 		MaxLane:               maxLane(resp.ResultPack.CostReport.LanePath),
@@ -514,11 +520,13 @@ var hardCaseExactEmbeddingAxes = map[string]int{
 	"company profile":                0,
 	"runtime agents proof context":   0,
 	"runtime agents proof auditable": 0,
-	"needle-x compiles noisy pages into compact proof-carrying context for agents":                   0,
-	"needle-x compiles noisy public pages compact context agents proof replay auditable operators":   0,
-	"forum replay drift troubleshooting":                                                             1,
-	"replay hashes proof deterministic":                                                              1,
-	"compare stage hashes first inspect proof records by chunk id replay became deterministic again": 1,
+	"needle-x compiles noisy pages into compact proof-carrying context for agents":                        0,
+	"needle-x compiles noisy pages into compact proof-carrying context for agents.":                       0,
+	"needle-x compiles noisy public pages compact context agents proof replay auditable operators":        0,
+	"needle-x compiles noisy public pages compact context agents keeps proof replay auditable operators.": 0,
+	"forum replay drift troubleshooting":                                                                  1,
+	"replay hashes proof deterministic":                                                                   1,
+	"compare stage hashes first inspect proof records by chunk id replay became deterministic again":      1,
 	"pricing audit":        2,
 	"starter replay trace": 2,
 	"starter includes local replay and trace export": 2,
@@ -527,7 +535,8 @@ var hardCaseExactEmbeddingAxes = map[string]int{
 	"freeze the crawler rollout restore the previous selector pack compare fresh snapshots before reopening traffic": 3,
 	"capability capture diff":   4,
 	"capture diff proof search": 4,
-	"capture pages locally proof every chunk diff every rerun search minimal tokens": 4,
+	"capture pages locally proof every chunk diff every rerun search minimal tokens":  4,
+	"capture pages locally proof every chunk diff every rerun search minimal tokens.": 4,
 	"release delta export":                  5,
 	"support acquisition retry":             6,
 	"feature comparison":                    7,
@@ -538,9 +547,13 @@ var hardCaseExactEmbeddingAxes = map[string]int{
 }
 
 var hardCaseExactEmbeddingVectors = map[string][]float32{
-	normalizeFixtureText("A user reports that the replay stage changed after a docs site updated its hero block.\nCompare stage hashes first. If only reduce changed, the issue is usually harmless layout churn.\n\nIf pack changed too, inspect proof records by chunk id and confirm selector stability.\nThe team pinned a new reduce rule and replay became deterministic again on the next run."): hardCaseAxisVector(1, 0.84),
-	normalizeFixtureText("A user reports that the replay stage changed after a docs site updated its hero block\nCompare stage hashes first\nThe team pinned a new reduce rule and replay became deterministic again on the next run"):                                                                                                                                                                  hardCaseAxisVector(1, 1.0),
-	normalizeFixtureText("Starter includes local replay and trace export.\n\nEnterprise adds audit streams and operator snapshots."):                                                                                                                                                                                                                                                                    hardCaseAxisVector(2, 0.78),
+	// Whole-packet references now include the visible forum header. The header
+	// changes neither the annotated topic nor the body-only semantic judgment.
+	normalizeFixtureText("A user reports that the replay stage changed after a docs site updated its hero block.\nCompare stage hashes first. If only reduce changed, the issue is usually harmless layout churn.\n\nIf pack changed too, inspect proof records by chunk id and confirm selector stability.\nCommunity Forum Search\nThe team pinned a new reduce rule and replay became deterministic again on the next run."): hardCaseAxisVector(1, 0.84),
+	normalizeFixtureText("A user reports that the replay stage changed after a docs site updated its hero block\nCompare stage hashes first\nCommunity Forum Search\nThe team pinned a new reduce rule and replay became deterministic again on the next run"):                                                                                                                                                                  hardCaseAxisVector(1, 1.0),
+	normalizeFixtureText("A user reports that the replay stage changed after a docs site updated its hero block.\nCompare stage hashes first. If only reduce changed, the issue is usually harmless layout churn.\n\nIf pack changed too, inspect proof records by chunk id and confirm selector stability.\nThe team pinned a new reduce rule and replay became deterministic again on the next run."):                         hardCaseAxisVector(1, 0.84),
+	normalizeFixtureText("A user reports that the replay stage changed after a docs site updated its hero block\nCompare stage hashes first\nThe team pinned a new reduce rule and replay became deterministic again on the next run"):                                                                                                                                                                                          hardCaseAxisVector(1, 1.0),
+	normalizeFixtureText("Starter includes local replay and trace export.\n\nEnterprise adds audit streams and operator snapshots."):                                                                                                                                                                                                                                                                                            hardCaseAxisVector(2, 0.78),
 	normalizeFixtureText("Starter includes local replay and trace export."): hardCaseAxisVector(2, 1.0),
 	normalizeFixtureText("Operator checklist: freeze the crawler rollout, restore the previous selector pack, compare fresh snapshots before reopening traffic.\n\nOperators noticed drift after a rollout.\n\nSeveral replies discuss unrelated tooling but the remediation stayed the same."): hardCaseAxisVector(3, 0.74),
 	normalizeFixtureText("Operator checklist: freeze the crawler rollout, restore the previous selector pack, compare fresh snapshots before reopening traffic"):                                                                                                                                hardCaseAxisVector(3, 1.0),
@@ -725,11 +738,18 @@ func mergeChunkText(chunks []core.Chunk) string {
 	return strings.Join(parts, "\n")
 }
 
-func semanticReferenceScore(cfg config.Config, client *http.Client, objective, text string) float64 {
+func semanticReferenceScore(cfg config.Config, client *http.Client, objective, text string) (float64, error) {
 	objective = strings.TrimSpace(objective)
 	text = strings.TrimSpace(text)
 	if objective == "" || text == "" {
-		return 0
+		return 0, fmt.Errorf("empty semantic reference input")
+	}
+	if !useLiveBackend() {
+		for _, input := range []string{objective, text} {
+			if !slices.ContainsFunc(hardCaseEmbeddingVector(input), func(v float32) bool { return v != 0 }) {
+				return 0, fmt.Errorf("unannotated dense reference fixture: %q", input)
+			}
+		}
 	}
 	aligner := intel.NewSemanticAligner(cfg, client)
 	alignment, err := aligner.Align(context.Background(), objective, []intel.SemanticCandidate{{
@@ -737,9 +757,22 @@ func semanticReferenceScore(cfg config.Config, client *http.Client, objective, t
 		Text: text,
 	}})
 	if err != nil {
-		return 0
+		return 0, err
 	}
-	return alignment.TopSimilarity
+	if alignment.TopID == "" {
+		return 0, fmt.Errorf("dense reference score unavailable")
+	}
+	return alignment.TopSimilarity, nil
+}
+
+func TestUnannotatedReferenceCannotBecomeZeroSimilarity(t *testing.T) {
+	if useLiveBackend() {
+		t.Skip("fixture reference check uses the offline adapter")
+	}
+	_, err := semanticReferenceScore(config.Defaults(), nil, "company profile", "an unannotated packet variation")
+	if err == nil {
+		t.Fatal("missing fixture annotation became a numerical quality result")
+	}
 }
 
 func contextDensity(score float64, text string) float64 {

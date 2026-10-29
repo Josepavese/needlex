@@ -18,7 +18,6 @@ func TestPrepareReadRequestWithLocalStateAppliesGenome(t *testing.T) {
 		PreferredProfile:  "tiny",
 		FetchProfile:      "hardened",
 		FetchRetryProfile: "hardened",
-		PruningProfile:    "aggressive",
 		RenderNeeded:      true,
 	})
 	if err != nil {
@@ -34,9 +33,6 @@ func TestPrepareReadRequestWithLocalStateAppliesGenome(t *testing.T) {
 	}
 	if req.FetchProfile != "hardened" || req.FetchRetryProfile != "hardened" {
 		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
-	}
-	if req.PruningProfile != "aggressive" {
-		t.Fatalf("expected pruning aggressive, got %q", req.PruningProfile)
 	}
 	if !req.RenderHint {
 		t.Fatal("expected render hint true")
@@ -59,7 +55,7 @@ func TestPrepareReadRequestWithLocalStateLoadsStableFingerprints(t *testing.T) {
 
 func TestObserveReadResponseWithLocalStatePersistsArtifacts(t *testing.T) {
 	root := t.TempDir()
-	req := ReadRequest{PruningProfile: "standard"}
+	req := ReadRequest{}
 	resp := ReadResponse{
 		Document: core.Document{
 			URL:       "https://example.com/docs",
@@ -128,7 +124,6 @@ func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 		PreferredProfile:  "tiny",
 		FetchProfile:      "browser_like",
 		FetchRetryProfile: "hardened",
-		PruningProfile:    "forum",
 		RenderNeeded:      true,
 	})
 	if err != nil {
@@ -145,9 +140,6 @@ func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 	if req.FetchProfile != "browser_like" || req.FetchRetryProfile != "hardened" {
 		t.Fatalf("expected fetch profiles from genome, got %q/%q", req.FetchProfile, req.FetchRetryProfile)
 	}
-	if req.PruningProfile != "forum" {
-		t.Fatalf("expected pruning forum, got %q", req.PruningProfile)
-	}
 	if !req.RenderHint {
 		t.Fatal("expected render hint true")
 	}
@@ -155,7 +147,7 @@ func TestPrepareCrawlRequestWithLocalStateAppliesGenome(t *testing.T) {
 
 func TestObserveCrawlResponseWithLocalStatePersistsGenome(t *testing.T) {
 	root := t.TempDir()
-	req := CrawlRequest{PruningProfile: "standard"}
+	req := CrawlRequest{}
 	resp := CrawlResponse{
 		Pages: []ReadResponse{
 			{

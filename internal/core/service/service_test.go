@@ -448,7 +448,7 @@ func TestReadUsesBrowserLikeUserAgentWhenRenderHintIsSet(t *testing.T) {
 	}
 }
 
-func TestReadAppliesAggressivePruningProfile(t *testing.T) {
+func TestReadPreservesVisibleTextInDecorativeContainers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprint(w, `<html><head><title>Needle Runtime</title></head><body><div class="hero-banner">Hero chrome</div><article><h1>Needle Runtime</h1><p>Useful compact context.</p></article></body></html>`)
@@ -464,18 +464,18 @@ func TestReadAppliesAggressivePruningProfile(t *testing.T) {
 	}
 
 	resp, err := svc.Read(context.Background(), ReadRequest{
-		URL:            server.URL,
-		Profile:        core.ProfileTiny,
-		PruningProfile: "aggressive",
+		URL:     server.URL,
+		Profile: core.ProfileTiny,
 	})
 	if err != nil {
 		t.Fatalf("read failed: %v", err)
 	}
 	for _, chunk := range resp.ResultPack.Chunks {
 		if strings.Contains(chunk.Text, "Hero chrome") {
-			t.Fatalf("expected aggressive pruning to remove hero content, got %q", chunk.Text)
+			return
 		}
 	}
+	t.Fatal("visible content was dropped because of CSS names")
 }
 
 func TestReadDoesNotRecoverFromCustomAppShellEmbeddedPayload(t *testing.T) {

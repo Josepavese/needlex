@@ -767,6 +767,7 @@ func TestQueryDiscoveryOffKeepsSeedURL(t *testing.T) {
 
 	resp, err := svc.Query(context.Background(), QueryRequest{
 		Goal:          "proof replay deterministic",
+		Assertion:     "The page describes proof replay",
 		SeedURL:       server.URL,
 		Profile:       core.ProfileTiny,
 		DiscoveryMode: QueryDiscoveryOff,

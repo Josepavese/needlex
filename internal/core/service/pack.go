@@ -239,10 +239,7 @@ func selectProfile(ranked []rankedSegment, profile string) []rankedSegment {
 func profileSelectionEligible(profile string, item rankedSegment) bool {
 	switch item.segment.Kind {
 	case "context", "navigation", "asset_reference":
-		if item.chunk.ContextAlignment >= 0.35 {
-			return true
-		}
-		return profile == core.ProfileDeep && item.chunk.ContextAlignment > 0
+		return profile == core.ProfileDeep || item.chunk.ContextAlignment >= 0.35
 	default:
 		return true
 	}

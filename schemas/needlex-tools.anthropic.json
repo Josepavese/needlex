@@ -98,6 +98,10 @@
           }
         ],
         "properties": {
+          "assertion": {
+            "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
+            "type": "string"
+          },
           "discovery_mode": {
             "description": "Discovery strategy. same_site_links = follow links from the seed site. off = do not expand beyond an exact verified seed URL. web_search = EXPERIMENTAL seedless public bootstrap and must be selected explicitly when seed_url is omitted; never choose it automatically.",
             "enum": [
@@ -163,6 +167,10 @@
           }
         ],
         "properties": {
+          "assertion": {
+            "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
+            "type": "string"
+          },
           "objective": {
             "type": "string"
           },

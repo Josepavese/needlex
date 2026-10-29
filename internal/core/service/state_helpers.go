@@ -8,7 +8,7 @@ import (
 	"github.com/josepavese/needlex/internal/store"
 )
 
-func applyGenomeHints(forceLane *int, profile, fetchProfile, fetchRetryProfile, pruningProfile *string, renderHint *bool, genome store.DomainGenome) {
+func applyGenomeHints(forceLane *int, profile, fetchProfile, fetchRetryProfile *string, renderHint *bool, genome store.DomainGenome) {
 	if *forceLane == 0 {
 		*forceLane = genome.ForceLane
 	}
@@ -21,17 +21,14 @@ func applyGenomeHints(forceLane *int, profile, fetchProfile, fetchRetryProfile, 
 	if *fetchRetryProfile == "" && genome.FetchRetryProfile != "" {
 		*fetchRetryProfile = genome.FetchRetryProfile
 	}
-	if *pruningProfile == "" && genome.PruningProfile != "" {
-		*pruningProfile = genome.PruningProfile
-	}
 	if !*renderHint && genome.RenderNeeded {
 		*renderHint = true
 	}
 }
 
-func loadGenomeHints(genomes store.Genomes, rawURL string, forceLane *int, profile, fetchProfile, fetchRetryProfile, pruningProfile *string, renderHint *bool) {
+func loadGenomeHints(genomes store.Genomes, rawURL string, forceLane *int, profile, fetchProfile, fetchRetryProfile *string, renderHint *bool) {
 	if genome, err := genomes.LoadByURL(rawURL); err == nil {
-		applyGenomeHints(forceLane, profile, fetchProfile, fetchRetryProfile, pruningProfile, renderHint, genome)
+		applyGenomeHints(forceLane, profile, fetchProfile, fetchRetryProfile, renderHint, genome)
 	}
 }
 
@@ -58,14 +55,13 @@ func observeGenome(genomes store.Genomes, observation store.GenomeObservation) {
 	_, _, _ = genomes.Observe(observation)
 }
 
-func genomeObservation(document core.Document, trace proof.RunTrace, pack core.ResultPack, pruningProfile string, renderHint bool) store.GenomeObservation {
+func genomeObservation(document core.Document, trace proof.RunTrace, pack core.ResultPack, renderHint bool) store.GenomeObservation {
 	return store.GenomeObservation{
 		URL:               document.FinalURL,
 		ObservedLane:      maxLane(pack.CostReport.LanePath),
 		PreferredProfile:  pack.Profile,
 		FetchProfile:      traceMetadata(trace, "acquire", "fetch_profile"),
 		FetchRetryProfile: traceMetadata(trace, "acquire", "retry_profile"),
-		PruningProfile:    pruningProfile,
 		RenderNeeded:      renderHint,
 		FetchMode:         document.FetchMode,
 		NoiseLevel:        traceMetadata(trace, "pack", "noise_level"),

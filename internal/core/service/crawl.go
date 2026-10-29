@@ -23,7 +23,6 @@ type CrawlRequest struct {
 	MaxDepth          int
 	SameDomain        bool
 	ForceLane         int
-	PruningProfile    string
 	RenderHint        bool
 	RenderMode        string
 }
@@ -118,7 +117,6 @@ func (s *Service) readCrawlNode(ctx context.Context, req CrawlRequest, profile, 
 		FetchRetryProfile: req.FetchRetryProfile,
 		UserAgent:         req.UserAgent,
 		ForceLane:         req.ForceLane,
-		PruningProfile:    req.PruningProfile,
 		RenderHint:        req.RenderHint,
 		RenderMode:        req.RenderMode,
 	})

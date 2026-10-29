@@ -93,7 +93,7 @@ class MCP:
         try:
             result = self.rpc("tools/call", dict(name="web_read", arguments=dict(
                 url=case["url"], objective=case["objective"], profile="deep", render="auto",
-                config_path=self.config)))
+                config_path=self.config, assertion=case.get("assertion", ""))))
         except MCPError as error:
             return dict(tool_error=error.details)
         if result.get("isError"):
@@ -112,7 +112,8 @@ class MCP:
                     text_sha256=hashlib.sha256(text.encode()).hexdigest(),
                     snapshot=text[:SNAPSHOT_CHARACTERS], snapshot_complete=len(text) <= SNAPSHOT_CHARACTERS,
                     observation=observation, signals=full.get("signals"), render=render,
-                    trace_audit_matches=bool(observation and len(audits) == 1 and
+                    coverage={marker: marker in text for marker in case.get("coverage_markers", [])},
+                    trace_audit_matches=(observation is None and not audits) or bool(observation and len(audits) == 1 and
                         json.loads(audits[0]["data"]["observation"]) == observation),
                     proof_file_nonempty=bool(proofs), proof_refs=full.get("proof_refs"),
                     chunk_ids=[c["id"] for c in chunks])
@@ -136,10 +137,25 @@ def main():
     parser.add_argument("--corpus", required=True, action="append", type=Path)
     parser.add_argument("--model-pid", required=True, type=int)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--assertions", type=Path, help="prepared claim corpus; request its supported assertions on matching URLs")
+    parser.add_argument("--coverage-anchors", type=Path, help="frozen source excerpts; record exact presence in the complete compiled text, not just its bounded snapshot")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--limit", type=int, help="optional admission smoke before resuming the full corpus")
     args = parser.parse_args()
     all_cases = cases(args.corpus)
+    if args.coverage_anchors:
+        anchors = json.loads(args.coverage_anchors.read_text())
+        by_url = {}
+        for anchor in anchors:
+            by_url.setdefault(anchor["source"]["url"], []).append(anchor["quote"])
+        for case in all_cases:
+            case["coverage_markers"] = by_url.get(case["url"], [])
+    if args.assertions:
+        checks = json.loads(args.assertions.read_text())
+        by_url = {case["source"]["url"]: case["input"]["assertion"] for case in checks if case["expected"]["support"] == "supported"}
+        for case in all_cases:
+            if case["url"] in by_url:
+                case["assertion"] = by_url[case["url"]]
     with tempfile.TemporaryDirectory(prefix="needlex-live-audit.") as temporary:
         with tempfile.TemporaryFile() as errors:
             identity_client = MCP(args.binary.resolve(), args.config.resolve(), Path(temporary), errors)
@@ -148,7 +164,9 @@ def main():
             finally:
                 identity_client.close()
     identity = hashlib.sha256(bytes.fromhex(binary_sha256) + args.config.read_bytes() +
-                              b"".join(p.read_bytes() for p in args.corpus)).hexdigest()
+                              b"".join(p.read_bytes() for p in args.corpus) +
+                              (args.assertions.read_bytes() if args.assertions else b"") +
+                              (args.coverage_anchors.read_bytes() if args.coverage_anchors else b"")).hexdigest()
     completed = []
     if args.resume:
         completed = [json.loads(line) for line in args.out.read_text().splitlines()]

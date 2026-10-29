@@ -48,7 +48,7 @@ func TestReducerTextRecoveryRespectsVisibilityAndInertSubtrees(t *testing.T) {
 		parts = append(parts, node.Text)
 	}
 	got := strings.Join(parts, " ")
-	if got != "Visible data Visible paragraph visible inline" {
+	if got != "Visible data Visible paragraph visible inline cookie payload" {
 		t.Fatalf("unexpected visible content: %q", got)
 	}
 }

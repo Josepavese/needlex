@@ -31,10 +31,10 @@ const (
 )
 
 type Request struct {
-	Objective, UserAgent, PruningProfile string
-	FetchProfile, FetchRetryProfile      string
-	RenderHint                           bool
-	RenderMode, AgentReadableMode        string
+	Objective, UserAgent            string
+	FetchProfile, FetchRetryProfile string
+	RenderHint                      bool
+	RenderMode, AgentReadableMode   string
 }
 
 type Resolver struct {
@@ -44,7 +44,7 @@ type Resolver struct {
 	Renderer rendering.Renderer
 	Semantic intel.SemanticAligner
 	Now      func() time.Time
-	Reduce   func(*proof.Recorder, pipeline.RawPage, string) (pipeline.SimplifiedDOM, error)
+	Reduce   func(*proof.Recorder, pipeline.RawPage) (pipeline.SimplifiedDOM, error)
 }
 
 func (r Resolver) now() time.Time {
@@ -66,7 +66,7 @@ func (r Resolver) ResolveAgentReadable(ctx context.Context, recorder *proof.Reco
 	maxCandidates := agentReadableCandidateLimit(r.Config.Agent.MaxCandidates)
 	allCandidates := agentreadable.Discover(rawPage, 0)
 	declaredCandidates := agentReadableCandidateBatch(declaredAgentReadableCandidates(allCandidates), maxCandidates)
-	probeConventional := mode == "auto" && shouldProbeConventionalAgentSources(rawPage, req, r.Reducer) && agentReadableHasProbeTime(ctx)
+	probeConventional := mode == "auto" && shouldProbeConventionalAgentSources(rawPage, r.Reducer) && agentReadableHasProbeTime(ctx)
 	candidates := append([]agentreadable.Candidate{}, declaredCandidates...)
 	metadata := map[string]string{
 		"candidate_count": fmt.Sprintf("%d", len(candidates)),
@@ -151,8 +151,8 @@ func agentReadableExpandedCandidateLimit(maxCandidates int) int {
 	return min(maxCandidates, agentReadableExpandedLimit)
 }
 
-func shouldProbeConventionalAgentSources(rawPage pipeline.RawPage, req Request, reducer pipeline.Reducer) bool {
-	dom, err := reducer.ReduceProfile(rawPage, req.PruningProfile)
+func shouldProbeConventionalAgentSources(rawPage pipeline.RawPage, reducer pipeline.Reducer) bool {
+	dom, err := reducer.Reduce(rawPage)
 	if err != nil {
 		return false
 	}

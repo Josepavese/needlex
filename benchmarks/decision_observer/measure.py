@@ -47,6 +47,9 @@ class Fixture(http.server.BaseHTTPRequestHandler):
             body += '<h1>Live report</h1><p>Waiting for application data</p><script>new EventSource("/stream")</script>'
         else:
             body += "<h1>Ancient astronomy</h1>" + ("<p>Ancient astronomers documented movements of stars, mapped constellations and studied the seasonal night sky across the Mediterranean. This historical account describes celestial observation and archival records.</p>" * 15)
+            if self.path in {"/header", "/wrapper"}:
+                facts = "<p>Prezzo: 47 euro. Garanzia: 37 mesi. Reso: 29 giorni.</p>"
+                body += ("<header>" + facts + "</header>" if self.path == "/header" else '<div class="has-sidebar advert-layout" id="navigation-wrapper">' + facts + "</div>")
             if self.path == "/js":
                 body += '<script>setTimeout(()=>{document.body.innerHTML="<h1>Product conditions</h1><p>Prezzo: 47 euro. Garanzia: 37 mesi. Reso: 29 giorni.</p>"},250)</script>'
         body += "</body></html>"
@@ -60,6 +63,8 @@ CASES = [
     ("short", "/js", "Prezzi", "auto", ["47 euro", "37 mesi", "29 giorni"]),
     ("zh", "/js", "请查找这个产品在意大利的保修条件及退货政策", "auto", ["47 euro", "37 mesi", "29 giorni"]),
     ("sse", "/sse", "Retrieve the warranty conditions in the live application report", "required", ["37 months"]),
+    ("header", "/header", "Prezzi e condizioni del prodotto", "off", ["47 euro", "37 mesi", "29 giorni"]),
+    ("wrapper", "/wrapper", "Prezzi e condizioni del prodotto", "off", ["47 euro", "37 mesi", "29 giorni"]),
     ("static", "/static", "Ancient astronomy and the historical observation of constellations", "off", ["Ancient astronomers"]),
 ]
 
@@ -72,7 +77,11 @@ def run(binary, label, cfg, server, root, rounds, model_pid):
     for repeat in range(rounds):
         for name, path, objective, render, facts in CASES:
             started = time.monotonic()
-            process = subprocess.Popen([binary, "read", f"http://127.0.0.1:{server.server_port}" + path, "--objective", objective, "--render", render, "--profile", "deep", "--config", str(conf), "--json", "--json-mode", "full"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            command = [binary, "read", f"http://127.0.0.1:{server.server_port}" + path, "--objective", objective, "--render", render, "--profile", "deep", "--config", str(conf), "--json", "--json-mode", "full"]
+            if label == "observation":
+                claim = "Ancient astronomers documented movements of stars." if name == "static" else ("The warranty lasts for 37 months." if name == "sse" else "La garanzia dura 37 mesi.")
+                command.extend(["--assertion", claim])
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             stop = threading.Event()
             peak = {"pss_kib": None, "model_pss_kib": None, "aggregate_pss_kib": None}
 

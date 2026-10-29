@@ -195,6 +195,12 @@ func TestSelectProfileSkipsUngroundedStructuralContext(t *testing.T) {
 	if len(selected) != 1 || selected[0].chunk.ID != "main" {
 		t.Fatalf("expected only primary content, got %#v", selected)
 	}
+	for _, score := range []float64{0, -0.4} {
+		ranked[0].chunk.ContextAlignment = score
+		if got := selectProfile(ranked, core.ProfileDeep); len(got) != 2 {
+			t.Fatalf("deep profile discarded attributable context with signed/unavailable alignment %v: %#v", score, got)
+		}
+	}
 }
 
 func TestApplyBoilerplatePenaltyDemotesHeadinglessMenuChunks(t *testing.T) {

@@ -20,13 +20,13 @@ import (
 )
 
 type ReadRequest struct {
-	URL, Objective, Profile, UserAgent, PruningProfile string
-	FetchProfile, FetchRetryProfile                    string
-	ForceLane                                          int
-	RenderHint                                         bool
-	RenderMode                                         string
-	AgentReadableMode                                  string
-	StableFingerprints                                 []string
+	URL, Objective, Assertion, Profile, UserAgent string
+	FetchProfile, FetchRetryProfile               string
+	ForceLane                                     int
+	RenderHint                                    bool
+	RenderMode                                    string
+	AgentReadableMode                             string
+	StableFingerprints                            []string
 }
 
 type ReadResponse struct {
@@ -72,6 +72,7 @@ func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, r
 	if cleanRoot == "" {
 		cleanRoot = platform.DefaultStateRoot()
 	}
+	cacheDir := platform.NewStateLayout(cleanRoot).EmbeddingCacheDir
 	return &Service{
 		cfg:        cfg,
 		httpClient: client,
@@ -80,10 +81,11 @@ func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, r
 		segmenter: pipeline.Segmenter{
 			MaxSegmentChars: 1200,
 		},
-		renderer:           renderer,
-		runtime:            intel.NewRuntime(cfg, client),
-		decisionObserver:   intel.NewDecisionObserver(cfg.Decision, client),
-		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, platform.NewStateLayout(cleanRoot).EmbeddingCacheDir),
+		renderer: renderer,
+		runtime:  intel.NewRuntime(cfg, client),
+		// Advisory cancellation must not trip the retrieval aligner's cooldown.
+		decisionObserver:   intel.NewDecisionObserver(cfg.Decision, client, intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir)),
+		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir),
 		now:                time.Now,
 		storeRoot:          cleanRoot,
 		webDiscoverBaseURL: strings.TrimSpace(cfg.Discovery.ProviderChain),
@@ -98,7 +100,7 @@ func (s *Service) SetWebDiscoverBaseURL(baseURL string) {
 func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, error) {
 	response, err := s.read(ctx, req)
 	if err == nil {
-		err = s.observeReadDecision(ctx, req.Objective, &response)
+		err = s.observeReadDecision(ctx, req.Assertion, &response)
 	}
 	return response, err
 }
@@ -131,7 +133,7 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		return ReadResponse{}, err
 	}
 
-	dom, err := s.reduce(recorder, rawPage, req)
+	dom, err := s.reduce(recorder, rawPage)
 	if err != nil {
 		return ReadResponse{}, err
 	}

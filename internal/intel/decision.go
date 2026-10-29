@@ -9,13 +9,14 @@ type DecisionObserver interface {
 }
 
 type DecisionInput struct {
-	Objective string             `json:"objective"`
+	Assertion string             `json:"assertion"`
 	Evidence  []DecisionEvidence `json:"evidence"`
 }
 
 type DecisionEvidence struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
+	Heading []string `json:"heading,omitempty"`
+	ID      string   `json:"id"`
+	Text    string   `json:"text"`
 }
 
 type DecisionAnswer struct {
@@ -24,16 +25,29 @@ type DecisionAnswer struct {
 }
 
 type DecisionObservation struct {
-	Status        string                    `json:"status"`
-	Model         string                    `json:"model"`
-	Revision      string                    `json:"revision"`
-	Specification string                    `json:"specification"`
-	Calibration   string                    `json:"calibration"`
-	ElapsedMS     int64                     `json:"elapsed_ms"`
-	InputBytes    int                       `json:"input_bytes"`
-	EvidenceIDs   []string                  `json:"evidence_ids,omitempty"`
-	Answers       map[string]DecisionAnswer `json:"answers,omitempty"`
-	Reason        string                    `json:"reason,omitempty"`
+	Assertion               string                    `json:"assertion"`
+	UnassessedEvidenceCount int                       `json:"unassessed_evidence_count"`
+	SelectionSimilarity     *float64                  `json:"selection_similarity,omitempty"`
+	CacheHit                bool                      `json:"cache_hit,omitempty"`
+	Status                  string                    `json:"status"`
+	Model                   string                    `json:"model"`
+	Revision                string                    `json:"revision"`
+	Specification           string                    `json:"specification"`
+	Calibration             string                    `json:"calibration"`
+	ElapsedMS               int64                     `json:"elapsed_ms"`
+	InputBytes              int                       `json:"input_bytes"`
+	EvidenceIDs             []string                  `json:"evidence_ids,omitempty"`
+	Answers                 map[string]DecisionAnswer `json:"answers,omitempty"`
+	Reason                  string                    `json:"reason,omitempty"`
 }
 
-const DecisionSpecification = "evidence-audit-v1"
+const DecisionSpecification = "claim-support-v1"
+
+// EvidenceCount counts attributable units, not repeated copies of an identical ID.
+func (input DecisionInput) EvidenceCount() int {
+	seen := map[string]bool{}
+	for _, evidence := range input.Evidence {
+		seen[evidence.ID] = true
+	}
+	return len(seen)
+}

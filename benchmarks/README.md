@@ -142,31 +142,49 @@ and Python driver are excluded. Browser scratch is retired per batch. An actual
 binary honors the isolated PAL home; the installed shell wrapper can override
 that home and retain useful proof/trace artifacts in canonical user state.
 
-The frozen `decision-live-anchors-v1.json` supplies 52 verified source excerpts
-with titles, URLs and capture hashes. Its 208 controls cover complete, absent,
-partial and synthetic-unrelated evidence in six question languages. Four cases
-per source are correlated. Labels concern the supplied excerpt, not a complete
-page or external truth. They are agent-authored and have not received human
-review. No Julia output supplied their reference labels.
+The current `claim-support-corpus-v1.json` preserves 52 verified source excerpts
+and their titles, URLs, traces and hashes. Each has supported, contradicted and
+not-established assertions: 156 correlated cases in six languages. A frozen
+split by registrable site family has 51 development cases and 105 held-out
+cases. Labels were authored and reviewed by the agent against the excerpts,
+not independently human-reviewed and never generated from Julia output. They
+concern the supplied passage, not the entire page or external truth.
 
 ```bash
 decision_work=$(mktemp -d /tmp/needlex-decision-eval.XXXXXX)
 python3 benchmarks/decision_observer/prepare.py \
-  --anchors benchmarks/corpora/decision-live-anchors-v1.json \
+  --anchors benchmarks/corpora/claim-support-corpus-v1.json \
   --out "$decision_work/cases.json"
 GOTMPDIR="$decision_work" go build -o "$decision_work/runner" ./benchmarks/decision_observer/runner
 "$decision_work/runner" --config /path/to/private/config.json \
-  --cases "$decision_work/cases.json" --repeats 1 > improvements/decision-quality-latest.jsonl
+  --cases "$decision_work/cases.json" --partition heldout --with-semantic-reference \
+  > improvements/claim-quality-latest.jsonl
 python3 benchmarks/decision_observer/summarize.py \
-  --live improvements/decision-live-latest.jsonl --cases "$decision_work/cases.json" \
-  --quality improvements/decision-quality-latest.jsonl --out improvements/decision-eval-latest.json
+  --live improvements/claim-live-latest.jsonl --cases "$decision_work/cases.json" \
+  --quality improvements/claim-quality-latest.jsonl --partition heldout \
+  --out improvements/claim-eval-latest.json
 rm -r "$decision_work"
 ```
 
-Run classification after live collection to avoid inference contention. Optional
-`prepare.py --receipts` verifies exact excerpt/capture identity against the
-original live receipts; a new website capture need not match an old frozen hash.
-Keep the current model, question specification and budgets fixed for evaluation.
-The summary separates admission, observed accuracy, confusion matrices and a
-constant-most-frequent-label reference. Large benchmark artifacts remain local
-under `improvements/`; do not commit them accidentally.
+Warm the shared embedding service separately and record its cold-start time
+before collecting the dense reference. An absent vector remains unavailable;
+it is never zero similarity. Run classification after live collection to avoid
+inference contention. `--encoding json` is a development-only format ablation,
+not an alternative production contract. Do not tune on held-out outputs.
+
+Live reads omit assertions by default. Add `--assertions` with the prepared
+corpus to request explicit supported-claim checks on matching URLs. Add
+`--coverage-anchors benchmarks/corpora/claim-support-corpus-v1.json` to record
+exact excerpt presence in the complete compiled text, independently of its
+bounded snapshot; such markers are test oracles, never retrieval ranking.
+Optional `prepare.py --receipts` checks source identity against frozen receipts.
+The report separates availability, confusion, false support, support recall,
+not-established judgments, latency and a constant-label reference. The cosine
+threshold in the qualification report was fitted on development only and is
+not a deployed factual-support classifier.
+
+The earlier 208-case/624-judgment broad audit used the retired generic
+`evidence-audit-v1` specification. Its corpus, runner and reproduction procedure
+are preserved at commit `55bfaab`; do not feed that format to the current runner
+or compare its accuracy directly with the new three-class task. Raw benchmark
+outputs remain local under `improvements/`.

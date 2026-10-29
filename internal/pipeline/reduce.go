@@ -14,7 +14,6 @@ var noiseTags = map[string]struct{}{
 	"button":   {},
 	"footer":   {},
 	"form":     {},
-	"header":   {},
 	"iframe":   {},
 	"input":    {},
 	"label":    {},
@@ -30,7 +29,6 @@ var preservedContextTags = map[string]string{
 	"aside":  "context",
 	"footer": "context",
 	"form":   "context",
-	"header": "context",
 	"nav":    "navigation",
 	"svg":    "asset_reference",
 }
@@ -56,10 +54,6 @@ var textTags = map[string]string{
 type Reducer struct{}
 
 func (Reducer) Reduce(page RawPage) (SimplifiedDOM, error) {
-	return Reducer{}.ReduceProfile(page, "standard")
-}
-
-func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error) {
 	if !isHTMLLikeContentType(page.ContentType) {
 		return reduceTextLike(page), nil
 	}
@@ -74,9 +68,9 @@ func (Reducer) ReduceProfile(page RawPage, profile string) (SimplifiedDOM, error
 	}
 
 	walker := domWalker{
-		title: extractTitle(root, profile),
+		title: extractTitle(root),
 	}
-	walker.walk(body, pathState{}, profile, false)
+	walker.walk(body, pathState{}, false)
 	structuredNodes := extractStructuredDataNodes(root)
 	if len(structuredNodes) > 0 {
 		walker.nodes = append(walker.nodes, structuredNodes...)
@@ -293,14 +287,14 @@ type domWalker struct {
 	preserved int
 }
 
-func (w *domWalker) walk(node *html.Node, state pathState, profile string, covered bool) {
+func (w *domWalker) walk(node *html.Node, state pathState, covered bool) {
 	siblingCounts := map[string]int{}
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		if child.Type == html.TextNode {
 			siblingCounts["text()"]++
 			if !covered {
 				path := append(clonePath(state), fmt.Sprintf("text()[%d]", siblingCounts["text()"]))
-				w.appendTextNode(child, path, node.Data, textTags["p"], profile)
+				w.appendTextNode(child, path, node.Data, textTags["p"])
 			}
 			continue
 		}
@@ -312,16 +306,16 @@ func (w *domWalker) walk(node *html.Node, state pathState, profile string, cover
 		siblingCounts[tag]++
 		path := append(clonePath(state), fmt.Sprintf("%s[%d]", tag, siblingCounts[tag]))
 
-		if shouldSkipNode(child, tag, profile) {
+		if shouldSkipNode(child, tag) {
 			w.appendPreservedContextNode(child, path, tag)
 			continue
 		}
 
 		kind, ownsText := textTags[tag]
 		if ownsText {
-			w.appendTextNode(child, path, tag, kind, profile)
+			w.appendTextNode(child, path, tag, kind)
 		}
-		w.walk(child, path, profile, covered || ownsText)
+		w.walk(child, path, covered || ownsText)
 	}
 }
 
@@ -329,8 +323,8 @@ type pathState []string
 
 func clonePath(path pathState) []string { return append([]string{}, path...) }
 
-func (w *domWalker) appendTextNode(node *html.Node, path []string, tag, kind, profile string) {
-	if text := normalizeWhitespace(extractText(node, profile)); text != "" {
+func (w *domWalker) appendTextNode(node *html.Node, path []string, tag, kind string) {
+	if text := normalizeWhitespace(extractText(node)); text != "" {
 		w.nodes = append(w.nodes, SimplifiedNode{
 			Path:         "/" + strings.Join(path, "/"),
 			Tag:          tag,
@@ -364,12 +358,12 @@ func (w *domWalker) appendPreservedContextNode(node *html.Node, path []string, t
 	w.preserved++
 }
 
-func shouldSkipNode(node *html.Node, tag, profile string) bool {
+func shouldSkipNode(node *html.Node, tag string) bool {
 	if _, blocked := noiseTags[tag]; blocked {
 		return true
 	}
 	for _, attr := range node.Attr {
-		if attrHidden(attr) || attrNoise(attr, profile) {
+		if attrHidden(attr) {
 			return true
 		}
 	}
@@ -410,36 +404,12 @@ func attrHidden(attr html.Attribute) bool {
 	return key == "hidden" || (key == "aria-hidden" && value == "true")
 }
 
-func attrNoise(attr html.Attribute, profile string) bool {
-	key := strings.ToLower(attr.Key)
-	return (key == "class" || key == "id" || key == "role") && isNoiseHint(strings.ToLower(attr.Val), profile)
-}
-
-func isNoiseHint(value, profile string) bool {
-	hints := []string{
-		"cookie", "consent", "banner", "promo", "advert", "ads",
-		"nav", "footer", "header", "sidebar", "comment", "modal", "popup",
-	}
-	switch strings.TrimSpace(strings.ToLower(profile)) {
-	case "aggressive":
-		hints = append(hints, "related", "share", "newsletter", "social", "hero", "toolbar")
-	case "forum":
-		hints = append(hints, "trending", "reaction", "avatar", "signature", "profile-card")
-	}
-	for _, hint := range hints {
-		if strings.Contains(value, hint) {
-			return true
-		}
-	}
-	return false
-}
-
-func extractTitle(root *html.Node, profile string) string {
+func extractTitle(root *html.Node) string {
 	titleNode := findElement(root, "title")
 	if titleNode == nil {
 		return ""
 	}
-	return normalizeWhitespace(extractText(titleNode, profile))
+	return normalizeWhitespace(extractText(titleNode))
 }
 
 func findElement(node *html.Node, name string) *html.Node {
@@ -455,7 +425,7 @@ func findElement(node *html.Node, name string) *html.Node {
 	return nil
 }
 
-func extractText(node *html.Node, profile string) string {
+func extractText(node *html.Node) string {
 	var parts []string
 	var walk func(*html.Node)
 	walk = func(current *html.Node) {
@@ -466,7 +436,7 @@ func extractText(node *html.Node, profile string) string {
 		}
 		if current.Type == html.ElementNode {
 			tag := strings.ToLower(current.Data)
-			if shouldSkipNode(current, tag, profile) {
+			if shouldSkipNode(current, tag) {
 				return
 			}
 		}
