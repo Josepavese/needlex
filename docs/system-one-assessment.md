@@ -267,3 +267,143 @@ deterministic six-stage trace. The compact packet identifies rendered DOM.
 That page's optional Julia audit exceeds the two-second budget and explicitly
 reports `unavailable`; it does not remove quotes, authors or proofs. The content
 proof and audit reliability are separate results.
+
+## Expanded corpus qualification, 2026-10-29
+
+The broader experiment **does not qualify the current Julia integration for
+active decisions**. On 208 short controlled inputs it returns 231/624 correct
+judgements (37.0%), below a constant-most-frequent-label reference of 364/624
+(58.3%) on this set. In real page reads it produces an audit for only 9/176 URLs.
+Making an input fit the model does not by itself make this question specification
+reliable. These measurements concern the pinned integration, not every possible
+Julia prompt, adaptation or deployment.
+
+No 1,000-site corpus was found in this checkout or its existing benchmark
+reports. The [seeded specification](seeded-benchmark-spec.md) describes
+1,000 cases as a later expansion gate. `unique-sources-corpus-v1.json` contains
+100 entries but 99 distinct URLs/hosts, including a duplicate pandas entry.
+Combined with the 100 seeded tasks, there are **176 distinct expected URLs on
+109 hosts**, preserving all 200 task origins. This experiment reads those exact
+URLs; it does not rerun the original same-site routing or seedless tasks. Old
+benchmark pass rates cannot be treated as current content-quality results.
+
+### Real installed MCP results
+
+All selected URLs were read serially through the installed v0.1.41 MCP runtime,
+profile `deep`, `render=auto`, with the existing 8-second runtime, 30-second render
+and 2-second/2-KB observer budgets. No production policy, model, prompt, threshold
+or shared service was changed. Temporary browser state was retired per batch;
+the installer wrapper selects canonical PAL state and useful traces/proofs
+remain there. Completed per-URL receipts were reused after an HTTP failure;
+failures were retained without repeated requests.
+
+| Measurement | Result |
+| --- | ---: |
+| Distinct URLs / hosts | 176 / 109 |
+| Returned nonempty packets | 173 |
+| Retrieval errors | 1 HTTP 503, 1 HTTP 403, 1 DNS failure |
+| Julia observed | 9 |
+| Julia input budget exceeded | 134 |
+| Julia inference timeout | 30 |
+| Persisted typed audit matches / nonempty proof files | 173 / 173 |
+| Browser renders / reused browser | 60 / 45 |
+| Reported degraded / truncated captures | 0 / 0 |
+
+Packet availability, a parsed proof file and a clean capture diagnostic are not
+content-completeness passes. Every successful read's typed audit, including
+skips and timeouts, matches the audit saved in its trace. Model coverage is 5.1%
+of selected URLs, or 5.2% of returned packets. All 30 unavailable audits reached
+the existing two-second inference limit.
+
+Wall latency p50/p95 is **3,986/9,756 ms**. Sampled aggregate process-tree PSS
+p50/p95/maximum is approximately **382/543/1,535 MiB**, including Chromium children
+and the shared decision process. Model PSS p50 is approximately **151 MiB**.
+Sampling is 50 ms; the common embedding service and Python driver are excluded.
+One recovered HTTP-503 receipt has unknown latency/RAM and remains null, leaving
+175 measured rows. These are current one-pass workload measurements, not a
+paired performance comparison with v0.1.40 or the earlier four-page fixture.
+
+### Source-scoped decision accuracy
+
+The frozen [anchor corpus](../benchmarks/corpora/decision-live-anchors-v1.json)
+contains 52 exact-verified excerpts from 52 hosts, with source title, URL, trace
+and content hash. Questions use English, Italian, Spanish, German, French and
+Chinese, including cross-language pairs. Each excerpt produces four controls:
+an explicitly answered question, a question absent from that excerpt, their
+partial conjunction, and unrelated synthetic evidence. There are **208 distinct
+inputs and 624 question judgements**, not 624 independent sources. The 52
+synthetic-unrelated controls deliberately reuse the same irrelevant statement.
+
+Labels were independently authored by the agent from the supplied source
+excerpt and were frozen before inference. They have not received human review;
+Julia's answers were never used as labels. Absence refers to the selected
+excerpt, not the whole page. Excerpts were selected from returned packets, so
+this classifier experiment cannot detect everything retrieval omitted. It is
+a convenience sample dominated by software documentation, not a representative
+random sample of the web or a whole-page retrieval gold set.
+
+The existing typed Go `DecisionObserver` runner evaluated each input once after
+live collection ended. All 208 completed within the unchanged two-second budget;
+there were no transport errors, input skips or prompt overflows. Wall p50/p95
+was **1,129.5/1,314 ms**, maximum 1,699 ms. The installed executable is unchanged;
+the benchmark driver was rebuilt from the same core commit with Go 1.27.3, while
+the installed release used Go 1.27.1. Source and executable hashes are retained.
+
+| Judge | Correct | Accuracy | Constant-label reference |
+| --- | ---: | ---: | ---: |
+| Relevance | 146/208 | 70.2% | 75.0% |
+| Coverage | 29/208 | 13.9% | 50.0% |
+| Source support | 56/208 | 26.9% | 50.0% |
+| Combined | 231/624 | 37.0% | 58.3% |
+
+There are 165 abstentions and 161 wrong judgements with selected-option
+probability above 90%. Only 9/208 cases get all three judgements correct.
+The constant reference simply selects the most frequent gold label for each
+question type on this set; it is a class-prior sanity check, not a trained
+retrieval competitor. Repeated variants are correlated, and these results do
+not constitute independent calibration or prove a general accuracy difference
+from the older 14-example corpus. No questions were tuned against the results.
+
+### Independent content-loss checks
+
+The large live run also exposes content omissions independent of Julia. A
+separate ordinary HTTP/HTML-text oracle finds Python's programming-language
+description and Vue's JavaScript/UI-framework description in their source
+pages, while both complete returned packet texts omit them. Retrying the same
+objectives with `render=required` and the observer explicitly disabled still
+omits those facts. Both renders report CDP, no missing network body, no open
+streams and no truncation/degradation. Thus clean transport diagnostics do not
+prove that the useful page text reached the final packet.
+
+| Case | Original read trace | Required-render trace |
+| --- | --- | --- |
+| Python homepage | `trace_1b5661d76d1469a8` | `trace_117a4850ee0c0744` |
+| Vue introduction | `trace_cb022103f202c59f` | `trace_47b03468a4c8b7fd` |
+
+This targeted oracle checked six pages selected for suspicious outputs. Four
+markers were present upstream and absent from packets; the raw Flask oracle
+was blocked with HTTP 403, and the proposed React marker was not found upstream,
+so neither is counted as a confirmed omission. Python and Vue are the two
+stronger cases reproduced with required rendering. This is failure evidence,
+not an omission-rate estimate for the 176 pages, nor yet a diagnosis of which
+capture/reduction/selection stage lost the information. The oracle stores source
+hashes and short supporting excerpts; it does not infer truth from Julia.
+
+### Evidence and reproduction
+
+The local current artifacts are `improvements/decision-live-latest.jsonl`,
+`decision-quality-latest.jsonl`, `decision-eval-latest.json` and
+`decision-content-oracle-latest.json`. The summary retains distributions,
+confusion matrices, input/model pins, sampling scope, artifact hashes and failed
+oracle checks. These benchmark artifacts are intentionally local. The compact
+anchor corpus preserves enough title/excerpt/provenance to reproduce the
+classifier offline after temporary builds are retired; see the
+[benchmark instructions](../benchmarks/README.md#local-decision-qualification-on-public-pages).
+
+The supported conclusion is narrower than "answers improved across the web":
+the previous deterministic fixes remain verified on their regressions, while
+this broader qualification rejects active use of the current observer and
+identifies remaining content-delivery defects. Repairing those omissions and
+then evaluating a revised decision specification on a separate labelled set
+are the next useful engineering steps. Increasing the observation budget alone
+does not address the measured judgement errors. Julia stays advisory.

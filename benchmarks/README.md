@@ -118,3 +118,55 @@ JSON for complete WebIR and render diagnostics. Consolidate the sufficient
 measurement evidence before retiring owned binaries and raw intermediates.
 Native regression tests separately cover active streams, truncation, crash,
 cleanup, concurrency, cancellation and browser storage isolation.
+
+## Local decision qualification on public pages
+
+`decision_observer/live.py` reads the union of the two existing 100-entry corpora
+through the installed MCP executable. The union has 176 distinct expected URLs
+on 109 hosts; it is not a 1,000-site corpus. It reads those exact URLs and does
+not exercise the original same-site routing tasks. A nonempty packet is a
+transport result, not a content-completeness or correctness pass.
+
+```bash
+python3 benchmarks/decision_observer/live.py \
+  --binary /path/to/installed/needlex-real --config /path/to/private/config.json \
+  --corpus benchmarks/corpora/unique-sources-corpus-v1.json \
+  --corpus benchmarks/corpora/seeded-corpus-v2.json \
+  --model-pid MODEL_PID --out improvements/decision-live-latest.jsonl
+```
+
+`--resume` validates input identity and reuses completed URL receipts, including
+failures. `--limit` permits an admission smoke followed by a full resume. RAM is
+50 ms process-tree PSS plus the shared decision process; the embedding service
+and Python driver are excluded. Browser scratch is retired per batch. An actual
+binary honors the isolated PAL home; the installed shell wrapper can override
+that home and retain useful proof/trace artifacts in canonical user state.
+
+The frozen `decision-live-anchors-v1.json` supplies 52 verified source excerpts
+with titles, URLs and capture hashes. Its 208 controls cover complete, absent,
+partial and synthetic-unrelated evidence in six question languages. Four cases
+per source are correlated. Labels concern the supplied excerpt, not a complete
+page or external truth. They are agent-authored and have not received human
+review. No Julia output supplied their reference labels.
+
+```bash
+decision_work=$(mktemp -d /tmp/needlex-decision-eval.XXXXXX)
+python3 benchmarks/decision_observer/prepare.py \
+  --anchors benchmarks/corpora/decision-live-anchors-v1.json \
+  --out "$decision_work/cases.json"
+GOTMPDIR="$decision_work" go build -o "$decision_work/runner" ./benchmarks/decision_observer/runner
+"$decision_work/runner" --config /path/to/private/config.json \
+  --cases "$decision_work/cases.json" --repeats 1 > improvements/decision-quality-latest.jsonl
+python3 benchmarks/decision_observer/summarize.py \
+  --live improvements/decision-live-latest.jsonl --cases "$decision_work/cases.json" \
+  --quality improvements/decision-quality-latest.jsonl --out improvements/decision-eval-latest.json
+rm -r "$decision_work"
+```
+
+Run classification after live collection to avoid inference contention. Optional
+`prepare.py --receipts` verifies exact excerpt/capture identity against the
+original live receipts; a new website capture need not match an old frozen hash.
+Keep the current model, question specification and budgets fixed for evaluation.
+The summary separates admission, observed accuracy, confusion matrices and a
+constant-most-frequent-label reference. Large benchmark artifacts remain local
+under `improvements/`; do not commit them accidentally.
