@@ -1,0 +1,1470 @@
+{
+  "specification": "popular-web-quality-v1",
+  "label_scope": "Source-text factual retrieval, agent-reviewed positive facts. Historical references may drift; missing markers are not automatically omissions. No model-generated gold or truth labels.",
+  "cases": [
+    {
+      "id": "go-home",
+      "family": "go.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://go.dev/",
+      "seed_url": "https://go.dev/",
+      "goal": "What does the go command do with modules by default?",
+      "must_contain_facts": [
+        "The go command by default downloads and authenticates modules"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://go.dev/",
+          "title": "The Go Programming Language",
+          "trace_id": "trace_874f451513bf99d0",
+          "text_sha256": "e4421cff61c3ae8760f8a8051fcb618f61bd93f63a573e029b723ad99ee5419f"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "sqlite-home",
+      "family": "sqlite.org",
+      "language": "it",
+      "source_language": "it",
+      "expected_url": "https://sqlite.org/",
+      "seed_url": "https://sqlite.org/",
+      "goal": "Quali restrizioni d'uso indica il testo per il codice di SQLite?",
+      "must_contain_facts": [
+        "SQLite source code is in the public-domain and is free to everyone to use for any purpose."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://sqlite.org/",
+          "title": "SQLite Home Page",
+          "trace_id": "trace_60cccd4fed2017e1",
+          "text_sha256": "1c5db4fd570d6b6c66972fb3e1ef8a2f87d1b6ce5a2d1696130f018c9034140d"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "postgresql-home",
+      "family": "postgresql.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.postgresql.org/",
+      "seed_url": "https://www.postgresql.org/",
+      "goal": "What kind of database system is PostgreSQL?",
+      "must_contain_facts": [
+        "PostgreSQL is a powerful, open source object-relational database system"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.postgresql.org/",
+          "title": "PostgreSQL: The world's most advanced open source database",
+          "trace_id": "trace_833043e0930f938f",
+          "text_sha256": "00c89af24fd7be6fb5700a7b24b2ca5efd0342266887fbd3482fa9d977d28c90"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "redis-docs",
+      "family": "redis.io",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://redis.io/docs/latest/",
+      "seed_url": "https://redis.io/docs/latest/",
+      "goal": "Can the Redis functions described here be replicated and persisted?",
+      "must_contain_facts": [
+        "The Redis functions feature, which became available in Redis 7, supersedes the use of Lua in prior versions of Redis. The client is still responsible for invoking the execution, but unlike the previous Lua scripts, functions can now be replicated and persisted."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://redis.io/docs/latest/",
+          "title": "APIs",
+          "trace_id": "trace_acb800a6cda48ce9",
+          "text_sha256": "65fffdec0ad3ef646ca62befce96684abd25bf6a7dc36e491293a97f3f71aeee"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "kubernetes-home",
+      "family": "kubernetes.io",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://kubernetes.io/",
+      "seed_url": "https://kubernetes.io/",
+      "goal": "What work does Kubernetes automate?",
+      "must_contain_facts": [
+        "Kubernetes , also known as K8s, is an open source system for automating deployment, scaling, and management of containerized applications."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://kubernetes.io/",
+          "title": "Kubernetes",
+          "trace_id": "trace_6bc91817aabc2e26",
+          "text_sha256": "f6320e4f74e26f7416091e904d6558c897a3fb8e84ce0e7b3db1eaeb9ddd3aa2"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "podman-docs",
+      "family": "podman.io",
+      "language": "es",
+      "source_language": "es",
+      "expected_url": "https://podman.io/docs",
+      "seed_url": "https://podman.io/docs",
+      "goal": "¿Para qué se puede utilizar Podman?",
+      "must_contain_facts": [
+        "Podman is a utility provided as part of the libpod library. It can be used to create and maintain containers."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://podman.io/docs",
+          "title": "Getting Started with Podman | Podman",
+          "trace_id": "trace_5e5178a5c4271da1",
+          "text_sha256": "d9fdf10985b43adad223de12e1b4180ce888aa918e0a9eb406aaaa5a8f993b1e"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "nginx-home",
+      "family": "nginx.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://nginx.org/en/",
+      "seed_url": "https://nginx.org/en/",
+      "goal": "Under which licence is nginx distributed?",
+      "must_contain_facts": [
+        "Originally written by Igor Sysoev and distributed under the 2-clause BSD License"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://nginx.org/en/",
+          "title": "nginx",
+          "trace_id": "trace_2df398d1b8e514b5",
+          "text_sha256": "8bfd83320bb885b69862a6ef6f5d19821195fbcaadc687f4c5f1b38e342da3fd"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "curl-home",
+      "family": "curl.se",
+      "language": "de",
+      "source_language": "de",
+      "expected_url": "https://curl.se/",
+      "seed_url": "https://curl.se/",
+      "goal": "Wofür wird curl in Skripten verwendet?",
+      "must_contain_facts": [
+        "curl is used in command lines or scripts to transfer data."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://curl.se/",
+          "title": "curl",
+          "trace_id": "trace_76df9dda8a146744",
+          "text_sha256": "d011c783aa12a4109554893f96587a8048ba197a96ce112183aa21d9fec75505"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "git-home",
+      "family": "git-scm.com",
+      "language": "fr",
+      "source_language": "fr",
+      "expected_url": "https://git-scm.com/",
+      "seed_url": "https://git-scm.com/",
+      "goal": "Git est-il un système de gestion de versions distribué ?",
+      "must_contain_facts": [
+        "Git is a free and open source distributed version control system"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://git-scm.com/",
+          "title": "Git",
+          "trace_id": "trace_e8ce27850203a1bf",
+          "text_sha256": "819a652e78fd8ab2508f55630ac13f556b3042301c0940ce8c23e1245c6f479b"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "github-docs",
+      "family": "github.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.github.com/en",
+      "seed_url": "https://docs.github.com/en",
+      "goal": "Which GitHub feature supplies CI/CD according to the excerpt?",
+      "must_contain_facts": [
+        "CI/CD via GitHub Actions"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.github.com/en",
+          "title": "GitHub Docs",
+          "trace_id": "trace_c73e6023c788fbb7",
+          "text_sha256": "acd2d278483fa7aff6060b68f5c1b9f3f2985eac82f4867ea9cd7cb080ecf832"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "gitlab-docs",
+      "family": "gitlab.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.gitlab.com/",
+      "seed_url": "https://docs.gitlab.com/",
+      "goal": "What kind of assistance features does this GitLab excerpt describe?",
+      "must_contain_facts": [
+        "Get help from a suite of AI-native features while you work in GitLab."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.gitlab.com/",
+          "title": "GitLab Docs",
+          "trace_id": "trace_b96bfac05e362514",
+          "text_sha256": "263e8da25f83c8cad17857853be5afa6a8babc15af2f63676a05996ee0159324"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "rust-home",
+      "family": "rust-lang.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.rust-lang.org/",
+      "seed_url": "https://www.rust-lang.org/",
+      "goal": "Does the described Rust implementation require a runtime or garbage collector?",
+      "must_contain_facts": [
+        "Rust is blazingly fast and memory-efficient: with no runtime or garbage collector"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.rust-lang.org/",
+          "title": "Rust Programming Language",
+          "trace_id": "trace_11501e10cd30f84f",
+          "text_sha256": "8e1d0997b2cf012aaa72d66ba806de1170c149f929fd7825399d6e3aa8205e5b"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "rust-book",
+      "family": "rust-lang.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://doc.rust-lang.org/book/",
+      "seed_url": "https://doc.rust-lang.org/book/",
+      "goal": "Which command opens the locally installed Rust book?",
+      "must_contain_facts": [
+        "run rustup doc --book to open."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://doc.rust-lang.org/book/",
+          "title": "The Rust Programming Language - The Rust Programming Language",
+          "trace_id": "trace_dbe6816da61ebe15",
+          "text_sha256": "c829759feea0aebf7404f73520b6872a012402fdc6d5074fbe5f083bc86c7c22"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "npm-docs",
+      "family": "npmjs.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.npmjs.com/",
+      "seed_url": "https://docs.npmjs.com/",
+      "goal": "Which npm components are covered by this documentation?",
+      "must_contain_facts": [
+        "Documentation for the npm registry, website, and command-line interface"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.npmjs.com/",
+          "title": "npm Docs",
+          "trace_id": "trace_f4c131255db2ff1f",
+          "text_sha256": "eb77d59072454cdd910b5a5b5242bf37215408fa3014372ba82fe10e1e6378c6"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "deno-docs",
+      "family": "deno.com",
+      "language": "zh",
+      "source_language": "zh",
+      "expected_url": "https://docs.deno.com/",
+      "seed_url": "https://docs.deno.com/",
+      "goal": "Deno代码在未获授权前能访问网络和文件系统吗？",
+      "must_contain_facts": [
+        "Deno is secure by default : code can't touch the network, filesystem, or environment until you grant it."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.deno.com/",
+          "title": "Get started with Deno | Deno Docs",
+          "trace_id": "trace_cb3bd0151b00aabc",
+          "text_sha256": "4835146a810d7893fed48a7aa68483a436679e3827ac43bdba5ca737f5a6daa4"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "bun-docs",
+      "family": "bun.sh",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://bun.sh/docs",
+      "seed_url": "https://bun.sh/docs",
+      "goal": "Which programming languages are named as targets of Bun's application toolkit?",
+      "must_contain_facts": [
+        "Bun is an all-in-one toolkit for developing modern JavaScript/TypeScript applications."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://bun.sh/docs",
+          "title": "Welcome to Bun",
+          "trace_id": "trace_6192cef3c69ec3ea",
+          "text_sha256": "04c3c9337bedbf946cf846b6827b876f4d65d490d019a7e11ebbc78456053208"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "svelte-docs",
+      "family": "svelte.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://svelte.dev/docs",
+      "seed_url": "https://svelte.dev/docs",
+      "goal": "Is the described Svelte documentation available as plain text?",
+      "must_contain_facts": [
+        "we offer the documentation in plaintext format."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://svelte.dev/docs",
+          "title": "Docs • Svelte",
+          "trace_id": "trace_6f9c91ab969e9124",
+          "text_sha256": "67a0b677580e8026ddb7f5da32be30d31c298bd2a960a3ea8ed4e666b56b1eb8"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "angular-docs",
+      "family": "angular.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://angular.dev/overview",
+      "seed_url": "https://angular.dev/overview",
+      "goal": "What does the Angular CLI ng update command automate?",
+      "must_contain_facts": [
+        "Angular CLI's ng update runs automated code transformations"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://angular.dev/overview",
+          "title": "What is Angular? • Angular",
+          "trace_id": "trace_8b944eabbe07088c",
+          "text_sha256": "ba0b4a315998c53b834b121cd79d453cd5a529f969d80a7c5efa08a9666ff207"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "nextjs-docs",
+      "family": "nextjs.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://nextjs.org/docs",
+      "seed_url": "https://nextjs.org/docs",
+      "goal": "What sort of applications is Next.js designed to build?",
+      "must_contain_facts": [
+        "Next.js is a React framework for building full-stack web applications."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://nextjs.org/docs",
+          "title": "docs.md",
+          "trace_id": "trace_7e0379f12dfa6be1",
+          "text_sha256": "b123469da521252e10d7673ecbb5b05ffb3d3163b5a38367b9d7a8b9bb13d91c"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "nuxt-docs",
+      "family": "nuxt.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://nuxt.com/docs/4.x/getting-started/introduction",
+      "seed_url": "https://nuxt.com/docs/4.x/getting-started/introduction",
+      "goal": "Does the described Nuxt production application use server-side rendering by default?",
+      "must_contain_facts": [
+        "with server-side rendering by default."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://nuxt.com/docs/4.x/getting-started/introduction",
+          "title": "Introduction",
+          "trace_id": "trace_0f86f26c444570bd",
+          "text_sha256": "1d21264fbf9acfcfc043a0fc49031ea0ef99345a443c2172d3cb2516d8300d3b"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "vite-docs",
+      "family": "vite.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://vite.dev/guide/",
+      "seed_url": "https://vite.dev/guide/",
+      "goal": "How can Vite integrate with frameworks and other tools?",
+      "must_contain_facts": [
+        "Support for frameworks or integration with other tools is possible through [Plugins](./using-plugins)."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://vite.dev/guide/",
+          "title": "Getting Started",
+          "trace_id": "trace_5cc213b5536a9795",
+          "text_sha256": "2a8280de30d2679838eec4b1b2ed9c3dc90b9d09c8a5815fafbf4c4ad8d87ad6"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "webpack-docs",
+      "family": "webpack.js.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://webpack.js.org/concepts/",
+      "seed_url": "https://webpack.js.org/concepts/",
+      "goal": "What kind of tool is webpack?",
+      "must_contain_facts": [
+        "webpack is a static module bundler for modern JavaScript applications."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://webpack.js.org/concepts/",
+          "title": "Concepts | webpack",
+          "trace_id": "trace_ba43aaaf4e99415f",
+          "text_sha256": "1cb73a700cb6996c69cf9d0184a174d192456b6794ea6a062293006ab178252d"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "rollup-docs",
+      "family": "rollupjs.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://rollupjs.org/introduction/",
+      "seed_url": "https://rollupjs.org/introduction/",
+      "goal": "Which licence is specified for this Rollup release?",
+      "must_contain_facts": [
+        "Released under the MIT License."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://rollupjs.org/introduction/",
+          "title": "Introduction | Rollup",
+          "trace_id": "trace_66967db472fa1f54",
+          "text_sha256": "d3234032bfc1c41211b7473fe3cab6cfc84b2ec7c4f960f2699286cf136caf09"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "tailwind-docs",
+      "family": "tailwindcss.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://tailwindcss.com/docs",
+      "seed_url": "https://tailwindcss.com/docs",
+      "goal": "What does Tailwind CSS scan source files for?",
+      "must_contain_facts": [
+        "Tailwind CSS works by scanning all of your HTML files, JavaScript components, and any other templates for class names"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://tailwindcss.com/docs",
+          "title": "Installing Tailwind CSS with Vite - Tailwind CSS",
+          "trace_id": "trace_47c9d525723da8a0",
+          "text_sha256": "80401ccc5c502530d4b4d55a1a865af23c20e9cdfbf44f81fccecc634ff98573"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "bootstrap-docs",
+      "family": "getbootstrap.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
+      "seed_url": "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
+      "goal": "Can the described Bootstrap CDN setup be used without a build step?",
+      "must_contain_facts": [
+        "Get started by including Bootstrap’s production-ready CSS and JavaScript via CDN without the need for any build steps."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
+          "title": "Get started with Bootstrap · Bootstrap v5.3",
+          "trace_id": "trace_1067af98cc1fc742",
+          "text_sha256": "4487fead36ddec6f72e03548b83dad6ecb9468993dd0462b5f5362e22db7beee"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "fastapi-docs",
+      "family": "tiangolo.com",
+      "language": "it",
+      "source_language": "it",
+      "expected_url": "https://fastapi.tiangolo.com/",
+      "seed_url": "https://fastapi.tiangolo.com/",
+      "goal": "Quale linguaggio e quale meccanismo di tipizzazione usa FastAPI?",
+      "must_contain_facts": [
+        "FastAPI is a modern, fast (high-performance), web framework for building APIs with Python based on standard Python type hints."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://fastapi.tiangolo.com/",
+          "title": "FastAPI - FastAPI",
+          "trace_id": "trace_6072f6892aa3680a",
+          "text_sha256": "d9eb7743d7793cb15be417480f67396e9005d485339632c8c4a4a48bc2031770"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "rails-guides",
+      "family": "rubyonrails.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://guides.rubyonrails.org/",
+      "seed_url": "https://guides.rubyonrails.org/",
+      "goal": "What does Active Record let application models interact with?",
+      "must_contain_facts": [
+        "Active Record allows your models to interact with the application's database."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://guides.rubyonrails.org/",
+          "title": "Ruby on Rails Guides",
+          "trace_id": "trace_102d3228dfbe0e0b",
+          "text_sha256": "94753a69a93dd4ab56bcb16df2b2559c1c8dd6b1e2ac9e257add272a63a5f92a"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "laravel-docs",
+      "family": "laravel.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://laravel.com/docs",
+      "seed_url": "https://laravel.com/docs",
+      "goal": "What kind of software framework is Laravel?",
+      "must_contain_facts": [
+        "Laravel is a web application framework with expressive, elegant syntax."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://laravel.com/docs",
+          "title": "Installation | Laravel 13.x - The clean stack for Artisans and agents",
+          "trace_id": "trace_963eed9d2798794c",
+          "text_sha256": "9e792edc51c596720cb65147dc471870bb7b87cef7fdfdba916f57c12551cde1"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "spring-docs",
+      "family": "spring.io",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://spring.io/projects/spring-framework",
+      "seed_url": "https://spring.io/projects/spring-framework",
+      "goal": "For which programming language are the described Spring enterprise applications built?",
+      "must_contain_facts": [
+        "The Spring Framework provides a comprehensive programming and configuration model for modern Java-based enterprise applications"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://spring.io/projects/spring-framework",
+          "title": "Spring Framework",
+          "trace_id": "trace_652aea49dad76f8c",
+          "text_sha256": "65b42a5133f5200b8152bfa930ce5d78f42e7552849b508538952e5c103fa5eb"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "dotnet-docs",
+      "family": "microsoft.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://learn.microsoft.com/en-us/dotnet/",
+      "seed_url": "https://learn.microsoft.com/en-us/dotnet/",
+      "goal": "Which three programming languages are named for .NET applications?",
+      "must_contain_facts": [
+        "Learn to use .NET to create applications on any platform using C#, F#, and Visual Basic."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://learn.microsoft.com/en-us/dotnet/",
+          "title": ".NET documentation -.NET | Microsoft Learn",
+          "trace_id": "trace_d7140a969d287997",
+          "text_sha256": "fa325ed6feb1598888bd2601109fbe7c37b3532c7cfa585bf95913786e841ab0"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "java-docs",
+      "family": "oracle.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.oracle.com/en/java/",
+      "seed_url": "https://docs.oracle.com/en/java/",
+      "goal": "On which two kinds of machines can the described Java SE applications be deployed?",
+      "must_contain_facts": [
+        "Java SE lets you develop and deploy Java applications on desktops and servers."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.oracle.com/en/java/",
+          "title": "Java Documentation - Get Started",
+          "trace_id": "trace_2d961b488140a5aa",
+          "text_sha256": "41dc7a22b5bb324a4a2aecb4aedf83714f689dd38efec232faa118250fd3d0be"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "php-docs",
+      "family": "php.net",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.php.net/docs.php",
+      "seed_url": "https://www.php.net/docs.php",
+      "goal": "Where does this PHP excerpt direct readers for downloadable documentation formats?",
+      "must_contain_facts": [
+        "For downloadable formats, please visit our documentation downloads page."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.php.net/docs.php",
+          "title": "PHP: Documentation",
+          "trace_id": "trace_779eaf8589763c13",
+          "text_sha256": "446d5c482e803c20aa0d17150c25cc6155561d019fddefb9f6c3acea5d4f1858"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "perl-docs",
+      "family": "perl.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://perldoc.perl.org/",
+      "seed_url": "https://perldoc.perl.org/",
+      "goal": "Which program provides access to the documentation bundled with Perl?",
+      "must_contain_facts": [
+        "The perldoc program gives you access to all the documentation that comes with Perl."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://perldoc.perl.org/",
+          "title": "Perl Documentation - Perldoc Browser",
+          "trace_id": "trace_d5de063a0ef95cc9",
+          "text_sha256": "2714cfdb7aeb6b733d764a68d086b3279209ededed18b042b4ff44dbc746157f"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "lua-docs",
+      "family": "lua.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.lua.org/docs.html",
+      "seed_url": "https://www.lua.org/docs.html",
+      "goal": "Which aspects of Lua are described by its reference manual?",
+      "must_contain_facts": [
+        "its reference manual , which describes the syntax and the semantics of Lua, the standard libraries, and the C API."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.lua.org/docs.html",
+          "title": "Lua: documentation",
+          "trace_id": "trace_2d29bf5ffa2dffee",
+          "text_sha256": "986b24908beb1e5020b6924d6b81071093c282f789bab30075cd147c36e2d689"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "r-docs",
+      "family": "r-project.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.r-project.org/other-docs.html",
+      "seed_url": "https://www.r-project.org/other-docs.html",
+      "goal": "Who provides most of the R documents listed on this page?",
+      "must_contain_facts": [
+        "Most of the documents listed on this page are provided by users of R."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.r-project.org/other-docs.html",
+          "title": "R: Documentation",
+          "trace_id": "trace_fca5df300593eb05",
+          "text_sha256": "86eeb2224776c5e391de7c2d88a8aaa8f2ec174c9859b7a7e626889f25922b9a"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "julia-docs",
+      "family": "julialang.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.julialang.org/en/v1/",
+      "seed_url": "https://docs.julialang.org/en/v1/",
+      "goal": "For what kinds of computing is the Julia programming language described as appropriate?",
+      "must_contain_facts": [
+        "The Julia programming language fills this role: it is a flexible dynamic language, appropriate for scientific and numerical computing"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.julialang.org/en/v1/",
+          "title": "Julia Documentation · The Julia Language",
+          "trace_id": "trace_d48d99b9a67b07fb",
+          "text_sha256": "70e2526f17ccd21481e81b772879362418bb8504d675f40ca41c27765b48a319"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "pandas-docs",
+      "family": "pydata.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://pandas.pydata.org/docs/",
+      "seed_url": "https://pandas.pydata.org/docs/",
+      "goal": "Which programming language does the pandas library target?",
+      "must_contain_facts": [
+        "pandas is an open source, BSD-licensed library providing high-performance, easy-to-use data structures and data analysis tools for the Python programming language."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://pandas.pydata.org/docs/",
+          "title": "pandas documentation — pandas 3.1.0 documentation",
+          "trace_id": "trace_c2b0ceb6cc7a27ff",
+          "text_sha256": "bf3f18a7350c92a5a878b1c56885a6811f79b645ed2e097b1d47610fe31313bc"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "scipy-docs",
+      "family": "scipy.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.scipy.org/doc/scipy/",
+      "seed_url": "https://docs.scipy.org/doc/scipy/",
+      "goal": "For which three broad fields is SciPy intended?",
+      "must_contain_facts": [
+        "SciPy (pronounced “Sigh Pie”) is an open-source software for mathematics, science, and engineering."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.scipy.org/doc/scipy/",
+          "title": "SciPy documentation — SciPy v1.18.0 Manual",
+          "trace_id": "trace_8c94ad6e2f44052b",
+          "text_sha256": "f2c6169bb9f67e760b2e0f2dcc1c0820117e95a32977e5721fd59a3bda31b553"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "matplotlib-docs",
+      "family": "matplotlib.org",
+      "language": "de",
+      "source_language": "de",
+      "expected_url": "https://matplotlib.org/stable/",
+      "seed_url": "https://matplotlib.org/stable/",
+      "goal": "Welche drei Arten von Visualisierungen kann Matplotlib erstellen?",
+      "must_contain_facts": [
+        "Matplotlib is a comprehensive library for creating static, animated, and interactive visualizations."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://matplotlib.org/stable/",
+          "title": "Matplotlib documentation — Matplotlib 3.11.2 documentation",
+          "trace_id": "trace_d2f86137b47feef5",
+          "text_sha256": "c40dd1b0364cb37fb89aceece7d2cf5f9f4d7be6d172f6c3dda75459080c5ff3"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "tensorflow-docs",
+      "family": "tensorflow.org",
+      "language": "zh",
+      "source_language": "zh",
+      "expected_url": "https://www.tensorflow.org/learn",
+      "seed_url": "https://www.tensorflow.org/learn",
+      "goal": "TensorFlow.js使用哪种语言创建机器学习模型？",
+      "must_contain_facts": [
+        "通过 TensorFlow.js 使用 JavaScript 创建新的机器学习模型和部署现有模型。"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.tensorflow.org/learn",
+          "title": "开始使用TensorFlow | TensorFlow中文官网",
+          "trace_id": "trace_5a58ca10fca00dbd",
+          "text_sha256": "ac0a81a4cdf26ccec86a05d97f2371dbd964e06d60d903279832eb4126893f87"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "requests-docs",
+      "family": "requests.readthedocs.io",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://requests.readthedocs.io/en/latest/",
+      "seed_url": "https://requests.readthedocs.io/en/latest/",
+      "goal": "For which programming language is Requests an HTTP library?",
+      "must_contain_facts": [
+        "Requests is an elegant and simple HTTP library for Python, built for human beings."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://requests.readthedocs.io/en/latest/",
+          "title": "Requests: HTTP for Humans™ — Requests 2.34.2 documentation",
+          "trace_id": "trace_230333af5a1241ea",
+          "text_sha256": "cad8c853f4185705238972fa2ecca427030a69104e5eb34abadde02b64eda4c3"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "playwright-docs",
+      "family": "playwright.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://playwright.dev/docs/intro",
+      "seed_url": "https://playwright.dev/docs/intro",
+      "goal": "What kind of applications does Playwright Test provide end-to-end testing for?",
+      "must_contain_facts": [
+        "Playwright Test is an end-to-end test framework for modern web apps."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://playwright.dev/docs/intro",
+          "title": "Installation | Playwright",
+          "trace_id": "trace_792d07bd12c4393e",
+          "text_sha256": "2cb469a368dc92b73f0e0e34a7ed9f44b7f85c6f74d8189baf15984d1fc493e6"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "selenium-docs",
+      "family": "selenium.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.selenium.dev/documentation/",
+      "seed_url": "https://www.selenium.dev/documentation/",
+      "goal": "What does the Selenium project help automate?",
+      "must_contain_facts": [
+        "Selenium is an umbrella project for a range of tools and libraries that enable and support the automation of web browsers."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.selenium.dev/documentation/",
+          "title": "The Selenium Browser Automation Project | Selenium",
+          "trace_id": "trace_9ec533e89e55f283",
+          "text_sha256": "ae8dc26a11e53fd39e9d8a5a6b833cdd1662644610c2656551ef1c253e1041e7"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "vitest-docs",
+      "family": "vitest.dev",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://vitest.dev/guide/",
+      "seed_url": "https://vitest.dev/guide/",
+      "goal": "Which build tool powers Vitest?",
+      "must_contain_facts": [
+        "Vitest (pronounced as *\"veetest\"*) is a next generation testing framework powered by Vite."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://vitest.dev/guide/",
+          "title": "Getting Started",
+          "trace_id": "trace_246ba13fea667d72",
+          "text_sha256": "3119a3ff9b28eacce407eee0647f9d7fc157f092fbe0129920e0b7a886331846"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "jest-docs",
+      "family": "jestjs.io",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://jestjs.io/docs/getting-started",
+      "seed_url": "https://jestjs.io/docs/getting-started",
+      "goal": "What filename is specified for the actual test?",
+      "must_contain_facts": [
+        "Then, create a file named sum.test.js . This will contain our actual test:"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://jestjs.io/docs/getting-started",
+          "title": "Getting Started · Jest",
+          "trace_id": "trace_b1a4e36f997d9acc",
+          "text_sha256": "b37300a4965c5d640cfc7ec539cb12056c2f94e60b5039f3b526b3935be23c24"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "pytest-docs",
+      "family": "pytest.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://docs.pytest.org/en/stable/",
+      "seed_url": "https://docs.pytest.org/en/stable/",
+      "goal": "What sort of assertion statements does this pytest excerpt say are used?",
+      "must_contain_facts": [
+        "Due to pytest ’s detailed assertion introspection, only plain assert statements are used."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.pytest.org/en/stable/",
+          "title": "pytest documentation",
+          "trace_id": "trace_7fc3a1eec5cf9ee5",
+          "text_sha256": "95684102a7a159e7a4da304ab296b68cd90bfc07d4c668d2c6341dde8fe9fec0"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "linux-man-pages",
+      "family": "man7.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://man7.org/linux/man-pages/",
+      "seed_url": "https://man7.org/linux/man-pages/",
+      "goal": "Which section numbers are listed for the manual pages?",
+      "must_contain_facts": [
+        "Individual sections (page names only): 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://man7.org/linux/man-pages/",
+          "title": "Linux man pages online",
+          "trace_id": "trace_c6ab7e62d51287cc",
+          "text_sha256": "b08a749845e7e0b25f2d02f22b60536b2f7037190366efef9843c3910ccac903"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "llvm-docs",
+      "family": "llvm.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://llvm.org/docs/",
+      "seed_url": "https://llvm.org/docs/",
+      "goal": "Are specialized JIT applications among the projects supported by LLVM?",
+      "must_contain_facts": [
+        "The LLVM compiler infrastructure supports a wide range of projects, from industrial strength compilers to specialized JIT applications to small research projects."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://llvm.org/docs/",
+          "title": "LLVM",
+          "trace_id": "trace_5dca93a19b1297eb",
+          "text_sha256": "6a7da4c2af9fa26769a3106e374a55d1f9ae3c2751dbc4fa66205e695e4b75ea"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "gcc-docs",
+      "family": "gnu.org",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://gcc.gnu.org/onlinedocs/",
+      "seed_url": "https://gcc.gnu.org/onlinedocs/",
+      "goal": "Which GCC version is specified for the GNU Fortran manual?",
+      "must_contain_facts": [
+        "GCC 16.2 GNU Fortran Manual"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://gcc.gnu.org/onlinedocs/",
+          "title": "GCC online documentation - GNU Project",
+          "trace_id": "trace_b196da372a55c6f3",
+          "text_sha256": "07c361575e71747815e30212f809e5c879c6db0d976e0c3fbcae61bc38c462a1"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "python-fr-docs",
+      "family": "python.org",
+      "language": "fr",
+      "source_language": "fr",
+      "expected_url": "https://docs.python.org/fr/3/",
+      "seed_url": "https://docs.python.org/fr/3/",
+      "goal": "Quelle version de Python cette documentation officielle décrit-elle ?",
+      "must_contain_facts": [
+        "Bienvenue sur la documentation officielle de Python 3.15.2."
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://docs.python.org/fr/3/",
+          "title": "Python 3.15.2 documentation",
+          "trace_id": "trace_c87c51fb37c15189",
+          "text_sha256": "afee2e2554228c08eb09c4c8da786ad828495206adae3cbf7977ad113eed6666"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "mongodb-docs",
+      "family": "mongodb.com",
+      "language": "zh",
+      "source_language": "zh",
+      "expected_url": "https://www.mongodb.com/docs/",
+      "seed_url": "https://www.mongodb.com/docs/",
+      "goal": "MongoDB允许开发者存储哪种形式的文档？",
+      "must_contain_facts": [
+        "MongoDB允许开发者存储丰富的类似JSON的文档"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.mongodb.com/docs/",
+          "title": "欢迎使用 MongoDB Docs - MongoDB 文档 - MongoDB Docs",
+          "trace_id": "trace_41a6a04187fdc687",
+          "text_sha256": "3d6e1ea6b7efd774ffdc7504f91d28e3074d361978ff1a0713cccbc21712351d"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "debian-docs",
+      "family": "debian.org",
+      "language": "zh",
+      "source_language": "zh",
+      "expected_url": "https://www.debian.org/doc/",
+      "seed_url": "https://www.debian.org/doc/",
+      "goal": "HOWTO文档帮助读者完成什么？",
+      "must_contain_facts": [
+        "HOWTO 文档 是告诉您 如何（how to） 完成一项特定任务的文档。"
+      ],
+      "must_expose_proof": true,
+      "cohort": "historical_fact",
+      "reference": {
+        "method": "previous_independent_source_annotation",
+        "source": {
+          "url": "https://www.debian.org/doc/",
+          "title": "Debian -- 说明文档",
+          "trace_id": "trace_7fc4483699707bdc",
+          "text_sha256": "3e190795daebd7929eca112e2678a97bf9fd2a7441667c63a111bc76d8fa4de2"
+        },
+        "scope": "frozen source fact; current omission requires independent source recheck"
+      }
+    },
+    {
+      "id": "popular-nasa.gov",
+      "family": "nasa.gov",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://science.nasa.gov/",
+      "seed_url": "https://science.nasa.gov/",
+      "goal": "What does NASA Science state as its main mission?",
+      "must_contain_facts": [
+        "NASA Science seeks to discover the secrets of the universe, search for life elsewhere, and protect and improve life on Earth and in space."
+      ],
+      "must_expose_proof": true,
+      "cohort": "new_reference_fact",
+      "reference": {
+        "id": "popular-nasa.gov",
+        "url": "https://science.nasa.gov/",
+        "category": "science",
+        "fetched_at": "2026-10-29T22:19:03.037286+00:00",
+        "status": 200,
+        "final_url": "https://science.nasa.gov/",
+        "partial": false,
+        "sha256": "1580a7c351168c56ee8b837232bac9736ef9d2dc88b945782cdd9053b8dea708",
+        "title": "NASA Science",
+        "method": "independent_HTTP_HTMLParser_positive_fact_manually_reviewed",
+        "quote": "NASA Science seeks to discover the secrets of the universe, search for life elsewhere, and protect and improve life on Earth and in space.",
+        "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
+        "volatile": false
+      }
+    },
+    {
+      "id": "popular-ikea.com",
+      "family": "ikea.com",
+      "language": "it",
+      "source_language": "it",
+      "expected_url": "https://www.ikea.com/",
+      "seed_url": "https://www.ikea.com/",
+      "goal": "Chi viene invitato a conoscere per capire come nascono i prodotti IKEA prima di arrivare sugli scaffali?",
+      "must_contain_facts": [
+        "designers who bring their ideas to life and into your home."
+      ],
+      "must_expose_proof": true,
+      "cohort": "new_reference_fact",
+      "reference": {
+        "id": "popular-ikea.com",
+        "url": "https://www.ikea.com/",
+        "category": "commerce",
+        "fetched_at": "2026-10-29T22:19:03.140324+00:00",
+        "status": 200,
+        "final_url": "https://www.ikea.com/",
+        "partial": true,
+        "sha256": "367250a3a5cd0cefcc5ca5f38cde7292f3562e7d3591ddee9feb4b89ed9feff4",
+        "title": "Hej! Welcome to IKEA Global",
+        "method": "independent_HTTP_HTMLParser_positive_fact_manually_reviewed",
+        "quote": "designers who bring their ideas to life and into your home.",
+        "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
+        "volatile": false
+      }
+    },
+    {
+      "id": "popular-loc.gov",
+      "family": "loc.gov",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.loc.gov/",
+      "seed_url": "https://www.loc.gov/",
+      "goal": "What can visitors track on the official site for U.S. federal legislative information described here?",
+      "must_contain_facts": [
+        "Track bills on the official site for U.S. federal legislative information."
+      ],
+      "must_expose_proof": true,
+      "cohort": "new_reference_fact",
+      "reference": {
+        "id": "popular-loc.gov",
+        "url": "https://www.loc.gov/",
+        "category": "archives",
+        "fetched_at": "2026-10-29T22:19:03.161915+00:00",
+        "status": 200,
+        "final_url": "https://www.loc.gov/",
+        "partial": false,
+        "sha256": "39d80bf85700b98100a7b8889164ef0440880f54e428ef770e019f63336a4c8a",
+        "title": "Home | Library of Congress",
+        "method": "independent_HTTP_HTMLParser_positive_fact_manually_reviewed",
+        "quote": "Track bills on the official site for U.S. federal legislative information.",
+        "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
+        "volatile": false
+      }
+    },
+    {
+      "id": "popular-openlibrary.org",
+      "family": "openlibrary.org",
+      "language": "fr",
+      "source_language": "fr",
+      "expected_url": "https://openlibrary.org/",
+      "seed_url": "https://openlibrary.org/",
+      "goal": "De quelle organisation Open Library est-elle une initiative ?",
+      "must_contain_facts": [
+        "Open Library is an initiative of the Internet Archive"
+      ],
+      "must_expose_proof": true,
+      "cohort": "new_reference_fact",
+      "reference": {
+        "id": "popular-openlibrary.org",
+        "url": "https://openlibrary.org/",
+        "category": "culture",
+        "fetched_at": "2026-10-29T22:19:04.418192+00:00",
+        "status": 200,
+        "final_url": "https://openlibrary.org/",
+        "partial": false,
+        "sha256": "daaa026b4dc787b8d206b39b5209a87e6d4ef594bc290b66b4be22ddbc1f6ea7",
+        "title": "Welcome to Open Library | Open Library",
+        "method": "independent_HTTP_HTMLParser_positive_fact_manually_reviewed",
+        "quote": "Open Library is an initiative of the Internet Archive",
+        "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
+        "volatile": false
+      }
+    },
+    {
+      "id": "popular-bbc.com",
+      "family": "bbc.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://www.bbc.com/",
+      "seed_url": "https://www.bbc.com/",
+      "goal": "Which actor led the tributes in the page’s story about Patrick Stewart?",
+      "must_contain_facts": [
+        "William Shatner has led tributes to his Star Trek co-star"
+      ],
+      "must_expose_proof": true,
+      "cohort": "new_reference_fact",
+      "reference": {
+        "id": "popular-bbc.com",
+        "url": "https://www.bbc.com/",
+        "category": "media",
+        "fetched_at": "2026-10-29T22:19:02.101652+00:00",
+        "status": 200,
+        "final_url": "https://www.bbc.com/",
+        "partial": true,
+        "sha256": "063bb5bff93bcd1a9cc1d7e4a5b479f311d482964c382f29bfdd4ece006c639d",
+        "title": "BBC Home | Breaking News, World News, US News, Sports, Business, Innovation, Climate, Culture, Travel, Video & Audio",
+        "method": "independent_HTTP_HTMLParser_positive_fact_manually_reviewed",
+        "quote": "William Shatner has led tributes to his Star Trek co-star",
+        "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
+        "volatile": true
+      }
+    },
+    {
+      "id": "popular-lemonde.fr",
+      "family": "lemonde.fr",
+      "language": "fr",
+      "source_language": "fr",
+      "expected_url": "https://www.lemonde.fr/",
+      "seed_url": "https://www.lemonde.fr/",
+      "goal": "Combien de policiers et gendarmes sont annoncés pour le dispositif des mobilisations du 31 octobre ?",
+      "must_contain_facts": [
+        "un dispositif de 70 000 policiers et gendarmes"
+      ],
+      "must_expose_proof": true,
+      "cohort": "new_reference_fact",
+      "reference": {
+        "id": "popular-lemonde.fr",
+        "url": "https://www.lemonde.fr/",
+        "category": "media_fr",
+        "fetched_at": "2026-10-29T22:19:03.629088+00:00",
+        "status": 200,
+        "final_url": "https://www.lemonde.fr/",
+        "partial": true,
+        "sha256": "562c0e172654a1a7c93132ec756d3d667a5ae592e0b72d97b11e78071208a154",
+        "title": "Le Monde.fr - Actualités et Infos en France et dans le monde",
+        "method": "independent_HTTP_HTMLParser_positive_fact_manually_reviewed",
+        "quote": "un dispositif de 70 000 policiers et gendarmes",
+        "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
+        "volatile": true
+      }
+    },
+    {
+      "id": "quotes-js",
+      "family": "toscrape.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://quotes.toscrape.com/js/",
+      "seed_url": "https://quotes.toscrape.com/js/",
+      "goal": "Retrieve the first quotation and identify its author.",
+      "must_contain_facts": [
+        "Albert Einstein",
+        "“The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”"
+      ],
+      "must_expose_proof": true,
+      "cohort": "dynamic_reference_fact",
+      "reference": {
+        "method": "independent_public_application_API",
+        "url": "https://quotes.toscrape.com/api/quotes?page=1",
+        "sha256": "14059716ecccb75ce2b6f07cd25a4be39b6d79b8df43b29942c656a13f19e30d",
+        "scope": "first public API quotation and author, not whole-site completeness"
+      }
+    },
+    {
+      "id": "quotes-scroll",
+      "family": "toscrape.com",
+      "language": "en",
+      "source_language": "en",
+      "expected_url": "https://quotes.toscrape.com/scroll",
+      "seed_url": "https://quotes.toscrape.com/scroll",
+      "goal": "Retrieve the first quotation and identify its author.",
+      "must_contain_facts": [
+        "Albert Einstein",
+        "“The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”"
+      ],
+      "must_expose_proof": true,
+      "cohort": "dynamic_reference_fact",
+      "reference": {
+        "method": "independent_public_application_API",
+        "url": "https://quotes.toscrape.com/api/quotes?page=1",
+        "sha256": "14059716ecccb75ce2b6f07cd25a4be39b6d79b8df43b29942c656a13f19e30d",
+        "scope": "first public API quotation and author, not whole-site completeness"
+      }
+    }
+  ]
+}

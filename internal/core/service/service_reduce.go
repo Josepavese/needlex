@@ -25,13 +25,16 @@ func (s *Service) reduce(recorder *proof.Recorder, rawPage pipeline.RawPage) (pi
 	for _, node := range dom.Nodes {
 		reducedChars += len(node.Text)
 	}
-	if err := recorder.StageCompleted(stage, dom, len(dom.Nodes), map[string]string{
-		"title":           dom.Title,
+	metadata := map[string]string{
 		"web_ir_version":  core.WebIRVersion,
 		"substrate_class": dom.SubstrateClass,
 		"reduced_nodes":   fmt.Sprintf("%d", len(dom.Nodes)),
 		"reduced_chars":   fmt.Sprintf("%d", reducedChars),
-	}, s.now().UTC()); err != nil {
+	}
+	if strings.TrimSpace(dom.Title) != "" {
+		metadata["title"] = dom.Title
+	}
+	if err := recorder.StageCompleted(stage, dom, len(dom.Nodes), metadata, s.now().UTC()); err != nil {
 		return pipeline.SimplifiedDOM{}, err
 	}
 	return dom, nil

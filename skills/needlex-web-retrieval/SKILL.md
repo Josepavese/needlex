@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.43
+version: v0.1.44
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -11,6 +11,8 @@ description: Use Needle-X to compile known web URLs into compact proof-backed co
 Use Needle-X to turn web pages selected by the host agent into compact, proof-backed context the agent can act on. The host agent owns search, candidate selection, research breadth, and source comparison. Needle-X owns token-efficient reading and evidence compilation for each URL the agent chooses to analyze.
 
 Needle-X must not impose or suggest a numeric candidate limit. If the agent chooses to analyze one URL or one hundred URLs, use Needle-X for every selected URL as allowed by the host's execution and concurrency controls.
+
+A page title is optional. Use the source URL and proof references for attribution when the title is absent.
 
 Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Needle-X also renders client-rendered pages and captures textual application data from fetch/XHR, SSE, and WebSocket payloads, so dynamic pages are in scope before any external escalation. Escalate when the task depends on exact visual bytes, full-document completeness, client-side interaction, or authenticated state.
 

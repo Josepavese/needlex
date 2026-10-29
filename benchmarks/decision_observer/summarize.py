@@ -4,6 +4,7 @@ import argparse
 from collections import Counter, defaultdict
 import json
 import math
+import re
 from pathlib import Path
 import statistics
 from urllib.parse import urlsplit
@@ -21,12 +22,22 @@ def distribution(values):
 
 def error_class(error):
     text = json.dumps(error).lower()
-    if any(code in text for code in ("403", "429")):
+    if isinstance(error, dict) and error.get("kind") == "observer_timeout":
+        return "benchmark_timeout"
+    status = re.search(r"status code (\d{3})", text)
+    code = int(status.group(1)) if status else None
+    if code in (403, 429):
         return "provider_blocked"
-    if any(code in text for code in ("502", "503", "no such host", "connection refused")):
+    if code in (401, 407):
+        return "authentication_required"
+    if code in (404, 410):
+        return "unavailable_resource"
+    if code is not None and code >= 500:
+        return "unavailable_upstream"
+    if "no such host" in text or "connection refused" in text:
         return "unavailable_upstream"
     if "deadline exceeded" in text or "timeout" in text:
-        return "benchmark_timeout"
+        return "upstream_timeout"
     if "unsupported" in text:
         return "unsupported_content_type"
     return "runtime_error"

@@ -188,3 +188,11 @@ The earlier 208-case/624-judgment broad audit used the retired generic
 are preserved at commit `55bfaab`; do not feed that format to the current runner
 or compare its accuracy directly with the new three-class task. Raw benchmark
 outputs remain local under `improvements/`.
+
+## Popular public web: 1,000 URL tasks
+
+The frozen `corpora/popular-web-v1.json` expands the historical source panel using
+existing Tranco and CrUX lists. It has 1,000 distinct URLs, six question languages,
+predeclared popularity bands and preserved source/selection provenance. The
+separate 60-task quality panel checks independently annotated facts; availability
+alone is not accuracy. See [sample, profile and reproduction](live_read_eval/POPULAR.md).
