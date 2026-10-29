@@ -56,7 +56,7 @@ func TestDecisionSelectionFailureDoesNotCoolDownLaterRetrieval(t *testing.T) {
 func (o *auditObserver) Observe(_ context.Context, input intel.DecisionInput) (intel.DecisionObservation, error) {
 	o.input = input
 	o.calls++
-	result := intel.DecisionObservation{Status: "observed", Model: "Julia", Revision: "pinned", Specification: intel.DecisionSpecification}
+	result := intel.DecisionObservation{DecisionExecution: intel.DecisionExecution{Status: "observed", Model: "Julia", Revision: "pinned", Specification: intel.DecisionSpecification}}
 	if o.fail {
 		return result, errors.New("runtime unavailable")
 	}

@@ -74,6 +74,7 @@ type compactReadOutput struct {
 	Analytics    compactAnalyticsFooter `json:"analytics"`
 	CostReport   core.CostReport        `json:"cost_report"`
 	Decision     *compactDecision       `json:"decision_observation,omitempty"`
+	Acquisition  *compactAcquisition    `json:"acquisition_observation,omitempty"`
 }
 
 type compactQueryOutput struct {
@@ -95,6 +96,7 @@ type compactQueryOutput struct {
 	Analytics    compactAnalyticsFooter `json:"analytics"`
 	CostReport   core.CostReport        `json:"cost_report"`
 	Decision     *compactDecision       `json:"decision_observation,omitempty"`
+	Acquisition  *compactAcquisition    `json:"acquisition_observation,omitempty"`
 }
 
 type compactCrawlDocument struct {
@@ -127,6 +129,7 @@ func compactReadResponse(resp coreservice.ReadResponse) compactReadOutput {
 		Analytics:    compactAnalyticsForRead(resp),
 		CostReport:   resp.ResultPack.CostReport,
 		Decision:     compactDecisionFor(resp.AgentContext.Decision),
+		Acquisition:  compactAcquisitionFor(resp.AgentContext.Acquisition),
 	}
 }
 
@@ -151,6 +154,7 @@ func compactQueryResponse(resp coreservice.QueryResponse) compactQueryOutput {
 		Analytics:    compactAnalyticsForQuery(resp),
 		CostReport:   resp.CostReport,
 		Decision:     compactDecisionFor(resp.AgentContext.Decision),
+		Acquisition:  compactAcquisitionFor(resp.AgentContext.Acquisition),
 	}
 }
 

@@ -24,21 +24,28 @@ type DecisionAnswer struct {
 	Probabilities map[string]float64 `json:"probabilities"`
 }
 
+// DecisionExecution is the common diagnostic contract of one local choice.
+// Task-specific observations add scope; it never grants authority to act.
+type DecisionExecution struct {
+	RuntimeMS     int64                     `json:"runtime_ms,omitempty"`
+	CacheHit      bool                      `json:"cache_hit,omitempty"`
+	Status        string                    `json:"status"`
+	Model         string                    `json:"model"`
+	Revision      string                    `json:"revision"`
+	Specification string                    `json:"specification"`
+	Calibration   string                    `json:"calibration"`
+	ElapsedMS     int64                     `json:"elapsed_ms"`
+	InputBytes    int                       `json:"input_bytes"`
+	Answers       map[string]DecisionAnswer `json:"answers,omitempty"`
+	Reason        string                    `json:"reason,omitempty"`
+}
+
 type DecisionObservation struct {
-	Assertion               string                    `json:"assertion"`
-	UnassessedEvidenceCount int                       `json:"unassessed_evidence_count"`
-	SelectionSimilarity     *float64                  `json:"selection_similarity,omitempty"`
-	CacheHit                bool                      `json:"cache_hit,omitempty"`
-	Status                  string                    `json:"status"`
-	Model                   string                    `json:"model"`
-	Revision                string                    `json:"revision"`
-	Specification           string                    `json:"specification"`
-	Calibration             string                    `json:"calibration"`
-	ElapsedMS               int64                     `json:"elapsed_ms"`
-	InputBytes              int                       `json:"input_bytes"`
-	EvidenceIDs             []string                  `json:"evidence_ids,omitempty"`
-	Answers                 map[string]DecisionAnswer `json:"answers,omitempty"`
-	Reason                  string                    `json:"reason,omitempty"`
+	DecisionExecution
+	Assertion               string   `json:"assertion"`
+	UnassessedEvidenceCount int      `json:"unassessed_evidence_count"`
+	SelectionSimilarity     *float64 `json:"selection_similarity,omitempty"`
+	EvidenceIDs             []string `json:"evidence_ids,omitempty"`
 }
 
 const DecisionSpecification = "claim-support-v1"

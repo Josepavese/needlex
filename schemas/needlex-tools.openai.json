@@ -120,6 +120,11 @@
               "description": "Retrieval objective or question to answer.",
               "type": "string"
             },
+            "observe_acquisition": {
+              "default": false,
+              "description": "Optional experimental acquisition-route observation. Requires an objective/goal and local decision observation. Runs after retrieval against the original HTTP snapshot; the unqualified proposal never changes actions, strict modes, content or proofs. Omit for ordinary reads.",
+              "type": "boolean"
+            },
             "profile": {
               "type": "string"
             },
@@ -181,6 +186,11 @@
             },
             "objective": {
               "type": "string"
+            },
+            "observe_acquisition": {
+              "default": false,
+              "description": "Optional experimental acquisition-route observation. Requires an objective/goal and local decision observation. Runs after retrieval against the original HTTP snapshot; the unqualified proposal never changes actions, strict modes, content or proofs. Omit for ordinary reads.",
+              "type": "boolean"
             },
             "profile": {
               "type": "string"

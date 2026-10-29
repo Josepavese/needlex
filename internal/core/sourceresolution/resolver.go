@@ -38,13 +38,14 @@ type Request struct {
 }
 
 type Resolver struct {
-	Config   config.Config
-	Acquirer pipeline.Acquirer
-	Reducer  pipeline.Reducer
-	Renderer rendering.Renderer
-	Semantic intel.SemanticAligner
-	Now      func() time.Time
-	Reduce   func(*proof.Recorder, pipeline.RawPage) (pipeline.SimplifiedDOM, error)
+	Config    config.Config
+	Acquirer  pipeline.Acquirer
+	Reducer   pipeline.Reducer
+	Segmenter pipeline.Segmenter
+	Renderer  rendering.Renderer
+	Semantic  intel.SemanticAligner
+	Now       func() time.Time
+	Reduce    func(*proof.Recorder, pipeline.RawPage) (pipeline.SimplifiedDOM, error)
 }
 
 func (r Resolver) now() time.Time {
@@ -57,7 +58,7 @@ func (r Resolver) now() time.Time {
 func (r Resolver) ResolveAgentReadable(ctx context.Context, recorder *proof.Recorder, req Request, rawPage pipeline.RawPage) (pipeline.RawPage, error) {
 	const stage = "agent_readable"
 	mode := normalizeAgentReadableMode(req.AgentReadableMode)
-	if mode == "off" || !r.Config.Agent.ReadableEnabled || !pipeline.IsHTMLLikeRawPage(rawPage) {
+	if mode == "off" || normalizeRenderMode(req.RenderMode, req.RenderHint) == "required" || !r.Config.Agent.ReadableEnabled || !pipeline.IsHTMLLikeRawPage(rawPage) {
 		return rawPage, nil
 	}
 	if err := recorder.StageStarted(stage, rawPage, r.now().UTC()); err != nil {
@@ -224,6 +225,7 @@ func markSelectedAgentReadable(metadata map[string]string, selection agentReadab
 	metadata["selected"] = "true"
 	metadata["selected_url"] = selection.Page.FinalURL
 	metadata["selected_kind"] = selection.Page.SourceKind
+	metadata["selected_partial"] = fmt.Sprintf("%t", selection.Page.Partial)
 	metadata["selected_declared_by"] = selection.Candidate.DeclaredBy
 	if selection.SemanticScore > 0 {
 		metadata["selected_semantic_score"] = fmt.Sprintf("%.4f", selection.SemanticScore)

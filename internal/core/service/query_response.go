@@ -22,6 +22,7 @@ func finalizeQueryResponse(plan QueryPlan, baseCompiler queryplan.QueryCompiler,
 		CostReport:   readResp.ResultPack.CostReport,
 	}
 	resp.AgentContext.Decision = readResp.AgentContext.Decision
+	resp.AgentContext.Acquisition = readResp.AgentContext.Acquisition
 	resp.Plan.Compiler = queryplan.AnnotateQueryCompilerWithWebIR(
 		resp.Plan.Compiler,
 		resp.WebIR.NodeCount,

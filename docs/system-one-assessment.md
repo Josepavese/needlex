@@ -1,15 +1,15 @@
 # System One decision models in Needle-X
 
-Assessment and implementation: 2026-10-28 to 2026-10-29. Current candidate: v0.1.42. Historical v0.1.40/v0.1.41 measurements below retain their original scope.
+Assessment and implementation: 2026-10-28 to 2026-10-29. Current candidate: v0.1.43. Historical v0.1.40/v0.1.41 measurements below retain their original scope.
 
 ## Current decision
 
-In v0.1.42 ordinary reads do not call Julia. An explicit `assertion` requests a
+Ordinary reads do not call Julia. An explicit `assertion` requests a
 `claim-support-v1` check of one whole, semantically selected passage. The
 held-out result is 35/105 correct, with all 105 classified as not established.
 Julia is unqualified for factual-support decisions and remains advisory.
 The demonstrated content omissions are fixed in the deterministic reducer,
-independently of the model. See the final qualification section for evidence.
+independently of the model. See the v0.1.42 qualification section for evidence. The v0.1.43 acquisition experiment below is a separate task and does not qualify factual truth or similarity.
 
 ## Original v0.1.41 decision
 
@@ -579,3 +579,131 @@ hard-case benchmark also required new exact fixture annotations for retained
 header/punctuation variants; unknown reference fixtures now error instead of
 becoming zero similarity. Its original acceptance thresholds pass unchanged.
 These offline fixture embeddings are test controls, not Julia calibration.
+
+
+## v0.1.43: passive acquisition policy
+
+An explicit `observe_acquisition` request (CLI `--observe-acquisition`) asks the
+existing local adapter for an `acquisition-route-v1` proposal. The code supplies
+only the original HTTP surface, an explicit objective, declared sources,
+structural script presence, source class and the permitted menu. The same dense
+selector picks one whole passage within the existing byte budget. Source hashes
+bind the memo but do not enter model text. Later operational outcomes never enter
+its features. Unassessed passages remain explicit.
+
+The actions are `serve_static`, `read_declared`, `render`, and `insufficient`.
+The `read_conventional` diagnostic records a selected source with non-direct
+declaration provenance, including indirect linked resources. It does not establish
+that the original declaration was conventional. This bucket is never a proposed
+action; baseline comparisons use measured work rather than that provenance label.
+Strict modes, content type and the remaining original operation budget determine
+availability. A single permitted route needs no inference. Every proposal runs
+only after final read/query selection and remains `observation_only`; ordinary
+reads add no Julia work. The existing bridge owns identity/token admission,
+validation and the bounded memo for both claim and acquisition tasks.
+
+The strict-mode regressions revealed a real defect: a declared Markdown source
+could bypass `render=required`. Required rendering now skips alternative-source
+resolution and honors the requested browser read, including non-HTML input.
+
+The native [qualification harness](../benchmarks/acquisition_policy/README.md)
+uses 75 tasks across 59 families: 54 public-page tasks and 21 fixtures, with
+English/Italian/Chinese fixture questions. The frozen 20 development and 55
+heldout tasks share no families. Original source-fact markers and actual
+counterfactual acquisition receipts are collected before inference. A complete
+capture plus source-scoped fact and proof is required for verified delivery;
+transport errors and degraded captures remain unknown. The dense comparator
+uses the same selected whole passage and a development-only threshold. This is
+an agent-reviewed routing experiment, not independent human truth annotation.
+
+Native GET attempts and Chromium HTTP(S) request events are measured separately.
+The latter include redirect/cache events and are not a wire-request count.
+The telemetry does not change the capture filter, wait activity or resource
+budgets. Proposed-route latency is estimated from measured acquisition time plus
+state construction and inference. PSS measurements cover the native test binary
+and owned shared Chromium, with resident Julia separately and in aggregate;
+the external dense endpoint is excluded consistently. A warm browser may remain
+resident while serving a later static page. These are counterfactual costs, not
+an active-policy performance claim.
+
+
+The initial unpaced development batch exposed circuit-breaker contamination:
+one dense timeout caused following immediate cases to abstain during cooldown.
+The paced cold run retains 11/20 failures with the installed 1,200 ms embedding
+and 2,000 ms decision budgets. The independent-case harness waits the configured
+cooldown after a failure, records that delay, and does not retry the failed case.
+A separate warm-cache experiment fills real vectors in bounded batches before
+classification, records warmup costs/errors, and preserves the same request
+budgets. Its 18/20 development observations include six false insufficiency
+proposals. Warm-cache ability cannot be represented as cold-path reliability or
+an active latency improvement. No prompts were tuned from heldout outcomes.
+
+### Heldout result and decision
+
+The frozen threshold is **0.610838229466655**, fitted only on the warm
+20-case development partition. Heldout has 55 tasks across disjoint families:
+46 observed proposals and nine unavailable observations, including the retained
+404 input. Four route oracles remain unknown (the three short declared-source
+fixtures and that 404); three controlled unavailable fixtures establish scoped
+insufficiency. No outcome was relabeled to remove a failure.
+
+Across all 55 heldout tasks, the current operational policy delivers the expected
+fact with a complete capture and valid proof in **48/55** cases. Those are the
+actual product outputs because observation never changes actions. Compare the
+same 46 cases where both proposed policies have a choice:
+
+| Heldout matched cases | Current policy | Dense comparator | Julia proposal |
+|---|---:|---:|---:|
+| Verified fact delivery |40/46|38/46|20/46|
+| False insufficiency stops |0|0|17|
+| Browser uses |25|18|3|
+| Native GET attempts |61|52|47|
+| Chromium HTTP request events |348|380|204|
+| Warm estimated total median |2203.5ms|1577ms|1435ms|
+| Median observer work included above |0ms|3ms|673ms|
+
+The lower proposed latency and fewer browser operations are **not improvements**:
+Julia avoids work by stopping incorrectly. It selects none of the seven heldout
+cases whose least-work successful route requires rendering, and neither of the
+two whose successful optimum is a declared source. The dense comparator also
+loses facts relative to the baseline, so it is not activated either. All methods
+have exactly the same selected passage in this ablation; this is not a test of
+an unconstrained embedding-only acquisition redesign.
+
+Cold independent development has nine observations and 11 timeout failures.
+Warm development has 18 observations and two failures; heldout has 46 and nine.
+Preparing real dense caches across the warm partitions costs **188,204 ms**, with
+ten warmup errors retained. This cost is separate from warm request medians and
+cannot be called a free optimization. Post-failure cooldown pacing is retained
+per case. Standalone cold inference is not the same cache lifecycle as an
+already-running MCP service sharing its operational vector cache.
+
+At 50 ms sampling, the native acquisition harness plus owned shared Chromium
+peaks at **572.9 MiB PSS** (711.3 MiB including resident Julia). The separate
+heldout decision phase peaks at 29.6 MiB tool PSS and 169.2 MiB model PSS
+(198.9 MiB aggregate). Those are different phases, not before/after savings;
+there is no active-policy RAM improvement claim. The model was already resident
+in both phases, and the external embedding service is excluded consistently.
+
+Decision: **not qualified for active acquisition**. Keep the existing operational
+policy and dense embeddings, expose this experiment only on explicit request,
+and retain strict modes/deadlines/capture diagnostics as code-owned guarantees.
+This experiment does not support a decision-model-first redesign or certify
+truth/similarity. A future model must beat the baseline and the dense comparator
+without new incorrect stops, across both cold admission and heldout outcomes.
+
+The versioned [receipts and complete scoped results](evidence/acquisition-policy-2026-10-29.json)
+retain source states, facts, route outcomes, witness proofs/digests, unknowns,
+failed observer pilots, cold/warm costs and resource samples. The scorer's only
+post-heldout repair accepts a null menu for the retained 404 case; it changes no
+labels, threshold, prompts, inference or measured route. Five offline scorer
+regressions pass.
+
+The packaged private install passes nine CLI/MCP checks: ordinary reads omit
+observation, explicit observation preserves identical source text, a repeated MCP
+read reuses its memo, query keeps its final audit, and proof/replay work. Required
+rendering on a declared-source fixture keeps the original DOM and captured data.
+Real canonical Quotes `/scroll` returns `dom+network` with one 2,860-byte payload;
+`/js/` returns `dom` with inline data. Shared Chromium is reused, and neither has
+missing bodies, truncation or degradation. The frozen `/scroll/` corpus input
+keeps its 404 outcome; the correct canonical smoke is a separate check.

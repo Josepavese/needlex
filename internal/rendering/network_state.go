@@ -115,6 +115,7 @@ func (c *networkCollector) snapshot() ([]NetworkResource, NetworkStats) {
 		}
 	}
 	stats := NetworkStats{
+		HTTPRequests:        c.httpRequests,
 		ResourceCount:       len(out),
 		ObservedResources:   len(c.order),
 		BodyUnavailable:     c.bodyUnavailableCount,

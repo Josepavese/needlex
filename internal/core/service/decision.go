@@ -19,7 +19,7 @@ func (s *Service) observeReadDecision(ctx context.Context, assertion string, res
 		input.Evidence = append(input.Evidence, intel.DecisionEvidence{ID: chunk.ID, Heading: chunk.HeadingPath, Text: chunk.Text})
 	}
 	started := s.now()
-	result := intel.DecisionObservation{Assertion: assertion, Status: "disabled", UnassessedEvidenceCount: input.EvidenceCount(), Specification: intel.DecisionSpecification, Reason: "local decision observation is not configured"}
+	result := intel.DecisionObservation{Assertion: assertion, UnassessedEvidenceCount: input.EvidenceCount(), DecisionExecution: intel.DecisionExecution{Status: "disabled", Specification: intel.DecisionSpecification, Reason: "local decision observation is not configured"}}
 	var err error
 	if s.decisionObserver != nil {
 		result, err = s.decisionObserver.Observe(ctx, input)
@@ -38,10 +38,13 @@ func (s *Service) observeReadDecision(ctx context.Context, assertion string, res
 		result.Reason = "invalid decision diagnostic"
 		audit, _ = json.Marshal(result)
 	}
-	recorder := proof.NewRecorder(response.Trace.RunID, response.Trace.TraceID, response.Trace.FinishedAt)
-	recorder.ModelIntervention("decision_observation", "advisory_only", "local decision audit; no retrieval action", 0, map[string]string{"observation": string(audit)}, s.now().UTC())
-
 	response.AgentContext.Decision = &result
+	return s.appendDecisionAudit(response, "decision_observation", audit)
+}
+
+func (s *Service) appendDecisionAudit(response *ReadResponse, stage string, audit []byte) error {
+	recorder := proof.NewRecorder(response.Trace.RunID, response.Trace.TraceID, response.Trace.FinishedAt)
+	recorder.ModelIntervention(stage, "advisory_only", "local decision audit; no retrieval action", 0, map[string]string{"observation": string(audit)}, s.now().UTC())
 	auditTrace := recorder.Finish(s.now().UTC())
 	response.Trace.Events = append(response.Trace.Events, auditTrace.Events...)
 	response.Trace.FinishedAt = auditTrace.FinishedAt

@@ -51,6 +51,9 @@ type NetworkResource struct {
 }
 
 type NetworkStats struct {
+	// HTTPRequests counts CDP request events through the snapshot, including
+	// redirects/cache events. It is independent of application-body filtering.
+	HTTPRequests        int
 	ResourceCount       int
 	ObservedResources   int
 	BodyUnavailable     int

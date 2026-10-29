@@ -10,7 +10,7 @@ import (
 )
 
 func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
-	configPath, goal, assertion, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode, jsonOut, ok := parseQueryArgs(args, stderr)
+	configPath, goal, assertion, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode, jsonOut, observeAcquisition, ok := parseQueryArgs(args, stderr)
 	if !ok {
 		writeQueryUsage(stderr)
 		return 2
@@ -34,13 +34,14 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	}
 
 	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
-		Goal:          goal,
-		Assertion:     assertion,
-		SeedURL:       seedURL,
-		Profile:       profile,
-		UserAgent:     userAgent,
-		DiscoveryMode: discovery,
-		RenderMode:    renderMode,
+		Goal:               goal,
+		Assertion:          assertion,
+		ObserveAcquisition: observeAcquisition,
+		SeedURL:            seedURL,
+		Profile:            profile,
+		UserAgent:          userAgent,
+		DiscoveryMode:      discovery,
+		RenderMode:         renderMode,
 	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "query", err, map[string]any{"goal": goal, "seed_url": seedURL, "discovery_mode": discovery})
@@ -57,12 +58,13 @@ func (r Runner) runQuery(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, assertion, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode string, jsonOut, ok bool) {
+func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, assertion, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode string, jsonOut, observeAcquisition, ok bool) {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&goal, "goal", "", "query goal")
 	fs.StringVar(&assertion, "assertion", "", assertionHelp)
+	fs.BoolVar(&observeAcquisition, "observe-acquisition", observeAcquisitionDefault, acquisitionObservationHelp)
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&discovery, "discovery", "", "query discovery mode: same_site_links, off, or experimental explicit opt-in web_search")
@@ -71,20 +73,21 @@ func parseQueryArgs(args []string, stderr io.Writer) (configPath, goal, assertio
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	fs.StringVar(&jsonMode, "json-mode", jsonModeCompact, "json output mode: compact or full")
 	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
-		return "", "", "", "", "", "", "", "", "", "", false, false
+		return "", "", "", "", "", "", "", "", "", "", false, false, false
 	}
 	if fs.NArg() > 1 || goal == "" {
-		return "", "", "", "", "", "", "", "", "", "", false, false
+		return "", "", "", "", "", "", "", "", "", "", false, false, false
 	}
 	if fs.NArg() == 1 {
 		seedURL = fs.Arg(0)
 	}
-	return configPath, goal, assertion, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode, jsonOut, true
+	return configPath, goal, assertion, profile, userAgent, discovery, seedURL, retrievalEffort, renderMode, jsonMode, jsonOut, observeAcquisition, true
 }
 
 func renderQueryText(w io.Writer, resp coreservice.QueryResponse, artifacts artifactPaths) {
 	compact := compactQueryResponse(resp)
 	renderDecisionText(w, compact.Decision)
+	renderAcquisitionText(w, compact.Acquisition)
 	fmt.Fprintf(w, "Kind: %s\n", compact.Kind)
 	fmt.Fprintf(w, "Goal: %s\n", compact.Goal)
 	if compact.SeedURL != "" {

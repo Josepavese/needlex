@@ -29,13 +29,14 @@ type AgentCandidate struct {
 }
 
 type AgentContext struct {
-	Decision      *intel.DecisionObservation `json:"decision_observation,omitempty"`
-	URL           string                     `json:"url"`
-	Title         string                     `json:"title,omitempty"`
-	Links         []string                   `json:"links,omitempty"`
-	CandidateURLs []string                   `json:"candidate_urls,omitempty"`
-	Candidates    []AgentCandidate           `json:"candidates,omitempty"`
-	Chunks        []AgentChunk               `json:"chunks"`
+	Acquisition   *intel.AcquisitionObservation `json:"acquisition_observation,omitempty"`
+	Decision      *intel.DecisionObservation    `json:"decision_observation,omitempty"`
+	URL           string                        `json:"url"`
+	Title         string                        `json:"title,omitempty"`
+	Links         []string                      `json:"links,omitempty"`
+	CandidateURLs []string                      `json:"candidate_urls,omitempty"`
+	Candidates    []AgentCandidate              `json:"candidates,omitempty"`
+	Chunks        []AgentChunk                  `json:"chunks"`
 }
 
 func buildAgentContext(document core.Document, pack core.ResultPack, proofs []proof.ProofRecord, candidates []DiscoverCandidate) AgentContext {

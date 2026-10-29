@@ -136,7 +136,7 @@ needlex config show
 needlex config set semantic.provider_model nomic-embed-text:latest
 ```
 
-Optional local Julia checks require an explicit `assertion` (`--assertion` in CLI). They assess one semantically selected passage in observation mode; ordinary retrieval incurs no Julia inference. The model remains unqualified for correctness decisions and does not change retrieval, embeddings or proofs. Configuration, measurements and current accuracy limits are documented in [the System One assessment](docs/system-one-assessment.md).
+Optional local Julia checks require an explicit `assertion` (`--assertion` in CLI). They assess one semantically selected passage in observation mode; ordinary retrieval incurs no Julia inference. The model remains unqualified for correctness decisions and does not change retrieval, embeddings or proofs. Experimental acquisition-route observations use `observe_acquisition: true` (CLI: `--observe-acquisition`) with an explicit objective/goal. They compare a proposed static, declared-source, browser or insufficient-evidence route with the actual path after retrieval; proposals never act. Configuration, measurements and current accuracy limits are documented in [the System One assessment](docs/system-one-assessment.md).
 
 ## Agent Skill
 

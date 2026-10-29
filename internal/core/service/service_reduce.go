@@ -57,6 +57,9 @@ func (s *Service) segment(recorder *proof.Recorder, dom pipeline.SimplifiedDOM) 
 }
 
 func validateReadRequest(req ReadRequest) error {
+	if req.ObserveAcquisition && strings.TrimSpace(req.Objective) == "" {
+		return fmt.Errorf("acquisition observation requires an explicit read objective")
+	}
 	if strings.TrimSpace(req.URL) == "" {
 		return fmt.Errorf("read request url must not be empty")
 	}

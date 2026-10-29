@@ -92,14 +92,15 @@ func queryCandidateDiagnostics(candidates []DiscoverCandidate) []queryreview.Dia
 
 func (s *Service) readRequestForQuery(req QueryRequest, profile, selectedURL string) ReadRequest {
 	return ReadRequest{
-		URL:               selectedURL,
-		Objective:         req.Goal,
-		Profile:           profile,
-		FetchProfile:      req.FetchProfile,
-		FetchRetryProfile: req.FetchRetryProfile,
-		UserAgent:         req.UserAgent,
-		ForceLane:         req.ForceLane,
-		RenderHint:        req.RenderHint,
-		RenderMode:        req.RenderMode,
+		URL:                selectedURL,
+		ObserveAcquisition: req.ObserveAcquisition,
+		Objective:          req.Goal,
+		Profile:            profile,
+		FetchProfile:       req.FetchProfile,
+		FetchRetryProfile:  req.FetchRetryProfile,
+		UserAgent:          req.UserAgent,
+		ForceLane:          req.ForceLane,
+		RenderHint:         req.RenderHint,
+		RenderMode:         req.RenderMode,
 	}
 }

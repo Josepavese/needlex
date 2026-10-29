@@ -30,7 +30,7 @@ type decisionQuestion struct {
 
 // NewDecisionObserver constructs the HTTP adapter; the caller owns the shared
 // runtime and borrowed client. Disabled observation allocates no runtime.
-func NewDecisionObserver(cfg config.DecisionConfig, client *http.Client, semantic SemanticAligner) DecisionObserver {
+func NewDecisionObserver(cfg config.DecisionConfig, client *http.Client, semantic SemanticAligner) DecisionModel {
 	if cfg.Mode != "observe" {
 		return nil
 	}
@@ -47,7 +47,7 @@ func decisionQuestions(assertion string) map[string]decisionQuestion {
 
 func (o *localDecisionObserver) Observe(ctx context.Context, input DecisionInput) (DecisionObservation, error) {
 	started := time.Now()
-	result := DecisionObservation{Status: "unavailable", Model: o.cfg.Model, Revision: o.cfg.Revision, Specification: DecisionSpecification, Calibration: "unqualified_in_domain"}
+	result := DecisionObservation{DecisionExecution: o.execution(DecisionSpecification)}
 	result.Assertion = input.Assertion
 	result.UnassessedEvidenceCount = input.EvidenceCount()
 	if err := o.cfg.Validate(); err != nil {
@@ -62,7 +62,7 @@ func (o *localDecisionObserver) Observe(ctx context.Context, input DecisionInput
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
-	unit, similarity, reason, err := o.selectEvidence(ctx, input)
+	unit, similarity, reason, err := o.selectEvidence(ctx, input, 0)
 	result.SelectionSimilarity, result.Reason = similarity, reason
 	if err != nil {
 		return result, err
@@ -77,15 +77,31 @@ func (o *localDecisionObserver) Observe(ctx context.Context, input DecisionInput
 		return result, err
 	}
 	result.InputBytes = len(state) + len(input.Assertion)
-	questions := decisionQuestions(input.Assertion)
-	cacheInput, _ := json.Marshal([]any{o.cfg.BaseURL, o.cfg.Model, o.cfg.Revision, DecisionSpecification, state, questions})
+	err = o.observeChoice(ctx, &result.DecisionExecution, state, "support", decisionQuestions(input.Assertion)["support"], "")
+	if result.Status == "observed" {
+		result.UnassessedEvidenceCount--
+	}
+	result.ElapsedMS = time.Since(started).Milliseconds()
+	return result, err
+}
+
+func (o *localDecisionObserver) execution(specification string) DecisionExecution {
+	return DecisionExecution{Status: "unavailable", Model: o.cfg.Model, Revision: o.cfg.Revision, Specification: specification, Calibration: "unqualified_in_domain"}
+}
+
+// observeChoice owns runtime identity, admission, validation and memoization for
+// both task contracts. Callers own their context and task-specific scope.
+func (o *localDecisionObserver) observeChoice(ctx context.Context, result *DecisionExecution, state json.RawMessage, questionID string, question decisionQuestion, sourceIdentity string) error {
+	started := time.Now()
+	defer func() { result.RuntimeMS = time.Since(started).Milliseconds() }()
+	questions := map[string]decisionQuestion{questionID: question}
+	cacheInput, _ := json.Marshal([]any{o.cfg.BaseURL, o.cfg.Model, o.cfg.Revision, result.Specification, sourceIdentity, state, questions})
 	key := sha256.Sum256(cacheInput)
 	if answer, ok := o.memo.get(key); ok {
-		result.Answers = map[string]DecisionAnswer{"support": answer}
+		result.Answers = map[string]DecisionAnswer{questionID: answer}
 		result.Status, result.CacheHit = "observed", true
-		result.UnassessedEvidenceCount--
 		result.ElapsedMS = time.Since(started).Milliseconds()
-		return result, nil
+		return nil
 	}
 	var models struct {
 		Data []struct {
@@ -96,20 +112,20 @@ func (o *localDecisionObserver) Observe(ctx context.Context, input DecisionInput
 		} `json:"data"`
 	}
 	if err := o.exchange(ctx, http.MethodGet, "/v1/models", nil, &models); err != nil {
-		return result, err
+		return err
 	}
 	if len(models.Data) != 1 || models.Data[0].ID != o.cfg.Model {
-		return result, fmt.Errorf("local decision runtime model identity mismatch")
+		return fmt.Errorf("local decision runtime model identity mismatch")
 	}
 	for _, question := range questions {
 		head, _ := json.Marshal(question)
 		fits, err := o.promptFits(ctx, head, state, models.Data[0].Meta.ContextTokens)
 		if err != nil {
-			return result, err
+			return err
 		}
 		if !fits {
 			result.Status = "prompt_budget_exceeded"
-			return result, nil
+			return nil
 		}
 	}
 	body, err := json.Marshal(struct {
@@ -117,46 +133,45 @@ func (o *localDecisionObserver) Observe(ctx context.Context, input DecisionInput
 		Questions map[string]decisionQuestion `json:"questions"`
 	}{state, questions})
 	if err != nil {
-		return result, err
+		return err
 	}
 	var response struct {
 		Model   string                    `json:"model"`
 		Answers map[string]DecisionAnswer `json:"answers"`
 	}
 	if err := o.exchange(ctx, http.MethodPost, "/v1/systemone", body, &response); err != nil {
-		return result, err
+		return err
 	}
 	if response.Model != o.cfg.Model {
-		return result, fmt.Errorf("decision response model identity mismatch")
+		return fmt.Errorf("decision response model identity mismatch")
 	}
 	if len(response.Answers) != len(questions) {
-		return result, fmt.Errorf("decision response has missing or foreign questions")
+		return fmt.Errorf("decision response has missing or foreign questions")
 	}
 	for id, question := range questions {
 		answer, ok := response.Answers[id]
 		if !ok || len(answer.Probabilities) != len(question.Criteria) {
-			return result, fmt.Errorf("invalid decision distribution for %s", id)
+			return fmt.Errorf("invalid decision distribution for %s", id)
 		}
 		sum := 0.0
 		best := -1.0
 		for option := range question.Criteria {
 			p, ok := answer.Probabilities[option]
 			if !ok || math.IsNaN(p) || math.IsInf(p, 0) || p < 0 || p > 1 {
-				return result, fmt.Errorf("invalid decision probability for %s", id)
+				return fmt.Errorf("invalid decision probability for %s", id)
 			}
 			sum += p
 			best = max(best, p)
 		}
 		if p, ok := answer.Probabilities[answer.Choice]; !ok || p != best || math.Abs(sum-1) > decisionProbabilityTolerance {
-			return result, fmt.Errorf("invalid decision choice or normalization for %s", id)
+			return fmt.Errorf("invalid decision choice or normalization for %s", id)
 		}
 	}
 	result.Status = "observed"
-	result.UnassessedEvidenceCount--
-	o.memo.set(key, response.Answers["support"])
+	o.memo.set(key, response.Answers[questionID])
 	result.Answers = response.Answers
 	result.ElapsedMS = time.Since(started).Milliseconds()
-	return result, nil
+	return nil
 }
 
 const decisionProbabilityTolerance = 0.0001
@@ -210,7 +225,7 @@ func (o *localDecisionObserver) promptFits(ctx context.Context, head, state []by
 }
 
 // Select whole evidence units; no byte slicing or lexical approximation of relevance.
-func (o *localDecisionObserver) selectEvidence(ctx context.Context, input DecisionInput) (*DecisionEvidence, *float64, string, error) {
+func (o *localDecisionObserver) selectEvidence(ctx context.Context, input DecisionInput, reservedBytes int) (*DecisionEvidence, *float64, string, error) {
 	eligible := []DecisionEvidence{}
 	seen := map[string]string{}
 	for _, evidence := range input.Evidence {
@@ -225,7 +240,7 @@ func (o *localDecisionObserver) selectEvidence(ctx context.Context, input Decisi
 		}
 		seen[evidence.ID] = decisionEvidenceText(evidence)
 		state, _ := json.Marshal(decisionEvidenceText(evidence))
-		if strings.TrimSpace(evidence.Text) != "" && len(state)+len(input.Assertion) <= o.cfg.MaxInputBytes {
+		if strings.TrimSpace(evidence.Text) != "" && len(state)+len(input.Assertion)+reservedBytes <= o.cfg.MaxInputBytes {
 			eligible = append(eligible, evidence)
 		}
 	}

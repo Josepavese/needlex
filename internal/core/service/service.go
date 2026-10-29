@@ -27,32 +27,36 @@ type ReadRequest struct {
 	RenderMode                                    string
 	AgentReadableMode                             string
 	StableFingerprints                            []string
+	ObserveAcquisition                            bool
 }
 
 type ReadResponse struct {
-	Document     core.Document       `json:"document"`
-	WebIR        core.WebIR          `json:"web_ir"`
-	ResultPack   core.ResultPack     `json:"result_pack"`
-	AgentContext AgentContext        `json:"agent_context,omitempty"`
-	ProofRecords []proof.ProofRecord `json:"proof_records"`
-	Trace        proof.RunTrace      `json:"trace"`
-	Replay       proof.ReplayReport  `json:"replay"`
+	Document          core.Document       `json:"document"`
+	WebIR             core.WebIR          `json:"web_ir"`
+	ResultPack        core.ResultPack     `json:"result_pack"`
+	AgentContext      AgentContext        `json:"agent_context,omitempty"`
+	ProofRecords      []proof.ProofRecord `json:"proof_records"`
+	Trace             proof.RunTrace      `json:"trace"`
+	Replay            proof.ReplayReport  `json:"replay"`
+	acquisitionPage   *pipeline.RawPage
+	acquisitionBudget *time.Duration
 }
 
 type Service struct {
-	cfg                config.Config
-	httpClient         *http.Client
-	acquirer           pipeline.Acquirer
-	reducer            pipeline.Reducer
-	segmenter          pipeline.Segmenter
-	renderer           rendering.Renderer
-	runtime            intel.ModelRuntime
-	semantic           intel.SemanticAligner
-	decisionObserver   intel.DecisionObserver
-	now                func() time.Time
-	storeRoot          string
-	webDiscoverBaseURL string
-	discoveryProviders store.DiscoveryProviderStateStore
+	cfg                 config.Config
+	httpClient          *http.Client
+	acquirer            pipeline.Acquirer
+	reducer             pipeline.Reducer
+	segmenter           pipeline.Segmenter
+	renderer            rendering.Renderer
+	runtime             intel.ModelRuntime
+	semantic            intel.SemanticAligner
+	decisionObserver    intel.DecisionObserver
+	acquisitionObserver intel.AcquisitionObserver
+	now                 func() time.Time
+	storeRoot           string
+	webDiscoverBaseURL  string
+	discoveryProviders  store.DiscoveryProviderStateStore
 }
 
 func New(cfg config.Config, client *http.Client) (*Service, error) {
@@ -73,23 +77,23 @@ func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, r
 		cleanRoot = platform.DefaultStateRoot()
 	}
 	cacheDir := platform.NewStateLayout(cleanRoot).EmbeddingCacheDir
+	observer := intel.NewDecisionObserver(cfg.Decision, client, intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir))
 	return &Service{
 		cfg:        cfg,
 		httpClient: client,
 		acquirer:   pipeline.Acquirer{Client: client},
 		reducer:    pipeline.Reducer{},
-		segmenter: pipeline.Segmenter{
-			MaxSegmentChars: 1200,
-		},
-		renderer: renderer,
-		runtime:  intel.NewRuntime(cfg, client),
+		segmenter:  pipeline.Segmenter{},
+		renderer:   renderer,
+		runtime:    intel.NewRuntime(cfg, client),
 		// Advisory cancellation must not trip the retrieval aligner's cooldown.
-		decisionObserver:   intel.NewDecisionObserver(cfg.Decision, client, intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir)),
-		semantic:           intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir),
-		now:                time.Now,
-		storeRoot:          cleanRoot,
-		webDiscoverBaseURL: strings.TrimSpace(cfg.Discovery.ProviderChain),
-		discoveryProviders: store.NewDiscoveryProviderStateStore(cleanRoot),
+		decisionObserver:    observer,
+		acquisitionObserver: observer,
+		semantic:            intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir),
+		now:                 time.Now,
+		storeRoot:           cleanRoot,
+		webDiscoverBaseURL:  strings.TrimSpace(cfg.Discovery.ProviderChain),
+		discoveryProviders:  store.NewDiscoveryProviderStateStore(cleanRoot),
 	}, nil
 }
 
@@ -100,7 +104,7 @@ func (s *Service) SetWebDiscoverBaseURL(baseURL string) {
 func (s *Service) Read(ctx context.Context, req ReadRequest) (ReadResponse, error) {
 	response, err := s.read(ctx, req)
 	if err == nil {
-		err = s.observeReadDecision(ctx, req.Assertion, &response)
+		err = s.observeReadDecisions(ctx, req, &response)
 	}
 	return response, err
 }
@@ -125,6 +129,16 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	rawPage, err := s.acquire(ctx, recorder, req, startedAt)
 	if err != nil {
 		return ReadResponse{}, err
+	}
+	var acquisitionPage *pipeline.RawPage
+	var acquisitionBudget *time.Duration
+	if req.ObserveAcquisition {
+		copy := rawPage
+		acquisitionPage = &copy
+		if deadline, ok := ctx.Deadline(); ok {
+			remaining := max(deadline.Sub(s.now()), 0)
+			acquisitionBudget = &remaining
+		}
 	}
 	resolver := s.sourceResolver()
 	resolutionReq := sourceResolutionRequest(req)
@@ -167,13 +181,15 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	resultPack.CostReport = buildCostReport(trace, resultPack.CostReport.LanePath)
 
 	response := ReadResponse{
-		Document:     document,
-		WebIR:        webIR,
-		ResultPack:   resultPack,
-		AgentContext: buildAgentContext(document, resultPack, proofRecords, nil),
-		ProofRecords: proofRecords,
-		Trace:        trace,
-		Replay:       replay,
+		acquisitionPage:   acquisitionPage,
+		acquisitionBudget: acquisitionBudget,
+		Document:          document,
+		WebIR:             webIR,
+		ResultPack:        resultPack,
+		AgentContext:      buildAgentContext(document, resultPack, proofRecords, nil),
+		ProofRecords:      proofRecords,
+		Trace:             trace,
+		Replay:            replay,
 	}
 	if err := response.Validate(); err != nil {
 		return ReadResponse{}, err

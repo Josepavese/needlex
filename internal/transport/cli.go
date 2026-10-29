@@ -177,12 +177,13 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	var userAgent string
 	var retrievalEffort string
 	var renderMode string
-	var jsonOut bool
+	var jsonOut, observeAcquisition bool
 	var jsonMode string
 
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&objective, "objective", "", "optional read objective")
 	fs.StringVar(&assertion, "assertion", "", assertionHelp)
+	fs.BoolVar(&observeAcquisition, "observe-acquisition", observeAcquisitionDefault, acquisitionObservationHelp)
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
@@ -211,12 +212,13 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 	}
 
 	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
-		URL:        fs.Arg(0),
-		Objective:  objective,
-		Assertion:  assertion,
-		Profile:    profile,
-		UserAgent:  userAgent,
-		RenderMode: renderMode,
+		URL:                fs.Arg(0),
+		Objective:          objective,
+		Assertion:          assertion,
+		ObserveAcquisition: observeAcquisition,
+		Profile:            profile,
+		UserAgent:          userAgent,
+		RenderMode:         renderMode,
 	}, "cli")
 	if err != nil {
 		return r.reportCLIError(stderr, "read", err, map[string]any{"url": fs.Arg(0), "objective": objective})
@@ -236,8 +238,8 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 func writeRootUsage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
   needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name] [--render auto|off|required]
-  needlex query <seed-url> --goal text [--assertion statement] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort name] [--render auto|off|required]
-  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required]
+  needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort name] [--render auto|off|required]
+  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required]
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
   needlex proof <trace-id|proof-id|chunk-id> [--json]
@@ -268,11 +270,11 @@ func (r Runner) runVersion(args []string, stdout, stderr io.Writer) int {
 }
 
 func writeQueryUsage(w io.Writer) {
-	writeUsage(w, "needlex query <seed-url> --goal text [--assertion statement] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]", "experimental opt-in: omit seed-url only with --discovery web_search")
+	writeUsage(w, "needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]", "experimental opt-in: omit seed-url only with --discovery web_search")
 }
 
 func writeReadUsage(w io.Writer) {
-	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]")
+	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]")
 }
 
 func writeReplayUsage(w io.Writer) {
@@ -340,6 +342,7 @@ func (r Runner) runDiff(args []string, stdout, stderr io.Writer) int {
 func renderReadText(w io.Writer, resp coreservice.ReadResponse, artifacts artifactPaths) {
 	compact := compactReadResponse(resp)
 	renderDecisionText(w, compact.Decision)
+	renderAcquisitionText(w, compact.Acquisition)
 	title := strings.TrimSpace(compact.Title)
 	if title == "" {
 		title = "(untitled)"

@@ -139,13 +139,14 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 		return nil, err
 	}
 	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
-		Goal:          stringArg(args, "goal"),
-		Assertion:     stringArg(args, "assertion"),
-		SeedURL:       seedURL,
-		Profile:       stringArg(args, "profile"),
-		UserAgent:     stringArg(args, "user_agent"),
-		DiscoveryMode: discoveryMode,
-		RenderMode:    stringArg(args, "render"),
+		Goal:               stringArg(args, "goal"),
+		Assertion:          stringArg(args, "assertion"),
+		ObserveAcquisition: boolArg(args, "observe_acquisition"),
+		SeedURL:            seedURL,
+		Profile:            stringArg(args, "profile"),
+		UserAgent:          stringArg(args, "user_agent"),
+		DiscoveryMode:      discoveryMode,
+		RenderMode:         stringArg(args, "render"),
 	}, "mcp")
 	if err != nil {
 		return nil, err
@@ -178,6 +179,9 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 		"proof_path":       artifacts.ProofPath,
 		"fingerprint_path": artifacts.FingerprintPath,
 	}
+	if compact.Acquisition != nil {
+		payload["acquisition_observation"] = compact.Acquisition
+	}
 	if compact.Decision != nil {
 		payload["decision_observation"] = compact.Decision
 	}
@@ -193,12 +197,13 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 		return nil, err
 	}
 	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
-		URL:        stringArg(args, "url"),
-		Objective:  stringArg(args, "objective"),
-		Assertion:  stringArg(args, "assertion"),
-		Profile:    stringArg(args, "profile"),
-		UserAgent:  stringArg(args, "user_agent"),
-		RenderMode: stringArg(args, "render"),
+		URL:                stringArg(args, "url"),
+		Objective:          stringArg(args, "objective"),
+		Assertion:          stringArg(args, "assertion"),
+		ObserveAcquisition: boolArg(args, "observe_acquisition"),
+		Profile:            stringArg(args, "profile"),
+		UserAgent:          stringArg(args, "user_agent"),
+		RenderMode:         stringArg(args, "render"),
 	}, "mcp")
 	if err != nil {
 		return nil, err
@@ -226,6 +231,9 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 		"trace_path":       artifacts.TracePath,
 		"proof_path":       artifacts.ProofPath,
 		"fingerprint_path": artifacts.FingerprintPath,
+	}
+	if compact.Acquisition != nil {
+		payload["acquisition_observation"] = compact.Acquisition
 	}
 	if compact.Decision != nil {
 		payload["decision_observation"] = compact.Decision
@@ -277,9 +285,10 @@ func mcpQueryTool() mcpTool {
 			"enum":        []string{"same_site_links", "web_search", "off"},
 			"description": "Discovery strategy. same_site_links = follow links from the seed site. off = do not expand beyond an exact verified seed URL. web_search = EXPERIMENTAL seedless public bootstrap and must be selected explicitly when seed_url is omitted; never choose it automatically.",
 		},
-		"assertion":        assertionSchema(),
-		"retrieval_effort": retrievalEffortSchema(),
-		"render":           renderModeSchema(),
+		"assertion":           assertionSchema(),
+		"observe_acquisition": acquisitionObservationSchema(),
+		"retrieval_effort":    retrievalEffortSchema(),
+		"render":              renderModeSchema(),
 	}, "goal")
 	schema["anyOf"] = []any{
 		map[string]any{"required": []string{"seed_url"}},
@@ -305,13 +314,14 @@ func mcpReadTool() mcpTool {
 		Name:        "web_read",
 		Description: "Read one known URL and return compact proof-carrying context first. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"url":              map[string]any{"type": "string"},
-			"profile":          map[string]any{"type": "string"},
-			"objective":        map[string]any{"type": "string"},
-			"assertion":        assertionSchema(),
-			"user_agent":       map[string]any{"type": "string"},
-			"retrieval_effort": retrievalEffortSchema(),
-			"render":           renderModeSchema(),
+			"url":                 map[string]any{"type": "string"},
+			"profile":             map[string]any{"type": "string"},
+			"objective":           map[string]any{"type": "string"},
+			"assertion":           assertionSchema(),
+			"observe_acquisition": acquisitionObservationSchema(),
+			"user_agent":          map[string]any{"type": "string"},
+			"retrieval_effort":    retrievalEffortSchema(),
+			"render":              renderModeSchema(),
 		}, "url"),
 			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details", "retrieval_effort": "standard"},
 		),
@@ -749,4 +759,13 @@ const assertionHelp = "Optional explicit factual statement to assess against a s
 
 func assertionSchema() map[string]any {
 	return map[string]any{"type": "string", "description": assertionHelp}
+}
+
+const (
+	observeAcquisitionDefault  = false
+	acquisitionObservationHelp = "Optional experimental acquisition-route observation. Requires an objective/goal and local decision observation. Runs after retrieval against the original HTTP snapshot; the unqualified proposal never changes actions, strict modes, content or proofs. Omit for ordinary reads."
+)
+
+func acquisitionObservationSchema() map[string]any {
+	return map[string]any{"type": "boolean", "default": observeAcquisitionDefault, "description": acquisitionObservationHelp}
 }

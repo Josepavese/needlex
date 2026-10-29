@@ -33,6 +33,10 @@ func EffectiveUserAgent(userAgent string, browserLike bool) string {
 
 type Acquirer struct {
 	Client *http.Client
+	// ObserveFetch is an optional synchronous telemetry hook for each transport
+	// GET attempt. Internal HTTP redirects are not separate attempt callbacks.
+	// The borrower owns the hook and any synchronization it requires.
+	ObserveFetch func()
 }
 
 type pacingState struct {
@@ -173,6 +177,7 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		client = &http.Client{}
 	}
 
+	a.observeFetch()
 	resp, err := client.Do(request)
 	if err != nil {
 		return RawPage{}, fmt.Errorf("fetch page: %w", err)
@@ -225,6 +230,7 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 	if strings.TrimSpace(input.Accept) != "" {
 		request = request.SetHeader("Accept", strings.TrimSpace(input.Accept))
 	}
+	a.observeFetch()
 	resp, err := request.Get(input.URL)
 	if err != nil {
 		return RawPage{}, fmt.Errorf("fetch page: %w", err)
@@ -603,4 +609,10 @@ func statusError(code int) error {
 
 func (e *httpStatusError) Error() string {
 	return fmt.Sprintf("unexpected status code %d", e.StatusCode)
+}
+
+func (a Acquirer) observeFetch() {
+	if a.ObserveFetch != nil {
+		a.ObserveFetch()
+	}
 }

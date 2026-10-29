@@ -8,12 +8,13 @@ import (
 
 func (s *Service) sourceResolver() sourceresolution.Resolver {
 	return sourceresolution.Resolver{
-		Config:   s.cfg,
-		Acquirer: s.acquirer,
-		Reducer:  s.reducer,
-		Renderer: s.renderer,
-		Semantic: s.semantic,
-		Now:      s.now,
+		Config:    s.cfg,
+		Acquirer:  s.acquirer,
+		Reducer:   s.reducer,
+		Segmenter: s.segmenter,
+		Renderer:  s.renderer,
+		Semantic:  s.semantic,
+		Now:       s.now,
 		Reduce: func(recorder *proof.Recorder, page pipeline.RawPage) (pipeline.SimplifiedDOM, error) {
 			return s.reduce(recorder, page)
 		},

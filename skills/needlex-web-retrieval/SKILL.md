@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.42
+version: v0.1.43
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -195,3 +195,24 @@ check, not invalid or empty source content. Text is never cut to fit. Successful
 answers are cached in memory for the current MCP service and model/specification;
 configuration replacement invalidates that bounded cache. Ordinary retrieval,
 Chromium contexts, proofs and captured application data retain their contracts.
+
+
+### Experimental acquisition observation
+
+Use `observe_acquisition: true` on `web_read`/`web_query` only when explicitly
+studying acquisition decisions (CLI: `--observe-acquisition`). A read requires
+an `objective`; a query uses its `goal`. Ordinary reads omit this option.
+
+The local model inspects one selected whole passage from the original HTTP
+surface and the permitted actions after operational retrieval has completed.
+`acquisition_observation` reports a proposed route, the actual baseline route,
+allowed actions, unassessed evidence count and `observation_only: true`.
+The proposal does not execute, skip Chromium, stop retrieval or alter proofs.
+Strict modes and remaining deadlines constrain the menu; a single permitted
+route needs no inference. `render=required` reads the requested page in Chromium
+even when it declares a machine-readable alternative.
+
+Treat `unqualified_in_domain`, budget failures, abstentions and unassessed
+passages explicitly. This diagnostic is not a completeness or truth verdict.
+Browser trace `network_http_requests` counts HTTP(S) request events, separately
+from captured application resources; it is not a wire-request total.

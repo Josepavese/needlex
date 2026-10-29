@@ -25,6 +25,7 @@ const (
 )
 
 type QueryRequest struct {
+	ObserveAcquisition                                                       bool
 	Goal, Assertion, SeedURL, SeedTraceID, Profile, UserAgent, DiscoveryMode string
 	RenderMode                                                               string
 	FetchProfile, FetchRetryProfile                                          string
@@ -105,7 +106,7 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 		}
 		return QueryResponse{}, err
 	}
-	if err := s.observeReadDecision(ctx, req.Assertion, &readResp); err != nil {
+	if err := s.observeReadDecisions(ctx, ReadRequest{Objective: req.Goal, Assertion: req.Assertion, ObserveAcquisition: req.ObserveAcquisition, RenderMode: req.RenderMode, RenderHint: req.RenderHint}, &readResp); err != nil {
 		return QueryResponse{}, err
 	}
 	return finalizeQueryResponse(plan, baseCompiler, discoveryResult.candidates, readResp)

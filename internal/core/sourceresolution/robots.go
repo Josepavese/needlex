@@ -76,10 +76,10 @@ func agentReadableProbeContext(ctx context.Context) (context.Context, context.Ca
 
 func (r Resolver) MaybeRender(ctx context.Context, recorder *proof.Recorder, req Request, rawPage pipeline.RawPage, dom pipeline.SimplifiedDOM) (pipeline.RawPage, pipeline.SimplifiedDOM, error) {
 	mode := normalizeRenderMode(req.RenderMode, req.RenderHint)
-	if mode == "off" || strings.Contains(strings.ToLower(rawPage.SourceKind), "markdown") || rawPage.FetchMode == core.FetchModeRender {
+	if mode == "off" || rawPage.FetchMode == core.FetchModeRender {
 		return rawPage, dom, nil
 	}
-	if mode == "auto" && !r.Config.Render.Enabled {
+	if mode == "auto" && (!r.Config.Render.Enabled || strings.Contains(strings.ToLower(rawPage.SourceKind), "markdown")) {
 		return rawPage, dom, nil
 	}
 	if mode == "auto" && !pipeline.IsHTMLLikeRawPage(rawPage) {
@@ -177,6 +177,7 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 		networkIdleReason = "not_collected"
 	}
 	metadata := map[string]string{
+		"network_http_requests": fmt.Sprintf("%d", stats.HTTPRequests),
 		"rendered":              "true",
 		"render_path":           renderPath(rendered),
 		"browser_reused":        fmt.Sprintf("%t", rendered.BrowserReused),

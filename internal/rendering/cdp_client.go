@@ -147,6 +147,7 @@ func collectNetworkBodies(ctx context.Context, cdp *cdpClient, sessionID string,
 }
 
 type networkCollector struct {
+	httpRequests            int
 	baseHost                string
 	resources               map[string]*NetworkResource
 	order                   []string
@@ -194,6 +195,8 @@ func newNetworkCollector(rawURL string, maxBytes, resourceMaxBytes int64, maxRes
 
 func (c *networkCollector) handleEvent(msg cdpMessage) {
 	switch msg.Method {
+	case "Network.requestWillBeSent":
+		c.handleRequestSent(msg.Params)
 	case "Network.responseReceived":
 		c.handleResponseReceived(msg.Params)
 	case "Network.loadingFinished":
@@ -210,6 +213,22 @@ func (c *networkCollector) handleEvent(msg cdpMessage) {
 		c.handleWebSocketFrameReceived(msg.Params)
 	case "Network.webSocketClosed":
 		c.handleWebSocketClosed(msg.Params)
+	}
+}
+
+func (c *networkCollector) handleRequestSent(params json.RawMessage) {
+	var event struct {
+		RequestID string `json:"requestId"`
+		Request   struct {
+			URL string `json:"url"`
+		} `json:"request"`
+	}
+	if json.Unmarshal(params, &event) != nil || event.RequestID == "" {
+		return
+	}
+	u, err := url.Parse(event.Request.URL)
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		c.httpRequests++
 	}
 }
 
