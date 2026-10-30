@@ -51,6 +51,17 @@ class PopularCorpusTests(unittest.TestCase):
         self.assertEqual(error_class({"message":"context deadline exceeded"}),"upstream_timeout")
         self.assertEqual(error_class({"kind":"observer_timeout"}),"benchmark_timeout")
 
+    def test_upstream_rejection_is_distinct_from_runtime_contract_defect(self):
+        sys.path.insert(0, str(base / "decision_observer"))
+        from summarize import error_class
+        self.assertEqual(error_class({"message":"unexpected status code 412"}),"upstream_http_rejected")
+        self.assertEqual(error_class({"message":"stream error: INTERNAL_ERROR; received from peer"}),"unavailable_upstream")
+        self.assertEqual(error_class({"message":"read: connection reset by peer"}),"unavailable_upstream")
+        self.assertEqual(error_class({"message":"tls: failed to verify certificate"}),"tls_error")
+        self.assertEqual(error_class({"message":"stopped after 10 redirects"}),"redirect_limit")
+        self.assertEqual(error_class({"message":"no segments produced"}),"empty_content")
+        self.assertEqual(error_class({"message":"trace_event.data[title] must not be empty"}),"runtime_error")
+
 
 if __name__ == "__main__":
     unittest.main()

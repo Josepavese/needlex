@@ -18,6 +18,8 @@ def read_rows(path):
 
 def summarize(rows):
     base = live_summary(rows)
+    base.pop("families")  # Exact membership is already owned by the frozen manifest.
+    base["declared_families"] = len({r["family"] for r in rows})
     packets = [r for r in rows if not r.get("tool_error")]
     nonempty = [r for r in packets if r.get("chunk_count", 0) > 0]
     proof = [r for r in nonempty if r.get("proof_mapping_valid") and r.get("proof_file_nonempty") and r.get("proof_refs")]
@@ -54,6 +56,7 @@ def main():
         raise ValueError("mixed measurement identities")
     result = dict(specification=corpus["specification"], corpus_sha256=hashlib.sha256(a.corpus.read_bytes()).hexdigest(),
                   receipts_sha256=hashlib.sha256(a.rows.read_bytes()).hexdigest(), installed_binary_sha256=rows[0]["binary_sha256"],
+                  run_identity=rows[0]["run_identity"], scorer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   execution=corpus["execution"], availability=summarize(rows),
                   by_cohort={v:summarize([r for r in rows if r.get("cohort")==v]) for v in sorted({r.get("cohort", "unspecified") for r in rows})},
                   by_band={v:summarize([r for r in rows if r.get("popularity_band", "historical")==v]) for v in sorted({r.get("popularity_band", "historical") for r in rows})},
@@ -67,6 +70,8 @@ def main():
         quality = read_rows(a.quality_rows)
         if {r["url"]for r in quality}!={c["expected_url"]for c in gold} or len(quality)!=len(gold):
             raise ValueError("quality tasks incomplete")
+        if len({r["run_identity"] for r in quality}) != 1 or {r["binary_sha256"] for r in quality} != {rows[0]["binary_sha256"]}:
+            raise ValueError("quality receipts mix identities or use a different executable")
         checks = []
         by_url = {r["url"]:r for r in quality}
         for case in gold:
@@ -74,10 +79,13 @@ def main():
             retained = row.get("coverage", {})
             hits = sum(retained.get(fact, False) for fact in case["must_contain_facts"])
             checks.append(dict(id=case["id"],url=case["expected_url"],cohort=case["cohort"],hits=hits,total=len(case["must_contain_facts"]),
+                               independent_positive_reference=case["independent_positive_reference"],
                                all_markers_retained=hits==len(case["must_contain_facts"]),tool_error=row.get("tool_error"),
                                proof_mapping_valid=row.get("proof_mapping_valid"),capture_complete=row.get("capture_complete"),
                                interpretation="Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."))
-        result["quality"] = dict(cases=len(checks), expected_markers=sum(c["total"]for c in checks),retained_markers=sum(c["hits"]for c in checks),all_markers_retained=sum(c["all_markers_retained"]for c in checks),
+        result["quality"] = dict(corpus_sha256=hashlib.sha256(a.quality_corpus.read_bytes()).hexdigest(),receipts_sha256=hashlib.sha256(a.quality_rows.read_bytes()).hexdigest(),run_identity=quality[0]["run_identity"],
+                                 cases=len(checks), expected_markers=sum(c["total"]for c in checks),retained_markers=sum(c["hits"]for c in checks),all_markers_retained=sum(c["all_markers_retained"]for c in checks),
+                                 independent_positive_reference=dict(cases=sum(c["independent_positive_reference"]for c in checks),markers=sum(c["total"]for c in checks if c["independent_positive_reference"]),retained_markers=sum(c["hits"]for c in checks if c["independent_positive_reference"]),all_markers_retained=sum(c["all_markers_retained"]for c in checks if c["independent_positive_reference"])),
                                  by_cohort={v:dict(cases=sum(c["cohort"]==v for c in checks),all_markers_retained=sum(c["cohort"]==v and c["all_markers_retained"]for c in checks))for v in {c["cohort"]for c in checks}},checks=checks)
     a.out.write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n")
     print(json.dumps(result["availability"],indent=2))

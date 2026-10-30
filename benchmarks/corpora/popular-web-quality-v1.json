@@ -1,6 +1,6 @@
 {
   "specification": "popular-web-quality-v1",
-  "label_scope": "Source-text factual retrieval, agent-reviewed positive facts. Historical references may drift; missing markers are not automatically omissions. No model-generated gold or truth labels.",
+  "label_scope": "Frozen source-marker regression: 52 prior agent-reviewed Needle-X-sourced excerpts, rechecked by independent HTTP before this quality run; 8 new independent HTTP/API reference tasks. No Julia judgments or present-run output becomes a label. Source absence is not established by a partial, variant or markup-sensitive reference miss.",
   "cases": [
     {
       "id": "go-home",
@@ -16,21 +16,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://go.dev/",
           "title": "The Go Programming Language",
           "trace_id": "trace_874f451513bf99d0",
           "text_sha256": "e4421cff61c3ae8760f8a8051fcb618f61bd93f63a573e029b723ad99ee5419f"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:54:56.064951+00:00",
+          "status": 200,
+          "final_url": "https://go.dev/",
+          "partial": false,
+          "sha256": "87d36e4f1a3cb3a2bc33cd8e11accc6e5d3d4d531922fbe85c5f88386c755513",
+          "expected_markers": {
+            "The go command by default downloads and authenticates modules": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "sqlite-home",
       "family": "sqlite.org",
       "language": "it",
-      "source_language": "it",
+      "source_language": "en",
       "expected_url": "https://sqlite.org/",
       "seed_url": "https://sqlite.org/",
       "goal": "Quali restrizioni d'uso indica il testo per il codice di SQLite?",
@@ -40,15 +52,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://sqlite.org/",
           "title": "SQLite Home Page",
           "trace_id": "trace_60cccd4fed2017e1",
           "text_sha256": "1c5db4fd570d6b6c66972fb3e1ef8a2f87d1b6ce5a2d1696130f018c9034140d"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:54:56.065498+00:00",
+          "status": 200,
+          "final_url": "https://sqlite.org/",
+          "partial": false,
+          "sha256": "838b2fff9b4b60151b058ecfac2b6f1ac8243742bbfdcfc1859829f2bb9cf0f8",
+          "expected_markers": {
+            "SQLite source code is in the public-domain and is free to everyone to use for any purpose.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "postgresql-home",
@@ -64,15 +88,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.postgresql.org/",
           "title": "PostgreSQL: The world's most advanced open source database",
           "trace_id": "trace_833043e0930f938f",
           "text_sha256": "00c89af24fd7be6fb5700a7b24b2ca5efd0342266887fbd3482fa9d977d28c90"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:54:58.625863+00:00",
+          "status": 200,
+          "final_url": "https://www.postgresql.org/",
+          "partial": false,
+          "sha256": "021454ffb6e2a6fdce4197788eba6ba2b6665f759396328a32facb9dc6501c0f",
+          "expected_markers": {
+            "PostgreSQL is a powerful, open source object-relational database system": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "redis-docs",
@@ -88,15 +124,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://redis.io/docs/latest/",
           "title": "APIs",
           "trace_id": "trace_acb800a6cda48ce9",
           "text_sha256": "65fffdec0ad3ef646ca62befce96684abd25bf6a7dc36e491293a97f3f71aeee"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:54:58.691243+00:00",
+          "status": 200,
+          "final_url": "https://redis.io/docs/latest/",
+          "partial": false,
+          "sha256": "4d604563b69a1ac08d034ecadece7f6aa77d9cade308ce77deccb22dce2c99ba",
+          "expected_markers": {
+            "The Redis functions feature, which became available in Redis 7, supersedes the use of Lua in prior versions of Redis. The client is still responsible for invoking the execution, but unlike the previous Lua scripts, functions can now be replicated and persisted.": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "kubernetes-home",
@@ -112,21 +160,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://kubernetes.io/",
           "title": "Kubernetes",
           "trace_id": "trace_6bc91817aabc2e26",
           "text_sha256": "f6320e4f74e26f7416091e904d6558c897a3fb8e84ce0e7b3db1eaeb9ddd3aa2"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:01.239924+00:00",
+          "status": 200,
+          "final_url": "https://kubernetes.io/",
+          "partial": false,
+          "sha256": "2f822b62e8791b850ef687451450acd617d84a6d52e55fd6f941743097911592",
+          "expected_markers": {
+            "Kubernetes , also known as K8s, is an open source system for automating deployment, scaling, and management of containerized applications.": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "podman-docs",
       "family": "podman.io",
       "language": "es",
-      "source_language": "es",
+      "source_language": "en",
       "expected_url": "https://podman.io/docs",
       "seed_url": "https://podman.io/docs",
       "goal": "¿Para qué se puede utilizar Podman?",
@@ -136,15 +196,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://podman.io/docs",
           "title": "Getting Started with Podman | Podman",
           "trace_id": "trace_5e5178a5c4271da1",
           "text_sha256": "d9fdf10985b43adad223de12e1b4180ce888aa918e0a9eb406aaaa5a8f993b1e"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:01.443047+00:00",
+          "status": 200,
+          "final_url": "https://podman.io/docs",
+          "partial": false,
+          "sha256": "0f53f1e92d09ae1000373adc9a3cf2935a0ca5b75182ab1c6d2abf29951cd33b",
+          "expected_markers": {
+            "Podman is a utility provided as part of the libpod library. It can be used to create and maintain containers.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "nginx-home",
@@ -160,21 +232,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://nginx.org/en/",
           "title": "nginx",
           "trace_id": "trace_2df398d1b8e514b5",
           "text_sha256": "8bfd83320bb885b69862a6ef6f5d19821195fbcaadc687f4c5f1b38e342da3fd"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:02.367269+00:00",
+          "status": 200,
+          "final_url": "https://nginx.org/en/",
+          "partial": false,
+          "sha256": "4934859d2b240c97da32b7f1d6062480242628bc21d30ff7ebbc0ab8d7a12f79",
+          "expected_markers": {
+            "Originally written by Igor Sysoev and distributed under the 2-clause BSD License": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "curl-home",
       "family": "curl.se",
       "language": "de",
-      "source_language": "de",
+      "source_language": "en",
       "expected_url": "https://curl.se/",
       "seed_url": "https://curl.se/",
       "goal": "Wofür wird curl in Skripten verwendet?",
@@ -184,21 +268,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://curl.se/",
           "title": "curl",
           "trace_id": "trace_76df9dda8a146744",
           "text_sha256": "d011c783aa12a4109554893f96587a8048ba197a96ce112183aa21d9fec75505"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:02.916041+00:00",
+          "status": 200,
+          "final_url": "https://curl.se/",
+          "partial": false,
+          "sha256": "4c7d062dbe2e92d343b3145935733242a69d8ed341052a93c66e544a413c8c77",
+          "expected_markers": {
+            "curl is used in command lines or scripts to transfer data.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "git-home",
       "family": "git-scm.com",
       "language": "fr",
-      "source_language": "fr",
+      "source_language": "en",
       "expected_url": "https://git-scm.com/",
       "seed_url": "https://git-scm.com/",
       "goal": "Git est-il un système de gestion de versions distribué ?",
@@ -208,15 +304,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://git-scm.com/",
           "title": "Git",
           "trace_id": "trace_e8ce27850203a1bf",
           "text_sha256": "819a652e78fd8ab2508f55630ac13f556b3042301c0940ce8c23e1245c6f479b"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:04.212495+00:00",
+          "status": 200,
+          "final_url": "https://git-scm.com/",
+          "partial": false,
+          "sha256": "0a000e2f83f2342ef8ec01127930ae122cce67d9497eeef9bf5f057bf017a9c7",
+          "expected_markers": {
+            "Git is a free and open source distributed version control system": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "github-docs",
@@ -232,15 +340,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.github.com/en",
           "title": "GitHub Docs",
           "trace_id": "trace_c73e6023c788fbb7",
           "text_sha256": "acd2d278483fa7aff6060b68f5c1b9f3f2985eac82f4867ea9cd7cb080ecf832"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:04.266755+00:00",
+          "status": 200,
+          "final_url": "https://docs.github.com/en",
+          "partial": false,
+          "sha256": "1ff81c398a58f759422f6c06b2a824efc1d9ceb8909e20a283df301b6b8303ae",
+          "expected_markers": {
+            "CI/CD via GitHub Actions": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "gitlab-docs",
@@ -256,15 +376,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.gitlab.com/",
           "title": "GitLab Docs",
           "trace_id": "trace_b96bfac05e362514",
           "text_sha256": "263e8da25f83c8cad17857853be5afa6a8babc15af2f63676a05996ee0159324"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:04.929041+00:00",
+          "status": 200,
+          "final_url": "https://docs.gitlab.com/",
+          "partial": false,
+          "sha256": "5d46a33c24fd07ed7026fdb0482da43fb9e39434289d25d285b1bcffd63192c0",
+          "expected_markers": {
+            "Get help from a suite of AI-native features while you work in GitLab.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "rust-home",
@@ -280,15 +412,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.rust-lang.org/",
           "title": "Rust Programming Language",
           "trace_id": "trace_11501e10cd30f84f",
           "text_sha256": "8e1d0997b2cf012aaa72d66ba806de1170c149f929fd7825399d6e3aa8205e5b"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:05.701586+00:00",
+          "status": 200,
+          "final_url": "https://rust-lang.org/",
+          "partial": false,
+          "sha256": "d3f8691c61eae9dbeed19a61d81d8df1e1d4813c59e9c966209030e994c9ce2d",
+          "expected_markers": {
+            "Rust is blazingly fast and memory-efficient: with no runtime or garbage collector": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "rust-book",
@@ -304,15 +448,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://doc.rust-lang.org/book/",
           "title": "The Rust Programming Language - The Rust Programming Language",
           "trace_id": "trace_dbe6816da61ebe15",
           "text_sha256": "c829759feea0aebf7404f73520b6872a012402fdc6d5074fbe5f083bc86c7c22"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:05.719268+00:00",
+          "status": 200,
+          "final_url": "https://doc.rust-lang.org/book/",
+          "partial": false,
+          "sha256": "b9b470ca1dbc606e033d2a1e0cdc30d479f482039dbd2ecee2f825c0df65cc71",
+          "expected_markers": {
+            "run rustup doc --book to open.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "npm-docs",
@@ -328,21 +484,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.npmjs.com/",
           "title": "npm Docs",
           "trace_id": "trace_f4c131255db2ff1f",
           "text_sha256": "eb77d59072454cdd910b5a5b5242bf37215408fa3014372ba82fe10e1e6378c6"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:06.645538+00:00",
+          "status": 200,
+          "final_url": "https://docs.npmjs.com/",
+          "partial": false,
+          "sha256": "81d88a83c7300685c0bf04cf83e063e5774277be5a9a9a51a1ea43b00ed42335",
+          "expected_markers": {
+            "Documentation for the npm registry, website, and command-line interface": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "deno-docs",
       "family": "deno.com",
       "language": "zh",
-      "source_language": "zh",
+      "source_language": "en",
       "expected_url": "https://docs.deno.com/",
       "seed_url": "https://docs.deno.com/",
       "goal": "Deno代码在未获授权前能访问网络和文件系统吗？",
@@ -352,15 +520,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.deno.com/",
           "title": "Get started with Deno | Deno Docs",
           "trace_id": "trace_cb3bd0151b00aabc",
           "text_sha256": "4835146a810d7893fed48a7aa68483a436679e3827ac43bdba5ca737f5a6daa4"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:08.004579+00:00",
+          "status": 200,
+          "final_url": "https://docs.deno.com/runtime/",
+          "partial": false,
+          "sha256": "4c3f2442c00cfbc7ee1bb1bc830dcb389d5d3cd23dbde1f2b49a9ab29e267e40",
+          "expected_markers": {
+            "Deno is secure by default : code can't touch the network, filesystem, or environment until you grant it.": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "bun-docs",
@@ -376,15 +556,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://bun.sh/docs",
           "title": "Welcome to Bun",
           "trace_id": "trace_6192cef3c69ec3ea",
           "text_sha256": "04c3c9337bedbf946cf846b6827b876f4d65d490d019a7e11ebbc78456053208"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:08.385385+00:00",
+          "status": 200,
+          "final_url": "https://bun.sh/docs",
+          "partial": false,
+          "sha256": "16380a6b3f4869a3417ea3b3e66db7b9edf5d933c51b80a57c9d5e129dd2be32",
+          "expected_markers": {
+            "Bun is an all-in-one toolkit for developing modern JavaScript/TypeScript applications.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "svelte-docs",
@@ -400,15 +592,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://svelte.dev/docs",
           "title": "Docs • Svelte",
           "trace_id": "trace_6f9c91ab969e9124",
           "text_sha256": "67a0b677580e8026ddb7f5da32be30d31c298bd2a960a3ea8ed4e666b56b1eb8"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:09.926530+00:00",
+          "status": 200,
+          "final_url": "https://svelte.dev/docs",
+          "partial": false,
+          "sha256": "3325062bf51fb37bda96cf084e38e1273d44927bc519a089495ee75c37dca75d",
+          "expected_markers": {
+            "we offer the documentation in plaintext format.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "angular-docs",
@@ -424,15 +628,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://angular.dev/overview",
           "title": "What is Angular? • Angular",
           "trace_id": "trace_8b944eabbe07088c",
           "text_sha256": "ba0b4a315998c53b834b121cd79d453cd5a529f969d80a7c5efa08a9666ff207"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:10.881992+00:00",
+          "status": 200,
+          "final_url": "https://angular.dev/overview",
+          "partial": false,
+          "sha256": "891d8a85f7489a134fa35db2d9a916122d624923e1373ded44e65b171df0fe9f",
+          "expected_markers": {
+            "Angular CLI's ng update runs automated code transformations": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "nextjs-docs",
@@ -448,15 +664,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://nextjs.org/docs",
           "title": "docs.md",
           "trace_id": "trace_7e0379f12dfa6be1",
           "text_sha256": "b123469da521252e10d7673ecbb5b05ffb3d3163b5a38367b9d7a8b9bb13d91c"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:10.987760+00:00",
+          "status": 200,
+          "final_url": "https://nextjs.org/docs",
+          "partial": false,
+          "sha256": "f6cd19a215a6d81ce8aebf20a1a09d7ee9a8185652047d168d7d18b205c4f9b8",
+          "expected_markers": {
+            "Next.js is a React framework for building full-stack web applications.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "nuxt-docs",
@@ -472,15 +700,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://nuxt.com/docs/4.x/getting-started/introduction",
           "title": "Introduction",
           "trace_id": "trace_0f86f26c444570bd",
           "text_sha256": "1d21264fbf9acfcfc043a0fc49031ea0ef99345a443c2172d3cb2516d8300d3b"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:12.610600+00:00",
+          "status": 200,
+          "final_url": "https://nuxt.com/docs/4.x/getting-started/introduction",
+          "partial": false,
+          "sha256": "a7a3a0d502679a4ce84e0663d3759a27e13b007747ee56a06982c765601f69fe",
+          "expected_markers": {
+            "with server-side rendering by default.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "vite-docs",
@@ -496,15 +736,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://vite.dev/guide/",
           "title": "Getting Started",
           "trace_id": "trace_5cc213b5536a9795",
           "text_sha256": "2a8280de30d2679838eec4b1b2ed9c3dc90b9d09c8a5815fafbf4c4ad8d87ad6"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:13.232417+00:00",
+          "status": 200,
+          "final_url": "https://vite.dev/guide/",
+          "partial": false,
+          "sha256": "a0ab5f65eedbfe1c13c1b9535369bd264cef53208d1c214ae9cee909c2fc9742",
+          "expected_markers": {
+            "Support for frameworks or integration with other tools is possible through [Plugins](./using-plugins).": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "webpack-docs",
@@ -520,15 +772,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://webpack.js.org/concepts/",
           "title": "Concepts | webpack",
           "trace_id": "trace_ba43aaaf4e99415f",
           "text_sha256": "1cb73a700cb6996c69cf9d0184a174d192456b6794ea6a062293006ab178252d"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:13.761445+00:00",
+          "status": 200,
+          "final_url": "https://webpack.js.org/concepts/",
+          "partial": false,
+          "sha256": "3f73e100ba83c2d3d6cd20b7fb6291f7f89f2ce8be854924be70d61c7559cceb",
+          "expected_markers": {
+            "webpack is a static module bundler for modern JavaScript applications.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "rollup-docs",
@@ -544,15 +808,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://rollupjs.org/introduction/",
           "title": "Introduction | Rollup",
           "trace_id": "trace_66967db472fa1f54",
           "text_sha256": "d3234032bfc1c41211b7473fe3cab6cfc84b2ec7c4f960f2699286cf136caf09"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:13.987037+00:00",
+          "status": 200,
+          "final_url": "https://rollupjs.org/introduction/",
+          "partial": false,
+          "sha256": "f9b04cc4028796c49dab1abe0fca4c4ed7381ed717a790e9f587e68fabda4abc",
+          "expected_markers": {
+            "Released under the MIT License.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "tailwind-docs",
@@ -568,15 +844,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://tailwindcss.com/docs",
           "title": "Installing Tailwind CSS with Vite - Tailwind CSS",
           "trace_id": "trace_47c9d525723da8a0",
           "text_sha256": "80401ccc5c502530d4b4d55a1a865af23c20e9cdfbf44f81fccecc634ff98573"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:14.405687+00:00",
+          "status": 200,
+          "final_url": "https://tailwindcss.com/docs/installation/using-vite",
+          "partial": false,
+          "sha256": "f3e1d6ab781c4edf4d2e375f199f577e4885481cc443ccdb7a40fd30ad117275",
+          "expected_markers": {
+            "Tailwind CSS works by scanning all of your HTML files, JavaScript components, and any other templates for class names": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "bootstrap-docs",
@@ -592,21 +880,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
           "title": "Get started with Bootstrap · Bootstrap v5.3",
           "trace_id": "trace_1067af98cc1fc742",
           "text_sha256": "4487fead36ddec6f72e03548b83dad6ecb9468993dd0462b5f5362e22db7beee"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:14.434982+00:00",
+          "status": 200,
+          "final_url": "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
+          "partial": false,
+          "sha256": "6dc02cbb04da64d0022a5d4c636819d079bfac0f317042db262867e801ff3871",
+          "expected_markers": {
+            "Get started by including Bootstrap’s production-ready CSS and JavaScript via CDN without the need for any build steps.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "fastapi-docs",
       "family": "tiangolo.com",
       "language": "it",
-      "source_language": "it",
+      "source_language": "en",
       "expected_url": "https://fastapi.tiangolo.com/",
       "seed_url": "https://fastapi.tiangolo.com/",
       "goal": "Quale linguaggio e quale meccanismo di tipizzazione usa FastAPI?",
@@ -616,15 +916,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://fastapi.tiangolo.com/",
           "title": "FastAPI - FastAPI",
           "trace_id": "trace_6072f6892aa3680a",
           "text_sha256": "d9eb7743d7793cb15be417480f67396e9005d485339632c8c4a4a48bc2031770"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:15.450330+00:00",
+          "status": 200,
+          "final_url": "https://fastapi.tiangolo.com/",
+          "partial": false,
+          "sha256": "a6ee494c176ad8631dea29059cfb150fdf77d603d3a2006400d255526d1f0cd1",
+          "expected_markers": {
+            "FastAPI is a modern, fast (high-performance), web framework for building APIs with Python based on standard Python type hints.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "rails-guides",
@@ -640,15 +952,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://guides.rubyonrails.org/",
           "title": "Ruby on Rails Guides",
           "trace_id": "trace_102d3228dfbe0e0b",
           "text_sha256": "94753a69a93dd4ab56bcb16df2b2559c1c8dd6b1e2ac9e257add272a63a5f92a"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:15.971940+00:00",
+          "status": 200,
+          "final_url": "https://guides.rubyonrails.org/",
+          "partial": false,
+          "sha256": "18837cf7737312394f3978f804fac4d0680b89ee793131a41971112d22146fa4",
+          "expected_markers": {
+            "Active Record allows your models to interact with the application's database.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "laravel-docs",
@@ -664,15 +988,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://laravel.com/docs",
           "title": "Installation | Laravel 13.x - The clean stack for Artisans and agents",
           "trace_id": "trace_963eed9d2798794c",
           "text_sha256": "9e792edc51c596720cb65147dc471870bb7b87cef7fdfdba916f57c12551cde1"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:16.356003+00:00",
+          "status": 200,
+          "final_url": "https://laravel.com/framework/docs",
+          "partial": false,
+          "sha256": "ddaf5f9b1cd8b57fef8ffe845fd8cad0cd78537caf092376eea058e999f9c09f",
+          "expected_markers": {
+            "Laravel is a web application framework with expressive, elegant syntax.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "spring-docs",
@@ -688,15 +1024,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://spring.io/projects/spring-framework",
           "title": "Spring Framework",
           "trace_id": "trace_652aea49dad76f8c",
           "text_sha256": "65b42a5133f5200b8152bfa930ce5d78f42e7552849b508538952e5c103fa5eb"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:17.114054+00:00",
+          "status": 200,
+          "final_url": "https://spring.io/projects/spring-framework/",
+          "partial": false,
+          "sha256": "1ec60509b730c587155a3046afd341107cd2a344560fe9660fc77c41716ce1f4",
+          "expected_markers": {
+            "The Spring Framework provides a comprehensive programming and configuration model for modern Java-based enterprise applications": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "dotnet-docs",
@@ -712,15 +1060,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://learn.microsoft.com/en-us/dotnet/",
           "title": ".NET documentation -.NET | Microsoft Learn",
           "trace_id": "trace_d7140a969d287997",
           "text_sha256": "fa325ed6feb1598888bd2601109fbe7c37b3532c7cfa585bf95913786e841ab0"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:18.289820+00:00",
+          "status": 200,
+          "final_url": "https://learn.microsoft.com/en-us/dotnet/",
+          "partial": false,
+          "sha256": "e8df9555126f4743f460414aef306f366d02d1d8cb077678cdb71bfa32d47906",
+          "expected_markers": {
+            "Learn to use .NET to create applications on any platform using C#, F#, and Visual Basic.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "java-docs",
@@ -736,15 +1096,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.oracle.com/en/java/",
           "title": "Java Documentation - Get Started",
           "trace_id": "trace_2d961b488140a5aa",
           "text_sha256": "41dc7a22b5bb324a4a2aecb4aedf83714f689dd38efec232faa118250fd3d0be"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:18.478941+00:00",
+          "status": 200,
+          "final_url": "https://docs.oracle.com/en/java/",
+          "partial": false,
+          "sha256": "d3fe17bc0576b8e25d55dfa8f7ea1780b3fde994b52d496e686ea1922cebe724",
+          "expected_markers": {
+            "Java SE lets you develop and deploy Java applications on desktops and servers.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "php-docs",
@@ -760,15 +1132,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.php.net/docs.php",
           "title": "PHP: Documentation",
           "trace_id": "trace_779eaf8589763c13",
           "text_sha256": "446d5c482e803c20aa0d17150c25cc6155561d019fddefb9f6c3acea5d4f1858"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:19.232827+00:00",
+          "status": 200,
+          "final_url": "https://www.php.net/docs.php",
+          "partial": false,
+          "sha256": "83c72c711e80984d62434329f1ccbb153c3b41d2b073ab15088600092cae5abf",
+          "expected_markers": {
+            "For downloadable formats, please visit our documentation downloads page.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "perl-docs",
@@ -784,15 +1168,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://perldoc.perl.org/",
           "title": "Perl Documentation - Perldoc Browser",
           "trace_id": "trace_d5de063a0ef95cc9",
           "text_sha256": "2714cfdb7aeb6b733d764a68d086b3279209ededed18b042b4ff44dbc746157f"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:19.945214+00:00",
+          "status": 200,
+          "final_url": "https://perldoc.perl.org/",
+          "partial": false,
+          "sha256": "580268ff0388fb8f3d20d038ef5c62c26f90e2b602a065ee200894af9f52047b",
+          "expected_markers": {
+            "The perldoc program gives you access to all the documentation that comes with Perl.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "lua-docs",
@@ -808,15 +1204,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.lua.org/docs.html",
           "title": "Lua: documentation",
           "trace_id": "trace_2d29bf5ffa2dffee",
           "text_sha256": "986b24908beb1e5020b6924d6b81071093c282f789bab30075cd147c36e2d689"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:20.693819+00:00",
+          "status": 200,
+          "final_url": "https://www.lua.org/docs.html",
+          "partial": false,
+          "sha256": "af6485a38b1975517698b03c7a06e2583582e7ca42f95a0c1aff37f1c4b39093",
+          "expected_markers": {
+            "its reference manual , which describes the syntax and the semantics of Lua, the standard libraries, and the C API.": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "r-docs",
@@ -832,15 +1240,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.r-project.org/other-docs.html",
           "title": "R: Documentation",
           "trace_id": "trace_fca5df300593eb05",
           "text_sha256": "86eeb2224776c5e391de7c2d88a8aaa8f2ec174c9859b7a7e626889f25922b9a"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:22.539291+00:00",
+          "status": 200,
+          "final_url": "https://www.r-project.org/other-docs.html",
+          "partial": false,
+          "sha256": "4127512cafb3876c104f9c8a9b6ab9dcd334d651e7fc9c7a3d72c73cec38f0be",
+          "expected_markers": {
+            "Most of the documents listed on this page are provided by users of R.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "julia-docs",
@@ -856,15 +1276,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.julialang.org/en/v1/",
           "title": "Julia Documentation · The Julia Language",
           "trace_id": "trace_d48d99b9a67b07fb",
           "text_sha256": "70e2526f17ccd21481e81b772879362418bb8504d675f40ca41c27765b48a319"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:22.830984+00:00",
+          "status": 200,
+          "final_url": "https://docs.julialang.org/en/v1/",
+          "partial": false,
+          "sha256": "d2e356d29075965a223a7529038ff07cd57f59d940a51bddf07a19c32fb7e55b",
+          "expected_markers": {
+            "The Julia programming language fills this role: it is a flexible dynamic language, appropriate for scientific and numerical computing": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "pandas-docs",
@@ -880,15 +1312,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://pandas.pydata.org/docs/",
           "title": "pandas documentation — pandas 3.1.0 documentation",
           "trace_id": "trace_c2b0ceb6cc7a27ff",
           "text_sha256": "bf3f18a7350c92a5a878b1c56885a6811f79b645ed2e097b1d47610fe31313bc"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:23.034475+00:00",
+          "status": 200,
+          "final_url": "https://pandas.pydata.org/docs/",
+          "partial": false,
+          "sha256": "936fdb4cc63383510534adefeec67aca9e2d1add7ee7feadc97ba007a9dd72df",
+          "expected_markers": {
+            "pandas is an open source, BSD-licensed library providing high-performance, easy-to-use data structures and data analysis tools for the Python programming language.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "scipy-docs",
@@ -904,21 +1348,33 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.scipy.org/doc/scipy/",
           "title": "SciPy documentation — SciPy v1.18.0 Manual",
           "trace_id": "trace_8c94ad6e2f44052b",
           "text_sha256": "f2c6169bb9f67e760b2e0f2dcc1c0820117e95a32977e5721fd59a3bda31b553"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:23.454464+00:00",
+          "status": 200,
+          "final_url": "https://docs.scipy.org/doc/scipy/",
+          "partial": false,
+          "sha256": "0007f0346aae5a051f069ad14098cbbbe1063512099deebf38ec8d4becd72c1f",
+          "expected_markers": {
+            "SciPy (pronounced “Sigh Pie”) is an open-source software for mathematics, science, and engineering.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "matplotlib-docs",
       "family": "matplotlib.org",
       "language": "de",
-      "source_language": "de",
+      "source_language": "en",
       "expected_url": "https://matplotlib.org/stable/",
       "seed_url": "https://matplotlib.org/stable/",
       "goal": "Welche drei Arten von Visualisierungen kann Matplotlib erstellen?",
@@ -928,15 +1384,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://matplotlib.org/stable/",
           "title": "Matplotlib documentation — Matplotlib 3.11.2 documentation",
           "trace_id": "trace_d2f86137b47feef5",
           "text_sha256": "c40dd1b0364cb37fb89aceece7d2cf5f9f4d7be6d172f6c3dda75459080c5ff3"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:23.578510+00:00",
+          "status": 200,
+          "final_url": "https://matplotlib.org/stable/",
+          "partial": false,
+          "sha256": "e5f0a9f719fdb12cfbd87b5e28f9202289aba193733deaa3c28031372b401a95",
+          "expected_markers": {
+            "Matplotlib is a comprehensive library for creating static, animated, and interactive visualizations.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "tensorflow-docs",
@@ -952,15 +1420,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.tensorflow.org/learn",
           "title": "开始使用TensorFlow | TensorFlow中文官网",
           "trace_id": "trace_5a58ca10fca00dbd",
           "text_sha256": "ac0a81a4cdf26ccec86a05d97f2371dbd964e06d60d903279832eb4126893f87"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:24.012155+00:00",
+          "status": 200,
+          "final_url": "https://www.tensorflow.org/learn",
+          "partial": false,
+          "sha256": "d2e175e48b1c3e988f4d82a0c128e05354dfad17459a2cec6031b9f042720330",
+          "expected_markers": {
+            "通过 TensorFlow.js 使用 JavaScript 创建新的机器学习模型和部署现有模型。": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "requests-docs",
@@ -976,15 +1456,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://requests.readthedocs.io/en/latest/",
           "title": "Requests: HTTP for Humans™ — Requests 2.34.2 documentation",
           "trace_id": "trace_230333af5a1241ea",
           "text_sha256": "cad8c853f4185705238972fa2ecca427030a69104e5eb34abadde02b64eda4c3"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:24.105673+00:00",
+          "status": 200,
+          "final_url": "https://requests.readthedocs.io/en/latest/",
+          "partial": false,
+          "sha256": "15665f93d8e12d0933b4f6b26b84d119cd04242371d0612f6b660026fd58f343",
+          "expected_markers": {
+            "Requests is an elegant and simple HTTP library for Python, built for human beings.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "playwright-docs",
@@ -1000,15 +1492,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://playwright.dev/docs/intro",
           "title": "Installation | Playwright",
           "trace_id": "trace_792d07bd12c4393e",
           "text_sha256": "2cb469a368dc92b73f0e0e34a7ed9f44b7f85c6f74d8189baf15984d1fc493e6"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:24.480116+00:00",
+          "status": 200,
+          "final_url": "https://playwright.dev/docs/intro",
+          "partial": false,
+          "sha256": "b8f54443f73e2f19059c85cf02c717ca8a40842e8097aaa9444220c8aaac6f73",
+          "expected_markers": {
+            "Playwright Test is an end-to-end test framework for modern web apps.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "selenium-docs",
@@ -1024,15 +1528,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.selenium.dev/documentation/",
           "title": "The Selenium Browser Automation Project | Selenium",
           "trace_id": "trace_9ec533e89e55f283",
           "text_sha256": "ae8dc26a11e53fd39e9d8a5a6b833cdd1662644610c2656551ef1c253e1041e7"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:24.918495+00:00",
+          "status": 200,
+          "final_url": "https://www.selenium.dev/documentation/",
+          "partial": false,
+          "sha256": "9814d7d535b1a456694f04e1ff77aa95dd5fb9f4d96ba3ca60d9cbbff7795656",
+          "expected_markers": {
+            "Selenium is an umbrella project for a range of tools and libraries that enable and support the automation of web browsers.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "vitest-docs",
@@ -1048,15 +1564,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://vitest.dev/guide/",
           "title": "Getting Started",
           "trace_id": "trace_246ba13fea667d72",
           "text_sha256": "3119a3ff9b28eacce407eee0647f9d7fc157f092fbe0129920e0b7a886331846"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:25.189423+00:00",
+          "status": 200,
+          "final_url": "https://vitest.dev/guide/",
+          "partial": false,
+          "sha256": "48372c198a8a19084d3d1df78d13feadd69c1bd2765fc729e83e6a890e638d4d",
+          "expected_markers": {
+            "Vitest (pronounced as *\"veetest\"*) is a next generation testing framework powered by Vite.": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "jest-docs",
@@ -1072,15 +1600,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://jestjs.io/docs/getting-started",
           "title": "Getting Started · Jest",
           "trace_id": "trace_b1a4e36f997d9acc",
           "text_sha256": "b37300a4965c5d640cfc7ec539cb12056c2f94e60b5039f3b526b3935be23c24"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:26.286209+00:00",
+          "status": 200,
+          "final_url": "https://jestjs.io/docs/getting-started",
+          "partial": false,
+          "sha256": "274f6a2463e383d86fdb8da0cdcf67cbe8f1e8e654fc83e8bd54a69b75f36419",
+          "expected_markers": {
+            "Then, create a file named sum.test.js . This will contain our actual test:": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "pytest-docs",
@@ -1096,15 +1636,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.pytest.org/en/stable/",
           "title": "pytest documentation",
           "trace_id": "trace_7fc3a1eec5cf9ee5",
           "text_sha256": "95684102a7a159e7a4da304ab296b68cd90bfc07d4c668d2c6341dde8fe9fec0"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:26.458855+00:00",
+          "status": 200,
+          "final_url": "https://docs.pytest.org/en/stable/",
+          "partial": false,
+          "sha256": "68c64fa98237f05b8f100396088b107eb0b564f6f2092cdd377fd98ce3463a13",
+          "expected_markers": {
+            "Due to pytest ’s detailed assertion introspection, only plain assert statements are used.": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "linux-man-pages",
@@ -1120,15 +1672,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://man7.org/linux/man-pages/",
           "title": "Linux man pages online",
           "trace_id": "trace_c6ab7e62d51287cc",
           "text_sha256": "b08a749845e7e0b25f2d02f22b60536b2f7037190366efef9843c3910ccac903"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:26.915857+00:00",
+          "status": 200,
+          "final_url": "https://man7.org/linux/man-pages/",
+          "partial": false,
+          "sha256": "da70760de42638088cfb7d9b7e9848ccfe537f8ee8587df62438d01605f1bd25",
+          "expected_markers": {
+            "Individual sections (page names only): 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "llvm-docs",
@@ -1144,15 +1708,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://llvm.org/docs/",
           "title": "LLVM",
           "trace_id": "trace_5dca93a19b1297eb",
           "text_sha256": "6a7da4c2af9fa26769a3106e374a55d1f9ae3c2751dbc4fa66205e695e4b75ea"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:26.978731+00:00",
+          "status": 200,
+          "final_url": "https://llvm.org/docs/",
+          "partial": false,
+          "sha256": "55c3430ebe8934e501be7332a43bce8ba82bc8d5fd00b385a7fa07c7c8487d5c",
+          "expected_markers": {
+            "The LLVM compiler infrastructure supports a wide range of projects, from industrial strength compilers to specialized JIT applications to small research projects.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "gcc-docs",
@@ -1168,15 +1744,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://gcc.gnu.org/onlinedocs/",
           "title": "GCC online documentation - GNU Project",
           "trace_id": "trace_b196da372a55c6f3",
           "text_sha256": "07c361575e71747815e30212f809e5c879c6db0d976e0c3fbcae61bc38c462a1"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:27.268950+00:00",
+          "status": 200,
+          "final_url": "https://gcc.gnu.org/onlinedocs/",
+          "partial": false,
+          "sha256": "575e3c0471f167fa8a6aec6a3b9c6071615ba4eb4ae3f6ffec331729517f0d58",
+          "expected_markers": {
+            "GCC 16.2 GNU Fortran Manual": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "python-fr-docs",
@@ -1192,15 +1780,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://docs.python.org/fr/3/",
           "title": "Python 3.15.2 documentation",
           "trace_id": "trace_c87c51fb37c15189",
           "text_sha256": "afee2e2554228c08eb09c4c8da786ad828495206adae3cbf7977ad113eed6666"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:28.628814+00:00",
+          "status": 200,
+          "final_url": "https://docs.python.org/fr/3/",
+          "partial": false,
+          "sha256": "18b6d8f3e683e44a76dd0e665906ed2ca331cea5a9955e14b6471160a212d052",
+          "expected_markers": {
+            "Bienvenue sur la documentation officielle de Python 3.15.2.": true
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "mongodb-docs",
@@ -1216,15 +1816,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.mongodb.com/docs/",
           "title": "欢迎使用 MongoDB Docs - MongoDB 文档 - MongoDB Docs",
           "trace_id": "trace_41a6a04187fdc687",
           "text_sha256": "3d6e1ea6b7efd774ffdc7504f91d28e3074d361978ff1a0713cccbc21712351d"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:29.054182+00:00",
+          "status": 200,
+          "final_url": "https://www.mongodb.com/docs/",
+          "partial": true,
+          "sha256": "a8579accc9f46f41b70ebc5c344f66ecec1831a71249323285c7af850f7faa9d",
+          "expected_markers": {
+            "MongoDB允许开发者存储丰富的类似JSON的文档": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "debian-docs",
@@ -1240,15 +1852,27 @@
       "must_expose_proof": true,
       "cohort": "historical_fact",
       "reference": {
-        "method": "previous_independent_source_annotation",
+        "method": "previous_agent_reviewed_needlex_capture",
         "source": {
           "url": "https://www.debian.org/doc/",
           "title": "Debian -- 说明文档",
           "trace_id": "trace_7fc4483699707bdc",
           "text_sha256": "3e190795daebd7929eca112e2678a97bf9fd2a7441667c63a111bc76d8fa4de2"
         },
-        "scope": "frozen source fact; current omission requires independent source recheck"
-      }
+        "scope": "frozen source fact; current omission requires independent source recheck",
+        "independent_current_check": {
+          "fetched_at": "2026-10-29T22:55:29.215960+00:00",
+          "status": 200,
+          "final_url": "https://www.debian.org/doc/",
+          "partial": false,
+          "sha256": "88eaee23288ff30c5cb4ec51481a3556073c1c65dd426d8df03a5ccd83001a42",
+          "expected_markers": {
+            "HOWTO 文档 是告诉您 如何（how to） 完成一项特定任务的文档。": false
+          },
+          "scope": "Positive source-text confirmation after whitespace normalization; a miss is not established absence."
+        }
+      },
+      "independent_positive_reference": false
     },
     {
       "id": "popular-nasa.gov",
@@ -1277,13 +1901,14 @@
         "quote": "NASA Science seeks to discover the secrets of the universe, search for life elsewhere, and protect and improve life on Earth and in space.",
         "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
         "volatile": false
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "popular-ikea.com",
       "family": "ikea.com",
       "language": "it",
-      "source_language": "it",
+      "source_language": "en",
       "expected_url": "https://www.ikea.com/",
       "seed_url": "https://www.ikea.com/",
       "goal": "Chi viene invitato a conoscere per capire come nascono i prodotti IKEA prima di arrivare sugli scaffali?",
@@ -1306,7 +1931,8 @@
         "quote": "designers who bring their ideas to life and into your home.",
         "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
         "volatile": false
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "popular-loc.gov",
@@ -1335,13 +1961,14 @@
         "quote": "Track bills on the official site for U.S. federal legislative information.",
         "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
         "volatile": false
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "popular-openlibrary.org",
       "family": "openlibrary.org",
       "language": "fr",
-      "source_language": "fr",
+      "source_language": "en",
       "expected_url": "https://openlibrary.org/",
       "seed_url": "https://openlibrary.org/",
       "goal": "De quelle organisation Open Library est-elle une initiative ?",
@@ -1364,7 +1991,8 @@
         "quote": "Open Library is an initiative of the Internet Archive",
         "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
         "volatile": false
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "popular-bbc.com",
@@ -1393,7 +2021,8 @@
         "quote": "William Shatner has led tributes to his Star Trek co-star",
         "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
         "volatile": true
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "popular-lemonde.fr",
@@ -1422,7 +2051,8 @@
         "quote": "un dispositif de 70 000 policiers et gendarmes",
         "scope": "positive source-text presence; a partial reference does not prove full-page completeness",
         "volatile": true
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "quotes-js",
@@ -1443,7 +2073,8 @@
         "url": "https://quotes.toscrape.com/api/quotes?page=1",
         "sha256": "14059716ecccb75ce2b6f07cd25a4be39b6d79b8df43b29942c656a13f19e30d",
         "scope": "first public API quotation and author, not whole-site completeness"
-      }
+      },
+      "independent_positive_reference": true
     },
     {
       "id": "quotes-scroll",
@@ -1464,7 +2095,8 @@
         "url": "https://quotes.toscrape.com/api/quotes?page=1",
         "sha256": "14059716ecccb75ce2b6f07cd25a4be39b6d79b8df43b29942c656a13f19e30d",
         "scope": "first public API quotation and author, not whole-site completeness"
-      }
+      },
+      "independent_positive_reference": true
     }
   ]
 }

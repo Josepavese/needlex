@@ -1,0 +1,2265 @@
+{
+  "specification": "popular-web-v1-measurement",
+  "acquisition_window_utc": {
+    "start": "2026-10-29T22:21:09.880020228Z",
+    "finish": "2026-10-29T23:44:22.026428663Z"
+  },
+  "sources": {
+    "tranco_metadata": {
+      "url": "https://tranco-list.eu/api/lists/id/ZJ8PG",
+      "sha256": "b76cb844dd8a19ae38226bc60cadd96d90e4b466ea4ac7deb10bb6e719671951",
+      "bytes": 419,
+      "file": "tranco-metadata.json"
+    },
+    "tranco": {
+      "url": "https://tranco-list.eu/download/ZJ8PG/10000",
+      "sha256": "d8119554f2359cb023e22d86b8a58e0a5e4b0837677691992338ddcf8c897190",
+      "bytes": 186843,
+      "file": "tranco.csv"
+    },
+    "crux": {
+      "url": "https://raw.githubusercontent.com/zakird/crux-top-lists/35ba243941defcd21882b134d9dd354824922482/data/global/current.csv.gz",
+      "sha256": "be444a341be6b4b0ffb2acae08acef67c77243c01bb071a69b26f87c53011f88",
+      "bytes": 8790815,
+      "file": "crux.csv.gz"
+    },
+    "crux_repository_commit": "35ba243941defcd21882b134d9dd354824922482"
+  },
+  "baseline": {
+    "specification": "needlex-popular-web-v1",
+    "corpus_sha256": "3c2ffb3951f9358c6393d7627d6a7ab68595bbc6940c73443a8b216c6557c06c",
+    "receipts_sha256": "b0f00311d7aa8b544128fd7aa80d336a7a6b985f332a912025162dee0f8af3b7",
+    "installed_binary_sha256": "7e52c95d76a2efb4181d4f360a705fa54a5323d4dcffceca2f5f39f5b42664b5",
+    "run_identity": "aedca9b9ae52495f18f306330eb682709475c3ef7afbe0cada113deb3b4e5f4d",
+    "scorer_sha256": "25f4a795352c3123d5cacabd37794d9b4e1bb624619eb7af25572a71ac10fb7f",
+    "execution": {
+      "memory_max_bytes": 2147483648,
+      "memory_swap_max_bytes": 0,
+      "cpu_quota": "200%",
+      "rpc_timeout_s": 300,
+      "state_growth_mib": 1024,
+      "repetitions": 1,
+      "profile": "deep",
+      "render": "auto"
+    },
+    "availability": {
+      "urls": 1000,
+      "hosts": 1000,
+      "nonempty_packets": 818,
+      "transport_errors": {
+        "unavailable_upstream": 18,
+        "provider_blocked": 63,
+        "runtime_error": 40,
+        "unavailable_resource": 26,
+        "upstream_http_rejected": 7,
+        "upstream_timeout": 11,
+        "authentication_required": 6,
+        "empty_content": 5,
+        "redirect_limit": 2,
+        "tls_error": 2,
+        "unsupported_content_type": 2
+      },
+      "audit_statuses": {
+        "not_requested": 818,
+        "tool_error": 182
+      },
+      "audit_trace_matches": 818,
+      "proof_files_nonempty": 818,
+      "rendered": 352,
+      "reused": 271,
+      "network_truncated": 7,
+      "render_degraded": 1,
+      "latency_ms": {
+        "samples": 1000,
+        "p50": 2510.5,
+        "p95": 16371,
+        "maximum": 38454
+      },
+      "aggregate_pss_kib": {
+        "samples": 1000,
+        "p50": 277599.5,
+        "p95": 526615,
+        "maximum": 792869
+      },
+      "model_pss_kib": {
+        "samples": 1000,
+        "p50": 14654.0,
+        "p95": 14655,
+        "maximum": 14656
+      },
+      "declared_languages": {
+        "en": 248,
+        "fr": 151,
+        "ja": 1,
+        "it": 150,
+        "de": 150,
+        "es": 150,
+        "zh": 150
+      },
+      "declared_families": 908,
+      "nonempty_with_mapped_proof": 818,
+      "complete_capture_with_mapped_proof": 762,
+      "capture_unknown": 0,
+      "capture_partial_or_degraded": 56,
+      "empty_packets": 0,
+      "unexpected_model_audits": 0,
+      "render_attempts": 352,
+      "render_failed": 0,
+      "network_body_missing": 134,
+      "network_stats_unknown": 0,
+      "browser_http_request_events": 29801,
+      "tool_pss_kib": {
+        "samples": 1000,
+        "p50": 262947.0,
+        "p95": 511963,
+        "maximum": 778217
+      }
+    },
+    "by_cohort": {
+      "historical": {
+        "urls": 99,
+        "hosts": 99,
+        "nonempty_packets": 97,
+        "transport_errors": {
+          "unavailable_upstream": 1,
+          "provider_blocked": 1
+        },
+        "audit_statuses": {
+          "not_requested": 97,
+          "tool_error": 2
+        },
+        "audit_trace_matches": 97,
+        "proof_files_nonempty": 97,
+        "rendered": 9,
+        "reused": 3,
+        "network_truncated": 0,
+        "render_degraded": 0,
+        "latency_ms": {
+          "samples": 99,
+          "p50": 973,
+          "p95": 7532,
+          "maximum": 14805
+        },
+        "aggregate_pss_kib": {
+          "samples": 99,
+          "p50": 257050,
+          "p95": 371252,
+          "maximum": 491298
+        },
+        "model_pss_kib": {
+          "samples": 99,
+          "p50": 14655,
+          "p95": 14655,
+          "maximum": 14655
+        },
+        "declared_languages": {
+          "en": 97,
+          "fr": 1,
+          "ja": 1
+        },
+        "declared_families": 7,
+        "nonempty_with_mapped_proof": 97,
+        "complete_capture_with_mapped_proof": 93,
+        "capture_unknown": 0,
+        "capture_partial_or_degraded": 4,
+        "empty_packets": 0,
+        "unexpected_model_audits": 0,
+        "render_attempts": 9,
+        "render_failed": 0,
+        "network_body_missing": 2,
+        "network_stats_unknown": 0,
+        "browser_http_request_events": 498,
+        "tool_pss_kib": {
+          "samples": 99,
+          "p50": 242395,
+          "p95": 356597,
+          "maximum": 476643
+        }
+      },
+      "ranked": {
+        "urls": 901,
+        "hosts": 901,
+        "nonempty_packets": 721,
+        "transport_errors": {
+          "runtime_error": 40,
+          "provider_blocked": 62,
+          "unavailable_resource": 26,
+          "unavailable_upstream": 17,
+          "upstream_http_rejected": 7,
+          "upstream_timeout": 11,
+          "authentication_required": 6,
+          "empty_content": 5,
+          "redirect_limit": 2,
+          "tls_error": 2,
+          "unsupported_content_type": 2
+        },
+        "audit_statuses": {
+          "not_requested": 721,
+          "tool_error": 180
+        },
+        "audit_trace_matches": 721,
+        "proof_files_nonempty": 721,
+        "rendered": 343,
+        "reused": 268,
+        "network_truncated": 7,
+        "render_degraded": 1,
+        "latency_ms": {
+          "samples": 901,
+          "p50": 3219,
+          "p95": 17046,
+          "maximum": 38454
+        },
+        "aggregate_pss_kib": {
+          "samples": 901,
+          "p50": 280755,
+          "p95": 532411,
+          "maximum": 792869
+        },
+        "model_pss_kib": {
+          "samples": 901,
+          "p50": 14654,
+          "p95": 14655,
+          "maximum": 14656
+        },
+        "declared_languages": {
+          "en": 151,
+          "it": 150,
+          "fr": 150,
+          "de": 150,
+          "es": 150,
+          "zh": 150
+        },
+        "declared_families": 901,
+        "nonempty_with_mapped_proof": 721,
+        "complete_capture_with_mapped_proof": 669,
+        "capture_unknown": 0,
+        "capture_partial_or_degraded": 52,
+        "empty_packets": 0,
+        "unexpected_model_audits": 0,
+        "render_attempts": 343,
+        "render_failed": 0,
+        "network_body_missing": 132,
+        "network_stats_unknown": 0,
+        "browser_http_request_events": 29303,
+        "tool_pss_kib": {
+          "samples": 901,
+          "p50": 266101,
+          "p95": 517757,
+          "maximum": 778217
+        }
+      }
+    },
+    "by_band": {
+      "1-1000": {
+        "urls": 307,
+        "hosts": 307,
+        "nonempty_packets": 230,
+        "transport_errors": {
+          "runtime_error": 19,
+          "provider_blocked": 24,
+          "unavailable_resource": 14,
+          "upstream_http_rejected": 5,
+          "unavailable_upstream": 4,
+          "upstream_timeout": 4,
+          "authentication_required": 3,
+          "tls_error": 1,
+          "redirect_limit": 1,
+          "unsupported_content_type": 2
+        },
+        "audit_statuses": {
+          "not_requested": 230,
+          "tool_error": 77
+        },
+        "audit_trace_matches": 230,
+        "proof_files_nonempty": 230,
+        "rendered": 121,
+        "reused": 105,
+        "network_truncated": 4,
+        "render_degraded": 1,
+        "latency_ms": {
+          "samples": 307,
+          "p50": 3355,
+          "p95": 19581,
+          "maximum": 28207
+        },
+        "aggregate_pss_kib": {
+          "samples": 307,
+          "p50": 285753,
+          "p95": 563027,
+          "maximum": 781935
+        },
+        "model_pss_kib": {
+          "samples": 307,
+          "p50": 14654,
+          "p95": 14655,
+          "maximum": 14656
+        },
+        "declared_languages": {
+          "en": 2,
+          "it": 149,
+          "fr": 2,
+          "de": 2,
+          "es": 150,
+          "zh": 2
+        },
+        "declared_families": 307,
+        "nonempty_with_mapped_proof": 230,
+        "complete_capture_with_mapped_proof": 207,
+        "capture_unknown": 0,
+        "capture_partial_or_degraded": 23,
+        "empty_packets": 0,
+        "unexpected_model_audits": 0,
+        "render_attempts": 121,
+        "render_failed": 0,
+        "network_body_missing": 60,
+        "network_stats_unknown": 0,
+        "browser_http_request_events": 11020,
+        "tool_pss_kib": {
+          "samples": 307,
+          "p50": 271098,
+          "p95": 548374,
+          "maximum": 767280
+        }
+      },
+      "1001-5000": {
+        "urls": 298,
+        "hosts": 298,
+        "nonempty_packets": 246,
+        "transport_errors": {
+          "runtime_error": 14,
+          "unavailable_upstream": 8,
+          "unavailable_resource": 6,
+          "provider_blocked": 17,
+          "upstream_http_rejected": 2,
+          "upstream_timeout": 2,
+          "authentication_required": 2,
+          "redirect_limit": 1
+        },
+        "audit_statuses": {
+          "tool_error": 52,
+          "not_requested": 246
+        },
+        "audit_trace_matches": 246,
+        "proof_files_nonempty": 246,
+        "rendered": 116,
+        "reused": 112,
+        "network_truncated": 2,
+        "render_degraded": 0,
+        "latency_ms": {
+          "samples": 298,
+          "p50": 3259.5,
+          "p95": 14462,
+          "maximum": 38454
+        },
+        "aggregate_pss_kib": {
+          "samples": 298,
+          "p50": 282483.0,
+          "p95": 530568,
+          "maximum": 792869
+        },
+        "model_pss_kib": {
+          "samples": 298,
+          "p50": 14654.0,
+          "p95": 14655,
+          "maximum": 14656
+        },
+        "declared_languages": {
+          "en": 1,
+          "it": 1,
+          "fr": 148,
+          "zh": 148
+        },
+        "declared_families": 298,
+        "nonempty_with_mapped_proof": 246,
+        "complete_capture_with_mapped_proof": 228,
+        "capture_unknown": 0,
+        "capture_partial_or_degraded": 18,
+        "empty_packets": 0,
+        "unexpected_model_audits": 0,
+        "render_attempts": 116,
+        "render_failed": 0,
+        "network_body_missing": 37,
+        "network_stats_unknown": 0,
+        "browser_http_request_events": 9725,
+        "tool_pss_kib": {
+          "samples": 298,
+          "p50": 267829.0,
+          "p95": 515915,
+          "maximum": 778217
+        }
+      },
+      "5001-10000": {
+        "urls": 296,
+        "hosts": 296,
+        "nonempty_packets": 245,
+        "transport_errors": {
+          "unavailable_resource": 6,
+          "runtime_error": 7,
+          "unavailable_upstream": 5,
+          "provider_blocked": 21,
+          "upstream_timeout": 5,
+          "empty_content": 5,
+          "authentication_required": 1,
+          "tls_error": 1
+        },
+        "audit_statuses": {
+          "not_requested": 245,
+          "tool_error": 51
+        },
+        "audit_trace_matches": 245,
+        "proof_files_nonempty": 245,
+        "rendered": 106,
+        "reused": 51,
+        "network_truncated": 1,
+        "render_degraded": 0,
+        "latency_ms": {
+          "samples": 296,
+          "p50": 3021.0,
+          "p95": 15419,
+          "maximum": 34739
+        },
+        "aggregate_pss_kib": {
+          "samples": 296,
+          "p50": 275844.5,
+          "p95": 478230,
+          "maximum": 638537
+        },
+        "model_pss_kib": {
+          "samples": 296,
+          "p50": 14654.0,
+          "p95": 14656,
+          "maximum": 14656
+        },
+        "declared_languages": {
+          "de": 148,
+          "en": 148
+        },
+        "declared_families": 296,
+        "nonempty_with_mapped_proof": 245,
+        "complete_capture_with_mapped_proof": 234,
+        "capture_unknown": 0,
+        "capture_partial_or_degraded": 11,
+        "empty_packets": 0,
+        "unexpected_model_audits": 0,
+        "render_attempts": 106,
+        "render_failed": 0,
+        "network_body_missing": 35,
+        "network_stats_unknown": 0,
+        "browser_http_request_events": 8558,
+        "tool_pss_kib": {
+          "samples": 296,
+          "p50": 261190.0,
+          "p95": 463576,
+          "maximum": 623882
+        }
+      },
+      "historical": {
+        "urls": 99,
+        "hosts": 99,
+        "nonempty_packets": 97,
+        "transport_errors": {
+          "unavailable_upstream": 1,
+          "provider_blocked": 1
+        },
+        "audit_statuses": {
+          "not_requested": 97,
+          "tool_error": 2
+        },
+        "audit_trace_matches": 97,
+        "proof_files_nonempty": 97,
+        "rendered": 9,
+        "reused": 3,
+        "network_truncated": 0,
+        "render_degraded": 0,
+        "latency_ms": {
+          "samples": 99,
+          "p50": 973,
+          "p95": 7532,
+          "maximum": 14805
+        },
+        "aggregate_pss_kib": {
+          "samples": 99,
+          "p50": 257050,
+          "p95": 371252,
+          "maximum": 491298
+        },
+        "model_pss_kib": {
+          "samples": 99,
+          "p50": 14655,
+          "p95": 14655,
+          "maximum": 14655
+        },
+        "declared_languages": {
+          "en": 97,
+          "fr": 1,
+          "ja": 1
+        },
+        "declared_families": 7,
+        "nonempty_with_mapped_proof": 97,
+        "complete_capture_with_mapped_proof": 93,
+        "capture_unknown": 0,
+        "capture_partial_or_degraded": 4,
+        "empty_packets": 0,
+        "unexpected_model_audits": 0,
+        "render_attempts": 9,
+        "render_failed": 0,
+        "network_body_missing": 2,
+        "network_stats_unknown": 0,
+        "browser_http_request_events": 498,
+        "tool_pss_kib": {
+          "samples": 99,
+          "p50": 242395,
+          "p95": 356597,
+          "maximum": 476643
+        }
+      }
+    },
+    "question_languages": {
+      "en": 248,
+      "fr": 151,
+      "ja": 1,
+      "it": 150,
+      "de": 150,
+      "es": 150,
+      "zh": 150
+    },
+    "defects": [
+      {
+        "id": "popular-booking.com",
+        "url": "https://www.booking.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_17ef4964a7ba7952"
+        }
+      },
+      {
+        "id": "popular-dw.com",
+        "url": "https://www.dw.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[8] trace_event.data[title] must not be empty; diagnostic_id: log_a811160c6af8af8a"
+        }
+      },
+      {
+        "id": "popular-superhosting.bg",
+        "url": "https://my.superhosting.bg/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty\nrun_trace.events[15] trace_event.data[title] must not be empty; diagnostic_id: log_81f04fd61f74195d"
+        }
+      },
+      {
+        "id": "popular-mvideo.ru",
+        "url": "https://www.mvideo.ru/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_a2ba57e29e24b113"
+        }
+      },
+      {
+        "id": "popular-betpawa.ug",
+        "url": "https://www.betpawa.ug/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[7] trace_event.data[title] must not be empty; diagnostic_id: log_3e52410d26bbda34"
+        }
+      },
+      {
+        "id": "popular-fronius.com",
+        "url": "https://login.fronius.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_ed4aebc2cec461ce"
+        }
+      },
+      {
+        "id": "popular-amazon.pl",
+        "url": "https://www.amazon.pl/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_3ed9acfab1e53438"
+        }
+      },
+      {
+        "id": "popular-kinopoisk.ru",
+        "url": "https://www.kinopoisk.ru/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_eab0bb75bf77fc3a"
+        }
+      },
+      {
+        "id": "popular-amazon.co.uk",
+        "url": "https://www.amazon.co.uk/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_54b1620c18f61e69"
+        }
+      },
+      {
+        "id": "popular-amazon.ae",
+        "url": "https://www.amazon.ae/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_827e572777991099"
+        }
+      },
+      {
+        "id": "popular-leadconnectorhq.com",
+        "url": "https://api.leadconnectorhq.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty\nrun_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_11ade0500f8617f2"
+        }
+      },
+      {
+        "id": "popular-taobao.com",
+        "url": "https://s.taobao.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty\nrun_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_e947cc46cd55e9f6"
+        }
+      },
+      {
+        "id": "popular-buydomains.com",
+        "url": "https://www.buydomains.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[7] trace_event.data[title] must not be empty; diagnostic_id: log_77e5310c7ad69776"
+        }
+      },
+      {
+        "id": "popular-amazon.in",
+        "url": "https://www.amazon.in/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_80812b3344331246"
+        }
+      },
+      {
+        "id": "popular-amazon.es",
+        "url": "https://www.amazon.es/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_9511809df62511dd"
+        }
+      },
+      {
+        "id": "popular-dialmyapp.com",
+        "url": "https://apps.dialmyapp.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_2bbaa0bc0bb27535"
+        }
+      },
+      {
+        "id": "popular-uiscom.ru",
+        "url": "https://app.uiscom.ru/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_21597d9e22a4e6af"
+        }
+      },
+      {
+        "id": "popular-alamy.com",
+        "url": "https://www.alamy.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_ac3dfb3f5f96d70f"
+        }
+      },
+      {
+        "id": "popular-nic.ru",
+        "url": "https://www.nic.ru/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_fc432b92d7f103f9"
+        }
+      },
+      {
+        "id": "popular-espn.com",
+        "url": "https://www.espn.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_b83bfb4a51a1319f"
+        }
+      },
+      {
+        "id": "popular-reg.ru",
+        "url": "https://www.reg.ru/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_7fdb881121d67f92"
+        }
+      },
+      {
+        "id": "popular-forms.gle",
+        "url": "https://forms.gle/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_1baac775a5b763f4"
+        }
+      },
+      {
+        "id": "popular-goo.gl",
+        "url": "https://maps.app.goo.gl/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_bc1e649635ef5f20"
+        }
+      },
+      {
+        "id": "popular-playinboss.com",
+        "url": "https://playinboss.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_bc3aa1b98180a966"
+        }
+      },
+      {
+        "id": "popular-globalsign.com",
+        "url": "https://gcc.globalsign.com/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty\nrun_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_619046634e447e52"
+        }
+      },
+      {
+        "id": "popular-workers.dev",
+        "url": "https://mission-render-main.crescendo-ai.workers.dev/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[9] trace_event.data[title] must not be empty\nrun_trace.events[14] trace_event.data[title] must not be empty; diagnostic_id: log_bf8b0a10d5237819"
+        }
+      },
+      {
+        "id": "popular-phantom.app",
+        "url": "https://connect.phantom.app/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty\nrun_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_026bb3bd5189069c"
+        }
+      },
+      {
+        "id": "popular-mamastar.jp",
+        "url": "https://mamastar.jp/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_14b7f5e8e6a3fdaa"
+        }
+      },
+      {
+        "id": "popular-amazon.de",
+        "url": "https://www.amazon.de/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_191366e69ef41a14"
+        }
+      },
+      {
+        "id": "popular-eurekalert.org",
+        "url": "https://www.eurekalert.org/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_c94c6dbf2efe8286"
+        }
+      },
+      {
+        "id": "popular-univie.ac.at",
+        "url": "https://ufind.univie.ac.at/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[10] trace_event.data[title] must not be empty; diagnostic_id: log_bf8091b38597807d"
+        }
+      },
+      {
+        "id": "popular-pendo.io",
+        "url": "https://app.pendo.io/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[8] trace_event.data[title] must not be empty; diagnostic_id: log_f238ad1a0e259087"
+        }
+      },
+      {
+        "id": "popular-dzen.ru",
+        "url": "https://dzen.ru/",
+        "error": {
+          "code": -32000,
+          "message": "run_trace.events[5] trace_event.data[title] must not be empty; diagnostic_id: log_10613a28b275bb94"
+        }
+      }
+    ],
+    "scope": "A stratified public-origin retrieval baseline, not a traffic-weighted web accuracy estimate. One live pass, native budgets unchanged. Context/proof mapping validity does not establish correctness. Resident external embedding server excluded from PSS; resident Julia separately included though inference is not requested. Shared-host load and cache state are not controlled laboratory conditions.",
+    "historical_occurrences": {
+      "original": 100,
+      "distinct_urls": 99,
+      "nonempty_with_proof": 98
+    },
+    "quality": {
+      "corpus_sha256": "39fc69c3f370acb09c61875b9c3a7321318af7143779c48eb9a7dee35ef180b1",
+      "receipts_sha256": "6778a58293057cf3a077240afea6a067557dbe931c25e7ea3701e78973af9793",
+      "run_identity": "83208b12d4f3e1157b1b20640b1415a23a73381868e6e8dc7fba69167d5d1cda",
+      "cases": 60,
+      "expected_markers": 62,
+      "retained_markers": 60,
+      "all_markers_retained": 58,
+      "independent_positive_reference": {
+        "cases": 47,
+        "markers": 49,
+        "retained_markers": 47,
+        "all_markers_retained": 45
+      },
+      "by_cohort": {
+        "new_reference_fact": {
+          "cases": 6,
+          "all_markers_retained": 4
+        },
+        "historical_fact": {
+          "cases": 52,
+          "all_markers_retained": 52
+        },
+        "dynamic_reference_fact": {
+          "cases": 2,
+          "all_markers_retained": 2
+        }
+      },
+      "checks": [
+        {
+          "id": "go-home",
+          "url": "https://go.dev/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "sqlite-home",
+          "url": "https://sqlite.org/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "postgresql-home",
+          "url": "https://www.postgresql.org/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "redis-docs",
+          "url": "https://redis.io/docs/latest/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "kubernetes-home",
+          "url": "https://kubernetes.io/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "podman-docs",
+          "url": "https://podman.io/docs",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "nginx-home",
+          "url": "https://nginx.org/en/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "curl-home",
+          "url": "https://curl.se/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "git-home",
+          "url": "https://git-scm.com/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "github-docs",
+          "url": "https://docs.github.com/en",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "gitlab-docs",
+          "url": "https://docs.gitlab.com/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "rust-home",
+          "url": "https://www.rust-lang.org/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "rust-book",
+          "url": "https://doc.rust-lang.org/book/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "npm-docs",
+          "url": "https://docs.npmjs.com/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "deno-docs",
+          "url": "https://docs.deno.com/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "bun-docs",
+          "url": "https://bun.sh/docs",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "svelte-docs",
+          "url": "https://svelte.dev/docs",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "angular-docs",
+          "url": "https://angular.dev/overview",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "nextjs-docs",
+          "url": "https://nextjs.org/docs",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "nuxt-docs",
+          "url": "https://nuxt.com/docs/4.x/getting-started/introduction",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "vite-docs",
+          "url": "https://vite.dev/guide/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "webpack-docs",
+          "url": "https://webpack.js.org/concepts/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "rollup-docs",
+          "url": "https://rollupjs.org/introduction/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "tailwind-docs",
+          "url": "https://tailwindcss.com/docs",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "bootstrap-docs",
+          "url": "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "fastapi-docs",
+          "url": "https://fastapi.tiangolo.com/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "rails-guides",
+          "url": "https://guides.rubyonrails.org/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "laravel-docs",
+          "url": "https://laravel.com/docs",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "spring-docs",
+          "url": "https://spring.io/projects/spring-framework",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "dotnet-docs",
+          "url": "https://learn.microsoft.com/en-us/dotnet/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "java-docs",
+          "url": "https://docs.oracle.com/en/java/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "php-docs",
+          "url": "https://www.php.net/docs.php",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "perl-docs",
+          "url": "https://perldoc.perl.org/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "lua-docs",
+          "url": "https://www.lua.org/docs.html",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "r-docs",
+          "url": "https://www.r-project.org/other-docs.html",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "julia-docs",
+          "url": "https://docs.julialang.org/en/v1/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "pandas-docs",
+          "url": "https://pandas.pydata.org/docs/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "scipy-docs",
+          "url": "https://docs.scipy.org/doc/scipy/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "matplotlib-docs",
+          "url": "https://matplotlib.org/stable/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "tensorflow-docs",
+          "url": "https://www.tensorflow.org/learn",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "requests-docs",
+          "url": "https://requests.readthedocs.io/en/latest/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "playwright-docs",
+          "url": "https://playwright.dev/docs/intro",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "selenium-docs",
+          "url": "https://www.selenium.dev/documentation/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "vitest-docs",
+          "url": "https://vitest.dev/guide/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "jest-docs",
+          "url": "https://jestjs.io/docs/getting-started",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "pytest-docs",
+          "url": "https://docs.pytest.org/en/stable/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "linux-man-pages",
+          "url": "https://man7.org/linux/man-pages/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "llvm-docs",
+          "url": "https://llvm.org/docs/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "gcc-docs",
+          "url": "https://gcc.gnu.org/onlinedocs/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "python-fr-docs",
+          "url": "https://docs.python.org/fr/3/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "mongodb-docs",
+          "url": "https://www.mongodb.com/docs/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "debian-docs",
+          "url": "https://www.debian.org/doc/",
+          "cohort": "historical_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": false,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "popular-nasa.gov",
+          "url": "https://science.nasa.gov/",
+          "cohort": "new_reference_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "popular-ikea.com",
+          "url": "https://www.ikea.com/",
+          "cohort": "new_reference_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "popular-loc.gov",
+          "url": "https://www.loc.gov/",
+          "cohort": "new_reference_fact",
+          "hits": 0,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": false,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "popular-openlibrary.org",
+          "url": "https://openlibrary.org/",
+          "cohort": "new_reference_fact",
+          "hits": 0,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": false,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "popular-bbc.com",
+          "url": "https://www.bbc.com/",
+          "cohort": "new_reference_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "popular-lemonde.fr",
+          "url": "https://www.lemonde.fr/",
+          "cohort": "new_reference_fact",
+          "hits": 1,
+          "total": 1,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "quotes-js",
+          "url": "https://quotes.toscrape.com/js/",
+          "cohort": "dynamic_reference_fact",
+          "hits": 2,
+          "total": 2,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        },
+        {
+          "id": "quotes-scroll",
+          "url": "https://quotes.toscrape.com/scroll",
+          "cohort": "dynamic_reference_fact",
+          "hits": 2,
+          "total": 2,
+          "independent_positive_reference": true,
+          "all_markers_retained": true,
+          "tool_error": null,
+          "proof_mapping_valid": true,
+          "capture_complete": true,
+          "interpretation": "Source marker retention; a miss requires independent source drift/acquisition diagnosis before calling it an omission."
+        }
+      ]
+    }
+  },
+  "resource_envelopes": {
+    "baseline": {
+      "values": {
+        "memory.current": "382562304",
+        "memory.peak": "879542272",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "memory.max": "2147483648",
+        "memory.swap.max": "0",
+        "cpu.max": "200000 100000"
+      },
+      "control_group": "/user.slice/user-1000.slice/user@1000.service/app.slice/needlex-popular-20261029.scope",
+      "sampled_at": "2026-10-29T23:44:19.307118+00:00",
+      "scope": "Owned benchmark processes and charged cache only; external semantic/Julia services excluded, no PSS equivalence claim.",
+      "terminal": true
+    },
+    "quality": {
+      "values": {
+        "memory.current": "168185856",
+        "memory.peak": "245833728",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "memory.max": "2147483648",
+        "memory.swap.max": "0",
+        "cpu.max": "200000 100000"
+      },
+      "sampled_at": "2026-10-29T23:45:54.070977+00:00",
+      "scope": "Owned quality MCP/browser processes; external services excluded",
+      "terminal": true
+    },
+    "title_fix_delta": {
+      "values": {
+        "memory.current": "300351488",
+        "memory.peak": "401580032",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "memory.max": "2147483648",
+        "memory.swap.max": "0",
+        "cpu.max": "200000 100000"
+      },
+      "control_group": "/user.slice/user-1000.slice/user@1000.service/app.slice/needlex-popular-delta-20261030.scope",
+      "sampled_at": "2026-10-29T23:52:55.213074+00:00",
+      "scope": "Owned benchmark processes and charged cache only; external semantic/Julia services excluded, no PSS equivalence claim.",
+      "terminal": true
+    }
+  },
+  "quality_diagnosis": {
+    "primary_scores_unchanged": true,
+    "method": "Agent review of existing receipts and independent references; one fresh full-export LOC diagnostic after original bounded snapshot was insufficient. No Julia labels.",
+    "cases": [
+      {
+        "id": "popular-openlibrary.org",
+        "baseline_trace_id": "trace_d68ca83c5b17e163",
+        "classification": "localized_fact_present_literal_marker_miss",
+        "finding": "Compiled Chinese text explicitly attributes operation to Internet Archive and describes Open Library as its initiative. The English exact marker fails across this locale variant; no semantic content omission established.",
+        "source_excerpt": "非营利 由 Internet Archive 运营",
+        "scope": "Agent-reviewed multilingual evidence; does not rewrite the predeclared English literal check."
+      },
+      {
+        "id": "popular-loc.gov",
+        "baseline_trace_id": "trace_b5f5ee194ef64064",
+        "classification": "baseline_literal_marker_missing_followup_variant_succeeds",
+        "baseline_text_characters": 19251,
+        "baseline_snapshot_complete": false,
+        "independent_reference_positive": true,
+        "current_independent_reference_positive": true,
+        "baseline_render": [
+          {
+            "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+            "browser_reused": "false",
+            "duration_ms": "6297",
+            "event_source_messages": "0",
+            "network_body_missing": "0",
+            "network_bytes": "12999",
+            "network_http_requests": "77",
+            "network_idle_reason": "network_idle",
+            "network_observed": "3",
+            "network_resources": "3",
+            "network_streams_open": "0",
+            "network_truncated": "false",
+            "partial": "false",
+            "render_path": "cdp",
+            "rendered": "true",
+            "semantic_gap_similarity": "0.3960",
+            "semantic_gap_threshold": "0.5000",
+            "websocket_messages": "0"
+          }
+        ],
+        "followup_trace_id": "trace_7e1cd77816b4a6bf",
+        "followup_render": [
+          {
+            "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+            "browser_reused": "false",
+            "duration_ms": "3779",
+            "event_source_messages": "0",
+            "network_body_missing": "0",
+            "network_bytes": "0",
+            "network_http_requests": "71",
+            "network_idle_reason": "network_idle",
+            "network_observed": "0",
+            "network_resources": "0",
+            "network_streams_open": "0",
+            "network_truncated": "false",
+            "partial": "false",
+            "render_path": "cdp",
+            "rendered": "true",
+            "semantic_gap_similarity": "0.3960",
+            "semantic_gap_threshold": "0.5000",
+            "websocket_messages": "0"
+          }
+        ],
+        "followup_text_sha256": "991294752bfc40f1f7a9c031ea1a950314e1786c1eda8b8bbc22f3641eaa4c23",
+        "followup_literal_marker": true,
+        "finding": "Baseline full compiled text failed the frozen marker. Its saved excerpt was bounded, so semantic absence cannot be established from it alone. That excerpt includes raw SVG path geometry and an identifier-only XHR. Fresh full-export followup returns the marker with zero captured application bodies versus three in baseline.",
+        "scope": "Fresh upstream/capture variant and executable44; the optional-title fix does not change this titled page. No causal gain credited to that fix, no replacement of original receipt.",
+        "next_step": "Reproduce objective retention with matched DOM and captured application payloads before changing packing. Non-semantic network payload noise is an observed concern, not a proven cause of this single miss."
+      }
+    ]
+  },
+  "title_fix": {
+    "version": "v0.1.44",
+    "commit": "ebf7d0f8a11d219875aaa56c331c947df6756457",
+    "binary_sha256": "6d2d4e858aabdc8e06a8196ebc4c7d5785bbf29d906ac8d45a01d61be3bdd15d",
+    "baseline_cases": 33,
+    "baseline_title_errors": 33,
+    "followup": {
+      "urls": 33,
+      "hosts": 33,
+      "nonempty_packets": 30,
+      "transport_errors": {
+        "runtime_error": 3
+      },
+      "audit_statuses": {
+        "not_requested": 30,
+        "tool_error": 3
+      },
+      "audit_trace_matches": 30,
+      "proof_files_nonempty": 30,
+      "rendered": 30,
+      "reused": 26,
+      "network_truncated": 0,
+      "render_degraded": 1,
+      "latency_ms": {
+        "samples": 33,
+        "p50": 8714,
+        "p95": 26583,
+        "maximum": 35545
+      },
+      "aggregate_pss_kib": {
+        "samples": 33,
+        "p50": 362340,
+        "p95": 528178,
+        "maximum": 542140
+      },
+      "model_pss_kib": {
+        "samples": 33,
+        "p50": 14653,
+        "p95": 14653,
+        "maximum": 14653
+      },
+      "declared_languages": {
+        "es": 7,
+        "en": 2,
+        "zh": 7,
+        "fr": 5,
+        "de": 3,
+        "it": 9
+      },
+      "declared_families": 33,
+      "nonempty_with_mapped_proof": 30,
+      "complete_capture_with_mapped_proof": 24,
+      "capture_unknown": 0,
+      "capture_partial_or_degraded": 6,
+      "empty_packets": 0,
+      "unexpected_model_audits": 0,
+      "render_attempts": 30,
+      "render_failed": 0,
+      "network_body_missing": 7,
+      "network_stats_unknown": 0,
+      "browser_http_request_events": 1728,
+      "tool_pss_kib": {
+        "samples": 33,
+        "p50": 347687,
+        "p95": 513525,
+        "maximum": 527487
+      }
+    },
+    "followup_title_errors": 0,
+    "remaining_errors": [
+      {
+        "id": "popular-betpawa.ug",
+        "url": "https://www.betpawa.ug/",
+        "error": {
+          "code": -32000,
+          "message": "web_ir.node_count must be > 0\nweb_ir.nodes must not be empty; diagnostic_id: log_6591e7f914b1e79b"
+        }
+      },
+      {
+        "id": "popular-amazon.pl",
+        "url": "https://www.amazon.pl/",
+        "error": {
+          "code": -32000,
+          "message": "web_ir.node_count must be > 0\nweb_ir.nodes must not be empty; diagnostic_id: log_44de3cf201f430d3"
+        }
+      },
+      {
+        "id": "popular-amazon.co.uk",
+        "url": "https://www.amazon.co.uk/",
+        "error": {
+          "code": -32000,
+          "message": "web_ir.node_count must be > 0\nweb_ir.nodes must not be empty; diagnostic_id: log_8d5e0cbb4cc22e18"
+        }
+      }
+    ],
+    "scope": "Targeted failure-class recheck, not a second 1000-URL run. Upstreams/cache state differ. Do not add its successes to the original baseline or claim a causal latency/RAM gain. Both cohorts use the same 2GiB/no-swap/2CPU envelope and unchanged native budgets."
+  },
+  "release": {
+    "public_assets": {
+      "assets": [
+        {
+          "name": "needlex_darwin_amd64.tar.gz",
+          "bytes": 15710704,
+          "sha256": "c005ced3ea6658054baf3ddc8721eb63099ce61d9f9de8db47af465d805b5f42",
+          "binary_sha256": "8a51c4a1ff840b27f294e931a9b749f019a56957ae4f4b69e23edd396ef926f0",
+          "machine": 16777223,
+          "members": [
+            "needlex"
+          ]
+        },
+        {
+          "name": "needlex_darwin_arm64.tar.gz",
+          "bytes": 14930356,
+          "sha256": "d53a76c2000cf8a78d9bfedaa52320bcf44936005f98adecee002dac90ff46b7",
+          "binary_sha256": "6318d6d409629c8c060d60083ba7c54fbcab303ac2f0987122e779d655c42aa3",
+          "machine": 16777228,
+          "members": [
+            "needlex"
+          ]
+        },
+        {
+          "name": "needlex_linux_amd64.tar.gz",
+          "bytes": 15582461,
+          "sha256": "d4cb69a5c0434b8f3d772f438737c3348a31985412950969e17693a88de73628",
+          "binary_sha256": "6d2d4e858aabdc8e06a8196ebc4c7d5785bbf29d906ac8d45a01d61be3bdd15d",
+          "machine": 62,
+          "members": [
+            "needlex"
+          ]
+        },
+        {
+          "name": "needlex_linux_arm64.tar.gz",
+          "bytes": 14429264,
+          "sha256": "bf732c24f12bc7a09699256e1eca88ed6805731830db3b436bb9d20008274025",
+          "binary_sha256": "f245a842c7ca96628d64999118a482df35e2baa77f20ad53f02e5bfba6745816",
+          "machine": 183,
+          "members": [
+            "needlex"
+          ]
+        },
+        {
+          "name": "needlex_windows_amd64.zip",
+          "bytes": 15649204,
+          "sha256": "25d50130cc2234b1cf5640d3ae0f7187917f6ea447419c3e8cd5a584c744cef0",
+          "binary_sha256": "6ab57b53d8099ec27f89b77b5db7ed63da0ce77518f3e13bcd926a8171c53de5",
+          "machine": 34404,
+          "members": [
+            "needlex.exe"
+          ]
+        },
+        {
+          "name": "needlex_windows_arm64.zip",
+          "bytes": 14435800,
+          "sha256": "0cc1391700787518f21c2c06796da4effe726ddb38dd85d8b4dbebb3c88db929",
+          "binary_sha256": "053312359f225c30468672d09d4fb06091aeab14475e0b4d22d112eea22fdf48",
+          "machine": 43620,
+          "members": [
+            "needlex.exe"
+          ]
+        }
+      ],
+      "isDraft": false,
+      "isPrerelease": false,
+      "publishedAt": "2026-10-29T22:56:08Z",
+      "tagName": "v0.1.44",
+      "url": "https://github.com/Josepavese/needlex/releases/tag/v0.1.44"
+    },
+    "required_untitled_fixture": {
+      "server": {
+        "capabilities": {
+          "tools": {}
+        },
+        "protocolVersion": "2024-11-05",
+        "serverInfo": {
+          "name": "needlex",
+          "version": "v0.1.44"
+        }
+      },
+      "binary_sha256": "6d2d4e858aabdc8e06a8196ebc4c7d5785bbf29d906ac8d45a01d61be3bdd15d",
+      "cli_trace_id": "trace_443d2d70f63b8908",
+      "cli_required_fact_retained": true,
+      "cli_seeded_strict_query_pass": true,
+      "requested_render": "required",
+      "trace_id": "trace_c56fe321d89c96b7",
+      "render": [
+        {
+          "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+          "browser_reused": "false",
+          "duration_ms": "2133",
+          "event_source_messages": "0",
+          "network_body_missing": "0",
+          "network_bytes": "24",
+          "network_http_requests": "2",
+          "network_idle_reason": "network_idle",
+          "network_observed": "1",
+          "network_resources": "1",
+          "network_streams_open": "0",
+          "network_truncated": "false",
+          "partial": "false",
+          "render_path": "cdp",
+          "rendered": "true",
+          "websocket_messages": "0"
+        }
+      ],
+      "proof_mapping_valid": true,
+      "replay_deterministic": true,
+      "fact_retained": true
+    },
+    "real_dynamic_smoke": {
+      "server": {
+        "capabilities": {
+          "tools": {}
+        },
+        "protocolVersion": "2024-11-05",
+        "serverInfo": {
+          "name": "needlex",
+          "version": "v0.1.44"
+        }
+      },
+      "binary_sha256": "6d2d4e858aabdc8e06a8196ebc4c7d5785bbf29d906ac8d45a01d61be3bdd15d",
+      "requested_url": "https://quotes.toscrape.com/scroll",
+      "trace_id": "trace_9315461012ec77a3",
+      "trace_sha256": "5d84010015e9e4fc35b3e84e5a284e23b8e6a7765476e6e70896afe690c22b60",
+      "proof_sha256": "f03baa5e21800a65c5382de5096e97b0435d645974dcf5eba8d5d2ef6caca97d",
+      "quotes": 10,
+      "quote_and_author_markers_retained": [
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        },
+        {
+          "quote": true,
+          "author": true
+        }
+      ],
+      "proof_mapping_valid": true,
+      "replay_deterministic": true,
+      "requested_render": "required",
+      "render": [
+        {
+          "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+          "browser_reused": "false",
+          "duration_ms": "3057",
+          "event_source_messages": "0",
+          "network_body_missing": "0",
+          "network_bytes": "2860",
+          "network_http_requests": "7",
+          "network_idle_reason": "network_idle",
+          "network_observed": "1",
+          "network_resources": "1",
+          "network_streams_open": "0",
+          "network_truncated": "false",
+          "partial": "false",
+          "render_path": "cdp",
+          "rendered": "true",
+          "websocket_messages": "0"
+        }
+      ],
+      "signals": {
+        "confidence": 0.95,
+        "substrate_class": "rendered_html",
+        "content_source": "dom+network",
+        "network_resources": 1,
+        "network_bytes": 2860
+      },
+      "model_audit_requested": false,
+      "memory_cli_pass": true,
+      "proof_cli_pass": true
+    },
+    "initial_smoke_observer_failure": {
+      "outcome": "observer_fixture_mismatch",
+      "script_sha256": "20ad22a8ec43013309184001d936a7a01c13554ce2b3d64bb4d7f94aafea6112",
+      "url": "https://quotes.toscrape.com/js/",
+      "explanation": "All ten quotation and author markers, proof mapping and CDP-render assertions passed. The observer then incorrectly required captured application responses on an inline-JS page; network_observed was zero. Original failed log retained. The next smoke uses /scroll, which requires an XHR application response, preserving the transport gate.",
+      "trace_id": "trace_763b9cac1e5da0ff",
+      "render": [
+        {
+          "browser": "/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell cdp",
+          "browser_reused": "false",
+          "duration_ms": "2805",
+          "event_source_messages": "0",
+          "network_body_missing": "0",
+          "network_bytes": "0",
+          "network_http_requests": "6",
+          "network_idle_reason": "network_idle",
+          "network_observed": "0",
+          "network_resources": "0",
+          "network_streams_open": "0",
+          "network_truncated": "false",
+          "partial": "false",
+          "render_path": "cdp",
+          "rendered": "true",
+          "websocket_messages": "0"
+        }
+      ]
+    },
+    "doctor_relevant_lines": [
+      "Version: v0.1.44",
+      "Semantic: ready=true provider=embeddinggemma:latest vector_space=ollama-embeddinggemma-v1 endpoint=http://127.0.0.1:11434/api/embed",
+      "Render: enabled=true ready=true provider=exec-dump-dom browser=/home/jose/.local/share/needlex/browsers/chrome-headless-shell/153.0.8010.52/linux64/chrome-headless-shell",
+      "Agent Skill: installed=true version=0.1.44 expected=0.1.44 stale=false path=/home/jose/.codex/skills/needlex-web-retrieval/SKILL.md",
+      "  - PATH needlex differs from current executable",
+      "  - active MCP processes detected; restart clients after local upgrades"
+    ],
+    "config_byte_preserved": true,
+    "configuration_sha256": "b1d40beb6a52e311b0338696b0ec40bdee3f0fe278cc7a6d69032ab13739020e",
+    "ci": {
+      "governance": 40968843236,
+      "main_dist": 40968843215,
+      "release_dist": 40968843834,
+      "conclusion": "success"
+    },
+    "scope": "Native Linux CLI and fresh MCP process qualified; running agent clients are not restarted or certified refreshed. Six archive digests/members/architectures checked, no execution claim on other platforms."
+  },
+  "provenance": {
+    "collector_sha256": "6af1a7c5c97bd2089287ee4b888e89c15e99816316d35af59e71c44a10c1c495",
+    "shared_summary_sha256": "208b7d12a0c3b866232c8d11d46d0f3af90820de0b38a59c3ef771260613b5ee"
+  },
+  "custody": {
+    "pal_relative_path": "benchmarks/popular-web-v1/2026-10-29-v0.1.43/receipts.tar.gz",
+    "bytes": 4175045,
+    "sha256": "6291c527ffa165ba1ca791812c555324b0fa32fbdddbcac285c35a529675a7ba",
+    "readback_verified": true,
+    "contents": {
+      "full-live.jsonl": {
+        "bytes": 10168909,
+        "sha256": "b0f00311d7aa8b544128fd7aa80d336a7a6b985f332a912025162dee0f8af3b7"
+      },
+      "quality-live.jsonl": {
+        "bytes": 550126,
+        "sha256": "6778a58293057cf3a077240afea6a067557dbe931c25e7ea3701e78973af9793"
+      },
+      "execution.json": {
+        "bytes": 467,
+        "sha256": "bcab6e1b2bcf5dca91dd371534c357a412ec63bd70507d41bab4ea6974e7e801"
+      },
+      "resource-envelope.json": {
+        "bytes": 576,
+        "sha256": "d48ce63be0dfc6634fa01baff71892da61a1f1858e6d5825ccc45c9ca6dc40f5"
+      },
+      "quality-resource-envelope.json": {
+        "bytes": 412,
+        "sha256": "689b08605bdf47afb342d51f9b56a5e7ac6b54736df3cef1bf2650f753e90a44"
+      },
+      "references.json": {
+        "bytes": 77439,
+        "sha256": "589f50fecb336f4ea7a1c7ccbb7c4c3556783f75be0d5f7e002835cd2efb3011"
+      },
+      "quality-references.json": {
+        "bytes": 376343,
+        "sha256": "ea6da354ada946ebd8691a63fe21ae056ded6ed19301ee1194dfb2d942e2d0a6"
+      },
+      "quotes-reference.json": {
+        "bytes": 2860,
+        "sha256": "14059716ecccb75ce2b6f07cd25a4be39b6d79b8df43b29942c656a13f19e30d"
+      },
+      "quality-anchors.json": {
+        "bytes": 9379,
+        "sha256": "2f7cbda7dd5c610edf2fa795da14a077055d031c3a3be02593ce6855183c5825"
+      },
+      "ranking-sources.json": {
+        "bytes": 784,
+        "sha256": "74f140473084f58c522db18bddc300cee4adf3c0b265ee699740e8f28e2fdbdc"
+      },
+      "local-assets.json": {
+        "bytes": 933,
+        "sha256": "7fb2f2cadd38f9fb42863f1be760e3ea508fd9371f8331c3af377f5415f5cdd2"
+      },
+      "public-assets.json": {
+        "bytes": 2167,
+        "sha256": "72db22536eece14e811d6f585f7aefc522f537e00c45643bef3373ed38b297db"
+      },
+      "private-validation.json": {
+        "bytes": 5195,
+        "sha256": "eb31224fa36fb03c4cada26fe7e41962899b49c743c4c1fab024c6853aa4d350"
+      },
+      "required-validation.json": {
+        "bytes": 1206,
+        "sha256": "3f87c4b4f14f9f4e319be36857d31176183101c58ebfc9ea4053f12d2a969cd8"
+      },
+      "untitled-before.log": {
+        "bytes": 531,
+        "sha256": "0be1f1c1e66395f00210c398d75ac461a50280f5afa08fd36b15a72cb2f74614"
+      },
+      "untitled-after.log": {
+        "bytes": 64,
+        "sha256": "c233d73443cd94c6e40c1da9359a1729642196d7bfc8282318c762f216890027"
+      },
+      "governance.log": {
+        "bytes": 6788,
+        "sha256": "2e48633167651c7786c18592754224764af9f28c1f9f62965720b932bd7ce02f"
+      },
+      "full-live.log": {
+        "bytes": 239081,
+        "sha256": "a286c1568c6aa29633db914dd15bcddb08937e46ae8625f80d22d323a1d08b5e"
+      },
+      "quality-live.log": {
+        "bytes": 11559,
+        "sha256": "2fb4b361e88b66ee0ddf93c48701007518290278dd79f87f74b08c818f3f4d3c"
+      },
+      "popular-live.jsonl": {
+        "bytes": 39500,
+        "sha256": "90c9c632dae41c09501fac1cf417b9bb96b3abdf9d44c1eb918a5e3bc360a53b"
+      },
+      "private-validation.log": {
+        "bytes": 1174,
+        "sha256": "faecfab6e5db29a9fe258ddc791c538e4085a8504071e119c969812321526574"
+      },
+      "public-assets.log": {
+        "bytes": 450,
+        "sha256": "3e59dfcfcf94ff80a00ccde4a72736a05ad26a6a95c76ddcb0972567049ee84e"
+      },
+      "release-ci.log": {
+        "bytes": 22204,
+        "sha256": "223d69fa9029a36038d5df9c9e96e96094533951d3bc136bc822ee8a5f1ff7f8"
+      },
+      "title-delta.jsonl": {
+        "bytes": 226247,
+        "sha256": "a217f7078ef67b29b219f187650f7f761f2cd194e8030cb74dad1b1e8ba78b22"
+      },
+      "title-delta.log": {
+        "bytes": 7111,
+        "sha256": "e77676d36ebfe33858cb260ade62b03a20b69bd293d7f2915d87db97adc028fa"
+      },
+      "post-install-validation.json": {
+        "bytes": 2163,
+        "sha256": "db1f3124684182c32049f3d2d747f799f0e53fc9c040e7d5011e9874e4bae23e"
+      },
+      "doctor.log": {
+        "bytes": 2197,
+        "sha256": "e8c5c66fd0edeb67462f6b7aea7b7c98ccf9f586d6d792d2942339c22f17ae66"
+      },
+      "quality-diagnosis.json": {
+        "bytes": 3822,
+        "sha256": "f60800625f735a7d7441ff5b2d2650051e52fdee7894253cdcc8639de95b7adf"
+      },
+      "popular-summary.json": {
+        "bytes": 53038,
+        "sha256": "8a613fa5a7b311d3fbb1a0b87675f0cfa07aa8a6ae36599a32c3f9d8bad100b4"
+      },
+      "host-install.log": {
+        "bytes": 1050,
+        "sha256": "2f4a8cac17e6abddc2e4f0812a0bf5ecb246cca40f3e1e554cd16bd7c1c7349e"
+      },
+      "title-delta-corpus.json": {
+        "bytes": 10874,
+        "sha256": "46cbc3edcbd3154a6aed3183e7158091ceb0d305b5d317d92928f37605c94ebc"
+      },
+      "delta-resource-envelope.json": {
+        "bytes": 582,
+        "sha256": "c23aa9d9eb05a9a51ebde68c61f6cbb80d43136f936f5df577a1dd5ff5778360"
+      },
+      "acquisition-window.json": {
+        "bytes": 94,
+        "sha256": "d17a0670cc16990e7c6a78c68419336533418f9c07668caa9163e6cfe14d6ead"
+      },
+      "first-public-smoke.json": {
+        "bytes": 1225,
+        "sha256": "46a3c71230d2484311b8dff230ab7e4b1746cd354b3086d1ca418b30cbb9183b"
+      },
+      "public-smoke-observation.log": {
+        "bytes": 513,
+        "sha256": "58e2e841b138d32ab028484de01b113d19c7e42a93dde352c49bbe8c90a70c59"
+      },
+      "public-smoke-scroll-observation.log": {
+        "bytes": 135,
+        "sha256": "84b724f6b11f554e4f42dff559e8147aafe15274ff7ebb72e53c1e2a19c0725a"
+      },
+      "required-validation.log": {
+        "bytes": 71,
+        "sha256": "2cbe37a90448ffbe027f89224f17fb91f031ca5cf3f112d5e2cab56aaa6193eb"
+      },
+      "loc-diagnostic-observation.json": {
+        "bytes": 396,
+        "sha256": "47e2f79c1bed9592bb96c8765971af093b5f8b091b7d60b89c147810119a4f02"
+      },
+      "loc-diagnostic-full.json": {
+        "bytes": 56147,
+        "sha256": "f879b847df58ec27d5e58369b3fc8596ad8d861169e0b437c2141686b117551c"
+      },
+      "loc-diagnostic-text.txt": {
+        "bytes": 6785,
+        "sha256": "991294752bfc40f1f7a9c031ea1a950314e1786c1eda8b8bbc22f3641eaa4c23"
+      },
+      "loc-current-reference.json": {
+        "bytes": 7700,
+        "sha256": "8c2b8546659b953090dcb336ff45341c4bfecc12ceb82089a05336b76b200247"
+      },
+      "qualify_required.py": {
+        "bytes": 3372,
+        "sha256": "3a5d5ad9cc96cf23101ca4a8c797d1f628083fab1af465781a118d4fb1bd4def"
+      },
+      "public_smoke.py": {
+        "bytes": 3122,
+        "sha256": "ef30f2857463791b114807bb910b492076d9ff61c8495ff9827ae9a3ba258d91"
+      },
+      "diagnose_loc.py": {
+        "bytes": 1524,
+        "sha256": "f060c7960de7e315ad7d24cb1368a69a52c9d12d4ddac99d298fdc0cf59548c8"
+      },
+      "private_validate.py": {
+        "bytes": 3792,
+        "sha256": "1e329090f47235dcfee5553005504af8493a27d8b2162de1d8d94ab1946c1672"
+      }
+    }
+  },
+  "scope": "Single stratified public-origin pass plus a small software-heavy quality panel. Availability, capture completeness, proof mapping and literal source-marker retention are distinct; none alone establishes whole-web accuracy. Julia is not invoked or qualified. Preserve failed observations and locale/upstream variation."
+}

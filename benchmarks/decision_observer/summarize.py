@@ -34,12 +34,20 @@ def error_class(error):
         return "unavailable_resource"
     if code is not None and code >= 500:
         return "unavailable_upstream"
-    if "no such host" in text or "connection refused" in text:
+    if code is not None and code >= 400:
+        return "upstream_http_rejected"
+    if "failed to verify certificate" in text:
+        return "tls_error"
+    if "stopped after" in text and "redirects" in text:
+        return "redirect_limit"
+    if any(reason in text for reason in ("no such host", "connection refused", "received from peer", "connection reset by peer")):
         return "unavailable_upstream"
     if "deadline exceeded" in text or "timeout" in text:
         return "upstream_timeout"
     if "unsupported" in text:
         return "unsupported_content_type"
+    if "no segments produced" in text:
+        return "empty_content"
     return "runtime_error"
 
 

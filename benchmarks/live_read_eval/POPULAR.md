@@ -1,5 +1,7 @@
 # Popular web: frozen 1,000-URL retrieval baseline
 
+Measured results and limits: [popular-web assessment](../../docs/popular-web-assessment.md).
+
 The corpus uses existing published rankings, not a new popularity model:
 
 - Tranco list **ZJ8PG**, aggregated September 29 through October 28, 2026; the
@@ -86,9 +88,13 @@ The four admission-pilot URLs are separate, excluded from the final capped run.
 ## Source-grounded quality
 
 `popular-web-quality-v1.json` contains 60 precise tasks and 62 expected markers:
-52 prior independently annotated source facts, six new manually reviewed positive
-facts from independent HTTP references, and two dynamic Quotes controls checked
-against its public API. No Needle-X or Julia output became a gold label. It is a
+52 prior agent-reviewed excerpts originally sourced from Needle-X captures, six
+new positive facts from independent HTTP references, and two dynamic Quotes
+controls checked against its public API. Independent HTTP rechecks before this
+quality run reconfirmed 39 of the 52 historical markers. The 13 unconfirmed cases
+remain in the frozen regression denominator; they cannot all be claimed as an
+independent current-source oracle. No current-run output or Julia judgment becomes
+a label. It is a
 small, software-heavy quality panel with new science/culture/media/commerce
 examples, not a representative accuracy estimate for all 1,000 URLs.
 
