@@ -1,182 +1,86 @@
 # Needle-X
 
-[![dist](https://github.com/Josepavese/needlex/actions/workflows/dist.yml/badge.svg)](https://github.com/Josepavese/needlex/actions/workflows/dist.yml)
-[![installer-smoke](https://github.com/Josepavese/needlex/actions/workflows/installer-smoke.yml/badge.svg)](https://github.com/Josepavese/needlex/actions/workflows/installer-smoke.yml)
-[![release](https://img.shields.io/github/v/release/Josepavese/needlex?display_name=tag)](https://github.com/Josepavese/needlex/releases/latest)
+[![Release](https://img.shields.io/github/v/release/Josepavese/needlex?display_name=tag)](https://github.com/Josepavese/needlex/releases/latest)
+[![Build](https://github.com/Josepavese/needlex/actions/workflows/dist.yml/badge.svg)](https://github.com/Josepavese/needlex/actions/workflows/dist.yml)
+[![Installer smoke tests](https://github.com/Josepavese/needlex/actions/workflows/installer-smoke.yml/badge.svg)](https://github.com/Josepavese/needlex/actions/workflows/installer-smoke.yml)
 
-> [!WARNING]
-> Alpha software. Needle-X is still in active development and test. Install flow, local state layout, CLI details, and output shape may still change.
+**Needle-X is the evidence layer in an agent’s web research workflow.** Give it a URL and a research objective. It returns a compact packet of relevant excerpts, source locations and proof references that the agent can inspect before citing.
 
-**Turn messy web pages into compact, proof-carrying context for AI agents.**
+The agent owns search, source selection and synthesis. Needle-X runs locally and does the reading through an MCP server or a CLI.
 
-**Smaller packets. Fewer hops. Real provenance.**
+![Web research workflow. The host agent searches and selects URLs, Needle-X compiles each selected page against the objective, and the host agent compares evidence and follows its source and proof references.](docs/assets/research-workflow.svg)
 
-![Needle-X Hero](docs/assets/readme-hero.png)
+> [!NOTE]
+> **Alpha.** CLI, MCP and output contracts are evolving. Pin a release for integrations that depend on a specific schema.
 
-## Why It Wins
+## Start with one URL
 
-1. **Smaller output**
-   Needle-X returns much less context than extraction-heavy tools.
-2. **Source-backed**
-   It carries proof, not just extracted text.
-3. **Less cleanup**
-   A downstream agent does less work before it can act.
-
-## Live Comparison
-
-| Metric | Needle-X | Tavily | Jina | Firecrawl |
-| --- | ---: | ---: | ---: | ---: |
-| Avg packet bytes | **4436** | 6975 | 30565 | 72166 |
-| Claim-to-source steps | **1** | 2 | 2 | 2 |
-| Post-processing burden | **0.25** | 1.92 | 1.86 | 2.50 |
-| Proof usability | **1.0** | 0 | 0 | 0 |
-
-Needle-X vs `Jina`:
-- about **85.5% smaller** packets
-
-This is the current sweet spot:
-1. compact context
-2. direct verification
-3. low-friction agent consumption
-
-![Needle-X Metrics](docs/assets/readme-metrics-2.png)
-
-## Agent Retrieval Workflow
-
-Needle-X is the compact reading layer after search:
-1. the host agent uses its own search tool to obtain candidate URLs
-2. the agent decides which URLs to analyze and how many; Needle-X imposes no candidate limit
-3. the agent calls `web_read` for every selected URL, passing the research objective
-4. Needle-X returns compact, proof-carrying context for comparison and synthesis
-5. client-rendered pages are compiled too: the read renders when needed and captures textual application data from fetch/XHR, SSE, and WebSocket payloads within an adaptive budget, then reports where the content came from
-6. the agent uses `web_fetch` for original HTTP bytes, or browser, PDF or domain-specific tooling when it needs layout or content outside the capture window
-
-This keeps responsibilities explicit: the agent controls discovery strategy and breadth; Needle-X optimizes the evidence read from each chosen source.
-
-Current verified seeded result on `seeded-corpus-v2`:
-1. **100/100** selected-url correctness
-2. **100/100** proof usability
-3. **100/100** runtime success
-
-## What It Does
-
-1. `read`
-2. seeded `query`
-3. `crawl`
-4. `proof`
-5. `replay`
-6. `diff`
-7. `memory stats/search/prune/export/import/rebuild-index`
-8. `analytics stats/recent/value-report/hosts/providers/failures/daily/export`
-9. `logs path/stats/tail`
-10. `support bundle`
-11. `doctor`
-12. `config path/show/init/set`
-
-Default output is AI-first:
-1. compact packet first
-2. proof inline when useful
-3. full diagnostics only on demand
-4. browser-like fetch by default for real-world targets
-5. local memory is populated automatically by successful `read`, `query`, and `crawl` runs
-6. MCP server accepts standard newline-delimited JSON and also supports `Content-Length` framing
-
-MCP exposes the `web_*` tools plus `memory` and `analytics`.
-The non-core `memory` and `analytics` surfaces use an explicit `action` parameter to avoid bloating agent tool lists with maintenance and observability operations.
-
-## Tiny Demo
+Already [installed](#install)? Read a source with a concrete question.
 
 ```bash
-needlex read https://example.com --objective "pricing and cancellation policy" --json
-needlex query https://example.com --goal "pricing" --json
-needlex proof proof_1 --json
-needlex analytics stats
-needlex analytics value-report
-needlex logs stats
-needlex support bundle --out /tmp/needlex-support
-needlex doctor
+needlex read https://ts.sdk.modelcontextprotocol.io/v2/clients/calling \
+  --objective "How does an MCP client discover and invoke tools?" \
+  --json > packet.json
 ```
 
-`analytics stats` gives quick operational counters plus saved chars/tokens. `analytics value-report` is the fuller value view with estimated cost scenarios.
-`logs stats` shows the PAL runtime log state used for clean CLI/MCP diagnostics.
-`support bundle` exports a maintainer-friendly diagnostic directory with doctor, analytics, and runtime logs.
+![Real Needle-X v0.1.45 terminal output. An excerpt about paginated MCP tool lists is paired with the source Markdown URL, its selector and a proof reference.](docs/assets/cli-evidence.png)
 
-## Raw downloads
+*Captured from a live read with v0.1.45. The terminal shows one shortened excerpt and its source and proof fields. For this page, Needle-X used the source’s published Markdown representation.* [Full-size capture](docs/assets/cli-evidence.png) · [Source page](https://ts.sdk.modelcontextprotocol.io/v2/clients/calling)
 
-Use `needlex fetch` to save an HTTP(S) response body, including binary files.
-Use `--assets` to also download stylesheets and scripts directly linked by HTML.
+## Use it from an agent
+
+Configure a local stdio MCP server with command `needlex` and argument `mcp`. In Codex:
 
 ```bash
-needlex fetch https://example.com --assets --out-dir ./example-source
+codex mcp add needlex -- needlex mcp
 ```
 
-MCP exposes the same operation as `web_fetch`. Both return local file paths
-and HTTP metadata. See the [CLI reference](docs/wiki/CLI.md#raw-downloads)
-for asset origins, budgets and output behavior.
+For open-web research, use the host agent’s search tool to find URLs. Give `web_read` each URL you choose to analyze and reuse the same objective across sources you plan to compare. The host agent decides how many URLs to inspect.
+
+| Task | MCP | CLI |
+| --- | --- | --- |
+| Read one selected URL and extract evidence for an objective | `web_read` | `needlex read` |
+| Find the relevant page within a site from a verified seed URL | `web_query` | `needlex query` |
+| Explore links from a seed within a page and depth budget | `web_crawl` | `needlex crawl` |
+| Inspect the proof record behind an excerpt | `web_proof` | `needlex proof` |
+| Save original HTTP response bytes | `web_fetch` | `needlex fetch` |
+
+[Tool schemas and examples](docs/wiki/MCP-And-Tool-Calling.md) · [CLI reference](docs/wiki/CLI.md) · [Optional Codex skill](skills/needlex-web-retrieval/SKILL.md)
+
+## Read the packet
+
+- **Evidence.** Read `chunks` alongside the summary. Each chunk can carry a `source_url`, `source_selector` and `proof_ref`. Pass the proof reference to `web_proof` or `needlex proof` to inspect the source span and its recorded transformations.
+- **Coverage.** Use `uncertainty` and `signals` to decide whether the excerpts cover the question. Needle-X can render pages when needed and include textual payloads from fetch/XHR, SSE and WebSockets within a capture budget. `content_source` distinguishes rendered DOM from DOM plus captured network data. Check `network_truncated` and `render_degraded` before drawing conclusions from missing content.
+- **Audit.** Use `trace_id` to inspect the recorded run. The compact packet is the default. Full JSON, replay and diff are available when you need more detail.
+
+Needle-X uses multilingual dense embeddings to align page content with the objective. The runtime stores proofs, traces and reusable retrieval state locally. [Packet contract](docs/agent-answer-packet.md) · [Discovery memory](docs/wiki/Discovery-Memory.md)
+
+## Get the original bytes
+
+Use `web_fetch` or `needlex fetch` when the task needs the original HTML or a binary file. With `--assets`, the CLI also saves directly linked stylesheets and scripts from the page’s origin. Use `--asset-origin` to include a trusted CDN. The MCP equivalents are `assets` and `asset_origins`.
+
+```bash
+needlex fetch https://example.com/ --assets --out-dir ./page-source
+```
+
+Both interfaces return file paths and HTTP metadata. [Raw download reference](docs/wiki/CLI.md#raw-downloads)
 
 ## Install
 
-Linux and macOS:
+Install the user-local binary on Linux or macOS:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.sh | bash
 ```
 
-Windows:
+On Windows:
 
 ```powershell
 irm https://raw.githubusercontent.com/Josepavese/needlex/main/install/install.ps1 | iex
 ```
 
-Installed command:
-1. `needlex`
+The installer sets up the local embedding runtime and headless browser. Run `needlex doctor` to check readiness. [Installation and configuration](docs/wiki/Install.md)
 
-This installer downloads the right release binary. Full details:
-1. [Install](docs/wiki/Install.md)
+## Evaluation
 
-The installer also prepares semantic prerequisites:
-1. installs or verifies Ollama where the platform supports automated install
-2. pulls the default embedding model `embeddinggemma:latest`
-3. writes the PAL-home SSOT config
-4. wires the `needlex` wrapper to that config so users do not export env vars per command
-5. installs a PAL-local headless render browser
-6. enables render in the PAL config, with network-aware capture budgets and an adaptive wait bounded by the operation deadline
-
-Change defaults with:
-
-```bash
-needlex config show
-needlex config set semantic.provider_model nomic-embed-text:latest
-```
-
-Optional local Julia checks require an explicit `assertion` (`--assertion` in CLI). They assess one semantically selected passage in observation mode; ordinary retrieval incurs no Julia inference. The model remains unqualified for correctness decisions and does not change retrieval, embeddings or proofs. Experimental acquisition-route observations use `observe_acquisition: true` (CLI: `--observe-acquisition`) with an explicit objective/goal. They compare a proposed static, declared-source, browser or insufficient-evidence route with the actual path after retrieval; proposals never act. Configuration, measurements and current accuracy limits are documented in [the System One assessment](docs/system-one-assessment.md).
-
-## Agent Skill
-
-Needle-X also ships an optional Codex skill that tells agents to obtain candidate URLs with their own search tool, compile every URL they choose with Needle-X, escalate when needed, and avoid treating compact context as full DOM coverage.
-
-Skill path:
-1. [skills/needlex-web-retrieval](skills/needlex-web-retrieval)
-
-Codex install helper:
-
-```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
-```
-
-After installing the skill, restart Codex so it can discover it.
-
-## What It Is Not
-
-1. browser agent
-2. search engine
-3. generic scraper
-4. LLM-first reader
-
-## Read More
-
-1. [Wiki Home](docs/wiki/README.md)
-2. [Install](docs/wiki/Install.md)
-3. [CLI](docs/wiki/CLI.md)
-4. [MCP And Tool Calling](docs/wiki/MCP-And-Tool-Calling.md)
-5. [Benchmarks](docs/wiki/Benchmarks.md)
+The October 2026 installed-MCP baseline on v0.1.43 returned nonempty packets with mapped proofs for **818 of 1,000 selected public URLs**. Of those, **762** had complete capture by the run’s diagnostics. A separate 60-question panel measured retention of source markers. The report records the sample, failures and limits of each measurement. [Public-web assessment](docs/popular-web-assessment.md) · [Benchmark protocols and reproduction](benchmarks/README.md)

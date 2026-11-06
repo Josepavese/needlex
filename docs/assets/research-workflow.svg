@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="420" viewBox="0 0 1120 420" role="img" aria-labelledby="title description">
+  <title id="title">From URL to evidence</title>
+  <desc id="description">The host agent searches and selects URLs, Needle-X compiles each selected URL against the research objective, then the host agent compares the resulting evidence and follows its source and proof references.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#0c1429"/>
+      <stop offset="1" stop-color="#131f39"/>
+    </linearGradient>
+    <linearGradient id="focus" x2="1" y2="1">
+      <stop stop-color="#1c3750"/>
+      <stop offset="1" stop-color="#172a46"/>
+    </linearGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#748ab1" opacity=".22"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 8 4 0 8Z" fill="#a9bde2"/>
+    </marker>
+  </defs>
+  <rect width="1120" height="420" rx="26" fill="url(#background)"/>
+  <rect width="1120" height="420" rx="26" fill="url(#dots)"/>
+  <rect x=".5" y=".5" width="1119" height="419" rx="25.5" fill="none" stroke="#354668"/>
+
+  <g font-family="Inter, DejaVu Sans, sans-serif">
+    <text x="40" y="62" fill="#f7faff" font-size="42" font-weight="700">From URL to evidence</text>
+    <text x="42" y="98" fill="#c4d3ee" font-size="19">An agent chooses the sources. Needle-X makes each source easier to check.</text>
+    <path d="M910 45h114m-84 10h114m-92 10h114" stroke="#82f4d2" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+    <path d="M1024 39v12m30-2v12m22-2v12" stroke="#82f4d2" stroke-width="2" stroke-linecap="round"/>
+
+    <g>
+      <rect x="40" y="132" width="300" height="250" rx="19" fill="#131f36" stroke="#3d5077"/>
+      <text x="64" y="170" fill="#c0d1f1" font-size="16" font-weight="700" letter-spacing="1.6">01 / HOST AGENT</text>
+      <text x="64" y="210" fill="#f7faff" font-size="29" font-weight="700">Choose sources</text>
+      <text x="64" y="239" fill="#c4d3ee" font-size="17">Search with your own tools.</text>
+      <text x="64" y="262" fill="#c4d3ee" font-size="17">Select the URLs worth reading.</text>
+      <g font-family="DejaVu Sans Mono, monospace" font-size="15">
+        <rect x="64" y="290" width="252" height="31" rx="7" fill="#233351"/>
+        <circle cx="81" cy="306" r="4" fill="#a9bde2"/>
+        <text x="96" y="311" fill="#e2ecff">Source URL</text>
+        <rect x="64" y="329" width="252" height="31" rx="7" fill="#233351"/>
+        <circle cx="81" cy="345" r="4" fill="#a9bde2"/>
+        <text x="96" y="350" fill="#e2ecff">Research objective</text>
+      </g>
+    </g>
+
+    <path d="M351 255h27" stroke="#a9bde2" stroke-width="2" marker-end="url(#arrow)"/>
+    <g>
+      <rect x="390" y="132" width="340" height="250" rx="19" fill="url(#focus)" stroke="#82f4d2" stroke-width="1.5"/>
+      <text x="414" y="170" fill="#82f4d2" font-size="16" font-weight="700" letter-spacing="1.6">02 / NEEDLE-X</text>
+      <text x="414" y="210" fill="#f7faff" font-size="29" font-weight="700">Compile evidence</text>
+      <text x="414" y="239" fill="#d2def5" font-size="17">Read the source for the objective.</text>
+      <text x="414" y="262" fill="#d2def5" font-size="17">Capture app data when needed.</text>
+      <path d="M414 300h44l24 12h44m-112 27h44l24-12h44" fill="none" stroke="#7294bd" stroke-width="2"/>
+      <path d="M422 320h110" stroke="#82f4d2" stroke-width="3" stroke-linecap="round"/>
+      <path d="M522 312l16 8-16 8Z" fill="#82f4d2"/>
+      <rect x="552" y="298" width="154" height="44" rx="11" fill="#82f4d2"/>
+      <text x="629" y="326" fill="#102d35" font-size="15" font-weight="700" text-anchor="middle">Evidence packet</text>
+    </g>
+
+    <path d="M741 255h27" stroke="#a9bde2" stroke-width="2" marker-end="url(#arrow)"/>
+    <g>
+      <rect x="780" y="132" width="300" height="250" rx="19" fill="#131f36" stroke="#3d5077"/>
+      <text x="804" y="170" fill="#c0d1f1" font-size="16" font-weight="700" letter-spacing="1.6">03 / HOST AGENT</text>
+      <text x="804" y="210" fill="#f7faff" font-size="29" font-weight="700">Check and cite</text>
+      <text x="804" y="239" fill="#c4d3ee" font-size="17">Compare source excerpts.</text>
+      <text x="804" y="262" fill="#c4d3ee" font-size="17">Follow the source and proof.</text>
+      <g font-family="DejaVu Sans Mono, monospace" font-size="15">
+        <rect x="804" y="290" width="252" height="31" rx="7" fill="#233351"/>
+        <path d="m817 306 3 3 6-7" fill="none" stroke="#82f4d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="836" y="311" fill="#e2ecff">source_url</text>
+        <rect x="804" y="329" width="252" height="31" rx="7" fill="#233351"/>
+        <path d="m817 345 3 3 6-7" fill="none" stroke="#82f4d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="836" y="350" fill="#e2ecff">proof_ref</text>
+      </g>
+    </g>
+  </g>
+</svg>
