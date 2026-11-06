@@ -28,6 +28,7 @@ Needle-X currently exposes these MCP tools:
 7. `web_prune`
 8. `memory`
 9. `analytics`
+10. `web_fetch`
 
 The core retrieval surface is the `web_*` group.
 `memory` and `analytics` are advanced dispatch tools with an explicit `action` parameter.
@@ -69,6 +70,8 @@ If you wire Needle-X into an AI tool-calling stack:
 6. keep `web_prune` as an operator tool, not a model-default tool; use `embedding_cache=true` only for explicit PAL embedding cache maintenance
 7. use `memory` only for advanced local semantic memory inspection or maintenance
 8. use `analytics` only for diagnostics, value reporting, or maintainer rollups
+
+Use `web_fetch` for exact HTTP body bytes and optional linked CSS and JavaScript. It returns local file paths. [Raw download contract](wiki/MCP-And-Tool-Calling.md#raw-downloads)
 
 Needle-X does not set a candidate-count policy. Search breadth, URL selection, concurrency, and research budget belong to the host agent.
 

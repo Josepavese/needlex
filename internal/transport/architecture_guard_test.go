@@ -313,3 +313,28 @@ func TestRenderingNativeProcessEffectsStayInPAL(t *testing.T) {
 		}
 	}
 }
+
+func TestDownloadNativeEffectsStayInPAL(t *testing.T) {
+	for _, name := range []string{"download.go", "../pipeline/download.go", "../pipeline/download_assets.go"} {
+		source, err := parser.ParseFile(token.NewFileSet(), name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, spec := range source.Imports {
+			switch strings.Trim(spec.Path.Value, `"`) {
+			case "os", "path/filepath", "net", "syscall":
+				t.Errorf("%s imports native effects through %s", name, spec.Path.Value)
+			}
+		}
+		ast.Inspect(source, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			if selector, ok := call.Fun.(*ast.SelectorExpr); ok && selector.Sel.Name == "Do" {
+				t.Errorf("%s bypasses PAL for HTTP I/O", name)
+			}
+			return true
+		})
+	}
+}

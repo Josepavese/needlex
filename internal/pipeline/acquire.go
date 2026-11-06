@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/josepavese/needlex/internal/platform"
+
 	req "github.com/imroc/req/v3"
 	"golang.org/x/net/html"
 )
@@ -163,24 +165,18 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 	reqCtx, cancel := requestContext(ctx, input.Timeout)
 	defer cancel()
 
-	request, err := http.NewRequestWithContext(reqCtx, http.MethodGet, input.URL, nil)
-	if err != nil {
-		return RawPage{}, fmt.Errorf("build request: %w", err)
-	}
-	request.Header.Set("User-Agent", userAgent(input.UserAgent, profile))
+	headers := make(http.Header)
+	headers.Set("User-Agent", userAgent(input.UserAgent, profile))
 	if strings.TrimSpace(input.Accept) != "" {
-		request.Header.Set("Accept", strings.TrimSpace(input.Accept))
+		headers.Set("Accept", strings.TrimSpace(input.Accept))
 	}
-
 	client := a.Client
 	if client == nil {
 		client = &http.Client{}
 	}
-
-	a.observeFetch()
-	resp, err := client.Do(request)
+	resp, err := platform.OpenHTTPGet(reqCtx, client, input.URL, headers, a.observeFetch)
 	if err != nil {
-		return RawPage{}, fmt.Errorf("fetch page: %w", err)
+		return RawPage{}, err
 	}
 	defer resp.Body.Close() //nolint:errcheck
 

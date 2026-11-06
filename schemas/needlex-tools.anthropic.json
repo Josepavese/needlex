@@ -223,6 +223,47 @@
       }
     },
     {
+      "name": "web_fetch",
+      "description": "Download the original HTTP response body, including binary files, to the local Needle-X downloads directory. Returns file paths and HTTP metadata. Use for exact bytes; use web_read for evidence.",
+      "input_schema": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "assets": true,
+            "url": "https://example.com"
+          }
+        ],
+        "properties": {
+          "asset_origins": {
+            "description": "Extra asset origins (scheme, host and optional port), for example a trusted CDN. Requires assets=true.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "assets": {
+            "default": false,
+            "description": "Also download directly linked CSS and JavaScript from HTML. Only the final page origin and explicitly allowed origins are fetched.",
+            "type": "boolean"
+          },
+          "max_bytes": {
+            "default": 67108864,
+            "description": "Maximum total bytes for the page and all downloaded assets. A failed download discards its files.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "url": {
+            "description": "Absolute HTTP(S) URL of the page or file.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    },
+    {
       "name": "web_replay",
       "description": "Replay a stored trace and report deterministic stage completion.",
       "input_schema": {

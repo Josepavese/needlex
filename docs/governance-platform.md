@@ -190,6 +190,16 @@ The dependency count is deliberately truthful. `go mod tidy` classified every im
 
 Zero-legacy cleanup accompanied the recalibration: the unused remote-CDP configuration field and its environment/CLI aliases were removed, the deprecated WebSocket module was replaced, and extracted packages expose their real APIs without service-layer compatibility shims.
 
+### Raw HTTP download budget
+
+The raw download path adds shared CLI and MCP routing, bounded asset discovery,
+and streaming storage with rollback in PAL. The prior production baseline of
+35,986 LOC left 14 lines for this capability. The measured candidate uses
+36,566 LOC and adds no packages or runtime dependencies. The hard total rises
+to 36,570 with the production target held at 34,500. A separate ceiling caps
+files over 500 LOC at the six already present, so the added capacity does not
+create more large hotspots.
+
 ## Workstation Footprint
 
 This development device is managed as a space-constrained machine: its root filesystem sits near 100% used, so free space is a few gigabytes rather than tens. That is not an accident of one afternoon; it is the operating condition local work must hold itself to.

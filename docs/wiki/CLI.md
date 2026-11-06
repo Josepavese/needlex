@@ -45,6 +45,43 @@ Seedless query is experimental and requires explicit opt-in:
 needlex query --goal "company profile" --discovery web_search --json
 ```
 
+## Raw downloads
+
+```bash
+needlex fetch https://example.com --out-dir ./page-source
+needlex fetch https://example.com --assets --asset-origin https://cdn.example.com
+needlex fetch https://example.com/archive.zip --max-bytes 134217728
+```
+
+`fetch` accepts an absolute HTTP(S) URL without embedded credentials. It saves
+the final successful response body after HTTP redirects and returns JSON with
+absolute local paths, requested and final URLs, HTTP status, MIME type,
+content encoding and byte counts. Binary bodies work without an embedding
+runtime. The primary file is named `body.html` for an HTML MIME type and
+`body` otherwise. HTTP transfer framing is removed. The request asks for
+identity content encoding and any encoding the server sends is preserved.
+
+The default destination is a fresh directory under `NEEDLEX_HOME/downloads`.
+`--out-dir` names a new directory under an existing parent. An existing path
+is refused. Successful downloads belong to the caller and stay on disk.
+
+With `--assets`, Needle-X scans the saved HTML for direct stylesheet, script,
+and corresponding preload links. It resolves relative URLs using the final
+page URL and the first HTML base URL. Discovery is limited to those direct
+HTML links. The saved HTML and assets retain their original bytes. Link
+scanning requires an HTML MIME type and identity content encoding.
+
+Only the final page origin and origins supplied with `--asset-origin` are
+requested for linked assets. Other origins appear in `skipped_asset_origins`.
+The same origin restrictions apply to asset redirects. You can repeat
+`--asset-origin` for additional trusted origins.
+
+The entire operation has a one-minute deadline, a 64 MiB default byte budget
+and a limit of 64 distinct asset references. `--max-bytes` overrides the total byte
+budget for the body and assets together. A failed allowed asset, incomplete
+HTTP response, cancellation or exceeded limit fails the download and removes
+files written by that invocation.
+
 ## Config
 
 Installed Needle-X uses one PAL-home SSOT config:

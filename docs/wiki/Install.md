@@ -77,9 +77,18 @@ Render waiting is adaptive: up to `render.timeout_ms` (default 30000) and never 
 
 Use `NEEDLEX_INSTALL_SKIP_RENDER_PREREQS=1` only for controlled CI or packaging tests.
 
+## Verify raw downloads
+
+Run `needlex fetch --help` to see CLI options. Run a fetch against a URL you
+control and check the file at `primary.path` in the JSON output. In your MCP
+client, call `web_fetch` on the same URL and check the file at
+`structuredContent.download.primary.path`. Both surfaces support binary
+files and optional HTML-linked stylesheets and scripts.
+[CLI reference](./CLI.md#raw-downloads) · [MCP reference](./MCP-And-Tool-Calling.md#raw-downloads)
+
 ## Optional Agent Skill
 
-Install the Needle-X web retrieval skill when Codex or another AI agent should know when to use Needle-X and when to escalate to browser/raw-fetch tools.
+Install the Needle-X web retrieval skill when Codex or another AI agent should know when to use evidence retrieval, raw downloads or a browser.
 
 Skill path:
 1. [skills/needlex-web-retrieval](../../skills/needlex-web-retrieval)
@@ -90,7 +99,7 @@ Codex install helper:
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
 ```
 
-Restart Codex after installing the skill.
+Reconnect the MCP server or start a fresh client session after updating Needle-X so the client discovers the new tool catalog. For v0.1.45, check that it lists `web_fetch`.
 
 A skill copy does not update itself. It declares the release it documents (`version: vX.Y.Z`), and two things keep it honest:
 1. the installer refreshes an existing skill copy automatically, backing up the previous one under `<codex-home>/skill-backups/` and restoring it if the refresh fails (`NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1` opts out)

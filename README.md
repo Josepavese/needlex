@@ -49,7 +49,7 @@ Needle-X is the compact reading layer after search:
 3. the agent calls `web_read` for every selected URL, passing the research objective
 4. Needle-X returns compact, proof-carrying context for comparison and synthesis
 5. client-rendered pages are compiled too: the read renders when needed and captures textual application data from fetch/XHR, SSE, and WebSocket payloads within an adaptive budget, then reports where the content came from
-6. the agent escalates to browser, raw fetch, PDF, or domain-specific tooling only when exact layout, bytes, or content outside the capture window matter
+6. the agent uses `web_fetch` for original HTTP bytes, or browser, PDF or domain-specific tooling when it needs layout or content outside the capture window
 
 This keeps responsibilities explicit: the agent controls discovery strategy and breadth; Needle-X optimizes the evidence read from each chosen source.
 
@@ -81,7 +81,7 @@ Default output is AI-first:
 5. local memory is populated automatically by successful `read`, `query`, and `crawl` runs
 6. MCP server accepts standard newline-delimited JSON and also supports `Content-Length` framing
 
-MCP advertises 9 tools: 7 core `web_*` tools plus `memory` and `analytics`.
+MCP exposes the `web_*` tools plus `memory` and `analytics`.
 The non-core `memory` and `analytics` surfaces use an explicit `action` parameter to avoid bloating agent tool lists with maintenance and observability operations.
 
 ## Tiny Demo
@@ -100,6 +100,19 @@ needlex doctor
 `analytics stats` gives quick operational counters plus saved chars/tokens. `analytics value-report` is the fuller value view with estimated cost scenarios.
 `logs stats` shows the PAL runtime log state used for clean CLI/MCP diagnostics.
 `support bundle` exports a maintainer-friendly diagnostic directory with doctor, analytics, and runtime logs.
+
+## Raw downloads
+
+Use `needlex fetch` to save an HTTP(S) response body, including binary files.
+Use `--assets` to also download stylesheets and scripts directly linked by HTML.
+
+```bash
+needlex fetch https://example.com --assets --out-dir ./example-source
+```
+
+MCP exposes the same operation as `web_fetch`. Both return local file paths
+and HTTP metadata. See the [CLI reference](docs/wiki/CLI.md#raw-downloads)
+for asset origins, budgets and output behavior.
 
 ## Install
 

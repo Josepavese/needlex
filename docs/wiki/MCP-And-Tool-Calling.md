@@ -25,7 +25,7 @@ State and logging:
 5. inspect diagnostics with `needlex logs path` and `needlex logs tail`
 
 Semantic prerequisite:
-1. Needle-X requires dense embeddings
+1. Semantic retrieval requires dense embeddings
 2. default installed backend is local Ollama `embeddinggemma:latest`
 3. change it with `needlex config set`, not per-tool MCP arguments
 
@@ -37,11 +37,12 @@ Current MCP tool set:
 5. `web_replay`
 6. `web_diff`
 7. `web_prune`
+8. `web_fetch`
+9. `memory`
+10. `analytics`
 
 `web_prune` is an operator maintenance tool. For disposable PAL embedding cache
 cleanup, call it with `embedding_cache=true`; use `dry_run=true` before deletion.
-8. `memory`
-9. `analytics`
 
 `memory` and `analytics` are non-core advanced dispatchers.
 Use their `action` parameter instead of exposing many separate MCP tools.
@@ -103,6 +104,22 @@ Agent routing rule:
 6. use `discovery_mode=off` only after the exact canonical page has already been verified
 7. omit `seed_url` only for explicit experimental testing with `discovery_mode="web_search"`; this mode is never an automatic fallback
 
+## Raw downloads
+
+Call `web_fetch` when the user needs the original HTTP body, including a
+binary file. It works independently of semantic retrieval.
+
+```json
+{"url":"https://example.com","assets":true,"asset_origins":["https://cdn.example.com"]}
+```
+
+The tool saves files on the MCP host and returns their absolute paths under
+`structuredContent.download`, with HTTP metadata. Use a client with access
+to that host filesystem to open the files. Successful downloads stay in a
+fresh directory under `NEEDLEX_HOME/downloads`. Set `max_bytes` to override
+the total byte budget. The [CLI raw download contract](./CLI.md#raw-downloads)
+describes asset discovery, origin restrictions and error handling.
+
 ## Provider Catalogs
 
 Export tool definitions directly from the binary:
@@ -154,6 +171,7 @@ Before escalating to an external browser, retry the same URL once with `render: 
 19. `analytics` with `action="failures"` -> `needlex analytics failures`
 20. `analytics` with `action="daily"` -> `needlex analytics daily`
 21. `analytics` with `action="export"` -> `needlex analytics export`
+22. `web_fetch` -> `needlex fetch`
 
 ## Next
 

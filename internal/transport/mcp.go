@@ -329,6 +329,7 @@ func writeMCPUsage(w io.Writer) {
 		"",
 		"Notes:",
 		"  run without extra positional arguments",
+		"  web_fetch saves original HTTP(S) bodies and optional linked assets to local files",
 		"  safe to probe with 'needlex mcp --help' before connecting a client",
 		"  diagnostics are written to the PAL runtime log; inspect with 'needlex logs path' and 'needlex logs tail'",
 	)

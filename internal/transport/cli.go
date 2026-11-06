@@ -112,6 +112,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) (exitCode int) {
 		return r.runCrawl(args[1:], stdout, stderr)
 	case "query":
 		return r.runQuery(args[1:], stdout, stderr)
+	case "fetch":
+		return r.runFetch(args[1:], stdout, stderr)
 	case "read":
 		return r.runRead(args[1:], stdout, stderr)
 	case "replay":
@@ -240,6 +242,7 @@ func writeRootUsage(w io.Writer) {
   needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name] [--render auto|off|required]
   needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort name] [--render auto|off|required]
   needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required]
+  `+downloadUsage+`
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
   needlex proof <trace-id|proof-id|chunk-id> [--json]

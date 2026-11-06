@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.44
+version: v0.1.45
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -37,7 +37,7 @@ Do not rely on Needle-X alone when the task needs:
 1. exact visual layout, coordinates, screenshots, or rendered styling
 2. interactive widget state: forms, canvas, maps, drag interactions, or anything requiring clicks or scrolling
 3. login-gated content, paywalled state, cart/session state, or user-specific pages
-4. exact asset bytes for CSS, images, PDFs, videos, archives, or generated files
+4. exact asset bytes when the runtime does not advertise `web_fetch`
 5. legal/compliance-grade full-document review where omitted text is unacceptable
 6. proof that a page is empty or missing when the result could be extraction loss
 7. application data the page only requests after the capture window, or an unbounded stream still open when the render stopped
@@ -45,6 +45,12 @@ Do not rely on Needle-X alone when the task needs:
 For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor. For rule 7, check `signals.content_source`, `network_truncated`, and `render_degraded` first, and retry once with `render: "required"` before leaving Needle-X.
 
 ## Tool Choice
+
+When the runtime advertises `web_fetch`, use it for exact HTTP response
+bodies such as original HTML, CSS, JavaScript, or binary files. The tool
+returns local file paths. For a page and its directly linked stylesheets
+and scripts, set `assets: true` and add any trusted CDN origins to
+`asset_origins`. Use `needlex fetch` from CLI when that command is available.
 
 Prefer MCP tools when available:
 
@@ -59,6 +65,7 @@ Use CLI fallback when MCP is unavailable:
 
 ```bash
 needlex read https://example.com --json
+needlex fetch https://example.com --assets --out-dir ./page-source
 needlex query https://example.com --goal "pricing" --json
 needlex crawl https://example.com --max-pages 10 --json
 needlex analytics stats
@@ -70,7 +77,7 @@ needlex analytics stats
 2. Known docs URL: use `web_read` on the official page, answer from cited chunks, and keep proof/trace IDs when the answer is implementation-sensitive.
 3. Latest release/changelog: search with the host agent's current-information tool, then use `web_read` on every selected release or changelog URL before answering.
 4. Same-site docs routing: use `web_query` with `seed_url` and `discovery_mode="same_site_links"` to find a specific concept inside a known documentation family.
-5. Layout/table/assets needed: use Needle-X to compact the page first, then switch to browser/raw/PDF/image tooling for exact rendered or binary content.
+5. Layout/table/assets needed: use Needle-X to compact the page first, then use `web_fetch` for original HTTP bytes when available, or browser/PDF/image tooling for rendered layout.
 
 ## Query Strategy
 
