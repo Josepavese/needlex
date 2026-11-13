@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.45
+version: v0.1.46
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -19,6 +19,8 @@ Use Needle-X first when the value is compact semantic evidence, proof-backed sni
 ## Policy Compatibility
 
 Needle-X does not override higher-priority browsing, citation, copyright, official-source, legal, medical, financial, or freshness requirements. If policy or task risk requires current verification, official sources, or explicit citations, Needle-X is sufficient only when its output provides adequate source evidence for that requirement.
+
+When the runtime is configured with `network.policy=public` (PAL config, or `NEEDLEX_NETWORK_POLICY=public`), Needle-X may acquire only publicly routable web destinations, including browser subresources and application data. Private, loopback, link-local and reserved destinations are denied with a recognizable egress error; do not retry the same URL through a less protected path. The default `any` policy preserves historical behavior for controlled environments.
 
 ## Decision Matrix
 
@@ -54,8 +56,8 @@ and scripts, set `assets: true` and add any trusted CDN origins to
 
 Prefer MCP tools when available:
 
-1. `web_read`: primary tool; read one known URL and return compact proof-backed context.
-2. `web_query`: route within a known site or documentation family only when a verified `seed_url` is supplied.
+1. `web_read`: primary tool; read one known URL and return compact proof-backed context. Its default response is the compact packet plus trace/proof/fingerprint paths; set `include_diagnostics: true` only when you need the full document, Web IR, result pack and agent context.
+2. `web_query`: route within a known site or documentation family only when a verified `seed_url` is supplied. Same compact default as `web_read`; `include_diagnostics: true` adds `plan` and the full diagnostics object.
 3. `web_crawl`: traverse bounded same-domain links from a seed URL.
 4. `web_proof`: inspect saved proof or trace records when evidence must be audited.
 5. `analytics`: advanced diagnostics only. Use `action="recent_runs"`, `action="stats"`, or `action="value_report"` when debugging retrieval behavior or showing value.
@@ -111,6 +113,7 @@ Treat the compact result as the front door, not the whole truth. Check:
 5. `uncertainty`
 6. `signals.content_source` when the page loads content dynamically
 7. `trace_id` when debugging or auditing
+8. `evidence` when present: limited extraction coverage
 
 `signals.content_source` reports where the compiled content came from:
 
@@ -120,12 +123,16 @@ Treat the compact result as the front door, not the whole truth. Check:
 4. `signals.network_truncated`: captured application data was cut by budget or a stream was still open, so more data exists upstream
 5. `signals.render_degraded`: the browser path failed and only a DOM dump was available, so application data was not captured
 
+`evidence` appears only when the delivered chunks cannot stand in for the page body: `{"coverage":"title_only"|"thin"|"none","reason":"..."}`. It also raises `uncertainty.level`. Treat it as extraction insufficiency and escalate or read the source directly instead of answering from the title. `analytics.proof_backed` only says proof references exist; it is provenance, not answer adequacy.
+
+`include_diagnostics` is a deliberate, expensive opt-in for audit or programmatic consumers. The default compact packet plus `trace_path`, `proof_path` and `fingerprint_path` is enough for ordinary answers.
+
 If the answer depends on absent text, page structure, a table, a code block, or a binary asset that is not present in the compact context, assume possible extraction loss and escalate instead of guessing.
 
 Anti-overclaim checklist:
 
 1. selected URL is authoritative enough for the task
-2. chunks or proof coverage contain the claim being made
+2. chunks or proof coverage contain the claim being made; `evidence` is absent or does not report insufficient coverage
 3. uncertainty does not undermine the answer
 4. missing tables, code, assets, or layout are not silently inferred
 5. fallback or escalation is used when compact context is insufficient

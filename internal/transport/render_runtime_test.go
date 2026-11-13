@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/rendering"
 )
 
@@ -19,23 +20,23 @@ func (r *recordingRenderRuntime) Close() error { r.closes++; return nil }
 
 func TestMCPRenderRuntimeSharesReplacesAndCloses(t *testing.T) {
 	var created []*recordingRenderRuntime
-	runner := Runner{newRenderRuntime: func(config.RenderConfig) (rendering.Runtime, error) {
+	runner := Runner{newRenderRuntime: func(config.RenderConfig, platform.NetworkPolicy) (rendering.Runtime, error) {
 		r := &recordingRenderRuntime{}
 		created = append(created, r)
 		return r, nil
 	}}
 	owner := runner.newMCPRenderRuntime()
 	cfg := config.DefaultRenderConfig()
-	first, err := owner.get(cfg)
+	first, err := owner.get(cfg, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := owner.get(cfg)
+	second, err := owner.get(cfg, platform.NetworkPolicyAny)
 	if err != nil || first != second {
 		t.Fatal("same config did not reuse runtime")
 	}
 	cfg.MaxConcurrency = 3
-	if _, err := owner.get(cfg); err != nil {
+	if _, err := owner.get(cfg, platform.NetworkPolicyAny); err != nil {
 		t.Fatal(err)
 	}
 	if created[0].closes != 1 {
@@ -47,7 +48,7 @@ func TestMCPRenderRuntimeSharesReplacesAndCloses(t *testing.T) {
 	if created[1].closes != 1 {
 		t.Fatal("shutdown did not close runtime")
 	}
-	if _, err := owner.get(cfg); err == nil {
+	if _, err := owner.get(cfg, platform.NetworkPolicyAny); err == nil {
 		t.Fatal("runtime reopened after shutdown")
 	}
 }
@@ -59,7 +60,7 @@ func TestMCPRunOwnsRendererOnReadErrorAndEOF(t *testing.T) {
 			r.storeRoot = t.TempDir()
 			r.stdin = strings.NewReader(input)
 			// No rendering command means no native runtime is created at all.
-			r.newRenderRuntime = func(config.RenderConfig) (rendering.Runtime, error) {
+			r.newRenderRuntime = func(config.RenderConfig, platform.NetworkPolicy) (rendering.Runtime, error) {
 				t.Fatal("eager browser runtime")
 				return nil, nil
 			}

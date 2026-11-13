@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -117,13 +118,9 @@ func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mcpToolResult(map[string]any{
-		"kind":        "bounded_crawl",
-		"summary":     resp.Summary,
-		"documents":   compactCrawlResponse(resp, artifacts).Documents,
-		"stored_runs": artifacts.StoredRuns,
-		"compact":     compactCrawlResponse(resp, artifacts),
-	}, compactCrawlResponse(resp, artifacts)), nil
+	compact := compactCrawlResponse(resp, artifacts)
+	// One canonical crawl shape: kind, summary, documents and stored_runs once.
+	return mcpToolResult(jsonObjectMap(compact), compact), nil
 }
 
 func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
@@ -153,40 +150,17 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 		return nil, err
 	}
 	compact := compactQueryResponse(resp)
-	payload := map[string]any{
-		"kind":             compact.Kind,
-		"goal":             compact.Goal,
-		"seed_url":         compact.SeedURL,
-		"selected_url":     compact.SelectedURL,
-		"summary":          compact.Summary,
-		"uncertainty":      compact.Uncertainty,
-		"selection_why":    compact.SelectionWhy,
-		"provider":         compact.Provider,
-		"profile":          compact.Profile,
-		"trace_id":         compact.TraceID,
-		"chunks":           compact.Chunks,
-		"candidates":       compact.Candidates,
-		"signals":          compact.Signals,
-		"web_ir_summary":   compact.WebIRSummary,
-		"cost_report":      compact.CostReport,
-		"compact":          compact,
-		"plan":             resp.Plan,
-		"document":         resp.Document,
-		"web_ir":           resp.WebIR,
-		"result_pack":      resp.ResultPack,
-		"agent_context":    resp.AgentContext,
-		"proof_refs":       resp.ProofRefs,
-		"trace_path":       artifacts.TracePath,
-		"proof_path":       artifacts.ProofPath,
-		"fingerprint_path": artifacts.FingerprintPath,
+	var diagnostics map[string]any
+	if boolArg(args, "include_diagnostics") {
+		diagnostics = map[string]any{
+			"document":      resp.Document,
+			"web_ir":        resp.WebIR,
+			"result_pack":   resp.ResultPack,
+			"agent_context": resp.AgentContext,
+			"plan":          resp.Plan,
+		}
 	}
-	if compact.Acquisition != nil {
-		payload["acquisition_observation"] = compact.Acquisition
-	}
-	if compact.Decision != nil {
-		payload["decision_observation"] = compact.Decision
-	}
-	return mcpToolResult(payload, compact), nil
+	return mcpCompactResult(compact, artifacts, diagnostics), nil
 }
 
 func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
@@ -210,36 +184,44 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 		return nil, err
 	}
 	compact := compactReadResponse(resp)
-	payload := map[string]any{
-		"kind":             compact.Kind,
-		"url":              compact.URL,
-		"title":            compact.Title,
-		"summary":          compact.Summary,
-		"uncertainty":      compact.Uncertainty,
-		"profile":          compact.Profile,
-		"trace_id":         compact.TraceID,
-		"outline":          compact.Outline,
-		"chunks":           compact.Chunks,
-		"links":            compact.Links,
-		"signals":          compact.Signals,
-		"web_ir_summary":   compact.WebIRSummary,
-		"cost_report":      compact.CostReport,
-		"compact":          compact,
-		"document":         resp.Document,
-		"web_ir":           resp.WebIR,
-		"agent_context":    resp.AgentContext,
-		"proof_refs":       resp.ResultPack.ProofRefs,
-		"trace_path":       artifacts.TracePath,
-		"proof_path":       artifacts.ProofPath,
-		"fingerprint_path": artifacts.FingerprintPath,
+	var diagnostics map[string]any
+	if boolArg(args, "include_diagnostics") {
+		diagnostics = map[string]any{
+			"document":      resp.Document,
+			"web_ir":        resp.WebIR,
+			"result_pack":   resp.ResultPack,
+			"agent_context": resp.AgentContext,
+		}
 	}
-	if compact.Acquisition != nil {
-		payload["acquisition_observation"] = compact.Acquisition
+	return mcpCompactResult(compact, artifacts, diagnostics), nil
+}
+
+// mcpCompactResult returns one canonical compact packet: content.text and
+// structuredContent both derive from the same compact value, structuredContent
+// adds only provenance references and optional nested diagnostics. Heavy
+// duplicates (document, web_ir, result_pack, agent_context, plan) are never
+// serialized twice on the default path.
+func mcpCompactResult(compact any, paths artifactPaths, diagnostics map[string]any) map[string]any {
+	payload := jsonObjectMap(compact)
+	payload["trace_path"] = paths.TracePath
+	payload["proof_path"] = paths.ProofPath
+	payload["fingerprint_path"] = paths.FingerprintPath
+	if len(diagnostics) > 0 {
+		payload["diagnostics"] = diagnostics
 	}
-	if compact.Decision != nil {
-		payload["decision_observation"] = compact.Decision
+	return mcpToolResult(payload, compact)
+}
+
+func jsonObjectMap(value any) map[string]any {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return map[string]any{}
 	}
-	return mcpToolResult(payload, compact), nil
+	out := map[string]any{}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return map[string]any{}
+	}
+	return out
 }
 
 func mcpTools() []mcpTool {
@@ -260,7 +242,7 @@ func mcpTools() []mcpTool {
 func mcpCrawlTool() mcpTool {
 	return mcpTool{
 		Name:        "web_crawl",
-		Description: "Traverse linked pages starting from one seed URL.",
+		Description: "Traverse linked pages starting from one seed URL. Returns one compact crawl packet (kind, summary, documents, stored_runs) with no duplicate representations.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"seed_url":         map[string]any{"type": "string"},
 			"profile":          map[string]any{"type": "string"},
@@ -291,6 +273,7 @@ func mcpQueryTool() mcpTool {
 		"observe_acquisition": acquisitionObservationSchema(),
 		"retrieval_effort":    retrievalEffortSchema(),
 		"render":              renderModeSchema(),
+		"include_diagnostics": includeDiagnosticsSchema("document, web_ir, result_pack, agent_context and plan"),
 	}, "goal")
 	schema["anyOf"] = []any{
 		map[string]any{"required": []string{"seed_url"}},
@@ -303,10 +286,11 @@ func mcpQueryTool() mcpTool {
 	}
 	return mcpTool{
 		Name:        "web_query",
-		Description: "Plan and execute a goal-oriented query from a seed URL. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page. Seedless web_search is experimental, explicit opt-in, and must never be selected automatically.",
+		Description: "Plan and execute a goal-oriented query from a seed URL. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page. Seedless web_search is experimental, explicit opt-in, and must never be selected automatically. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack, agent_context and plan.",
 		InputSchema: schemaExamples(schema,
 			map[string]any{"goal": "Find authentication flow details", "seed_url": "https://agentclientprotocol.com/protocol/overview", "discovery_mode": "same_site_links"},
 			map[string]any{"goal": "Read the verified initialize method page", "seed_url": "https://agentclientprotocol.com/protocol/initialization", "discovery_mode": "off"},
+			map[string]any{"goal": "Inspect the full compiled packet", "seed_url": "https://agentclientprotocol.com/protocol/overview", "include_diagnostics": true},
 		),
 	}
 }
@@ -314,7 +298,7 @@ func mcpQueryTool() mcpTool {
 func mcpReadTool() mcpTool {
 	return mcpTool{
 		Name:        "web_read",
-		Description: "Read one known URL and return compact proof-carrying context first. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
+		Description: "Read one known URL and return compact proof-carrying context first. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
 		InputSchema: schemaExamples(toolSchema(map[string]any{
 			"url":                 map[string]any{"type": "string"},
 			"profile":             map[string]any{"type": "string"},
@@ -324,8 +308,10 @@ func mcpReadTool() mcpTool {
 			"user_agent":          map[string]any{"type": "string"},
 			"retrieval_effort":    retrievalEffortSchema(),
 			"render":              renderModeSchema(),
+			"include_diagnostics": includeDiagnosticsSchema("document, web_ir, result_pack and agent_context"),
 		}, "url"),
 			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details", "retrieval_effort": "standard"},
+			map[string]any{"url": "https://example.com", "objective": "Inspect the full compiled packet", "include_diagnostics": true},
 		),
 	}
 }
@@ -770,4 +756,15 @@ const (
 
 func acquisitionObservationSchema() map[string]any {
 	return map[string]any{"type": "boolean", "default": observeAcquisitionDefault, "description": acquisitionObservationHelp}
+}
+
+const includeDiagnosticsDefault = false
+
+func includeDiagnosticsSchema(diagnosticsFields string) map[string]any {
+	return map[string]any{
+		"type":    "boolean",
+		"default": includeDiagnosticsDefault,
+		"description": "When true, structuredContent also carries a nested diagnostics object with the full " + diagnosticsFields +
+			". Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
+	}
 }

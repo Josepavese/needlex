@@ -60,6 +60,8 @@ content encoding and byte counts. Binary bodies work without an embedding
 runtime. The primary file is named `body.html` for an HTML MIME type and
 `body` otherwise. HTTP transfer framing is removed. The request asks for
 identity content encoding and any encoding the server sends is preserved.
+`--config PATH` selects the JSON config that supplies the network policy and
+other acquisition settings; without it the default PAL config is used.
 
 The default destination is a fresh directory under `NEEDLEX_HOME/downloads`.
 `--out-dir` names a new directory under an existing parent. An existing path

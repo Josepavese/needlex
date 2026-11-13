@@ -50,8 +50,8 @@ For open-web research, use the host agent’s search tool to find URLs. Give `we
 ## Read the packet
 
 - **Evidence.** Read `chunks` alongside the summary. Each chunk can carry a `source_url`, `source_selector` and `proof_ref`. Pass the proof reference to `web_proof` or `needlex proof` to inspect the source span and its recorded transformations.
-- **Coverage.** Use `uncertainty` and `signals` to decide whether the excerpts cover the question. Needle-X can render pages when needed and include textual payloads from fetch/XHR, SSE and WebSockets within a capture budget. `content_source` distinguishes rendered DOM from DOM plus captured network data. Check `network_truncated` and `render_degraded` before drawing conclusions from missing content.
-- **Audit.** Use `trace_id` to inspect the recorded run. The compact packet is the default. Full JSON, replay and diff are available when you need more detail.
+- **Coverage.** Use `uncertainty` and `signals` to decide whether the excerpts cover the question. Needle-X can render pages when needed and include textual payloads from fetch/XHR, SSE and WebSockets within a capture budget. `content_source` distinguishes rendered DOM from DOM plus captured network data. Check `network_truncated` and `render_degraded` before drawing conclusions from missing content. When the delivered chunks cannot stand in for the page body, the packet adds `evidence` (`coverage: title_only|thin|none`) and raises `uncertainty`; `analytics.proof_backed` is provenance, not answer adequacy.
+- **Audit.** Use `trace_id` from the CLI, or `trace_path`, `proof_path` and `fingerprint_path` from MCP, to inspect the recorded run. The compact packet is the default. `web_read`/`web_query` accept `include_diagnostics: true` when you need the full `document`, `web_ir`, `result_pack`, `agent_context` and `plan`; CLI `--json-mode full` exposes the same detail.
 
 Needle-X uses multilingual dense embeddings to align page content with the objective. The runtime stores proofs, traces and reusable retrieval state locally. [Packet contract](docs/agent-answer-packet.md) · [Discovery memory](docs/wiki/Discovery-Memory.md)
 
@@ -64,6 +64,16 @@ needlex fetch https://example.com/ --assets --out-dir ./page-source
 ```
 
 Both interfaces return file paths and HTTP metadata. [Raw download reference](docs/wiki/CLI.md#raw-downloads)
+
+## Shared and restricted environments
+
+By default Needle-X keeps its historical network behavior (`network.policy: any`). On a shared or untrusted host, set the optional public-only policy to keep acquisition and browser traffic on publicly routable destinations:
+
+```bash
+NEEDLEX_NETWORK_POLICY=public needlex read https://example.com/ --objective "..."
+```
+
+The policy covers HTTP acquisition, downloads and linked assets, redirects, meta-refresh and the browser’s autonomous requests (subresources, fetch/XHR, SSE, WebSocket). DNS answers are all validated and the validated address is dialed, so a second resolution cannot rebind the connection. Private, loopback, link-local, CGNAT and reserved destinations are rejected with a recognizable `ErrEgressDenied` error and no less-protected fallback. Explicit technical endpoints such as the local embedding service are not reachable through the policy and stay outside it. Configure it as top-level `{"network":{"policy":"public"}}` in the PAL config, or with `NEEDLEX_NETWORK_POLICY`.
 
 ## Install
 

@@ -26,7 +26,7 @@ type Runner struct {
 	operationContext   context.Context
 	renderers          *renderRuntime
 	services           *serviceRuntime
-	newRenderRuntime   func(config.RenderConfig) (rendering.Runtime, error)
+	newRenderRuntime   func(config.RenderConfig, platform.NetworkPolicy) (rendering.Runtime, error)
 	newLocalState      func(string) store.LocalState
 	newMemoryStore     func(string, string) memory.LocalStore
 	newMemoryRuntime   func(config.Config) memory.Runtime
@@ -89,7 +89,7 @@ func (r Runner) runtimeService(cfg config.Config) (*coreservice.Service, error) 
 	if r.renderers == nil {
 		return coreservice.NewWithStateRoot(cfg, nil, r.storeRoot)
 	}
-	renderer, err := r.renderers.get(cfg.Render)
+	renderer, err := r.renderers.get(cfg.Render, cfg.EgressPolicy())
 	if err != nil {
 		return nil, err
 	}

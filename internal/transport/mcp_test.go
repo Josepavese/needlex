@@ -17,6 +17,7 @@ import (
 
 	"github.com/josepavese/needlex/internal/analytics"
 	"github.com/josepavese/needlex/internal/config"
+	"github.com/josepavese/needlex/internal/core"
 	coreservice "github.com/josepavese/needlex/internal/core/service"
 	"github.com/josepavese/needlex/internal/intel"
 )
@@ -343,7 +344,7 @@ func TestRunnerMCPReadReplayAndProof(t *testing.T) {
 	if !strings.Contains(string(responses[3]), `"proof"`) {
 		t.Fatalf("expected proof payload, got %s", responses[3])
 	}
-	assertMCPStructuredKeys(t, responses[1], "document", "web_ir", "chunks", "agent_context", "proof_refs", "cost_report", "compact", "summary", "uncertainty")
+	assertMCPStructuredKeys(t, responses[1], "chunks", "cost_report", "summary", "uncertainty", "trace_id", "trace_path", "proof_path", "fingerprint_path")
 	assertMCPStructuredKeys(t, responses[2], "replay_report")
 	assertMCPStructuredKeys(t, responses[3], "proof_records")
 }
@@ -442,10 +443,11 @@ func TestRunnerMCPQuery(t *testing.T) {
 	if len(responses) != 2 {
 		t.Fatalf("expected 2 responses, got %d", len(responses))
 	}
-	if !strings.Contains(string(responses[1]), `"result_pack"`) {
-		t.Fatalf("expected query payload, got %s", responses[1])
+	if !strings.Contains(string(responses[1]), `"selected_url"`) || !strings.Contains(string(responses[1]), `"chunks"`) {
+		t.Fatalf("expected query compact payload, got %s", responses[1])
 	}
-	assertMCPStructuredKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "agent_context", "proof_refs", "trace_id", "compact", "summary", "selected_url")
+	assertMCPStructuredKeys(t, responses[1], "goal", "selected_url", "chunks", "cost_report", "summary", "uncertainty", "trace_id", "trace_path", "proof_path", "fingerprint_path")
+	assertMCPStructuredAbsentKeys(t, responses[1], "plan", "document", "web_ir", "result_pack", "agent_context", "compact", "proof_refs")
 }
 
 func TestRunnerMCPQueryAppliesRetrievalEffort(t *testing.T) {
@@ -602,6 +604,7 @@ func TestRunnerMCPCrawl(t *testing.T) {
 		t.Fatalf("expected crawl summary, got %s", responses[1])
 	}
 	assertMCPStructuredKeys(t, responses[1], "documents", "summary", "stored_runs")
+	assertMCPStructuredAbsentKeys(t, responses[1], "compact")
 }
 
 func TestRunnerMCPMemoryTools(t *testing.T) {
@@ -813,6 +816,28 @@ func jsonLength(data []byte) string {
 func assertMCPStructuredKeys(t *testing.T, frame []byte, keys ...string) {
 	t.Helper()
 
+	structured := mcpStructuredContent(t, frame)
+	for _, key := range keys {
+		if _, ok := structured[key]; !ok {
+			t.Fatalf("expected structuredContent key %q, got %#v", key, structured)
+		}
+	}
+}
+
+func assertMCPStructuredAbsentKeys(t *testing.T, frame []byte, keys ...string) {
+	t.Helper()
+
+	structured := mcpStructuredContent(t, frame)
+	for _, key := range keys {
+		if _, ok := structured[key]; ok {
+			t.Fatalf("expected structuredContent to omit key %q, got keys %#v", key, structured)
+		}
+	}
+}
+
+func mcpStructuredContent(t *testing.T, frame []byte) map[string]any {
+	t.Helper()
+
 	var payload map[string]any
 	if err := json.Unmarshal(frame, &payload); err != nil {
 		t.Fatalf("decode frame: %v", err)
@@ -825,9 +850,188 @@ func assertMCPStructuredKeys(t *testing.T, frame []byte, keys ...string) {
 	if !ok {
 		t.Fatalf("expected structuredContent object, got %#v", result["structuredContent"])
 	}
-	for _, key := range keys {
-		if _, ok := structured[key]; !ok {
-			t.Fatalf("expected structuredContent key %q, got %#v", key, structured)
+	return structured
+}
+
+func largeMCPReadResponse() coreservice.ReadResponse {
+	resp := fakeResponse()
+	for i := 0; i < 120; i++ {
+		resp.WebIR.Nodes = append(resp.WebIR.Nodes, core.WebIRNode{
+			Path: fmt.Sprintf("/article[1]/p[%d]", i),
+			Tag:  "p",
+			Kind: "paragraph",
+			Text: strings.Repeat("compiled web ir node text ", 12),
+		})
+	}
+	resp.WebIR.NodeCount = len(resp.WebIR.Nodes)
+	for i := 0; i < 80; i++ {
+		resp.ResultPack.Chunks = append(resp.ResultPack.Chunks, core.Chunk{
+			ID:          fmt.Sprintf("chk_%d", i),
+			DocID:       "doc_1",
+			Text:        strings.Repeat("result pack chunk body text for diagnostics ", 8),
+			HeadingPath: []string{"Diagnostics"},
+			Score:       0.8,
+			Fingerprint: "fp_diag",
+			Confidence:  0.9,
+		})
+	}
+	for i := 0; i < 4; i++ {
+		resp.AgentContext.Chunks = append(resp.AgentContext.Chunks, coreservice.AgentChunk{
+			ID:          fmt.Sprintf("agent_chk_%d", i),
+			Text:        strings.Repeat("selected compact chunk evidence for the objective ", 6),
+			HeadingPath: []string{"Section"},
+			Confidence:  0.9,
+		})
+	}
+	return resp
+}
+
+func TestRunnerMCPReadPayloadIsCompactByDefaultWithDiagnosticsOptIn(t *testing.T) {
+	runner := Runner{
+		loadConfig: config.Load,
+		read: func(ctx context.Context, cfg config.Config, req coreservice.ReadRequest) (coreservice.ReadResponse, error) {
+			return largeMCPReadResponse(), nil
+		},
+		storeRoot: t.TempDir(),
+	}
+
+	def, err := runner.callMCPReadTool(map[string]any{"url": "https://example.com"})
+	if err != nil {
+		t.Fatalf("default web_read: %v", err)
+	}
+	diagnosticsResult, err := runner.callMCPReadTool(map[string]any{"url": "https://example.com", "include_diagnostics": true})
+	if err != nil {
+		t.Fatalf("diagnostics web_read: %v", err)
+	}
+
+	defStructured := def["structuredContent"].(map[string]any)
+	optStructured := diagnosticsResult["structuredContent"].(map[string]any)
+	for _, key := range []string{"document", "web_ir", "result_pack", "agent_context", "plan", "compact"} {
+		if _, ok := defStructured[key]; ok {
+			t.Fatalf("default structuredContent must omit %q, got keys %#v", key, defStructured)
+		}
+	}
+	for _, key := range []string{"trace_path", "proof_path", "fingerprint_path"} {
+		if _, ok := defStructured[key]; !ok {
+			t.Fatalf("default structuredContent must expose %q, got keys %#v", key, defStructured)
+		}
+	}
+	if _, ok := defStructured["diagnostics"]; ok {
+		t.Fatalf("default structuredContent must not include diagnostics: %#v", defStructured)
+	}
+	diagnostics, ok := optStructured["diagnostics"].(map[string]any)
+	if !ok {
+		t.Fatalf("include_diagnostics=true must add a nested diagnostics object, got keys %#v", optStructured)
+	}
+	for _, key := range []string{"document", "web_ir", "result_pack", "agent_context"} {
+		if _, ok := diagnostics[key]; !ok {
+			t.Fatalf("diagnostics must include %q, got keys %#v", key, diagnostics)
+		}
+	}
+	if _, ok := diagnostics["plan"]; ok {
+		t.Fatalf("web_read diagnostics must not include plan: %#v", diagnostics)
+	}
+
+	// The compact value is the single canonical shape: content.text and the
+	// default structuredContent carry the same compact keys.
+	text := def["content"].([]map[string]any)[0]["text"].(string)
+	var compactText map[string]any
+	if err := json.Unmarshal([]byte(text), &compactText); err != nil {
+		t.Fatalf("decode compact content.text: %v", err)
+	}
+	for key := range compactText {
+		if _, ok := defStructured[key]; !ok {
+			t.Fatalf("structuredContent lost compact key %q", key)
+		}
+	}
+	for key := range defStructured {
+		switch key {
+		case "trace_path", "proof_path", "fingerprint_path", "diagnostics":
+			continue
+		}
+		if _, ok := compactText[key]; !ok {
+			t.Fatalf("structuredContent introduced non-compact key %q", key)
+		}
+	}
+
+	defJSON := mustJSON(defStructured)
+	optJSON := mustJSON(optStructured)
+	if len(optJSON) < len(defJSON)*3 {
+		t.Fatalf("expected diagnostics payload to be materially larger: default=%d diagnostics=%d", len(defJSON), len(optJSON))
+	}
+}
+
+func TestRunnerMCPQueryPayloadIsCompactByDefaultWithDiagnosticsOptIn(t *testing.T) {
+	runner := Runner{
+		loadConfig: config.Load,
+		query: func(ctx context.Context, cfg config.Config, req coreservice.QueryRequest) (coreservice.QueryResponse, error) {
+			return largeMCPQueryResponse(req), nil
+		},
+		storeRoot: t.TempDir(),
+	}
+
+	def, err := runner.callMCPQueryTool(map[string]any{"goal": "objective evidence", "seed_url": "https://example.com"})
+	if err != nil {
+		t.Fatalf("default web_query: %v", err)
+	}
+	diagnosticsResult, err := runner.callMCPQueryTool(map[string]any{"goal": "objective evidence", "seed_url": "https://example.com", "include_diagnostics": true})
+	if err != nil {
+		t.Fatalf("diagnostics web_query: %v", err)
+	}
+
+	defStructured := def["structuredContent"].(map[string]any)
+	optStructured := diagnosticsResult["structuredContent"].(map[string]any)
+	for _, key := range []string{"plan", "document", "web_ir", "result_pack", "agent_context", "compact"} {
+		if _, ok := defStructured[key]; ok {
+			t.Fatalf("default structuredContent must omit %q, got keys %#v", key, defStructured)
+		}
+	}
+	diagnostics, ok := optStructured["diagnostics"].(map[string]any)
+	if !ok {
+		t.Fatalf("include_diagnostics=true must add a nested diagnostics object, got keys %#v", optStructured)
+	}
+	for _, key := range []string{"plan", "document", "web_ir", "result_pack", "agent_context"} {
+		if _, ok := diagnostics[key]; !ok {
+			t.Fatalf("web_query diagnostics must include %q, got keys %#v", key, diagnostics)
+		}
+	}
+	defJSON := mustJSON(defStructured)
+	optJSON := mustJSON(optStructured)
+	if len(optJSON) < len(defJSON)*3 {
+		t.Fatalf("expected diagnostics payload to be materially larger: default=%d diagnostics=%d", len(defJSON), len(optJSON))
+	}
+}
+
+func largeMCPQueryResponse(req coreservice.QueryRequest) coreservice.QueryResponse {
+	read := largeMCPReadResponse()
+	out := fakeQueryResponse(req)
+	out.Document = read.Document
+	out.WebIR = read.WebIR
+	out.ResultPack = read.ResultPack
+	out.AgentContext.Chunks = read.AgentContext.Chunks
+	out.ProofRefs = read.ResultPack.ProofRefs
+	return out
+}
+
+func TestMCPReadAndQueryExposeIncludeDiagnostics(t *testing.T) {
+	for _, tool := range []mcpTool{mcpReadTool(), mcpQueryTool()} {
+		props, ok := tool.InputSchema["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s: expected properties map", tool.Name)
+		}
+		if _, ok := props["include_diagnostics"]; !ok {
+			t.Fatalf("%s: expected include_diagnostics argument, got %#v", tool.Name, props)
+		}
+		diag, ok := props["include_diagnostics"].(map[string]any)
+		if !ok || diag["type"] != "boolean" || diag["default"] != includeDiagnosticsDefault {
+			t.Fatalf("%s: unexpected include_diagnostics schema %#v", tool.Name, props["include_diagnostics"])
+		}
+		desc, _ := diag["description"].(string)
+		if !strings.Contains(desc, "diagnostics") || !strings.Contains(desc, "trace_path") {
+			t.Fatalf("%s: expected diagnostics guidance, got %q", tool.Name, desc)
+		}
+		if !strings.Contains(tool.Description, "include_diagnostics") || !strings.Contains(tool.Description, "compact packet") {
+			t.Fatalf("%s: expected tool description to document compact default and opt-in diagnostics, got %q", tool.Name, tool.Description)
 		}
 	}
 }

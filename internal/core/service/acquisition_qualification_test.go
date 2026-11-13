@@ -20,6 +20,7 @@ import (
 	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/intel"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/rendering"
 )
@@ -158,7 +159,7 @@ func collectAcquisitionPolicy(t *testing.T, cfg config.Config, out string) {
 	encoder := json.NewEncoder(file)
 	fixture := httptest.NewServer(http.HandlerFunc(acquisitionFixture))
 	defer fixture.Close()
-	runtime, err := rendering.NewRuntime(cfg.Render)
+	runtime, err := rendering.NewRuntime(cfg.Render, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}

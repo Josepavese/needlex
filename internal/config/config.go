@@ -12,6 +12,12 @@ type Config struct {
 	Memory    MemoryConfig    `json:"memory,omitempty"`
 	Agent     AgentConfig     `json:"agent,omitempty"`
 	Render    RenderConfig    `json:"render,omitempty"`
+	Network   NetworkConfig   `json:"network,omitempty"`
+}
+
+// NetworkConfig selects the network destinations acquisition transports may use.
+type NetworkConfig struct {
+	Policy string `json:"policy,omitempty"`
 }
 
 type RuntimeConfig struct {

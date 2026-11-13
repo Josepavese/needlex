@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 func TestClassifyFailure(t *testing.T) {
@@ -20,6 +22,7 @@ func TestClassifyFailure(t *testing.T) {
 		{"empty", errors.New("discover web returned no candidates"), ClassEmptyCandidates},
 		{"unavailable", errors.New("brave api key not configured"), ClassUnavailableUpstream},
 		{"other", errors.New("decode payload"), ClassRuntimeError},
+		{"egress denied", &platform.EgressDeniedError{Code: platform.EgressCodeAddress, Host: "10.0.0.1"}, ClassNetworkDenied},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -86,10 +86,19 @@ Retrieval effort:
 6. `lane_max` is not part of the public agent-facing schema
 
 Compact-first output rule:
-1. MCP `content.text` exposes the compact packet first
-2. MCP `structuredContent` keeps the richer diagnostic payload
-3. agents should default to the compact packet before opening diagnostics
-4. the `analytics` dispatcher follows the same rule: headline numbers first, richer rollups in structured payloads
+1. `content.text` exposes the compact packet first
+2. `structuredContent` is the same compact packet by default, plus only `trace_path`, `proof_path`, and `fingerprint_path`
+3. full diagnostics are explicit opt-in: `include_diagnostics: true` on `web_read` or `web_query` adds a nested `diagnostics` object with `document`, `web_ir`, `result_pack`, `agent_context` (and `plan` for `web_query`); the default response never duplicates those payloads
+4. `web_crawl` returns one compact crawl shape (`kind`, `summary`, `documents`, `stored_runs`) without a duplicate `compact` copy
+5. agents should default to the compact packet before opening diagnostics
+6. the `analytics` dispatcher follows the same compact-first rule: headline numbers first, richer rollups in structured payloads
+
+Evidence coverage rule:
+1. the compact packet adds `evidence` only when extraction is limited: `{"coverage":"title_only"|"thin"|"none","reason":"..."}`
+2. `title_only` means the delivered chunks carry only page title or heading text; `thin` means the delivered body is shorter than a sentence or two; `none` means no usable body text
+3. limited coverage also adds an uncertainty reason (`title_only_extraction`, `thin_extraction`, or `no_extraction`) and raises `uncertainty.level`
+4. `analytics.proof_backed` means proof references exist for the delivered chunks; it is provenance, not answer adequacy
+5. treat a present `evidence` field as a signal to read a broader source or request diagnostics, not as a normal packet annotation
 
 Tool scope rule:
 1. `web_extract` is intentionally not added yet

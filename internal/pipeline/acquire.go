@@ -35,6 +35,9 @@ func EffectiveUserAgent(userAgent string, browserLike bool) string {
 
 type Acquirer struct {
 	Client *http.Client
+	// Egress enforces the configured network policy on every attempt, including
+	// redirect hops. Nil keeps the historical unrestricted transport behavior.
+	Egress *platform.Egress
 	// ObserveFetch is an optional synchronous telemetry hook for each transport
 	// GET attempt. Internal HTTP redirects are not separate attempt callbacks.
 	// The borrower owns the hook and any synchronization it requires.
@@ -95,6 +98,9 @@ func (a Acquirer) acquireAttempt(ctx context.Context, input AcquireInput, timeou
 	attemptInput := input
 	attemptInput.Timeout = timeout
 	attemptInput.Profile = profile
+	if err := a.Egress.ValidateURLString(attemptInput.URL); err != nil {
+		return RawPage{}, err
+	}
 	pacingDelay, err := applyPerHostPacing(ctx, attemptInput.URL, attemptInput.PerHostMinGap, attemptInput.PerHostJitter)
 	if err != nil {
 		return RawPage{}, err
@@ -171,6 +177,9 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		headers.Set("Accept", strings.TrimSpace(input.Accept))
 	}
 	client := a.Client
+	if client == nil && a.Egress != nil {
+		client = a.Egress.HTTPClient(nil)
+	}
 	if client == nil {
 		client = &http.Client{}
 	}
@@ -220,6 +229,14 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		client = client.ImpersonateChrome().SetTLSFingerprintChrome()
 	} else {
 		client = client.ImpersonateChrome()
+	}
+	if a.Egress != nil {
+		// Public egress resolves and validates the dialed address itself, ignores
+		// environment proxies and validates every redirect before it is followed.
+		client = client.SetDial(a.Egress.DialContext).SetProxy(nil).
+			SetRedirectPolicy(req.DefaultRedirectPolicy(), req.RedirectPolicy(func(target *http.Request, _ []*http.Request) error {
+				return a.Egress.ValidateRedirect(target.URL)
+			}))
 	}
 
 	request := client.R().SetContext(reqCtx)

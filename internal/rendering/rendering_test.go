@@ -403,5 +403,5 @@ func testRenderer(path string, timeout time.Duration) Renderer {
 	if timeout > 0 {
 		cfg.TimeoutMS = timeout.Milliseconds()
 	}
-	return New(cfg)
+	return New(cfg, platform.NetworkPolicyAny)
 }

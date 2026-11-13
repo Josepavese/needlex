@@ -47,6 +47,15 @@ Regola per `signals`:
 5. `render_degraded` segnala che il percorso browser e' fallito e l'evidenza applicativa non e' stata osservata
 6. i campi di provenienza compaiono solo per letture che hanno coinvolto il rendering: le letture statiche restano senza rumore aggiuntivo
 
+Regola per `evidence`:
+1. il campo compare solo quando l'estrazione e' insufficiente, mai sulle pagine ordinarie
+2. forma: `{"coverage":"title_only"|"thin"|"none","reason":"..."}`
+3. `title_only` = i chunk consegnati contengono solo titolo o heading, non il corpo che serve all'obiettivo
+4. `thin` = il corpo consegnato e' piu' corto di una o due frasi
+5. `none` = nessun testo di corpo utilizzabile estratto
+6. la copertura limitata aggiunge un motivo di `uncertainty` (`title_only_extraction`, `thin_extraction`, `no_extraction`) e alza `uncertainty.level`
+7. `analytics.proof_backed` resta veritiero (esistono proof ref) ma non e' un giudizio di adeguatezza della risposta: un packet `title_only` puo' essere proof-backed
+
 Campi query-specific:
 1. `selected_url`
 2. `selection_why`

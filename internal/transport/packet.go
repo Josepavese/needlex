@@ -48,6 +48,26 @@ type compactUncertainty struct {
 	Reasons []string `json:"reasons,omitempty"`
 }
 
+// compactEvidence reports limited extraction coverage. It is emitted only when
+// the delivered chunks cannot stand in for the page body, so ordinary pages
+// stay free of the field.
+type compactEvidence struct {
+	Coverage string `json:"coverage"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+const (
+	evidenceCoverageTitleOnly = "title_only"
+	evidenceCoverageThin      = "thin"
+	evidenceCoverageNone      = "none"
+
+	// Evidence thresholds are deliberately conservative: title-only needs the
+	// leftover body text to be negligible, and thin needs the whole delivered
+	// body to stay below a sentence or two. Normal pages clear both.
+	evidenceTitleOnlyBodyRunes = 24
+	evidenceThinBodyRunes      = 160
+)
+
 type compactAnalyticsFooter struct {
 	CharsSaved           int     `json:"chars_saved"`
 	TokensSavedEstimated int64   `json:"tokens_saved_estimated"`
@@ -64,6 +84,7 @@ type compactReadOutput struct {
 	Title        string                 `json:"title,omitempty"`
 	Summary      string                 `json:"summary,omitempty"`
 	Uncertainty  compactUncertainty     `json:"uncertainty"`
+	Evidence     *compactEvidence       `json:"evidence,omitempty"`
 	Profile      string                 `json:"profile,omitempty"`
 	TraceID      string                 `json:"trace_id,omitempty"`
 	Outline      []string               `json:"outline,omitempty"`
@@ -84,6 +105,7 @@ type compactQueryOutput struct {
 	SelectedURL  string                 `json:"selected_url"`
 	Summary      string                 `json:"summary,omitempty"`
 	Uncertainty  compactUncertainty     `json:"uncertainty"`
+	Evidence     *compactEvidence       `json:"evidence,omitempty"`
 	SelectionWhy []string               `json:"selection_why,omitempty"`
 	Provider     string                 `json:"provider,omitempty"`
 	Profile      string                 `json:"profile,omitempty"`
@@ -113,12 +135,14 @@ type compactCrawlOutput struct {
 
 func compactReadResponse(resp coreservice.ReadResponse) compactReadOutput {
 	selectedChunks := compactChunkSelection(resp.AgentContext.Chunks)
+	evidence := deriveEvidenceCoverage(firstNonEmptyTrimmed(resp.Document.Title, resp.AgentContext.Title), selectedChunks)
 	return compactReadOutput{
 		Kind:         "page_read",
 		URL:          firstNonEmptyTrimmed(resp.Document.FinalURL, resp.Document.URL),
 		Title:        cleanDisplayString(resp.Document.Title),
 		Summary:      deriveSummary(resp.AgentContext.Title, selectedChunks),
-		Uncertainty:  deriveReadUncertainty(selectedChunks, resp.WebIR),
+		Uncertainty:  deriveReadUncertainty(selectedChunks, resp.WebIR, evidence),
+		Evidence:     evidence,
 		Profile:      resp.ResultPack.Profile,
 		TraceID:      resp.Trace.TraceID,
 		Outline:      cleanDisplayPath(resp.ResultPack.Outline),
@@ -135,13 +159,15 @@ func compactReadResponse(resp coreservice.ReadResponse) compactReadOutput {
 
 func compactQueryResponse(resp coreservice.QueryResponse) compactQueryOutput {
 	selectedChunks := compactChunkSelection(resp.AgentContext.Chunks)
+	evidence := deriveEvidenceCoverage(firstNonEmptyTrimmed(resp.Document.Title, resp.AgentContext.Title), selectedChunks)
 	return compactQueryOutput{
 		Kind:         "goal_query",
 		Goal:         resp.Plan.Goal,
 		SeedURL:      resp.Plan.SeedURL,
 		SelectedURL:  firstNonEmptyTrimmed(resp.Document.FinalURL, resp.Plan.SelectedURL),
 		Summary:      deriveSummary(resp.AgentContext.Title, selectedChunks),
-		Uncertainty:  deriveQueryUncertainty(selectedChunks, resp.AgentContext.Candidates, resp.Plan.SelectedURL, resp.WebIR),
+		Uncertainty:  deriveQueryUncertainty(selectedChunks, resp.AgentContext.Candidates, resp.Plan.SelectedURL, resp.WebIR, evidence),
+		Evidence:     evidence,
 		SelectionWhy: topCandidateReasons(resp.Plan.SelectedURL, resp.AgentContext.Candidates),
 		Provider:     resp.Plan.DiscoveryProvider,
 		Profile:      resp.ResultPack.Profile,

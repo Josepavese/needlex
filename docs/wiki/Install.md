@@ -59,6 +59,16 @@ needlex config set semantic.provider_model nomic-embed-text:latest
 needlex doctor
 ```
 
+## Network Policy
+
+Acquisition uses the historical unrestricted behavior by default. On shared or untrusted hosts, the optional public-only policy keeps HTTP acquisition, downloads, assets, redirects and browser traffic on publicly routable destinations:
+
+```json
+{"network": {"policy": "public"}}
+```
+
+Set it in `<state-root>/configs/needlex.json`, or override with `NEEDLEX_NETWORK_POLICY=public`. Every DNS answer is validated and the validated literal address is dialed, so a second resolution cannot rebind the connection. Private, loopback, link-local, CGNAT and reserved destinations are denied with a recognizable egress error (`unsupported_scheme`, `url_credentials`, `invalid_host`, `non_public_address`) and are not retried through an unprotected path. Explicit technical endpoints such as the local embedding service stay outside the policy. `network.policy` is visible in `needlex config show`.
+
 ## Render Config
 
 The installer prepares JavaScript rendering as part of the normal runtime surface.

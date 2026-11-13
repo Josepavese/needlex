@@ -31,6 +31,7 @@ func Defaults() Config {
 		Memory:    defaultMemoryConfig(baseline),
 		Agent:     defaultAgentConfig(),
 		Render:    DefaultRenderConfig(),
+		Network:   defaultNetworkConfig(),
 	}
 }
 
@@ -156,6 +157,10 @@ func defaultMemoryConfig(baseline modelbaseline.Manifest) MemoryConfig {
 		VectorEngine:  "sqlite-vec",
 		PrunePolicy:   "lru",
 	}
+}
+
+func defaultNetworkConfig() NetworkConfig {
+	return NetworkConfig{Policy: string(platform.NetworkPolicyAny)}
 }
 
 func defaultAgentConfig() AgentConfig {

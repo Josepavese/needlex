@@ -73,6 +73,7 @@ Current active runtime contract:
 ### 4.1 Acquisition
 - FR-001: il sistema deve supportare fetch HTTP/HTTPS con redirect tracking.
 - FR-002: il sistema deve registrare `final_url`, headers principali, status code e fetch_mode.
+- FR-002b: con `network.policy=public` il sistema deve acquisire solo destinazioni web pubbliche, convalidando tutte le risposte DNS e connettendo l'indirizzo convalidato (anti-rebinding), su HTTP, download, asset, redirect e richieste autonome del browser.
 - FR-003: il sistema deve supportare render adapter attivabile via policy per siti JS-heavy.
 - FR-003b: il render deve consegnare, oltre al DOM, l'evidenza testuale applicativa catturata via browser/CDP (body fetch/XHR, messaggi SSE, frame WebSocket ricevuti), entro budget `render.network_*` espliciti.
 - FR-003c: l'attesa del render deve essere adattiva, guidata dall'attività di rete e limitata da `render.timeout_ms` e dalla deadline dell'operazione; una cattura tagliata o degradata deve essere segnalata (`network_truncated`, `render_degraded`).
@@ -129,15 +130,18 @@ Current active runtime contract:
 - FR-028: CLI deve includere `read`, `query`, `crawl`, `replay`, `diff`, `proof`.
 - FR-029: MCP deve esporre tools equivalenti con schema I/O stabile.
 - FR-030: output deve includere sempre `sources` e `cost_report`.
-- FR-030b: output di `read/query` deve includere `web_ir` come artifact ispezionabile.
+- FR-030b: `web_ir` deve restare ispezionabile tramite modalita' diagnostica esplicita (MCP `include_diagnostics=true`, CLI `--json-mode full`) o artefatti di trace, senza essere duplicato nel payload compatto di default.
 - FR-030c: output default di `read/query/crawl` deve privilegiare un payload compatto agent-facing ottimizzato per navigazione rapida e basso consumo token.
-- FR-030d: payload diagnostici completi devono richiedere una modalita' esplicita, senza sostituire il contratto compatto di default.
+- FR-030d: payload diagnostici completi devono richiedere una modalita' esplicita (`include_diagnostics=true` per MCP, `--json-mode full` per CLI), senza sostituire il contratto compatto di default.
 - FR-030e: il payload compatto default deve essere ordinato per consumo AI-first e includere almeno locator primario, summary, uncertainty sintetica, evidenza minima inline, alternative di selezione quando rilevanti, segnali sintetici e costo.
+- FR-030f: il payload compatto deve esporre `evidence` con `coverage` e `reason` quando l'estrazione consegnata e' insufficiente (`title_only`, `thin`, `none`), alzando `uncertainty`; `analytics.proof_backed` resta provenienza, non adeguatezza della risposta.
 
 ### 4.11 Sicurezza e Guardrail
 - FR-031: enforcement su `max_pages`, `max_depth`, `max_bytes`, `timeout`.
 - FR-032: blocco default di form submit e azioni con side-effect.
 - FR-033: no credential handling automatico senza policy esplicita.
+- FR-033b: la policy `network.policy=public` deve coprire acquisizione HTTP, download e asset, redirect, meta-refresh e richieste autonome del browser; gli endpoint tecnici espliciti (servizio embedding, modelli) restano fuori dalla policy e non sono raggiungibili dalle pagine.
+- FR-033c: un diniego di rete deve essere riconoscibile (`ErrEgressDenied` con codice `unsupported_scheme`, `url_credentials`, `invalid_host` o `non_public_address`) e non deve suggerire un retry attraverso un percorso meno protetto.
 
 ### 4.12 Osservabilita'
 - FR-034: metriche runtime p50/p95/p99 per stage.
@@ -336,26 +340,38 @@ JSON modes:
 ### 9.6 `needle proof`
 `needle proof <chunk_id|proof_id|trace_id> [--json]`
 
+### 9.7 `needle fetch`
+`needle fetch <url> [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N] [--config path]`
+
+Salva i byte HTTP originali (e gli asset CSS/JS collegati con `--assets`) e restituisce percorsi e metadati. La `network.policy` proviene dal config caricato (default o `--config`).
+
 ## 10. MCP Tool Contracts
 ### 10.1 `web_read`
 Input:
 ```json
 {
   "url": "https://...",
-  "profile": "standard",
-  "lane_max": 2
+  "objective": "...",
+  "include_diagnostics": false
 }
 ```
-Output:
+Output (default compatto):
 ```json
 {
-  "document": {},
-  "web_ir": {},
+  "kind": "page_read",
+  "url": "https://...",
+  "summary": "...",
+  "uncertainty": {"level": "low"},
   "chunks": [],
-  "proof_refs": [],
-  "cost_report": {}
+  "signals": {},
+  "web_ir_summary": {},
+  "cost_report": {},
+  "trace_path": "...",
+  "proof_path": "...",
+  "fingerprint_path": "..."
 }
 ```
+Con `include_diagnostics=true` il payload aggiunge `diagnostics: {document, web_ir, result_pack, agent_context}`.
 
 ### 10.2 `web_query`
 Input:
@@ -363,18 +379,24 @@ Input:
 {
   "goal": "...",
   "seed_url": "https://... (optional)",
-  "budget": {"ms": 1200, "tokens": 8000}
+  "include_diagnostics": false
 }
 ```
-Output:
+Output (default compatto):
 ```json
 {
-  "plan": {},
-  "document": {},
-  "web_ir": {},
-  "result_pack": {}
+  "kind": "goal_query",
+  "selected_url": "https://...",
+  "summary": "...",
+  "uncertainty": {"level": "low"},
+  "chunks": [],
+  "signals": {},
+  "trace_path": "...",
+  "proof_path": "...",
+  "fingerprint_path": "..."
 }
 ```
+Con `include_diagnostics=true` il payload aggiunge `diagnostics: {document, web_ir, result_pack, agent_context, plan}`.
 
 ### 10.3 `web_crawl`
 Input:
@@ -386,11 +408,13 @@ Input:
   "same_domain": true
 }
 ```
-Output:
+Output (una sola rappresentazione compatta):
 ```json
 {
+  "kind": "bounded_crawl",
+  "summary": {},
   "documents": [],
-  "summary": {}
+  "stored_runs": 0
 }
 ```
 
@@ -470,6 +494,9 @@ Codici minimi:
 4. No side-effect HTTP methods by default (solo GET/HEAD).
 5. Redaction opzionale di PII nei log.
 6. Storage locale cifrabile opzionale.
+7. Policy opzionale `network.policy=public` per runtime condivisi: solo destinazioni web pubbliche, controllo DNS legato alla connessione effettiva (anti-rebinding), protezione delle richieste autonome del browser tramite proxy loopback filtraggio, diniego tipizzato senza fallback meno protetto.
+8. `network.policy=any` (default) conserva il comportamento storico; gli endpoint tecnici espliciti (embedding, modelli) non sono soggetti alla policy e non sono raggiungibili dalle pagine.
+9. Il diniego di rete è riportato come errore riconoscibile e non viene ritentato attraverso un percorso non protetto.
 
 ## 13. Observability
 Metriche minime:

@@ -173,3 +173,114 @@ func TestCompactSignalsReportDegradedFallback(t *testing.T) {
 		t.Fatalf("expected degraded dom provenance, got %#v", signals)
 	}
 }
+
+func TestDeriveEvidenceCoverageFlagsTitleOnlyExtraction(t *testing.T) {
+	title := "Attention Is All You Need"
+	chunks := []coreservice.AgentChunk{{Text: title, HeadingPath: []string{"Attention Is All You Need"}}}
+
+	evidence := deriveEvidenceCoverage(title, chunks)
+	if evidence == nil || evidence.Coverage != evidenceCoverageTitleOnly {
+		t.Fatalf("expected title_only evidence coverage, got %#v", evidence)
+	}
+	uncertainty := deriveReadUncertainty(chunks, core.WebIR{}, evidence)
+	if uncertainty.Level != "high" {
+		t.Fatalf("expected title-only extraction to raise uncertainty to high, got %#v", uncertainty)
+	}
+	if len(uncertainty.Reasons) == 0 || uncertainty.Reasons[0] != "title_only_extraction" {
+		t.Fatalf("expected title_only_extraction uncertainty reason, got %#v", uncertainty.Reasons)
+	}
+}
+
+func TestDeriveEvidenceCoverageFlagsHeadingOnlyExtraction(t *testing.T) {
+	chunks := []coreservice.AgentChunk{{Text: "References", HeadingPath: []string{"References"}}}
+	evidence := deriveEvidenceCoverage("A Paper", chunks)
+	if evidence == nil || evidence.Coverage != evidenceCoverageTitleOnly {
+		t.Fatalf("expected heading-only extraction to be reported as title_only coverage, got %#v", evidence)
+	}
+}
+
+func TestDeriveEvidenceCoverageFlagsThinExtraction(t *testing.T) {
+	title := "Contact"
+	chunks := []coreservice.AgentChunk{{Text: "Email team@example.com for support or sales.", HeadingPath: []string{"Contact"}}}
+
+	evidence := deriveEvidenceCoverage(title, chunks)
+	if evidence == nil || evidence.Coverage != evidenceCoverageThin {
+		t.Fatalf("expected thin evidence coverage, got %#v", evidence)
+	}
+	uncertainty := deriveReadUncertainty(chunks, core.WebIR{}, evidence)
+	if uncertainty.Level != "medium" {
+		t.Fatalf("expected thin extraction to raise uncertainty to at least medium, got %#v", uncertainty)
+	}
+	if len(uncertainty.Reasons) == 0 || uncertainty.Reasons[0] != "thin_extraction" {
+		t.Fatalf("expected thin_extraction uncertainty reason, got %#v", uncertainty.Reasons)
+	}
+}
+
+func TestDeriveEvidenceCoverageFlagsNoExtraction(t *testing.T) {
+	chunks := []coreservice.AgentChunk{{Text: "   "}, {Text: ""}}
+	if evidence := deriveEvidenceCoverage("Empty", chunks); evidence == nil || evidence.Coverage != evidenceCoverageNone {
+		t.Fatalf("expected none evidence coverage, got %#v", evidence)
+	}
+	if evidence := deriveEvidenceCoverage("Empty", nil); evidence == nil || evidence.Coverage != evidenceCoverageNone {
+		t.Fatalf("expected none evidence coverage without chunks, got %#v", evidence)
+	}
+}
+
+func TestDeriveEvidenceCoverageStaysSilentOnNormalPage(t *testing.T) {
+	title := "SQLite Home Page"
+	chunks := []coreservice.AgentChunk{
+		{
+			Text:        "SQLite is a database engine used across many devices and applications. It is small, fast, self-contained, and reliable for embedded and local workloads.",
+			HeadingPath: []string{"SQLite Home Page"},
+			Confidence:  0.95,
+		},
+		{
+			Text:        "SQLite is made possible in part by sponsors and consortium members. This page was last updated on 2026-03-16 20:07:10Z.",
+			HeadingPath: []string{"Latest Release", "Common Links", "Sponsors"},
+			Confidence:  0.9,
+		},
+	}
+	if evidence := deriveEvidenceCoverage(title, chunks); evidence != nil {
+		t.Fatalf("expected ordinary page to stay free of evidence coverage, got %#v", evidence)
+	}
+	uncertainty := deriveReadUncertainty(chunks, core.WebIR{NodeCount: 5}, nil)
+	if uncertainty.Level != "low" {
+		t.Fatalf("expected ordinary page uncertainty to stay low, got %#v", uncertainty)
+	}
+}
+
+func TestCompactReadResponseEmitsEvidenceForTitleOnlySelection(t *testing.T) {
+	resp := fakeResponse()
+	resp.Document.Title = "Attention Is All You Need"
+	resp.AgentContext.Title = resp.Document.Title
+	resp.AgentContext.Chunks = []coreservice.AgentChunk{{
+		Text:        "Attention Is All You Need",
+		HeadingPath: []string{"Attention Is All You Need"},
+		Confidence:  0.93,
+	}}
+
+	compact := compactReadResponse(resp)
+	if compact.Evidence == nil || compact.Evidence.Coverage != evidenceCoverageTitleOnly {
+		t.Fatalf("expected compact packet to expose title_only evidence, got %#v", compact.Evidence)
+	}
+	if compact.Uncertainty.Level != "high" {
+		t.Fatalf("title-only compact packet must not keep low uncertainty, got %#v", compact.Uncertainty)
+	}
+	if compact.Evidence.Reason == "" {
+		t.Fatal("expected evidence reason to explain limited coverage")
+	}
+}
+
+func TestCompactReadResponseOmitsEvidenceForFullPage(t *testing.T) {
+	resp := fakeResponse()
+	resp.AgentContext.Chunks = []coreservice.AgentChunk{{
+		Text:        "Needle-X compiles agent-selected URLs into compact proof-carrying context. It preserves proof references, trace paths, and analytics metadata for every read. Semantic retrieval ranks evidence before it reaches the agent, so the packet stays small and source-backed.",
+		HeadingPath: []string{"Overview"},
+		Confidence:  0.95,
+	}}
+
+	compact := compactReadResponse(resp)
+	if compact.Evidence != nil {
+		t.Fatalf("expected ordinary compact packet without evidence coverage, got %#v", compact.Evidence)
+	}
+}

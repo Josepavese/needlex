@@ -91,18 +91,34 @@ func (p *browserProcess) Close() error {
 	return p.cleanupErr
 }
 
-func browserArgs(path, profile string) []string {
+func browserArgs(path, profile, proxyURL string) []string {
 	args := []string{}
 	if !IsHeadlessShell(path) {
 		args = append(args, "--headless=new")
 	}
-	return append(args, "--no-sandbox", "--disable-gpu", "--no-first-run",
+	args = append(args, "--no-sandbox", "--disable-gpu", "--no-first-run",
 		"--no-default-browser-check", "--disable-dev-shm-usage",
 		"--disable-background-networking", "--disable-sync", "--hide-scrollbars",
 		"--mute-audio", "--user-data-dir="+profile)
+	return append(browserProxyArgs(proxyURL), args...)
 }
 
-func launchBrowser(ctx context.Context, path string) (BrowserProcess, error) {
+// browserProxyArgs routes every browser request, including autonomous fetches,
+// SSE and WebSocket traffic, through the loopback policy proxy. <-loopback>
+// removes Chromium's implicit loopback bypass so no destination escapes it.
+func browserProxyArgs(proxyURL string) []string {
+	if strings.TrimSpace(proxyURL) == "" {
+		return nil
+	}
+	return []string{
+		"--proxy-server=" + proxyURL,
+		"--proxy-bypass-list=<-loopback>",
+		"--disable-quic",
+		"--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+	}
+}
+
+func launchBrowser(ctx context.Context, path, proxyURL string) (BrowserProcess, error) {
 	path, err := FindBrowserPath(path)
 	if err != nil {
 		return nil, err
@@ -111,7 +127,7 @@ func launchBrowser(ctx context.Context, path string) (BrowserProcess, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create render profile: %w", err)
 	}
-	args := append(browserArgs(path, profile), "--remote-debugging-port=0",
+	args := append(browserArgs(path, profile, proxyURL), "--remote-debugging-port=0",
 		"--remote-debugging-address="+cdpLoopbackHost, "about:blank")
 	cmd := exec.Command(path, args...)
 	cleanup, err := prepareBrowserProcess(cmd)
@@ -155,9 +171,9 @@ func launchBrowser(ctx context.Context, path string) (BrowserProcess, error) {
 
 // BrowserDOMRequest is the degraded dump-DOM transport, not a second CDP path.
 type BrowserDOMRequest struct {
-	Path, URL, UserAgent string
-	MaxBytes             int64
-	VirtualTime          time.Duration
+	Path, URL, UserAgent, ProxyURL string
+	MaxBytes                       int64
+	VirtualTime                    time.Duration
 }
 
 func captureBrowserDOM(ctx context.Context, req BrowserDOMRequest) (data []byte, err error) {
@@ -166,7 +182,7 @@ func captureBrowserDOM(ctx context.Context, req BrowserDOMRequest) (data []byte,
 		return nil, err
 	}
 	defer func() { err = errors.Join(err, os.RemoveAll(profile)) }()
-	args := append(browserArgs(req.Path, profile),
+	args := append(browserArgs(req.Path, profile, req.ProxyURL),
 		"--virtual-time-budget="+strconv.FormatInt(req.VirtualTime.Milliseconds(), 10), "--dump-dom")
 	if req.UserAgent != "" {
 		args = append(args, "--user-agent="+req.UserAgent)

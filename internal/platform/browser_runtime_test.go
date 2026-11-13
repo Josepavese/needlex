@@ -31,13 +31,16 @@ func (p *fakeBrowser) Close() error {
 
 func fakeRuntime(t *testing.T, limits BrowserLimits) (*browserRuntime, *atomic.Int32) {
 	t.Helper()
-	host, err := NewBrowserRuntime(limits)
+	host, err := NewBrowserRuntime(limits, NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}
 	r := host.(*browserRuntime)
 	var starts atomic.Int32
-	r.launch = func(context.Context, string) (BrowserProcess, error) { starts.Add(1); return newFakeBrowser(), nil }
+	r.launch = func(context.Context, string, string) (BrowserProcess, error) {
+		starts.Add(1)
+		return newFakeBrowser(), nil
+	}
 	t.Cleanup(func() {
 		if err := r.Close(); err != nil {
 			t.Error(err)
@@ -137,7 +140,7 @@ func TestBrowserRuntimeIdleCleanupAndCrashRecovery(t *testing.T) {
 func TestBrowserRuntimeCloseCancelsStartupAndRejectsWork(t *testing.T) {
 	r, _ := fakeRuntime(t, BrowserLimits{MaxConcurrency: 1, IdleTimeout: time.Minute, MaxUses: 2})
 	started := make(chan struct{})
-	r.launch = func(ctx context.Context, _ string) (BrowserProcess, error) {
+	r.launch = func(ctx context.Context, _, _ string) (BrowserProcess, error) {
 		close(started)
 		<-ctx.Done()
 		return nil, ctx.Err()

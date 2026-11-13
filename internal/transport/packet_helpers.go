@@ -349,8 +349,8 @@ func isTightPunctuation(r rune) bool {
 	}
 }
 
-func deriveReadUncertainty(chunks []coreservice.AgentChunk, webIR core.WebIR) compactUncertainty {
-	reasons := make([]string, 0, 4)
+func deriveReadUncertainty(chunks []coreservice.AgentChunk, webIR core.WebIR, evidence *compactEvidence) compactUncertainty {
+	reasons := make([]string, 0, 5)
 	for _, reason := range core.WebIRUtilityReasons(webIR) {
 		reasons = discovery.AppendUniqueReason(reasons, reason)
 	}
@@ -370,14 +370,17 @@ func deriveReadUncertainty(chunks []coreservice.AgentChunk, webIR core.WebIR) co
 	if webIR.Signals.EmbeddedNodeCount >= 12 {
 		reasons = append(reasons, "embedded_heavy_surface")
 	}
+	if reason := evidenceUncertaintyReason(evidence); reason != "" {
+		reasons = discovery.AppendUniqueReason([]string{reason}, reasons...)
+	}
 	return compactUncertainty{
-		Level:   uncertaintyLevel(reasons),
+		Level:   evidenceUncertaintyFloor(uncertaintyLevel(reasons), evidence),
 		Reasons: reasons,
 	}
 }
 
-func deriveQueryUncertainty(chunks []coreservice.AgentChunk, candidates []coreservice.AgentCandidate, selectedURL string, webIR core.WebIR) compactUncertainty {
-	reasons := deriveReadUncertainty(chunks, webIR).Reasons
+func deriveQueryUncertainty(chunks []coreservice.AgentChunk, candidates []coreservice.AgentCandidate, selectedURL string, webIR core.WebIR, evidence *compactEvidence) compactUncertainty {
+	reasons := deriveReadUncertainty(chunks, webIR, evidence).Reasons
 	if delta, ok := selectedCandidateDelta(candidates, selectedURL); ok {
 		switch {
 		case delta <= 0.08:
@@ -390,7 +393,7 @@ func deriveQueryUncertainty(chunks []coreservice.AgentChunk, candidates []corese
 		reasons = discovery.AppendUniqueReason(reasons, "single_candidate_path")
 	}
 	return compactUncertainty{
-		Level:   uncertaintyLevel(reasons),
+		Level:   evidenceUncertaintyFloor(uncertaintyLevel(reasons), evidence),
 		Reasons: reasons,
 	}
 }

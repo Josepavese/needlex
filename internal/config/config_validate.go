@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 func (c Config) Validate() error {
@@ -23,11 +25,19 @@ func (c Config) Validate() error {
 	errs = append(errs, validateMemory(c.Memory)...)
 	errs = append(errs, validateAgent(c.Agent)...)
 	errs = append(errs, validateRender(c.Render)...)
+	errs = append(errs, validateNetwork(c.Network)...)
 
 	if len(errs) == 0 {
 		return nil
 	}
 	return errors.Join(errs...)
+}
+
+func validateNetwork(network NetworkConfig) []error {
+	if _, err := platform.ParseNetworkPolicy(network.Policy); err != nil {
+		return []error{err}
+	}
+	return nil
 }
 
 func validateFetch(fetch FetchConfig) []error {

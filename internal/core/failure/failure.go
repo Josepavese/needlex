@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 type Class string
@@ -16,6 +18,9 @@ const (
 	ClassUnsupportedContentType Class = "unsupported_content_type"
 	ClassEmptyCandidates        Class = "empty_candidates"
 	ClassUnavailableUpstream    Class = "unavailable_upstream"
+	// ClassNetworkDenied marks a destination rejected by the configured egress
+	// policy; the run must not be retried through an unprotected transport.
+	ClassNetworkDenied Class = "network_denied"
 )
 
 func (c Class) String() string {
@@ -28,6 +33,9 @@ func (c Class) String() string {
 func Classify(err error) Class {
 	if err == nil {
 		return ClassRuntimeError
+	}
+	if errors.Is(err, platform.ErrEgressDenied) {
+		return ClassNetworkDenied
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		return ClassUpstreamTimeout

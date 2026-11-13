@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "web_crawl",
-      "description": "Traverse linked pages starting from one seed URL.",
+      "description": "Traverse linked pages starting from one seed URL. Returns one compact crawl packet (kind, summary, documents, stored_runs) with no duplicate representations.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [
@@ -65,7 +65,7 @@
     },
     {
       "name": "web_query",
-      "description": "Plan and execute a goal-oriented query from a seed URL. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page. Seedless web_search is experimental, explicit opt-in, and must never be selected automatically.",
+      "description": "Plan and execute a goal-oriented query from a seed URL. Use same_site_links to expand from a seed site, and off only when seed_url is the exact canonical page. Seedless web_search is experimental, explicit opt-in, and must never be selected automatically. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack, agent_context and plan.",
       "input_schema": {
         "additionalProperties": false,
         "anyOf": [
@@ -95,6 +95,11 @@
             "discovery_mode": "off",
             "goal": "Read the verified initialize method page",
             "seed_url": "https://agentclientprotocol.com/protocol/initialization"
+          },
+          {
+            "goal": "Inspect the full compiled packet",
+            "include_diagnostics": true,
+            "seed_url": "https://agentclientprotocol.com/protocol/overview"
           }
         ],
         "properties": {
@@ -114,6 +119,11 @@
           "goal": {
             "description": "Retrieval objective or question to answer.",
             "type": "string"
+          },
+          "include_diagnostics": {
+            "default": false,
+            "description": "When true, structuredContent also carries a nested diagnostics object with the full document, web_ir, result_pack, agent_context and plan. Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
+            "type": "boolean"
           },
           "observe_acquisition": {
             "default": false,
@@ -161,7 +171,7 @@
     },
     {
       "name": "web_read",
-      "description": "Read one known URL and return compact proof-carrying context first. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
+      "description": "Read one known URL and return compact proof-carrying context first. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [
@@ -169,12 +179,22 @@
             "objective": "Extract pricing and policy details",
             "retrieval_effort": "standard",
             "url": "https://example.com"
+          },
+          {
+            "include_diagnostics": true,
+            "objective": "Inspect the full compiled packet",
+            "url": "https://example.com"
           }
         ],
         "properties": {
           "assertion": {
             "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
             "type": "string"
+          },
+          "include_diagnostics": {
+            "default": false,
+            "description": "When true, structuredContent also carries a nested diagnostics object with the full document, web_ir, result_pack and agent_context. Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
+            "type": "boolean"
           },
           "objective": {
             "type": "string"

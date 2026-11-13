@@ -64,7 +64,7 @@ func New(cfg config.Config, client *http.Client) (*Service, error) {
 }
 
 func NewWithStateRoot(cfg config.Config, client *http.Client, storeRoot string) (*Service, error) {
-	return NewWithRenderer(cfg, client, storeRoot, rendering.New(cfg.Render))
+	return NewWithRenderer(cfg, client, storeRoot, rendering.New(cfg.Render, cfg.EgressPolicy()))
 }
 
 // NewWithRenderer borrows a renderer whose lifetime belongs to the caller.
@@ -78,10 +78,17 @@ func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, r
 	}
 	cacheDir := platform.NewStateLayout(cleanRoot).EmbeddingCacheDir
 	observer := intel.NewDecisionObserver(cfg.Decision, client, intel.NewSemanticAlignerWithCacheDir(cfg, client, cacheDir))
+	// Only web acquisition is subject to the network policy; technical endpoints
+	// (embedding/model clients) keep the caller-provided client unchanged.
+	egress := platform.NewEgress(cfg.EgressPolicy())
+	acquisitionClient := client
+	if egress != nil {
+		acquisitionClient = egress.HTTPClient(client)
+	}
 	return &Service{
 		cfg:        cfg,
 		httpClient: client,
-		acquirer:   pipeline.Acquirer{Client: client},
+		acquirer:   pipeline.Acquirer{Client: acquisitionClient, Egress: egress},
 		reducer:    pipeline.Reducer{},
 		segmenter:  pipeline.Segmenter{},
 		renderer:   renderer,

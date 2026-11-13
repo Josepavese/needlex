@@ -22,12 +22,13 @@ type managedRenderer struct{ chromiumRenderer }
 func (r *managedRenderer) Close() error { return r.browser.Close() }
 
 type oneShotRenderer struct {
-	cfg   config.RenderConfig
-	slots chan struct{}
+	cfg    config.RenderConfig
+	policy platform.NetworkPolicy
+	slots  chan struct{}
 }
 
 func (r oneShotRenderer) Render(ctx context.Context, req Request) (page Page, err error) {
-	runtime, err := NewRuntime(r.cfg)
+	runtime, err := NewRuntime(r.cfg, r.policy)
 	if err != nil {
 		return Page{}, err
 	}
@@ -41,7 +42,7 @@ func (r oneShotRenderer) Render(ctx context.Context, req Request) (page Page, er
 	return runtime.Render(ctx, req)
 }
 
-func New(cfg config.RenderConfig) Renderer {
+func New(cfg config.RenderConfig, policy platform.NetworkPolicy) Renderer {
 	if !cfg.Enabled {
 		return NoopRenderer{}
 	}
@@ -49,10 +50,10 @@ func New(cfg config.RenderConfig) Renderer {
 	if cfg.MaxConcurrency > 0 {
 		slots = make(chan struct{}, cfg.MaxConcurrency)
 	}
-	return oneShotRenderer{cfg: cfg, slots: slots}
+	return oneShotRenderer{cfg: cfg, policy: policy, slots: slots}
 }
 
-func NewRuntime(cfg config.RenderConfig) (Runtime, error) {
+func NewRuntime(cfg config.RenderConfig, policy platform.NetworkPolicy) (Runtime, error) {
 	if !cfg.Enabled {
 		return disabledRuntime{}, nil
 	}
@@ -63,11 +64,11 @@ func NewRuntime(cfg config.RenderConfig) (Runtime, error) {
 		MaxConcurrency: cfg.MaxConcurrency,
 		IdleTimeout:    time.Duration(cfg.BrowserIdleTimeoutMS) * time.Millisecond,
 		MaxUses:        cfg.BrowserMaxUses,
-	})
+	}, policy)
 	if err != nil {
 		return nil, err
 	}
-	return &managedRenderer{chromiumRenderer{browser: host, cfg: cfg}}, nil
+	return &managedRenderer{chromiumRenderer{browser: host, cfg: cfg, egress: platform.NewEgress(policy)}}, nil
 }
 
 type disabledRuntime struct{ NoopRenderer }

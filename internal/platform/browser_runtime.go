@@ -43,7 +43,7 @@ var ErrBrowserRuntimeClosed = errors.New("browser runtime is closed")
 type browserRuntime struct {
 	mu       sync.Mutex
 	limits   BrowserLimits
-	launch   func(context.Context, string) (BrowserProcess, error)
+	launch   func(context.Context, string, string) (BrowserProcess, error)
 	ctx      context.Context
 	cancel   context.CancelFunc
 	changed  chan struct{}
@@ -56,16 +56,29 @@ type browserRuntime struct {
 	closed   bool
 	idle     *time.Timer
 	err      error
+	proxy    *egressProxy
+	proxyURL string
 }
 
 func (r *browserRuntime) Context() context.Context { return r.ctx }
 
-func NewBrowserRuntime(limits BrowserLimits) (BrowserRuntime, error) {
+// NewBrowserRuntime owns the browser process and, for NetworkPolicyPublic, the
+// loopback egress proxy that filters every autonomous browser request.
+func NewBrowserRuntime(limits BrowserLimits, policy NetworkPolicy) (BrowserRuntime, error) {
 	if limits.MaxConcurrency <= 0 || limits.IdleTimeout <= 0 || limits.MaxUses <= 0 {
 		return nil, errors.New("browser concurrency, idle timeout and maximum uses must be positive")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &browserRuntime{limits: limits, launch: launchBrowser, ctx: ctx, cancel: cancel, changed: make(chan struct{})}, nil
+	runtime := &browserRuntime{limits: limits, launch: launchBrowser, ctx: ctx, cancel: cancel, changed: make(chan struct{})}
+	if policy == NetworkPolicyPublic {
+		proxy, err := startEgressProxy(NewEgress(policy))
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		runtime.proxy, runtime.proxyURL = proxy, proxy.url()
+	}
+	return runtime, nil
 }
 
 func (r *browserRuntime) notify() { close(r.changed); r.changed = make(chan struct{}) }
@@ -107,7 +120,7 @@ func (r *browserRuntime) Acquire(ctx context.Context, path string) (BrowserLease
 				r.mu.Unlock()
 				startup, cancel := context.WithCancel(ctx)
 				stop := context.AfterFunc(r.ctx, cancel)
-				p, err := r.launch(startup, path)
+				p, err := r.launch(startup, path, r.proxyURL)
 				stop()
 				cancel()
 				r.mu.Lock()
@@ -193,6 +206,9 @@ func (r *browserRuntime) Close() error {
 	p := r.detach()
 	r.mu.Unlock()
 	_ = r.finishRetirement(p)
+	if r.proxy != nil {
+		_ = r.proxy.Close()
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.err
@@ -222,6 +238,7 @@ func (r *browserRuntime) CaptureDOM(ctx context.Context, req BrowserDOMRequest) 
 			stop := context.AfterFunc(r.ctx, cancel)
 			var data []byte
 			if err == nil {
+				req.ProxyURL = r.proxyURL
 				data, err = captureBrowserDOM(operation, req)
 			}
 			stop()

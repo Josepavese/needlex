@@ -13,29 +13,30 @@ import (
 type renderRuntime struct {
 	mu      sync.Mutex
 	config  config.RenderConfig
+	policy  platform.NetworkPolicy
 	runtime rendering.Runtime
-	new     func(config.RenderConfig) (rendering.Runtime, error)
+	new     func(config.RenderConfig, platform.NetworkPolicy) (rendering.Runtime, error)
 	closed  bool
 }
 
-func (r *renderRuntime) get(cfg config.RenderConfig) (rendering.Renderer, error) {
+func (r *renderRuntime) get(cfg config.RenderConfig, policy platform.NetworkPolicy) (rendering.Renderer, error) {
 	r.mu.Lock()
 	if r.closed {
 		r.mu.Unlock()
 		return nil, platform.ErrBrowserRuntimeClosed
 	}
-	if r.runtime != nil && r.config == cfg {
+	if r.runtime != nil && r.config == cfg && r.policy == policy {
 		out := r.runtime
 		r.mu.Unlock()
 		return out, nil
 	}
-	next, err := r.new(cfg)
+	next, err := r.new(cfg, policy)
 	if err != nil {
 		r.mu.Unlock()
 		return nil, err
 	}
 	previous := r.runtime
-	r.runtime, r.config = next, cfg
+	r.runtime, r.config, r.policy = next, cfg, policy
 	r.mu.Unlock()
 	if previous != nil {
 		if err := previous.Close(); err != nil {

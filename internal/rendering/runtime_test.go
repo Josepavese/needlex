@@ -44,7 +44,7 @@ func TestRuntimeIsolatesStorageAndDisposesContexts(t *testing.T) {
 	cfg := config.DefaultRenderConfig()
 	cfg.BrowserPath = browser
 	cfg.NetworkIdleMS = 500
-	runtime, err := NewRuntime(cfg)
+	runtime, err := NewRuntime(cfg, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestRuntimeCancellationAndCloseCannotLaunchFallback(t *testing.T) {
 	cfg := config.DefaultRenderConfig()
 	cfg.BrowserPath = browser
 	cfg.NetworkIdleMS = 100
-	r, err := NewRuntime(cfg)
+	r, err := NewRuntime(cfg, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestRuntimeAppliesConfiguredUseAndIdleBudgets(t *testing.T) {
 	cfg.BrowserMaxUses = 2
 	cfg.BrowserIdleTimeoutMS = 150
 	cfg.NetworkIdleMS = 50
-	runtime, err := NewRuntime(cfg)
+	runtime, err := NewRuntime(cfg, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestRuntimeAppliesConfiguredUseAndIdleBudgets(t *testing.T) {
 func TestOneShotRendererKeepsServiceConcurrencyLimit(t *testing.T) {
 	cfg := config.DefaultRenderConfig()
 	cfg.MaxConcurrency = 1
-	renderer := New(cfg).(oneShotRenderer)
+	renderer := New(cfg, platform.NetworkPolicyAny).(oneShotRenderer)
 	renderer.slots <- struct{}{}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()

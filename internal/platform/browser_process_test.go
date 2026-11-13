@@ -42,7 +42,7 @@ func TestNativeBrowserCrashRecoveryAndProfileCleanup(t *testing.T) {
 	if probeErr != nil || !strings.Contains(string(probe), "Needle-X browser capability probe") {
 		t.Skipf("browser installed but unavailable for native qualification: %s: %v", path, probeErr)
 	}
-	host, err := NewBrowserRuntime(BrowserLimits{MaxConcurrency: 1, IdleTimeout: time.Minute, MaxUses: 10})
+	host, err := NewBrowserRuntime(BrowserLimits{MaxConcurrency: 1, IdleTimeout: time.Minute, MaxUses: 10}, NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
 	}

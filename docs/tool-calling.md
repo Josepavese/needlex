@@ -70,6 +70,7 @@ If you wire Needle-X into an AI tool-calling stack:
 6. keep `web_prune` as an operator tool, not a model-default tool; use `embedding_cache=true` only for explicit PAL embedding cache maintenance
 7. use `memory` only for advanced local semantic memory inspection or maintenance
 8. use `analytics` only for diagnostics, value reporting, or maintainer rollups
+9. use `include_diagnostics=true` only when the compact packet is insufficient; it is the explicit path to `document`, `web_ir`, `result_pack`, `agent_context`, and `plan`
 
 Use `web_fetch` for exact HTTP body bytes and optional linked CSS and JavaScript. It returns local file paths. [Raw download contract](wiki/MCP-And-Tool-Calling.md#raw-downloads)
 
@@ -193,10 +194,34 @@ This remains the best standard integration surface for Needle-X itself.
 ## Compact-first MCP Rule
 
 For MCP agent-facing calls:
-1. `content.text` should expose the compact packet first
-2. `structuredContent` should retain the richer diagnostic envelope
-3. agents should read the compact packet first and open diagnostics only when needed
-4. for dynamic pages, read `signals.content_source` before concluding that the page has no more data
+1. `content.text` exposes the compact packet first
+2. `structuredContent` is the same compact packet by default, plus only the
+   `trace_path`, `proof_path`, and `fingerprint_path` provenance references
+3. full diagnostics are explicit opt-in: pass `include_diagnostics: true` to
+   `web_read` or `web_query` to receive a nested `diagnostics` object with
+   `document`, `web_ir`, `result_pack`, `agent_context` (and `plan` for
+   `web_query`); the default response never duplicates those payloads
+4. `web_crawl` returns one compact crawl shape (`kind`, `summary`, `documents`,
+   `stored_runs`) without a second copy under a `compact` key
+5. agents should read the compact packet first and open diagnostics only when needed
+6. for dynamic pages, read `signals.content_source` before concluding that the page has no more data
+
+### Evidence Coverage
+
+The compact packet reports limited extraction instead of implying adequacy:
+
+1. `evidence` appears only when the delivered evidence is insufficient:
+   `{"coverage":"title_only"|"thin"|"none","reason":"..."}`
+2. `title_only` means the selected chunks carry only page title or heading text
+3. `thin` means the delivered body text is shorter than a sentence or two
+4. `none` means no usable body text was extracted
+5. limited coverage also adds an uncertainty reason (`title_only_extraction`,
+   `thin_extraction`, or `no_extraction`) and raises `uncertainty.level`
+6. the field is absent on ordinary pages, so its presence is a signal
+
+`analytics.proof_backed` only says proof references exist for the delivered
+chunks. It is provenance, not answer adequacy: a title-only packet can still be
+proof-backed. Trust `evidence` and `uncertainty` for coverage.
 
 Tool expansion rule:
 1. do not add narrower tools like `web_extract` until repeated agent misuse shows that `web_read` and `web_query` cannot be made clear enough

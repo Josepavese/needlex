@@ -133,6 +133,7 @@ func (c *Config) applyStringEnv(env map[string]string) {
 		{"NEEDLEX_MEMORY_PRUNE_POLICY", &c.Memory.PrunePolicy},
 		{"NEEDLEX_RENDER_PROVIDER", &c.Render.Provider},
 		{"NEEDLEX_RENDER_BROWSER_PATH", &c.Render.BrowserPath},
+		{"NEEDLEX_NETWORK_POLICY", &c.Network.Policy},
 	})
 }
 

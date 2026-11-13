@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/josepavese/needlex/internal/config"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/platform"
 )
 
 const (
-	downloadUsage = "needlex fetch <url> [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N]"
+	downloadUsage = "needlex fetch <url> [--config path] [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N]"
 	webFetchTool  = "web_fetch"
 )
 
@@ -24,7 +25,8 @@ func (r Runner) runFetch(args []string, stdout, stderr io.Writer) int {
 		fs.PrintDefaults()
 	}
 	var request pipeline.DownloadRequest
-	var destination string
+	var destination, configPath string
+	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	fs.StringVar(&destination, "out-dir", "", "new output directory (default: a new directory under NEEDLEX_HOME/downloads)")
 	fs.BoolVar(&request.Assets, "assets", false, "also download linked HTML stylesheets and scripts")
 	fs.Func("asset-origin", "allow an additional asset origin; repeat for multiple origins", func(origin string) error {
@@ -46,7 +48,12 @@ func (r Runner) runFetch(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "fetch: --max-bytes must be positive")
 		return 2
 	}
+	cfg, ok := r.loadConfigOrExit(configPath, stderr)
+	if !ok {
+		return 1
+	}
 	request.URL = fs.Arg(0)
+	request.Egress = platform.NewEgress(cfg.EgressPolicy())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stop := platform.WatchShutdown(cancel)
@@ -90,9 +97,14 @@ func (r Runner) callMCPFetchTool(args map[string]any) (map[string]any, error) {
 			return nil, errors.New("max_bytes must be a positive integer")
 		}
 	}
+	cfg, err := config.Load("")
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
 	result, err := r.download(pipeline.DownloadRequest{
 		URL: stringArg(args, "url"), Assets: boolArg(args, "assets"),
 		AssetOrigins: origins, MaxBytes: int64(maxBytes),
+		Egress: platform.NewEgress(cfg.EgressPolicy()),
 	}, "")
 	if err != nil {
 		return nil, err

@@ -20,7 +20,7 @@ func TestBrowserStartupUsesAnnouncementWithoutSharedPortFile(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	process, err := launchBrowser(ctx, path)
+	process, err := launchBrowser(ctx, path, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -79,10 +79,16 @@ func (NoopRenderer) Render(context.Context, Request) (Page, error) {
 type chromiumRenderer struct {
 	browser platform.BrowserRuntime
 	cfg     config.RenderConfig
+	// egress validates the render URL before the browser is launched; autonomous
+	// browser requests are filtered by the runtime's loopback proxy.
+	egress *platform.Egress
 }
 
 func (r chromiumRenderer) Render(ctx context.Context, req Request) (page Page, err error) {
 	req = r.resolveRequest(req)
+	if err := r.egress.ValidateRenderURL(ctx, req.URL); err != nil {
+		return Page{}, err
+	}
 	ctx, cancel := context.WithTimeout(ctx, req.Timeout)
 	defer cancel()
 	stop := context.AfterFunc(r.browser.Context(), cancel)
