@@ -81,11 +81,14 @@ jobs:
             BIN="needlex.exe"
           fi
           GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" go build -ldflags "-X github.com/josepavese/needlex/internal/platform/buildinfo.Version=${VERSION}" -o "work/${BIN}" ./cmd/needle
+          cp LICENSE THIRD_PARTY_NOTICES.txt work/
           BASE="needlex_${{ matrix.goos }}_${{ matrix.goarch }}"
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
-            (cd work && zip -q "../dist/${BASE}.zip" "${BIN}")
+            (cd work && zip -q "../dist/${BASE}.zip" "${BIN}" LICENSE THIRD_PARTY_NOTICES.txt)
+            bash scripts/release/check_archive_licenses.sh "dist/${BASE}.zip"
           else
-            tar -C work -czf "dist/${BASE}.tar.gz" "${BIN}"
+            tar -C work -czf "dist/${BASE}.tar.gz" "${BIN}" LICENSE THIRD_PARTY_NOTICES.txt
+            bash scripts/release/check_archive_licenses.sh "dist/${BASE}.tar.gz"
           fi
 
       - uses: actions/upload-artifact@v6
@@ -105,6 +108,20 @@ jobs:
           path: dist
           pattern: needlex_*
           merge-multiple: true
+
+      - name: Verify license material
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(dist/*.tar.gz dist/*.zip)
+          if [[ "${#archives[@]}" -eq 0 ]]; then
+            echo "no release archives found" >&2
+            exit 1
+          fi
+          for archive in "${archives[@]}"; do
+            bash scripts/release/check_archive_licenses.sh "${archive}"
+          done
 
       - name: Publish release assets
         env:

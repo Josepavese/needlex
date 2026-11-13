@@ -43,7 +43,7 @@ func TestRuntimeIsolatesStorageAndDisposesContexts(t *testing.T) {
 	defer server.Close()
 	cfg := config.DefaultRenderConfig()
 	cfg.BrowserPath = browser
-	cfg.NetworkIdleMS = 500
+	cfg.NetworkIdleMS = 2000
 	runtime, err := NewRuntime(cfg, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)

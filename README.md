@@ -94,3 +94,9 @@ The installer sets up the local embedding runtime and headless browser. Run `nee
 ## Evaluation
 
 The October 2026 installed-MCP baseline on v0.1.43 returned nonempty packets with mapped proofs for **818 of 1,000 selected public URLs**. Of those, **762** had complete capture by the run’s diagnostics. A separate 60-question panel measured retention of source markers. The report records the sample, failures and limits of each measurement. [Public-web assessment](docs/popular-web-assessment.md) · [Benchmark protocols and reproduction](benchmarks/README.md)
+
+## License
+
+Needle-X is released under the MIT License (see [LICENSE](LICENSE)); copyright (c) 2026 Josè Pavese. The declaration covers this repository and native release artifacts from **v0.1.47 onward**. Every native archive ships `LICENSE` and `THIRD_PARTY_NOTICES.txt` with the binary, and release builds reject an archive that is missing them. Earlier tags through v0.1.46 were published without license material and should not be redistributed.
+
+The binary links third-party Go modules under MIT, BSD, Apache-2.0 and ISC-compatible terms; their notices are reproduced in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). Redistributors must preserve both files and comply with the included terms. No trademark rights are granted. [Licensing and redistribution](docs/licensing.md)

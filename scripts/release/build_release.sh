@@ -33,6 +33,15 @@ verify_skill_version() {
 
 verify_skill_version
 
+# Native archives must carry the project license and the third-party notices.
+# A release without them is not redistributable, so the build fails instead.
+for required in LICENSE THIRD_PARTY_NOTICES.txt; do
+  if [[ ! -s "${REPO_ROOT}/${required}" ]]; then
+    echo "release material missing: ${REPO_ROOT}/${required}" >&2
+    exit 1
+  fi
+done
+
 build_one() {
   local goos="$1"
   local goarch="$2"
@@ -46,14 +55,17 @@ build_one() {
   fi
 
   GOOS="${goos}" GOARCH="${goarch}" go build -ldflags "-X github.com/josepavese/needlex/internal/platform/buildinfo.Version=${VERSION}" -o "${work_dir}/${bin_name}" ./cmd/needle
+  cp "${REPO_ROOT}/LICENSE" "${REPO_ROOT}/THIRD_PARTY_NOTICES.txt" "${work_dir}/"
 
   if [[ "${goos}" == "windows" ]]; then
     (
       cd "${work_dir}"
-      zip -q "${OUT_DIR}/${archive_name}.zip" "${bin_name}"
+      zip -q "${OUT_DIR}/${archive_name}.zip" "${bin_name}" LICENSE THIRD_PARTY_NOTICES.txt
     )
+    bash "${REPO_ROOT}/scripts/release/check_archive_licenses.sh" "${OUT_DIR}/${archive_name}.zip"
   else
-    tar -C "${work_dir}" -czf "${OUT_DIR}/${archive_name}.tar.gz" "${bin_name}"
+    tar -C "${work_dir}" -czf "${OUT_DIR}/${archive_name}.tar.gz" "${bin_name}" LICENSE THIRD_PARTY_NOTICES.txt
+    bash "${REPO_ROOT}/scripts/release/check_archive_licenses.sh" "${OUT_DIR}/${archive_name}.tar.gz"
   fi
 
   rm -rf "${work_dir}"
