@@ -5,10 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/josepavese/needlex/internal/pipeline"
 )
 
 func TestSchemaFilesContainValidJSON(t *testing.T) {
 	files := []string{
+		"needlex-fetch-receipt.v1.json",
 		"needlex-tools.anthropic.json",
 		"needlex-tools.openai.json",
 		"proof.schema.json",
@@ -31,5 +34,31 @@ func TestSchemaFilesContainValidJSON(t *testing.T) {
 				t.Fatalf("invalid json: %v", err)
 			}
 		})
+	}
+}
+
+func TestFetchReceiptSchemaDeclaresCurrentContract(t *testing.T) {
+	data, err := os.ReadFile("needlex-fetch-receipt.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Required   []string                  `json:"required"`
+		Properties map[string]map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if schema.Properties["schema"]["const"] != pipeline.DownloadReceiptSchemaV1 {
+		t.Fatalf("schema const = %v, want %q", schema.Properties["schema"]["const"], pipeline.DownloadReceiptSchemaV1)
+	}
+	required := map[string]bool{}
+	for _, name := range schema.Required {
+		required[name] = true
+	}
+	for _, name := range []string{"schema", "directory", "primary"} {
+		if !required[name] {
+			t.Fatalf("schema does not require %q", name)
+		}
 	}
 }

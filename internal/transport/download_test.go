@@ -3,10 +3,13 @@ package transport
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -68,6 +71,7 @@ func TestFetchCLIOriginalHTMLAndLinkedAssets(t *testing.T) {
 	}
 	assertDownloadedBytes(t, result.Primary, []byte(page))
 	assertDownloadedBytes(t, result.Assets[0], []byte(css))
+	assertDownloadModes(t, result.Directory, result.Primary.Path)
 	result = runFetchTestCLI(t, r, site.URL+"/entry", "--assets", "--asset-origin", cdn.URL)
 	if len(result.Assets) != 2 || len(result.SkippedAssetOrigins) != 0 || cdnRequests.Load() != 1 {
 		t.Fatalf("unexpected allowlisted result: %+v (CDN requests: %d)", result, cdnRequests.Load())
@@ -103,10 +107,83 @@ func TestFetchMCPPreservesBinaryAndContentEncoding(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := response.Result.StructuredContent.Download
-	if result.Primary.ContentEncoding != "gzip" || result.Primary.ContentType != "application/octet-stream" {
+	digest := sha256.Sum256(binary)
+	if result.Schema != pipeline.DownloadReceiptSchemaV1 || result.Primary.ContentEncoding != "gzip" ||
+		result.Primary.ContentType != "application/octet-stream" || result.Primary.SHA256 != hex.EncodeToString(digest[:]) {
 		t.Fatalf("unexpected MCP result: %s", &stdout)
 	}
 	assertDownloadedBytes(t, result.Primary, binary)
+}
+
+func TestFetchReceiptErrorCodes(t *testing.T) {
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/missing" {
+			http.NotFound(w, req)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = io.WriteString(w, "hello")
+	}))
+	defer site.Close()
+	existingFile := filepath.Join(t.TempDir(), "exists")
+	if err := os.WriteFile(existingFile, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name     string
+		args     func(out string) []string
+		wantCode string
+	}{
+		{"invalid URL", func(out string) []string {
+			return []string{"fetch", "http://user:secret@127.0.0.1:9/file", "--out-dir", out}
+		}, "invalid_url"},
+		{"invalid asset origin", func(out string) []string {
+			return []string{"fetch", site.URL, "--asset-origin", "https://cdn.example.com", "--out-dir", out}
+		}, "invalid_arguments"},
+		{"http status", func(out string) []string {
+			return []string{"fetch", site.URL + "/missing", "--out-dir", out}
+		}, "http_status"},
+		{"assets need HTML", func(out string) []string {
+			return []string{"fetch", site.URL, "--assets", "--out-dir", out}
+		}, "assets_unsupported"},
+		{"existing output", func(string) []string {
+			return []string{"fetch", site.URL, "--out-dir", existingFile}
+		}, "output_directory"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := NewRunner()
+			runner.storeRoot = t.TempDir()
+			var stdout, stderr bytes.Buffer
+			out := filepath.Join(t.TempDir(), "out")
+			if code := runner.Run(tc.args(out), &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "code="+tc.wantCode) {
+				t.Fatalf("code=%d stdout=%s stderr=%s, want code=%s", code, &stdout, &stderr, tc.wantCode)
+			}
+		})
+	}
+}
+
+func TestFetchDeniesIPv4MappedLoopback(t *testing.T) {
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("mapped loopback fetch reached the server")
+	}))
+	defer site.Close()
+
+	runner := NewRunner()
+	runner.storeRoot = t.TempDir()
+	var stdout, stderr bytes.Buffer
+	code := runner.Run([]string{"fetch", "--config", publicPolicyConfig(t), site.URL + "/file"}, &stdout, &stderr)
+	if code != 1 || !strings.Contains(stderr.String(), "code=network_denied") {
+		t.Fatalf("code=%d stdout=%s stderr=%s", code, &stdout, &stderr)
+	}
+
+	port := site.Listener.Addr().(*net.TCPAddr).Port
+	code = runner.Run([]string{"fetch", "--config", publicPolicyConfig(t), fmt.Sprintf("http://[::ffff:127.0.0.1]:%d/file", port)}, &stdout, &stderr)
+	if code != 1 || !strings.Contains(stderr.String(), "code=network_denied") {
+		t.Fatalf("mapped code=%d stdout=%s stderr=%s", code, &stdout, &stderr)
+	}
 }
 
 func TestFetchRollsBackIncompleteBundle(t *testing.T) {
@@ -131,16 +208,17 @@ func TestFetchRollsBackIncompleteBundle(t *testing.T) {
 	r := NewRunner()
 	r.storeRoot = t.TempDir()
 	for _, tc := range []struct {
-		args []string
-		want string
+		args     []string
+		want     string
+		wantCode string
 	}{
-		{[]string{site.URL, "--assets"}, "asset redirect leaves the allowed origins"},
-		{[]string{site.URL + "/chunked", "--max-bytes", "3"}, "download exceeds total byte limit"},
+		{[]string{site.URL, "--assets"}, "asset redirect leaves the allowed origins", "invalid_url"},
+		{[]string{site.URL + "/chunked", "--max-bytes", "3"}, "download exceeds total byte limit", "max_bytes_exceeded"},
 	} {
 		out := filepath.Join(t.TempDir(), "incomplete")
 		var stdout, stderr bytes.Buffer
 		args := append([]string{"fetch", "--out-dir", out}, tc.args...)
-		if code := r.Run(args, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), tc.want) {
+		if code := r.Run(args, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), tc.want) || !strings.Contains(stderr.String(), "code="+tc.wantCode) {
 			t.Fatalf("code=%d stdout=%s stderr=%s", code, &stdout, &stderr)
 		}
 		if _, err := os.Stat(out); !os.IsNotExist(err) {
@@ -150,7 +228,7 @@ func TestFetchRollsBackIncompleteBundle(t *testing.T) {
 
 	existing := t.TempDir()
 	var stdout, stderr bytes.Buffer
-	if code := r.Run([]string{"fetch", site.URL, "--out-dir", existing}, &stdout, &stderr); code != 1 {
+	if code := r.Run([]string{"fetch", site.URL, "--out-dir", existing}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "code=output_directory") {
 		t.Fatalf("accepted existing directory: code=%d stderr=%s", code, &stderr)
 	}
 	if _, err := os.Stat(existing); err != nil {
@@ -191,13 +269,29 @@ func runFetchTestCLI(t *testing.T, r Runner, args ...string) pipeline.DownloadRe
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
+	if result.Schema != pipeline.DownloadReceiptSchemaV1 {
+		t.Fatalf("receipt schema = %q, want %q", result.Schema, pipeline.DownloadReceiptSchemaV1)
+	}
 	return result
 }
 
 func assertDownloadedBytes(t *testing.T, file pipeline.DownloadFile, want []byte) {
 	t.Helper()
 	got, err := os.ReadFile(file.Path)
-	if err != nil || !bytes.Equal(got, want) || file.Bytes != int64(len(want)) {
-		t.Fatalf("downloaded %q: bytes=%q size=%d want=%q err=%v", file.Path, got, file.Bytes, want, err)
+	digest := sha256.Sum256(want)
+	if err != nil || !bytes.Equal(got, want) || file.Bytes != int64(len(want)) || file.SHA256 != hex.EncodeToString(digest[:]) {
+		t.Fatalf("downloaded %q: bytes=%q size=%d sha256=%q want=%q digest=%x err=%v", file.Path, got, file.Bytes, file.SHA256, want, digest, err)
+	}
+}
+
+func assertDownloadModes(t *testing.T, directory, file string) {
+	t.Helper()
+	dirInfo, err := os.Stat(directory)
+	if err != nil || dirInfo.Mode().Perm() != 0o700 {
+		t.Fatalf("download directory mode = %v err=%v, want 0700", dirInfo, err)
+	}
+	fileInfo, err := os.Stat(file)
+	if err != nil || fileInfo.Mode().Perm() != 0o600 {
+		t.Fatalf("download file mode = %v err=%v, want 0600", fileInfo, err)
 	}
 }

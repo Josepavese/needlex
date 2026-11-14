@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://josepavese.github.io/needlex/schemas/needlex-fetch-receipt.v1.json",
+  "title": "NeedleXFetchReceiptV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "directory",
+    "primary"
+  ],
+  "properties": {
+    "schema": {
+      "const": "needlex.fetch.receipt.v1"
+    },
+    "directory": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primary": {
+      "$ref": "#/$defs/file"
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "skipped_asset_origins": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "final_url",
+        "path",
+        "bytes",
+        "status",
+        "sha256"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "final_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "content_encoding": {
+          "type": "string"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 200,
+          "maximum": 299
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

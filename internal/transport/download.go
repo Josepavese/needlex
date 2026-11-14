@@ -61,7 +61,7 @@ func (r Runner) runFetch(args []string, stdout, stderr io.Writer) int {
 	r.operationContext = ctx
 	result, err := r.download(request, destination)
 	if err != nil {
-		fmt.Fprintf(stderr, "fetch: %v\n", err)
+		fmt.Fprintf(stderr, "fetch: code=%s error=%v\n", pipeline.DownloadErrorCode(err), err)
 		return 1
 	}
 	return r.writeJSON(stdout, stderr, "fetch", result)
@@ -107,7 +107,7 @@ func (r Runner) callMCPFetchTool(args map[string]any) (map[string]any, error) {
 		Egress: platform.NewEgress(cfg.EgressPolicy()),
 	}, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetch failed: code=%s: %w", pipeline.DownloadErrorCode(err), err)
 	}
 	payload := map[string]any{"kind": "raw_download", "download": result}
 	return mcpToolResult(payload, nil), nil

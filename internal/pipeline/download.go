@@ -38,13 +38,62 @@ type DownloadFile struct {
 	ContentEncoding string `json:"content_encoding,omitempty"`
 	Bytes           int64  `json:"bytes"`
 	Status          int    `json:"status"`
+	SHA256          string `json:"sha256"`
 }
 
 type DownloadResult struct {
+	Schema              string         `json:"schema"`
 	Directory           string         `json:"directory"`
 	Primary             DownloadFile   `json:"primary"`
 	Assets              []DownloadFile `json:"assets,omitempty"`
 	SkippedAssetOrigins []string       `json:"skipped_asset_origins,omitempty"`
+}
+
+// DownloadReceiptSchemaV1 identifies the stable fetch receipt contract. An
+// adapter can use the closed set of fields documented in docs/wiki/CLI.md.
+const DownloadReceiptSchemaV1 = "needlex.fetch.receipt.v1"
+
+// Stable public error codes for fetch failures.
+const (
+	DownloadErrorInvalidURL        = "invalid_url"
+	DownloadErrorInvalidArguments  = "invalid_arguments"
+	DownloadErrorNetworkDenied     = "network_denied"
+	DownloadErrorOutputDirectory   = "output_directory"
+	DownloadErrorMaxBytesExceeded  = "max_bytes_exceeded"
+	DownloadErrorHTTPStatus        = "http_status"
+	DownloadErrorAssetsUnsupported = "assets_unsupported"
+	DownloadErrorCancelled         = "cancelled"
+	DownloadErrorTimeout           = "timeout"
+	DownloadErrorDownloadFailed    = "download_failed"
+)
+
+// DownloadError carries a stable code for a failed fetch.
+type DownloadError struct {
+	Code string
+	Err  error
+}
+
+func (e *DownloadError) Error() string { return e.Err.Error() }
+func (e *DownloadError) Unwrap() error { return e.Err }
+
+// DownloadErrorCode classifies a fetch failure for CLI and MCP consumers.
+func DownloadErrorCode(err error) string {
+	var downloadErr *DownloadError
+	if errors.As(err, &downloadErr) {
+		return downloadErr.Code
+	}
+	if platform.IsEgressDenied(err) {
+		return DownloadErrorNetworkDenied
+	}
+	switch {
+	case errors.Is(err, platform.ErrDownloadLimit):
+		return DownloadErrorMaxBytesExceeded
+	case errors.Is(err, context.Canceled):
+		return DownloadErrorCancelled
+	case errors.Is(err, context.DeadlineExceeded):
+		return DownloadErrorTimeout
+	}
+	return DownloadErrorDownloadFailed
 }
 
 const downloadHTMLName = "body.html"
@@ -60,7 +109,7 @@ func Download(ctx context.Context, request DownloadRequest, createDirectory func
 		return result, err
 	}
 	if request.MaxBytes < 0 {
-		return result, errors.New("max_bytes must be positive")
+		return result, &DownloadError{Code: DownloadErrorInvalidArguments, Err: errors.New("max_bytes must be positive")}
 	}
 	remaining := request.MaxBytes
 	if remaining == 0 {
@@ -73,7 +122,7 @@ func Download(ctx context.Context, request DownloadRequest, createDirectory func
 
 	directory, err := createDirectory()
 	if err != nil {
-		return result, err
+		return result, &DownloadError{Code: DownloadErrorOutputDirectory, Err: err}
 	}
 	retain := false
 	defer func() { err = errors.Join(err, directory.Close(retain)) }()
@@ -89,16 +138,17 @@ func downloadFiles(ctx context.Context, withAssets bool, target *url.URL, origin
 	var result DownloadResult
 	var err error
 
+	result.Schema = DownloadReceiptSchemaV1
 	result.Directory = directory.Path()
 	result.Primary, err = saveDownload(ctx, newDownloadClient(nil, egress), directory, target, "", remaining)
 	if err != nil || !withAssets {
 		return result, err
 	}
 	if !downloadHTML(result.Primary.ContentType) {
-		return result, errors.New("assets require an HTML response")
+		return result, &DownloadError{Code: DownloadErrorAssetsUnsupported, Err: errors.New("assets require an HTML response")}
 	}
 	if encoding := result.Primary.ContentEncoding; encoding != "" && !strings.EqualFold(encoding, "identity") {
-		return result, fmt.Errorf("cannot find linked assets in HTML served with Content-Encoding %q", encoding)
+		return result, &DownloadError{Code: DownloadErrorAssetsUnsupported, Err: fmt.Errorf("cannot find linked assets in HTML served with Content-Encoding %q", encoding)}
 	}
 
 	// Resolve asset references against the final HTTP URL after redirects.
@@ -137,7 +187,7 @@ func newDownloadClient(origins map[string]bool, egress *platform.Egress) *http.C
 				return err
 			}
 			if origins != nil && !origins[downloadOrigin(target)] {
-				return errors.New("asset redirect leaves the allowed origins")
+				return &DownloadError{Code: DownloadErrorInvalidURL, Err: errors.New("asset redirect leaves the allowed origins")}
 			}
 			request.Header.Del("Referer")
 			return nil
@@ -160,10 +210,10 @@ func saveDownload(ctx context.Context, client *http.Client, directory platform.D
 	}
 	defer platform.Close(response.Body)
 	if response.StatusCode < 200 || response.StatusCode >= 300 || response.StatusCode == http.StatusPartialContent {
-		return DownloadFile{}, fmt.Errorf("download received HTTP %d", response.StatusCode)
+		return DownloadFile{}, &DownloadError{Code: DownloadErrorHTTPStatus, Err: fmt.Errorf("download received HTTP %d", response.StatusCode)}
 	}
 	if response.ContentLength > limit {
-		return DownloadFile{}, errors.New("download exceeds total byte limit")
+		return DownloadFile{}, &DownloadError{Code: DownloadErrorMaxBytesExceeded, Err: platform.ErrDownloadLimit}
 	}
 	contentType := response.Header.Get("Content-Type")
 	if name == "" {
@@ -172,21 +222,24 @@ func saveDownload(ctx context.Context, client *http.Client, directory platform.D
 			name = downloadHTMLName
 		}
 	}
-	path, size, err := directory.Save(name, response.Body, limit)
+	path, size, digest, err := directory.Save(name, response.Body, limit)
 	if err != nil {
+		if errors.Is(err, platform.ErrDownloadLimit) {
+			return DownloadFile{}, &DownloadError{Code: DownloadErrorMaxBytesExceeded, Err: err}
+		}
 		return DownloadFile{}, fmt.Errorf("save response body: %w", err)
 	}
 	return DownloadFile{
 		URL: target.String(), FinalURL: response.Request.URL.String(), Path: path,
 		ContentType: contentType, ContentEncoding: strings.Join(response.Header.Values("Content-Encoding"), ", "),
-		Bytes: size, Status: response.StatusCode,
+		Bytes: size, Status: response.StatusCode, SHA256: digest,
 	}, nil
 }
 
 func downloadURL(address string) (*url.URL, error) {
 	target, err := url.Parse(strings.TrimSpace(address))
 	if err != nil || target.Hostname() == "" || target.User != nil || (target.Scheme != "http" && target.Scheme != "https") {
-		return nil, errors.New("download requires an absolute HTTP(S) URL without credentials")
+		return nil, &DownloadError{Code: DownloadErrorInvalidURL, Err: errors.New("download requires an absolute HTTP(S) URL without credentials")}
 	}
 	target.Fragment, target.RawFragment = "", ""
 	return target, nil
@@ -202,13 +255,13 @@ func downloadOrigin(target *url.URL) string {
 
 func downloadOrigins(request DownloadRequest) (map[string]bool, error) {
 	if !request.Assets && len(request.AssetOrigins) != 0 {
-		return nil, errors.New("asset_origins requires assets")
+		return nil, &DownloadError{Code: DownloadErrorInvalidArguments, Err: errors.New("asset_origins requires assets")}
 	}
 	origins := make(map[string]bool)
 	for _, address := range request.AssetOrigins {
 		origin, err := downloadURL(address)
 		if err != nil || (origin.Path != "" && origin.Path != "/") || origin.RawQuery != "" || origin.ForceQuery || strings.Contains(address, "#") {
-			return nil, errors.New("asset_origins entries must contain only scheme, host and optional port")
+			return nil, &DownloadError{Code: DownloadErrorInvalidArguments, Err: errors.New("asset_origins entries must contain only scheme, host and optional port")}
 		}
 		origins[downloadOrigin(origin)] = true
 	}

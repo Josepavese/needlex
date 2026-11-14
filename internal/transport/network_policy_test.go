@@ -30,7 +30,7 @@ func TestFetchCLIAppliesPublicNetworkPolicy(t *testing.T) {
 	runner.storeRoot = t.TempDir()
 	var stdout, stderr bytes.Buffer
 	code := runner.Run([]string{"fetch", "--config", publicPolicyConfig(t), server.URL + "/file"}, &stdout, &stderr)
-	if code != 1 || !strings.Contains(stderr.String(), "egress denied by network policy") {
+	if code != 1 || !strings.Contains(stderr.String(), "egress denied by network policy") || !strings.Contains(stderr.String(), "code=network_denied") {
 		t.Fatalf("code=%d stdout=%s stderr=%s", code, &stdout, &stderr)
 	}
 }
@@ -50,7 +50,7 @@ func TestMCPFetchAppliesPublicNetworkPolicy(t *testing.T) {
 	))
 	var stdout, stderr bytes.Buffer
 	runner.Run([]string{"mcp"}, &stdout, &stderr)
-	if !strings.Contains(stdout.String(), "egress denied by network policy") {
+	if !strings.Contains(stdout.String(), "egress denied by network policy") || !strings.Contains(stdout.String(), "code=network_denied") {
 		t.Fatalf("stdout=%s stderr=%s", &stdout, &stderr)
 	}
 }

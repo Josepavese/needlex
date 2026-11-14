@@ -164,3 +164,44 @@ func TestAcquirerReqPathDeniesPrivateResolution(t *testing.T) {
 		t.Fatalf("req private acquire error = %v, want egress denial", err)
 	}
 }
+
+func TestDownloadPublicPolicyDeniesPrivateRedirect(t *testing.T) {
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "http://private.test/", http.StatusFound)
+	}))
+	defer page.Close()
+
+	egress := pipelineEgress(t, map[string][]string{
+		"public.test":  {"93.184.216.34"},
+		"private.test": {"10.0.0.1"},
+	}, func(ctx context.Context, network, _ string) (net.Conn, error) {
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, network, page.Listener.Addr().String())
+	})
+	parent := t.TempDir()
+	_, err := Download(context.Background(), DownloadRequest{
+		URL: "http://public.test/entry", Egress: egress,
+	}, func() (platform.DownloadDirectory, error) {
+		return platform.NewDownloadDirectory(parent, "")
+	})
+	if !platform.IsEgressDenied(err) || DownloadErrorCode(err) != DownloadErrorNetworkDenied {
+		t.Fatalf("private redirect error = %v, want network_denied", err)
+	}
+	leftovers, readErr := os.ReadDir(parent)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if len(leftovers) != 0 {
+		t.Fatalf("denied redirect left %d directories", len(leftovers))
+	}
+}
+
+func TestDownloadRejectsUserinfoWithStableCode(t *testing.T) {
+	_, err := Download(context.Background(), DownloadRequest{URL: "http://user:secret@127.0.0.1:9/file"}, func() (platform.DownloadDirectory, error) {
+		t.Fatal("directory created for invalid URL")
+		return nil, nil
+	})
+	if DownloadErrorCode(err) != DownloadErrorInvalidURL {
+		t.Fatalf("userinfo error = %v, want invalid_url", err)
+	}
+}

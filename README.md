@@ -63,7 +63,7 @@ Use `web_fetch` or `needlex fetch` when the task needs the original HTML or a bi
 needlex fetch https://example.com/ --assets --out-dir ./page-source
 ```
 
-Both interfaces return file paths and HTTP metadata. [Raw download reference](docs/wiki/CLI.md#raw-downloads)
+Both interfaces return a versioned receipt (`schema: needlex.fetch.receipt.v1`) with file paths, HTTP metadata and `sha256` for every saved file. [Raw download reference](docs/wiki/CLI.md#raw-downloads) · [Receipt schema](schemas/needlex-fetch-receipt.v1.json)
 
 ## Shared and restricted environments
 

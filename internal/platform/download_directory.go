@@ -1,6 +1,8 @@
 package platform
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -8,11 +10,15 @@ import (
 	"path/filepath"
 )
 
+// ErrDownloadLimit reports that a download exceeded its declared byte budget.
+// Callers map it to a stable public error code.
+var ErrDownloadLimit = errors.New("download exceeds total byte limit")
+
 // DownloadDirectory owns files exclusively created by one download. Its
 // caller closes it once and chooses whether to retain the files.
 type DownloadDirectory interface {
 	Path() string
-	Save(name string, source io.Reader, limit int64) (path string, size int64, err error)
+	Save(name string, source io.Reader, limit int64) (path string, size int64, sha256 string, err error)
 	Open(name string) (io.ReadCloser, error)
 	Close(retain bool) error
 }
@@ -50,27 +56,28 @@ func NewDownloadDirectory(parent, destination string) (DownloadDirectory, error)
 
 func (d *downloadDirectory) Path() string { return d.root.Name() }
 
-func (d *downloadDirectory) Save(name string, source io.Reader, limit int64) (string, int64, error) {
+func (d *downloadDirectory) Save(name string, source io.Reader, limit int64) (string, int64, string, error) {
 	file, err := d.root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
-		return "", 0, err
+		return "", 0, "", err
 	}
 	d.names = append(d.names, name)
-	size, copyErr := io.Copy(file, io.LimitReader(source, limit))
+	digest := sha256.New()
+	size, copyErr := io.Copy(io.MultiWriter(file, digest), io.LimitReader(source, limit))
 	if copyErr == nil && size == limit {
 		var extra [1]byte
 		_, copyErr = io.ReadFull(source, extra[:])
 		switch {
 		case copyErr == nil:
-			copyErr = errors.New("download exceeds total byte limit")
+			copyErr = ErrDownloadLimit
 		case errors.Is(copyErr, io.EOF):
 			copyErr = nil
 		}
 	}
 	if err := errors.Join(copyErr, file.Close()); err != nil {
-		return "", 0, err
+		return "", 0, "", err
 	}
-	return filepath.Join(d.Path(), name), size, nil
+	return filepath.Join(d.Path(), name), size, hex.EncodeToString(digest.Sum(nil)), nil
 }
 
 func (d *downloadDirectory) Open(name string) (io.ReadCloser, error) {

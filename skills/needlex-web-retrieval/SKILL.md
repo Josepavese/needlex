@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.47
+version: v0.1.48
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -50,9 +50,11 @@ For those cases, keep the URL found by the host agent and escalate from Needle-X
 
 When the runtime advertises `web_fetch`, use it for exact HTTP response
 bodies such as original HTML, CSS, JavaScript, or binary files. The tool
-returns local file paths. For a page and its directly linked stylesheets
-and scripts, set `assets: true` and add any trusted CDN origins to
-`asset_origins`. Use `needlex fetch` from CLI when that command is available.
+returns local file paths in a versioned receipt (`schema:
+needlex.fetch.receipt.v1`) with a `sha256` of each saved file. For a page and
+its directly linked stylesheets and scripts, set `assets: true` and add any
+trusted CDN origins to `asset_origins`. Use `needlex fetch` from CLI when that
+command is available.
 
 Prefer MCP tools when available:
 

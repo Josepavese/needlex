@@ -56,16 +56,59 @@ needlex fetch https://example.com/archive.zip --max-bytes 134217728
 `fetch` accepts an absolute HTTP(S) URL without embedded credentials. It saves
 the final successful response body after HTTP redirects and returns JSON with
 absolute local paths, requested and final URLs, HTTP status, MIME type,
-content encoding and byte counts. Binary bodies work without an embedding
-runtime. The primary file is named `body.html` for an HTML MIME type and
-`body` otherwise. HTTP transfer framing is removed. The request asks for
-identity content encoding and any encoding the server sends is preserved.
-`--config PATH` selects the JSON config that supplies the network policy and
-other acquisition settings; without it the default PAL config is used.
+content encoding, byte counts and the SHA-256 of every saved file. Binary
+bodies work without an embedding runtime. The primary file is named
+`body.html` for an HTML MIME type and `body` otherwise. HTTP transfer framing
+is removed. The request asks for identity content encoding and any encoding
+the server sends is preserved. `--config PATH` selects the JSON config that
+supplies the network policy and other acquisition settings; without it the
+default PAL config is used.
+
+### Receipt contract v1
+
+The JSON output is a stable adapter contract identified by
+`"schema": "needlex.fetch.receipt.v1"`. The JSON Schema is
+[needlex-fetch-receipt.v1.json](../../schemas/needlex-fetch-receipt.v1.json).
+The top-level fields are `schema`, `directory`, `primary`, and optionally
+`assets` and `skipped_asset_origins`. `primary` and every `assets[]` entry
+carry `url` (requested), `final_url` (after redirects), `path`, `bytes`, HTTP
+`status`, `sha256`, and `content_type`/`content_encoding` when present.
+
+`sha256` is computed from the bytes actually saved, so an adapter can read the
+file, hash it independently and compare. An adapter in any language can parse
+the JSON, require the expected `schema`, verify the digest and adopt the file;
+it does not need the Go implementation. A future receipt version changes the
+`schema` value, so adapters can reject an unknown contract instead of
+misreading it.
 
 The default destination is a fresh directory under `NEEDLEX_HOME/downloads`.
 `--out-dir` names a new directory under an existing parent. An existing path
-is refused. Successful downloads belong to the caller and stay on disk.
+is refused. Created directories are private (`0700`) and files are created
+without overwrite (`0600`). The bytes are written to the caller's chosen
+location, not into private retrieval state. Successful downloads belong to
+the caller and stay on disk; a failed invocation removes only the files and
+directory it created.
+
+### Fetch errors
+
+A failed fetch writes `fetch: code=<code> error=<message>` to stderr and exits
+non-zero. The error message does not suggest an alternative path or a weaker
+policy. Stable codes:
+
+| Code | Meaning |
+| --- | --- |
+| `invalid_url` | not an absolute HTTP(S) URL, contains credentials, or an asset redirect leaves the allowed origins |
+| `invalid_arguments` | invalid flag combination or `asset_origins` value |
+| `network_denied` | the configured network policy rejected the URL, redirect, DNS answer or dial |
+| `output_directory` | the destination exists or cannot be created |
+| `max_bytes_exceeded` | the body and assets exceed the total byte budget |
+| `http_status` | the server returned a non-2xx or partial response |
+| `assets_unsupported` | `--assets` was used with a non-HTML response or an encoded HTML body |
+| `cancelled` / `timeout` | the operation was cancelled or its deadline expired |
+| `download_failed` | unclassified transport, storage or partial-bundle failure |
+
+MCP `web_fetch` returns the same receipt under `structuredContent.download`
+and embeds the same `code=...` in its error when the download fails.
 
 With `--assets`, Needle-X scans the saved HTML for direct stylesheet, script,
 and corresponding preload links. It resolves relative URLs using the final

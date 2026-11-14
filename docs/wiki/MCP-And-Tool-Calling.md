@@ -123,11 +123,16 @@ binary file. It works independently of semantic retrieval.
 ```
 
 The tool saves files on the MCP host and returns their absolute paths under
-`structuredContent.download`, with HTTP metadata. Use a client with access
-to that host filesystem to open the files. Successful downloads stay in a
-fresh directory under `NEEDLEX_HOME/downloads`. Set `max_bytes` to override
-the total byte budget. The [CLI raw download contract](./CLI.md#raw-downloads)
-describes asset discovery, origin restrictions and error handling.
+`structuredContent.download` with HTTP metadata and a `sha256` digest. The
+download object is a versioned receipt identified by
+`"schema": "needlex.fetch.receipt.v1"` (see
+[needlex-fetch-receipt.v1.json](../../schemas/needlex-fetch-receipt.v1.json)).
+Use a client with access to that host filesystem to open the files and verify
+the digest. Successful downloads stay in a fresh directory under
+`NEEDLEX_HOME/downloads`. Set `max_bytes` to override the total byte budget.
+The [CLI raw download contract](./CLI.md#raw-downloads) describes asset
+discovery, permissions, the complete receipt, stable error codes and origin
+restrictions.
 
 ## Provider Catalogs
 
