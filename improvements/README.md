@@ -11,6 +11,8 @@ Keep in root:
 
 Current root reports are intentionally small and operational.
 
+Per-file freshness and disposition: [STATUS.md](STATUS.md).
+
 Rules:
 1. root files should be either `*-baseline.*` or `*-latest.*`
 2. root files may also include a very small number of actively referenced closure reports

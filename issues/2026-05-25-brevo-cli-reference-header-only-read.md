@@ -2,6 +2,7 @@
 
 Status: closed as of 2026-11-15 (v0.1.52)
 Last reviewed: 2026-11-15
+State: closed.
 
 Date: 2026-05-25
 

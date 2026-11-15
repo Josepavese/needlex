@@ -2,6 +2,7 @@
 
 Status: open; still reproducible on v0.1.52
 Last reviewed: 2026-11-15
+State: open (fresh regression evidence).
 
 Date: 2026-05-25
 

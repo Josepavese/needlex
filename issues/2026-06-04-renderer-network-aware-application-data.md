@@ -2,6 +2,7 @@
 
 Status: closed; implementation landed in the v0.1.33 line. Later delivery gaps are tracked in the 2026-09-17 issue.
 Last reviewed: 2026-11-15 (v0.1.52)
+State: closed.
 
 ## Contesto
 

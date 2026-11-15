@@ -2,6 +2,7 @@
 
 Status: closed in v0.1.36. The residual trace-metadata risk below remains recorded, not silently retired.
 Last reviewed: 2026-11-15 (v0.1.52)
+State: closed.
 
 ## Contesto
 

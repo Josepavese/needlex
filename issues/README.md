@@ -21,13 +21,14 @@ they are old.
 3. [Local HNSW vector index](2026-05-04-04-local-hnsw-vector-index.md) — exact vector-index PAL implemented; the HNSW backend remains intentionally unshipped pending portability and recall gates.
 4. [Brevo web_query selected unrelated MiniMax docs](2026-05-25-brevo-web-query-selected-minimax.md) — still reproducible on v0.1.52; a Brevo goal selected `https://www.icloud.com.cn/find` instead of Brevo sources.
 
-## Implemented, evidence retained
+## Closed for implementation, benchmark evidence not re-run
 
 1. [Entity-family graph memory](2026-05-04-02-entity-family-graph-memory.md) — persistence, active recall, diagnostics, export, and import are present; no remaining implementation action is recorded in the issue.
 2. [Semantic quorum provider fusion](2026-05-04-05-semantic-quorum-provider-fusion.md) — provider observation metadata, health memory, and semantic cluster quorum are present; no remaining implementation action is recorded in the issue.
 
-These two are not obsolete. Their benchmark claims were not re-run during this
-documentation-maintenance pass, so the index does not promote them to closed.
+These two are not obsolete. Their implementation is closed, but the benchmark
+claim was not re-run during this documentation-maintenance pass, so they are
+kept out of the unconditional closed list above.
 
 ## Closed
 

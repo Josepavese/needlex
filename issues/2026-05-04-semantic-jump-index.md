@@ -1,7 +1,8 @@
 # Semantic Jump Development Plan
 
-Status: historical plan; superseded by the five individual issue files in this directory
+Status: obsolete historical plan; superseded by the five individual issue files in this directory
 Last reviewed: 2026-11-15 (v0.1.52)
+State: obsolete (retained for history)
 Date: 2026-05-04
 Scope: five high-impact projects to move Needle-X from semantic ranking improvements to a durable semantic retrieval platform.
 

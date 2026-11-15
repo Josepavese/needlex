@@ -2,6 +2,7 @@
 
 Status: implemented for persistence, active recall, diagnostics, export, and import
 Last reviewed: 2026-11-15 (v0.1.52)
+State: closed for implementation; benchmark claim not revalidated in this review
 Maintenance note: implementation is present and tested; benchmark evidence was not re-run in this pass, so the issue stays out of the closed list.
 Date: 2026-05-04
 Priority: P0 after late-interaction shadow mode

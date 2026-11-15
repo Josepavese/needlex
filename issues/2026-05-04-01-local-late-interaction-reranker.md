@@ -2,6 +2,7 @@
 
 Status: implemented as bounded dense-semantic candidate-stack reranker; benchmark gate still required for release claims
 Last reviewed: 2026-11-15 (v0.1.52)
+State: open (implementation present; benchmark gate outstanding)
 Next action: run the documented `+10` point seedless benchmark gate before making an active-release claim
 Date: 2026-05-04
 Priority: P0 if seedless quality remains the main product bottleneck
