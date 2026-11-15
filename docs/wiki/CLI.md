@@ -104,6 +104,10 @@ Example session file:
       "http_only": true
     }
   ],
+  "browser_profile": {
+    "path": "/home/me/.config/google-chrome",
+    "profile": "Default"
+  },
   "proxy": "http://127.0.0.1:8080",
   "tls": {
     "ca_file": "/etc/needlex/private-ca.pem",
@@ -115,7 +119,8 @@ Example session file:
 ```
 
 - `origin` is exactly `scheme://host[:port]`; a header is sent only to that
-  origin, never to a cross-origin redirect or asset.
+  origin, never to a cross-origin redirect or asset. The browser renderer
+  applies the same rules through CDP request interception.
 - `value` may be a literal, `env:VARIABLE` or `file:PATH` (relative to the
   session file); use `literal:` when a literal starts with `env:` or `file:`.
 - `--session` wins over `NEEDLEX_SESSION`, which wins over `session_file` in the
@@ -123,10 +128,20 @@ Example session file:
   target origin and are intended for short-lived credentials.
 - `user:password@` in the URL is converted to a Basic authorization rule for
   that origin and removed from receipts, traces and output.
+- `--browser-profile DIR` imports cookies from a Chromium-family profile for
+  this command. `--browser-profile-name` selects the profile inside a
+  user-data directory (`Default` by default). The session-file form is
+  `browser_profile` with `path` and optional `profile`. Imported cookies are
+  domain-scoped exactly like explicit cookie rules.
 - `--proxy`/session `proxy` requires `network.policy=any`; under the public
   policy the proxy cannot be inspected and the command rejects the combination.
-- TLS custom roots and client certificates apply to HTTP acquisition. The
-  browser renderer receives session cookies in its isolated context.
+  The browser uses the proxy for autonomous traffic when it launches its
+  session-scoped context.
+- TLS custom roots and client certificates apply to HTTP acquisition.
+  `insecure_skip_verify` is also applied to the browser as an explicit
+  certificate-error opt-in. Browser custom CA and client-certificate support is
+  not provided by this version; those settings are rejected for rendered
+  navigation instead of being silently ignored.
 
 Credentials are resolved by the caller and are never echoed in receipts,
 traces, proof records or logs. A failed HTTP authentication remains an
@@ -134,10 +149,41 @@ traces, proof records or logs. A failed HTTP authentication remains an
 reported before the network request. Use a private (`0600`) session file and
 prefer `env:` references so secrets do not enter shell history or the repo.
 
-Current boundary: the renderer applies cookies, not per-origin request headers
-yet, and importing an existing browser profile or cookies database is not part
-of this session version. `fetch --render` is not a fetch option; use `read
---render required` for rendered access.
+### Guided browser login
+
+For sites whose session is created by an interactive login, use a dedicated
+profile and let the user complete the login in a real browser window:
+
+```bash
+needlex session login \
+  --profile "$HOME/.local/share/needlex/browser-login" \
+  --url "https://github.com/login" \
+  --session "$HOME/.config/needlex/github.json"
+```
+
+Needle-X launches a non-headless Chromium with that profile
+(`--password-store=basic` so its Linux cookies remain importable), waits for the
+user to close the browser, then writes a session containing only the profile
+path.
+It imports the profile cookies when the session is used; it never reads or
+writes the password. Use `--browser /path/to/chrome` when the configured
+renderer is a headless shell. Existing session files are never overwritten.
+
+Browser cookie import supports Chromium's plaintext cookies and the legacy
+Linux `v10`/`v11` AES-CBC format (for example Chrome started with
+`--password-store=basic`). Keychain, DPAPI, app-bound encryption and custom
+keyring stores are reported as skipped cookies, not guessed. Only cookies are
+imported: profile local storage, IndexedDB and service-worker state are not
+copied; use `--render required` with a live login only when the site's session
+cookie is sufficient.
+
+`fetch --assets` follows linked stylesheets, scripts, images, fonts, media and
+other binary assets from the final page origin and explicitly allowed origins.
+The same session headers and cookies are applied to those asset requests.
+
+Current boundary: browser custom CA/client certificates and importing
+non-cookie browser storage remain out of scope; `fetch --render` is not a fetch
+option (use `read --render required` for rendered access).
 
 ### Receipt contract v1
 

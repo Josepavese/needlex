@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	downloadUsage = "needlex fetch <url> [--config path] [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]..."
+	downloadUsage = "needlex fetch <url> [--config path] [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]... [--browser-profile DIR] [--browser-profile-name NAME]"
 	webFetchTool  = "web_fetch"
 )
 
@@ -30,7 +30,7 @@ func (r Runner) runFetch(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
 	session.register(fs)
 	fs.StringVar(&destination, "out-dir", "", "new output directory (default: a new directory under NEEDLEX_HOME/downloads)")
-	fs.BoolVar(&request.Assets, "assets", false, "also download linked HTML stylesheets and scripts")
+	fs.BoolVar(&request.Assets, "assets", false, "also download linked stylesheets, scripts, images, fonts, media and other binary assets")
 	fs.Func("asset-origin", "allow an additional asset origin; repeat for multiple origins", func(origin string) error {
 		request.AssetOrigins = append(request.AssetOrigins, origin)
 		return nil
@@ -131,7 +131,7 @@ func mcpFetchTool() mcpTool {
 		Description: "Download the original HTTP response body, including binary files, to the local Needle-X downloads directory. Returns file paths and HTTP metadata. Use for exact bytes; use web_read for evidence.",
 		InputSchema: schemaExamples(toolSchema(withSessionToolSchema(map[string]any{
 			"url":           map[string]any{"type": "string", "description": "Absolute HTTP(S) URL of the page or file."},
-			"assets":        map[string]any{"type": "boolean", "default": false, "description": "Also download directly linked CSS and JavaScript from HTML. Only the final page origin and explicitly allowed origins are fetched."},
+			"assets":        map[string]any{"type": "boolean", "default": false, "description": "Also download directly linked CSS, JavaScript, images, fonts, media and other binary assets from HTML. Only the final page origin and explicitly allowed origins are fetched."},
 			"asset_origins": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Extra asset origins (scheme, host and optional port), for example a trusted CDN. Requires assets=true."},
 			"max_bytes":     map[string]any{"type": "integer", "minimum": 1, "default": pipeline.DefaultDownloadMaxBytes, "description": "Maximum total bytes for the page and all downloaded assets. A failed download discards its files."},
 		}), "url"), map[string]any{"url": "https://example.com", "assets": true}),

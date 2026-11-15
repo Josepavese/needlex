@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -335,6 +336,47 @@ func TestFetchCLISessionHeadersCookiesAndURLUserinfo(t *testing.T) {
 	}
 }
 
+func TestFetchCLIAuthenticatedImageAndFontAssets(t *testing.T) {
+	const secret = "Bearer asset-session"
+	image := []byte("png-image-bytes")
+	font := []byte("woff2-font-bytes")
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Header.Get("Authorization") != secret {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		switch req.URL.Path {
+		case "/entry":
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, `<!doctype html><html><body><img src="/image.png"><link rel="preload" as="font" href="/font.woff2"></body></html>`)
+		case "/image.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write(image)
+		case "/font.woff2":
+			w.Header().Set("Content-Type", "font/woff2")
+			_, _ = w.Write(font)
+		default:
+			http.NotFound(w, req)
+		}
+	}))
+	defer site.Close()
+	out := filepath.Join(t.TempDir(), "page")
+	result := runFetchTestCLI(t, NewRunner(), site.URL+"/entry", "--assets", "--out-dir", out,
+		"--header", "Authorization: "+secret)
+	if len(result.Assets) != 2 {
+		t.Fatalf("assets=%d %+v", len(result.Assets), result.Assets)
+	}
+	if !strings.HasSuffix(result.Assets[0].Path, "asset-01.png") || !strings.HasSuffix(result.Assets[1].Path, "asset-02.woff2") {
+		t.Fatalf("asset names=%q %q", result.Assets[0].Path, result.Assets[1].Path)
+	}
+	assertDownloadedBytes(t, result.Assets[0], image)
+	assertDownloadedBytes(t, result.Assets[1], font)
+	encoded, _ := json.Marshal(result)
+	if strings.Contains(string(encoded), secret) {
+		t.Fatal("asset credential leaked in receipt")
+	}
+}
+
 func TestFetchMCPInlineSessionCredentials(t *testing.T) {
 	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Header.Get("X-API-Key") != "mcp-secret" {
@@ -367,4 +409,37 @@ func TestFetchMCPInlineSessionCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertDownloadedBytes(t, response.Result.StructuredContent.Download.Primary, []byte("mcp protected bytes"))
+}
+
+func TestFetchCLIBrowserProfileCookies(t *testing.T) {
+	profile := t.TempDir()
+	profileDir := filepath.Join(profile, "Default")
+	if err := os.MkdirAll(profileDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", filepath.Join(profileDir, "Cookies"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE cookies (host_key TEXT, name TEXT, value TEXT, encrypted_value BLOB, path TEXT, expires_utc INTEGER, is_secure INTEGER, is_httponly INTEGER, samesite INTEGER)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO cookies VALUES ('127.0.0.1','sid','profile-cookie','','/',0,0,1,1)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if !strings.Contains(req.Header.Get("Cookie"), "sid=profile-cookie") {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprint(w, "profile-authenticated")
+	}))
+	defer site.Close()
+	out := filepath.Join(t.TempDir(), "page")
+	result := runFetchTestCLI(t, NewRunner(), site.URL, "--out-dir", out, "--browser-profile", profile)
+	assertDownloadedBytes(t, result.Primary, []byte("profile-authenticated"))
 }

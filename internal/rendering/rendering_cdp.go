@@ -31,7 +31,12 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 	conn.SetReadLimit(req.NetworkMaxBytes + cdpEnvelopeHeadroomBytes)
 	defer conn.CloseNow() //nolint:errcheck
 	collector := newNetworkCollector(req.URL, req.NetworkMaxBytes, req.NetworkResourceMaxBytes, req.NetworkMaxResources, req.NetworkMaxMessages)
-	cdp := cdpClient{conn: conn, onEvent: collector.handleEvent}
+	cdp := &cdpClient{conn: conn}
+	interceptor := &fetchInterceptor{cdp: cdp, ctx: ctx, session: req.Session}
+	cdp.onEvent = func(msg cdpMessage) {
+		collector.handleEvent(msg)
+		interceptor.handleEvent(msg)
+	}
 	contextResult, err := cdp.command(ctx, "", "Target.createBrowserContext", map[string]any{"disposeOnDetach": true})
 	if err != nil {
 		return Page{}, err
@@ -77,6 +82,15 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 		"maxResourceBufferSize": req.NetworkResourceMaxBytes,
 	})
 	_, _ = cdp.command(ctx, sessionID, "Page.enable", map[string]any{})
+	interceptHeaders := req.Session != nil && req.Session.HasHeaders()
+	interceptor.sessionID = sessionID
+	if interceptHeaders {
+		if _, err := cdp.command(ctx, sessionID, "Fetch.enable", map[string]any{
+			"patterns": []map[string]any{{"urlPattern": "*", "requestStage": "Request"}},
+		}); err != nil {
+			return Page{}, err
+		}
+	}
 	if req.UserAgent != "" {
 		if _, err := cdp.command(ctx, sessionID, "Network.setUserAgentOverride", map[string]any{"userAgent": req.UserAgent}); err != nil {
 			return Page{}, err
@@ -92,8 +106,14 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 	if _, err := cdp.command(ctx, sessionID, "Page.navigate", map[string]any{"url": req.URL}); err != nil {
 		return Page{}, err
 	}
-	if err := waitForApplicationSettled(ctx, &cdp, sessionID, collector, req.NetworkIdle, renderSettleBudget(req.Timeout)); err != nil {
+	if err := interceptor.takeError(); err != nil {
+		return Page{}, err
+	}
+	if err := waitForApplicationSettled(ctx, cdp, sessionID, collector, interceptor, req.NetworkIdle, renderSettleBudget(req.Timeout)); err != nil {
 		collector.markSettleError(err)
+	}
+	if err := interceptor.takeError(); err != nil {
+		return Page{}, err
 	}
 	snapshotCtx, cancelSnapshot := context.WithTimeout(ctx, renderSnapshotBudget(req.Timeout))
 	defer cancelSnapshot()

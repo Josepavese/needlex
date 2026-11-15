@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 )
@@ -40,24 +41,30 @@ type BrowserRuntime interface {
 
 var ErrBrowserRuntimeClosed = errors.New("browser runtime is closed")
 
+type BrowserRuntimeOptions struct {
+	ProxyURL    string
+	InsecureTLS bool
+}
+
 type browserRuntime struct {
-	mu       sync.Mutex
-	limits   BrowserLimits
-	launch   func(context.Context, string, string) (BrowserProcess, error)
-	ctx      context.Context
-	cancel   context.CancelFunc
-	changed  chan struct{}
-	process  BrowserProcess
-	path     string
-	active   int
-	uses     int
-	busy     bool // process startup/retirement is outside the lock
-	retiring bool
-	closed   bool
-	idle     *time.Timer
-	err      error
-	proxy    *egressProxy
-	proxyURL string
+	mu          sync.Mutex
+	limits      BrowserLimits
+	launch      func(context.Context, string, string) (BrowserProcess, error)
+	insecureTLS bool
+	ctx         context.Context
+	cancel      context.CancelFunc
+	changed     chan struct{}
+	process     BrowserProcess
+	path        string
+	active      int
+	uses        int
+	busy        bool // process startup/retirement is outside the lock
+	retiring    bool
+	closed      bool
+	idle        *time.Timer
+	err         error
+	proxy       *egressProxy
+	proxyURL    string
 }
 
 func (r *browserRuntime) Context() context.Context { return r.ctx }
@@ -65,12 +72,29 @@ func (r *browserRuntime) Context() context.Context { return r.ctx }
 // NewBrowserRuntime owns the browser process and, for NetworkPolicyPublic, the
 // loopback egress proxy that filters every autonomous browser request.
 func NewBrowserRuntime(limits BrowserLimits, policy NetworkPolicy) (BrowserRuntime, error) {
+	return NewBrowserRuntimeWithOptions(limits, policy, BrowserRuntimeOptions{})
+}
+
+func NewBrowserRuntimeWithOptions(limits BrowserLimits, policy NetworkPolicy, options BrowserRuntimeOptions) (BrowserRuntime, error) {
 	if limits.MaxConcurrency <= 0 || limits.IdleTimeout <= 0 || limits.MaxUses <= 0 {
 		return nil, errors.New("browser concurrency, idle timeout and maximum uses must be positive")
 	}
+	if strings.TrimSpace(options.ProxyURL) != "" && policy == NetworkPolicyPublic {
+		return nil, errors.New("session browser proxy requires network.policy=any; public egress cannot inspect proxied destinations")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
-	runtime := &browserRuntime{limits: limits, launch: launchBrowser, ctx: ctx, cancel: cancel, changed: make(chan struct{})}
-	if policy == NetworkPolicyPublic {
+	runtime := &browserRuntime{
+		limits: limits, ctx: ctx, cancel: cancel, changed: make(chan struct{}),
+		insecureTLS: options.InsecureTLS, proxyURL: strings.TrimSpace(options.ProxyURL),
+	}
+	if options.InsecureTLS {
+		runtime.launch = func(ctx context.Context, path, proxyURL string) (BrowserProcess, error) {
+			return launchBrowserWithTLS(ctx, path, proxyURL, true)
+		}
+	} else {
+		runtime.launch = launchBrowser
+	}
+	if runtime.proxyURL == "" && policy == NetworkPolicyPublic {
 		proxy, err := startEgressProxy(NewEgress(policy))
 		if err != nil {
 			cancel()
@@ -239,6 +263,7 @@ func (r *browserRuntime) CaptureDOM(ctx context.Context, req BrowserDOMRequest) 
 			var data []byte
 			if err == nil {
 				req.ProxyURL = r.proxyURL
+				req.InsecureTLS = r.insecureTLS
 				data, err = captureBrowserDOM(operation, req)
 			}
 			stop()

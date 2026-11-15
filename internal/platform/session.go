@@ -40,10 +40,11 @@ type SessionTLS struct {
 }
 
 type SessionConfig struct {
-	Headers  []SessionHeader
-	Cookies  []SessionCookie
-	ProxyURL string
-	TLS      SessionTLS
+	Headers        []SessionHeader
+	Cookies        []SessionCookie
+	BrowserProfile *BrowserProfileConfig
+	ProxyURL       string
+	TLS            SessionTLS
 }
 
 // Session is the caller-owned navigation identity for one operation. It carries
@@ -67,6 +68,13 @@ type sessionHeaderRule struct {
 // NewSession validates and materializes a navigation session. Hidden secrets
 // are already resolved by the config owner; values are never logged here.
 func NewSession(cfg SessionConfig) (*Session, error) {
+	if cfg.BrowserProfile != nil {
+		imported, err := ImportBrowserCookies(*cfg.BrowserProfile)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Cookies = append(cfg.Cookies, imported.Cookies...)
+	}
 	session := &Session{managed: map[string]struct{}{}}
 	for _, header := range cfg.Headers {
 		origin, err := canonicalOrigin(header.Origin)
@@ -265,6 +273,11 @@ func (s *Session) StripManagedHeaders(headers http.Header) {
 	for name := range s.managed {
 		headers.Del(name)
 	}
+}
+
+// HasHeaders reports whether the session carries any request header rule.
+func (s *Session) HasHeaders() bool {
+	return s != nil && len(s.rules) > 0
 }
 
 // HeadersFor is the req/v3-compatible view of the session rules for one URL.

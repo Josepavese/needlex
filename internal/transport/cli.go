@@ -138,6 +138,8 @@ func (r Runner) Run(args []string, stdout, stderr io.Writer) (exitCode int) {
 		return r.runMCP(args[1:], stdout, stderr)
 	case "tool-catalog":
 		return r.runToolCatalog(args[1:], stdout, stderr)
+	case "session":
+		return r.runSession(args[1:], stdout, stderr)
 	case "doctor":
 		return r.runDoctor(args[1:], stdout, stderr)
 	case "version":
@@ -245,9 +247,9 @@ func (r Runner) runRead(args []string, stdout, stderr io.Writer) int {
 
 func writeRootUsage(w io.Writer) {
 	fmt.Fprint(w, `Usage:
-  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name] [--render auto|off|required]
-  needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort name] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]...
-  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]...
+  needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort name] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]... [--browser-profile DIR] [--browser-profile-name NAME]
+  needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort name] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]... [--browser-profile DIR] [--browser-profile-name NAME]
+  needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort name] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]... [--browser-profile DIR] [--browser-profile-name NAME]
   `+downloadUsage+`
   needlex replay <trace-id> [--json]
   needlex diff <trace-a> <trace-b> [--json]
@@ -260,6 +262,7 @@ func writeRootUsage(w io.Writer) {
   needlex prune (--all | --older-than-hours N | --embedding-cache) [--dry-run] [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
+  needlex session login --profile DIR --url URL [--session PATH]
   needlex doctor [--json]
   needlex version
 
@@ -279,11 +282,11 @@ func (r Runner) runVersion(args []string, stdout, stderr io.Writer) int {
 }
 
 func writeQueryUsage(w io.Writer) {
-	writeUsage(w, "needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]...", "experimental opt-in: omit seed-url only with --discovery web_search")
+	writeUsage(w, "needlex query <seed-url> --goal text [--assertion statement] [--observe-acquisition] [--json] [--json-mode compact|full] [--config path] [--profile name] [--user-agent ua] [--discovery same_site_links|off] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]... [--browser-profile DIR] [--browser-profile-name NAME]", "experimental opt-in: omit seed-url only with --discovery web_search")
 }
 
 func writeReadUsage(w io.Writer) {
-	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]...")
+	writeUsage(w, "needlex read <url> [--json] [--json-mode compact|full] [--config path] [--objective text] [--assertion statement] [--observe-acquisition] [--profile name] [--user-agent ua] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]... [--browser-profile DIR] [--browser-profile-name NAME]")
 }
 
 func writeReplayUsage(w io.Writer) {

@@ -18,10 +18,16 @@ import (
 const SessionFileEnv = "NEEDLEX_SESSION"
 
 type sessionFile struct {
-	Headers []sessionHeader `json:"headers,omitempty"`
-	Cookies []sessionCookie `json:"cookies,omitempty"`
-	Proxy   string          `json:"proxy,omitempty"`
-	TLS     sessionTLS      `json:"tls,omitempty"`
+	Headers        []sessionHeader        `json:"headers,omitempty"`
+	Cookies        []sessionCookie        `json:"cookies,omitempty"`
+	BrowserProfile *sessionBrowserProfile `json:"browser_profile,omitempty"`
+	Proxy          string                 `json:"proxy,omitempty"`
+	TLS            sessionTLS             `json:"tls,omitempty"`
+}
+
+type sessionBrowserProfile struct {
+	Path    string `json:"path"`
+	Profile string `json:"profile,omitempty"`
 }
 
 type sessionHeader struct {
@@ -83,6 +89,16 @@ func LoadSession(path string) (platform.SessionConfig, error) {
 		CAFile: raw.TLS.CAFile, ClientCertFile: raw.TLS.ClientCertFile,
 		ClientKeyFile: raw.TLS.ClientKeyFile, InsecureSkipVerify: raw.TLS.InsecureSkipVerify,
 	}}
+	if raw.BrowserProfile != nil {
+		profilePath := strings.TrimSpace(raw.BrowserProfile.Path)
+		if profilePath == "" {
+			return platform.SessionConfig{}, errors.New("browser_profile.path must not be empty")
+		}
+		if !filepath.IsAbs(profilePath) {
+			profilePath = filepath.Join(baseDir, profilePath)
+		}
+		out.BrowserProfile = &platform.BrowserProfileConfig{Path: profilePath, Profile: raw.BrowserProfile.Profile}
+	}
 	if strings.TrimSpace(raw.Proxy) != "" {
 		proxy, err := resolveSessionValue(raw.Proxy, baseDir)
 		if err != nil {

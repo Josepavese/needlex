@@ -15,11 +15,13 @@ import (
 // persistent, origin-scoped form; the repeated flags are convenience overrides
 // for the command target and are never echoed back by receipts or errors.
 type sessionFlags struct {
-	path     string
-	headers  headerValues
-	cookies  cookieValues
-	proxy    string
-	insecure bool
+	path               string
+	headers            headerValues
+	cookies            cookieValues
+	proxy              string
+	insecure           bool
+	browserProfile     string
+	browserProfileName string
 }
 
 type headerValues []string
@@ -44,6 +46,8 @@ func (s *sessionFlags) register(fs *flag.FlagSet) {
 	fs.Var(&s.cookies, "cookie", "cookie NAME=VALUE for the target host; repeat for multiple cookies")
 	fs.StringVar(&s.proxy, "proxy", "", "HTTP(S) or SOCKS5 proxy URL; requires network.policy=any")
 	fs.BoolVar(&s.insecure, "insecure", false, "disable TLS certificate verification for this session (explicit opt-in)")
+	fs.StringVar(&s.browserProfile, "browser-profile", "", "import cookies from a Chromium user-data or profile directory")
+	fs.StringVar(&s.browserProfileName, "browser-profile-name", "Default", "profile name inside a Chromium user-data directory")
 }
 
 // load returns the target URL with userinfo removed and a session that applies
@@ -68,9 +72,12 @@ func (s *sessionFlags) load(cfg config.Config, targetURL string) (*platform.Sess
 	if s.insecure {
 		sessionConfig.TLS.InsecureSkipVerify = true
 	}
-	if len(sessionConfig.Headers) == 0 && len(sessionConfig.Cookies) == 0 && sessionConfig.ProxyURL == "" &&
-		!sessionConfig.TLS.InsecureSkipVerify && sessionConfig.TLS.CAFile == "" &&
-		sessionConfig.TLS.ClientCertFile == "" {
+	if strings.TrimSpace(s.browserProfile) != "" {
+		sessionConfig.BrowserProfile = &platform.BrowserProfileConfig{
+			Path: strings.TrimSpace(s.browserProfile), Profile: strings.TrimSpace(s.browserProfileName),
+		}
+	}
+	if !sessionConfigured(sessionConfig) {
 		sanitized, _ := platform.SanitizeURL(targetURL)
 		if sanitized == "" {
 			return nil, targetURL, nil
@@ -152,15 +159,20 @@ func sessionFromMCPArgs(args map[string]any, cfg config.Config, targetURL string
 	if proxy := stringArg(args, "proxy"); proxy != "" {
 		sessionConfig.ProxyURL = proxy
 	}
+	profile, err := mcpBrowserProfileArg(args)
+	if err != nil {
+		return nil, targetURL, err
+	}
+	if profile != nil {
+		sessionConfig.BrowserProfile = profile
+	}
 	if boolArg(args, "insecure_tls") {
 		sessionConfig.TLS.InsecureSkipVerify = true
 	}
 	if err := applyMCPTargetSession(&sessionConfig, args, targetURL); err != nil {
 		return nil, targetURL, err
 	}
-	if len(sessionConfig.Headers) == 0 && len(sessionConfig.Cookies) == 0 && sessionConfig.ProxyURL == "" &&
-		!sessionConfig.TLS.InsecureSkipVerify && sessionConfig.TLS.CAFile == "" &&
-		sessionConfig.TLS.ClientCertFile == "" {
+	if !sessionConfigured(sessionConfig) {
 		sanitized, _ := platform.SanitizeURL(targetURL)
 		if sanitized == "" {
 			return nil, targetURL, nil
@@ -176,6 +188,27 @@ func sessionFromMCPArgs(args map[string]any, cfg config.Config, targetURL string
 		return nil, targetURL, err
 	}
 	return session, sanitized, nil
+}
+
+func sessionConfigured(cfg platform.SessionConfig) bool {
+	return len(cfg.Headers) > 0 || len(cfg.Cookies) > 0 || cfg.BrowserProfile != nil ||
+		cfg.ProxyURL != "" || cfg.TLS.InsecureSkipVerify || cfg.TLS.CAFile != "" || cfg.TLS.ClientCertFile != ""
+}
+
+func mcpBrowserProfileArg(args map[string]any) (*platform.BrowserProfileConfig, error) {
+	value, ok := args["browser_profile"]
+	if !ok || value == nil {
+		return nil, nil
+	}
+	raw, ok := value.(map[string]any)
+	if !ok {
+		return nil, errors.New("browser_profile must be an object with path and optional profile")
+	}
+	path := stringArg(raw, "path")
+	if strings.TrimSpace(path) == "" {
+		return nil, errors.New("browser_profile.path must not be empty")
+	}
+	return &platform.BrowserProfileConfig{Path: path, Profile: stringArg(raw, "profile")}, nil
 }
 
 func applyMCPTargetSession(sessionConfig *platform.SessionConfig, args map[string]any, targetURL string) error {
@@ -286,6 +319,14 @@ func sessionToolSchema() map[string]any {
 				},
 			},
 			"description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
+		},
+		"browser_profile": map[string]any{
+			"type": "object", "additionalProperties": false, "required": []string{"path"},
+			"properties": map[string]any{
+				"path":    map[string]any{"type": "string", "description": "Chromium user-data directory or profile directory."},
+				"profile": map[string]any{"type": "string", "description": "Profile inside a user-data directory; defaults to Default."},
+			},
+			"description": "Import cookies from a local Chromium browser profile. The profile is read server-side.",
 		},
 		"proxy":        map[string]any{"type": "string", "description": "Optional HTTP(S) or SOCKS5 proxy; requires network.policy=any."},
 		"insecure_tls": map[string]any{"type": "boolean", "description": "Explicitly disable TLS certificate verification for this operation."},

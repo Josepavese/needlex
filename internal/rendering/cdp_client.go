@@ -18,6 +18,21 @@ type cdpClient struct {
 	onEvent func(cdpMessage)
 }
 
+// send writes a command without waiting for its response. It is reserved for
+// event callbacks, which run while another command owns the response loop.
+func (c *cdpClient) send(ctx context.Context, sessionID, method string, params any) error {
+	c.id++
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(cdpMessage{ID: c.id, Method: method, Params: paramsJSON, SessionID: sessionID})
+	if err != nil {
+		return err
+	}
+	return c.conn.Write(ctx, websocket.MessageText, data)
+}
+
 type cdpMessage struct {
 	ID        int             `json:"id,omitempty"`
 	Method    string          `json:"method,omitempty"`
@@ -86,7 +101,7 @@ func (c *cdpClient) evaluateString(ctx context.Context, sessionID, expression st
 	return evaluated.Result.Value, nil
 }
 
-func waitForApplicationSettled(ctx context.Context, cdp *cdpClient, sessionID string, collector *networkCollector, networkIdle, maxWait time.Duration) error {
+func waitForApplicationSettled(ctx context.Context, cdp *cdpClient, sessionID string, collector *networkCollector, interceptor *fetchInterceptor, networkIdle, maxWait time.Duration) error {
 	tick := time.NewTicker(250 * time.Millisecond)
 	defer tick.Stop()
 	var readyAt time.Time
@@ -95,6 +110,9 @@ func waitForApplicationSettled(ctx context.Context, cdp *cdpClient, sessionID st
 	for {
 		if maxWait > 0 && time.Now().After(deadline) {
 			return context.DeadlineExceeded
+		}
+		if err := interceptor.takeError(); err != nil {
+			return err
 		}
 		state, err := cdp.evaluateString(ctx, sessionID, `document.readyState`)
 		if err == nil && (state == "interactive" || state == "complete") && readyAt.IsZero() {

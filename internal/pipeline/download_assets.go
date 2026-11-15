@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"path"
 	"slices"
 	"strings"
 
@@ -54,7 +55,7 @@ func discoverDownloadAssets(ctx context.Context, directory platform.DownloadDire
 			}
 			continue
 		}
-		assets = append(assets, downloadAsset{url: target, kind: ref.kind})
+		assets = append(assets, downloadAsset{url: target, kind: assetFileKind(target, ref.kind)})
 	}
 	return assets, skipped, nil
 }
@@ -106,7 +107,7 @@ func scanDownloadAssetReferences(ctx context.Context, source io.Reader, page *ur
 }
 
 func linkedDownloadAsset(token html.Token) assetReference {
-	var src, href, rel, as string
+	var src, href, rel, as, srcset, poster, data string
 	for _, attr := range token.Attr {
 		value := strings.TrimSpace(attr.Val)
 		switch attr.Key {
@@ -118,6 +119,12 @@ func linkedDownloadAsset(token html.Token) assetReference {
 			rel = strings.ToLower(value)
 		case "as":
 			as = strings.ToLower(value)
+		case "srcset":
+			srcset = value
+		case "poster":
+			poster = value
+		case "data":
+			data = value
 		}
 	}
 	switch token.Data {
@@ -131,6 +138,75 @@ func linkedDownloadAsset(token html.Token) assetReference {
 		if slices.Contains(rels, "modulepreload") || (slices.Contains(rels, "preload") && as == "script") {
 			return assetReference{href, "js"}
 		}
+		if slices.Contains(rels, "icon") || slices.Contains(rels, "apple-touch-icon") || slices.Contains(rels, "manifest") ||
+			(slices.Contains(rels, "preload") && slices.Contains([]string{"font", "image", "fetch", "track"}, as)) {
+			return assetReference{href, assetKindHint(as)}
+		}
+	case "img":
+		if srcset != "" {
+			return assetReference{firstSrcsetURL(srcset), "img"}
+		}
+		return assetReference{src, "img"}
+	case "source":
+		if srcset != "" {
+			return assetReference{firstSrcsetURL(srcset), "media"}
+		}
+		return assetReference{src, "media"}
+	case "video":
+		if poster != "" {
+			return assetReference{poster, "img"}
+		}
+		return assetReference{src, "media"}
+	case "audio", "track":
+		return assetReference{src, "media"}
+	case "input":
+		return assetReference{src, "img"}
+	case "embed":
+		return assetReference{src, "bin"}
+	case "object":
+		return assetReference{data, "bin"}
 	}
 	return assetReference{}
+}
+
+func firstSrcsetURL(srcset string) string {
+	for _, candidate := range strings.Split(srcset, ",") {
+		fields := strings.Fields(strings.TrimSpace(candidate))
+		if len(fields) > 0 && fields[0] != "" {
+			return fields[0]
+		}
+	}
+	return ""
+}
+
+func assetKindHint(as string) string {
+	switch as {
+	case "font":
+		return "font"
+	case "image":
+		return "img"
+	default:
+		return "bin"
+	}
+}
+
+func assetFileKind(target *url.URL, hint string) string {
+	switch hint {
+	case "js", "css":
+		return hint
+	}
+	ext := strings.ToLower(strings.TrimPrefix(path.Ext(target.Path), "."))
+	switch ext {
+	case "png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "ico", "bmp", "tif", "tiff",
+		"woff", "woff2", "ttf", "otf", "eot", "mp4", "webm", "ogg", "mp3", "wav", "pdf", "zip", "json":
+		return ext
+	default:
+		if hint == "font" {
+			return "font"
+		}
+		if hint == "media" {
+			return "media"
+		}
+		return "bin"
+	}
 }

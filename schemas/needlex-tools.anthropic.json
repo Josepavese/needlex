@@ -16,6 +16,24 @@
           }
         ],
         "properties": {
+          "browser_profile": {
+            "additionalProperties": false,
+            "description": "Import cookies from a local Chromium browser profile. The profile is read server-side.",
+            "properties": {
+              "path": {
+                "description": "Chromium user-data directory or profile directory.",
+                "type": "string"
+              },
+              "profile": {
+                "description": "Profile inside a user-data directory; defaults to Default.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
           "cookies": {
             "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
             "items": {
@@ -168,6 +186,24 @@
             "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
             "type": "string"
           },
+          "browser_profile": {
+            "additionalProperties": false,
+            "description": "Import cookies from a local Chromium browser profile. The profile is read server-side.",
+            "properties": {
+              "path": {
+                "description": "Chromium user-data directory or profile directory.",
+                "type": "string"
+              },
+              "profile": {
+                "description": "Profile inside a user-data directory; defaults to Default.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
           "cookies": {
             "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
             "items": {
@@ -313,6 +349,24 @@
             "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
             "type": "string"
           },
+          "browser_profile": {
+            "additionalProperties": false,
+            "description": "Import cookies from a local Chromium browser profile. The profile is read server-side.",
+            "properties": {
+              "path": {
+                "description": "Chromium user-data directory or profile directory.",
+                "type": "string"
+              },
+              "profile": {
+                "description": "Profile inside a user-data directory; defaults to Default.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
           "cookies": {
             "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
             "items": {
@@ -446,8 +500,26 @@
           },
           "assets": {
             "default": false,
-            "description": "Also download directly linked CSS and JavaScript from HTML. Only the final page origin and explicitly allowed origins are fetched.",
+            "description": "Also download directly linked CSS, JavaScript, images, fonts, media and other binary assets from HTML. Only the final page origin and explicitly allowed origins are fetched.",
             "type": "boolean"
+          },
+          "browser_profile": {
+            "additionalProperties": false,
+            "description": "Import cookies from a local Chromium browser profile. The profile is read server-side.",
+            "properties": {
+              "path": {
+                "description": "Chromium user-data directory or profile directory.",
+                "type": "string"
+              },
+              "profile": {
+                "description": "Profile inside a user-data directory; defaults to Default.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
           },
           "cookies": {
             "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",

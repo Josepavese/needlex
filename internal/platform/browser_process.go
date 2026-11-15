@@ -92,6 +92,10 @@ func (p *browserProcess) Close() error {
 }
 
 func browserArgs(path, profile, proxyURL string) []string {
+	return browserArgsWithTLS(path, profile, proxyURL, false)
+}
+
+func browserArgsWithTLS(path, profile, proxyURL string, insecureTLS bool) []string {
 	args := []string{}
 	if !IsHeadlessShell(path) {
 		args = append(args, "--headless=new")
@@ -100,6 +104,9 @@ func browserArgs(path, profile, proxyURL string) []string {
 		"--no-default-browser-check", "--disable-dev-shm-usage",
 		"--disable-background-networking", "--disable-sync", "--hide-scrollbars",
 		"--mute-audio", "--user-data-dir="+profile)
+	if insecureTLS {
+		args = append(args, "--ignore-certificate-errors")
+	}
 	return append(browserProxyArgs(proxyURL), args...)
 }
 
@@ -118,7 +125,39 @@ func browserProxyArgs(proxyURL string) []string {
 	}
 }
 
+// LaunchBrowserLogin opens an interactive browser for a human login. It is
+// deliberately not used by automated rendering: the caller keeps the profile,
+// the user enters credentials, and Needle-X only imports the resulting cookies.
+// --password-store=basic keeps Chromium's Linux cookie encryption on the
+// legacy v10/v11 key that the profile importer can read.
+func LaunchBrowserLogin(ctx context.Context, path, profile, profileName, targetURL string) error {
+	path, err := FindBrowserPath(path)
+	if err != nil {
+		return err
+	}
+	if IsHeadlessShell(path) {
+		return errors.New("guided login requires a non-headless Chromium browser")
+	}
+	cmd := exec.CommandContext(ctx, path,
+		"--user-data-dir="+profile,
+		"--profile-directory="+profileName,
+		"--password-store=basic",
+		"--no-first-run",
+		"--no-default-browser-check",
+		"--new-window",
+		targetURL,
+	)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
 func launchBrowser(ctx context.Context, path, proxyURL string) (BrowserProcess, error) {
+	return launchBrowserWithTLS(ctx, path, proxyURL, false)
+}
+
+func launchBrowserWithTLS(ctx context.Context, path, proxyURL string, insecureTLS bool) (BrowserProcess, error) {
 	path, err := FindBrowserPath(path)
 	if err != nil {
 		return nil, err
@@ -127,7 +166,7 @@ func launchBrowser(ctx context.Context, path, proxyURL string) (BrowserProcess, 
 	if err != nil {
 		return nil, fmt.Errorf("create render profile: %w", err)
 	}
-	args := append(browserArgs(path, profile, proxyURL), "--remote-debugging-port=0",
+	args := append(browserArgsWithTLS(path, profile, proxyURL, insecureTLS), "--remote-debugging-port=0",
 		"--remote-debugging-address="+cdpLoopbackHost, "about:blank")
 	cmd := exec.Command(path, args...)
 	cleanup, err := prepareBrowserProcess(cmd)
@@ -174,6 +213,7 @@ type BrowserDOMRequest struct {
 	Path, URL, UserAgent, ProxyURL string
 	MaxBytes                       int64
 	VirtualTime                    time.Duration
+	InsecureTLS                    bool
 }
 
 func captureBrowserDOM(ctx context.Context, req BrowserDOMRequest) (data []byte, err error) {
@@ -182,7 +222,7 @@ func captureBrowserDOM(ctx context.Context, req BrowserDOMRequest) (data []byte,
 		return nil, err
 	}
 	defer func() { err = errors.Join(err, os.RemoveAll(profile)) }()
-	args := append(browserArgs(req.Path, profile, req.ProxyURL),
+	args := append(browserArgsWithTLS(req.Path, profile, req.ProxyURL, req.InsecureTLS),
 		"--virtual-time-budget="+strconv.FormatInt(req.VirtualTime.Milliseconds(), 10), "--dump-dom")
 	if req.UserAgent != "" {
 		args = append(args, "--user-agent="+req.UserAgent)

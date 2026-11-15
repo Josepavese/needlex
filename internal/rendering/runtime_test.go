@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -209,5 +210,57 @@ func TestRuntimeAppliesSessionCookiesBeforeNavigation(t *testing.T) {
 	}
 	if !strings.Contains(page.HTML, "sid=browser-cookie") {
 		t.Fatalf("session cookie missing from rendered DOM: %s", page.HTML)
+	}
+}
+
+func TestRuntimeAppliesSessionHeadersToOriginRequests(t *testing.T) {
+	browser := runnableBrowserOrSkip(t)
+	var sawAPI atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api" {
+			if r.Header.Get("Authorization") != "Bearer browser-header" || r.Header.Get("X-API-Key") != "browser-key" {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			sawAPI.Store(true)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"value":"authenticated-browser-data"}`)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, `<!doctype html><p id="api">pending</p><script>
+fetch('/api').then(r=>r.json()).then(d=>document.querySelector('#api').textContent=d.value)
+  .catch(e=>document.querySelector('#api').textContent='ERROR:'+e.message)
+</script>`)
+	}))
+	defer server.Close()
+	target, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := platform.NewSession(platform.SessionConfig{Headers: []platform.SessionHeader{
+		{Origin: platform.Origin(target), Name: "Authorization", Value: "Bearer browser-header"},
+		{Origin: platform.Origin(target), Name: "X-API-Key", Value: "browser-key"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.DefaultRenderConfig()
+	cfg.BrowserPath = browser
+	cfg.NetworkIdleMS = 300
+	runtime, err := NewRuntime(cfg, platform.NetworkPolicyAny)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Close() //nolint:errcheck
+	page, err := runtime.Render(context.Background(), Request{URL: server.URL, Session: session, Timeout: 10 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sawAPI.Load() {
+		t.Fatalf("API was not reached with session headers: %s", page.HTML)
+	}
+	if !strings.Contains(page.HTML, "authenticated-browser-data") {
+		t.Fatalf("session headers missing from rendered network data: %s", page.HTML)
 	}
 }

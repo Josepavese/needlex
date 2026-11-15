@@ -83,3 +83,15 @@ func TestNativeBrowserCrashRecoveryAndProfileCleanup(t *testing.T) {
 		t.Fatalf("profiles=%v err=%v", profiles, err)
 	}
 }
+
+func TestBrowserSessionProxyAndTLSArguments(t *testing.T) {
+	args := strings.Join(browserArgsWithTLS("/usr/bin/chrome", "/tmp/profile", "http://127.0.0.1:9999", true), " ")
+	for _, want := range []string{"--proxy-server=http://127.0.0.1:9999", "--proxy-bypass-list=<-loopback>", "--ignore-certificate-errors"} {
+		if !strings.Contains(args, want) {
+			t.Fatalf("missing %q in %s", want, args)
+		}
+	}
+	if _, err := NewBrowserRuntimeWithOptions(BrowserLimits{MaxConcurrency: 1, IdleTimeout: time.Second, MaxUses: 1}, NetworkPolicyPublic, BrowserRuntimeOptions{ProxyURL: "http://127.0.0.1:9999"}); err == nil {
+		t.Fatal("public egress accepted an uninspectable browser proxy")
+	}
+}

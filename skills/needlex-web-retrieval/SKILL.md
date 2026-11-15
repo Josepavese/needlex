@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.49
+version: v0.1.50
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -58,16 +58,19 @@ navigation session instead of escalating for login-gated HTTP content:
   `--header "Name: Value"` and `--cookie "name=value"`.
 - URL `user:password@` is supported and is converted to Basic auth without being
   echoed in receipts or traces.
+- A session may reference a Chromium `browser_profile`; its cookies are imported
+  server-side. A guided `needlex session login` writes such a session without
+  exposing the user's password to Needle-X.
 - Header rules are scoped to one `scheme://host[:port]`; cookies are scoped by
   domain. Cross-origin redirects and assets do not receive another origin's
-  credentials.
+  credentials. The browser renderer applies the same request-header rules.
 
 Never request, invent, log or persist credentials the user did not provide. Do
 not use a session to bypass paywalls, CAPTCHA, 2FA, DRM or an authorization
 boundary. A 401/403 from an authorized request is an HTTP failure, not a signal
-to evade the control. Current render boundary: cookies are injected into the
-isolated browser context; per-origin request headers and imported browser
-profiles are not part of this session version.
+to evade the control. Browser rendering applies per-origin request headers and cookies in an isolated
+context. Browser custom CA/client certificates and non-cookie profile storage
+are not part of this session version.
 
 ## Tool Choice
 
