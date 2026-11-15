@@ -1,18 +1,19 @@
 package config
 
 type Config struct {
-	Decision  DecisionConfig  `json:"decision,omitempty"`
-	Runtime   RuntimeConfig   `json:"runtime"`
-	Fetch     FetchConfig     `json:"fetch,omitempty"`
-	Policy    PolicyConfig    `json:"policy"`
-	Budget    BudgetConfig    `json:"budget"`
-	Models    ModelsConfig    `json:"models"`
-	Discovery DiscoveryConfig `json:"discovery,omitempty"`
-	Semantic  SemanticConfig  `json:"semantic,omitempty"`
-	Memory    MemoryConfig    `json:"memory,omitempty"`
-	Agent     AgentConfig     `json:"agent,omitempty"`
-	Render    RenderConfig    `json:"render,omitempty"`
-	Network   NetworkConfig   `json:"network,omitempty"`
+	Decision    DecisionConfig  `json:"decision,omitempty"`
+	Runtime     RuntimeConfig   `json:"runtime"`
+	Fetch       FetchConfig     `json:"fetch,omitempty"`
+	Policy      PolicyConfig    `json:"policy"`
+	Budget      BudgetConfig    `json:"budget"`
+	Models      ModelsConfig    `json:"models"`
+	Discovery   DiscoveryConfig `json:"discovery,omitempty"`
+	Semantic    SemanticConfig  `json:"semantic,omitempty"`
+	Memory      MemoryConfig    `json:"memory,omitempty"`
+	Agent       AgentConfig     `json:"agent,omitempty"`
+	Render      RenderConfig    `json:"render,omitempty"`
+	Network     NetworkConfig   `json:"network,omitempty"`
+	SessionFile string          `json:"session_file,omitempty"`
 }
 
 // NetworkConfig selects the network destinations acquisition transports may use.

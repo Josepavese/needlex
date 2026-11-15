@@ -41,6 +41,23 @@ Current MCP tool set:
 9. `memory`
 10. `analytics`
 
+Authenticated navigation:
+1. `web_read`, `web_query`, `web_crawl` and `web_fetch` accept `session_path`, pointing to a navigation-session JSON file.
+2. They also accept inline `headers` (an object scoped to the target origin) and `cookies` (an array scoped to the target host) for short-lived caller credentials.
+3. `proxy` and `insecure_tls` are available for explicit transport overrides; `session_path` also carries custom CA and client-certificate settings.
+4. Credentials are never echoed in compact packets, receipts or diagnostics. Cross-origin redirects and assets receive only rules scoped to their own origin; cookies remain domain-scoped.
+5. The MCP server does not read a session from `NEEDLEX_SESSION` if it is running in a different environment; pass `session_path` explicitly or set the variable in the server environment.
+
+Example arguments:
+
+```json
+{
+  "url": "https://api.github.com/user",
+  "headers": {"Authorization": "Bearer token-from-the-agent-host"},
+  "cookies": [{"name": "sid", "value": "cookie-value"}]
+}
+```
+
 `web_prune` is an operator maintenance tool. For disposable PAL embedding cache
 cleanup, call it with `embedding_cache=true`; use `dry_run=true` before deletion.
 

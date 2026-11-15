@@ -18,7 +18,7 @@ import (
 	"github.com/josepavese/needlex/internal/store"
 )
 
-func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.CrawlRequest, surface string) (coreservice.CrawlResponse, crawlArtifacts, error) {
+func (r Runner) executeCrawlWithSurface(cfg config.Config, session *platform.Session, req coreservice.CrawlRequest, surface string) (coreservice.CrawlResponse, crawlArtifacts, error) {
 	state := r.localState()
 	req = coreservice.PrepareCrawlRequestWithLocalState(state, req)
 
@@ -26,6 +26,7 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 	cacheStart := intel.SnapshotEmbeddingCacheCounters()
 	ctx, cancel := r.runtimeOperationContext(cfg, "crawl", req.MaxPages)
 	defer cancel()
+	ctx = platform.WithSession(ctx, session)
 	resp, err := r.callCrawl(ctx, cfg, req)
 	if err != nil {
 		r.observeRuntimeFailure("crawl", "crawl.failed", surface, startedAt, err, map[string]any{
@@ -68,7 +69,7 @@ func (r Runner) executeCrawlWithSurface(cfg config.Config, req coreservice.Crawl
 	return resp, crawlArtifacts{StoredRuns: storedRuns}, nil
 }
 
-func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRequest, surface string) (coreservice.ReadResponse, artifactPaths, error) {
+func (r Runner) executeReadWithSurface(cfg config.Config, session *platform.Session, req coreservice.ReadRequest, surface string) (coreservice.ReadResponse, artifactPaths, error) {
 	state := r.localState()
 	req = coreservice.PrepareReadRequestWithLocalState(state, req)
 
@@ -76,6 +77,7 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 	cacheStart := intel.SnapshotEmbeddingCacheCounters()
 	ctx, cancel := r.runtimeOperationContext(cfg, "read", 1)
 	defer cancel()
+	ctx = platform.WithSession(ctx, session)
 	resp, err := r.callRead(ctx, cfg, req)
 	if err != nil {
 		r.observeRuntimeFailure("read", "fetch.failed", surface, startedAt, err, map[string]any{
@@ -125,7 +127,7 @@ func (r Runner) executeReadWithSurface(cfg config.Config, req coreservice.ReadRe
 	}, nil
 }
 
-func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.QueryRequest, surface string) (coreservice.QueryResponse, artifactPaths, error) {
+func (r Runner) executeQueryWithSurface(cfg config.Config, session *platform.Session, req coreservice.QueryRequest, surface string) (coreservice.QueryResponse, artifactPaths, error) {
 	state := r.localState()
 	req = coreservice.PrepareQueryRequestWithLocalState(state, req, cfg, r.semanticAligner(cfg), r.memoryRuntime(cfg))
 	req.FingerprintEvidenceLoader = coreservice.NewFingerprintEvidenceLoader(state.Fingerprints)
@@ -133,6 +135,7 @@ func (r Runner) executeQueryWithSurface(cfg config.Config, req coreservice.Query
 	cacheStart := intel.SnapshotEmbeddingCacheCounters()
 	ctx, cancel := r.runtimeOperationContext(cfg, "query", 1)
 	defer cancel()
+	ctx = platform.WithSession(ctx, session)
 	resp, err := r.callQuery(ctx, cfg, req)
 	if err != nil {
 		r.observeRuntimeFailure("query", "discovery_or_fetch.failed", surface, startedAt, err, map[string]any{

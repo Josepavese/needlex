@@ -21,7 +21,7 @@ func TestExecuteReadFailureRecordsAnalyticsSurface(t *testing.T) {
 		return coreservice.ReadResponse{}, fmt.Errorf("unexpected status code 404")
 	}
 
-	_, _, err := runner.executeReadWithSurface(config.Defaults(), coreservice.ReadRequest{
+	_, _, err := runner.executeReadWithSurface(config.Defaults(), nil, coreservice.ReadRequest{
 		URL:       "https://example.com/missing",
 		Objective: "analytics failure smoke",
 		Profile:   "standard",
@@ -104,7 +104,7 @@ func TestExecuteReadSuccessWritesFetchRuntimeEvent(t *testing.T) {
 		return resp, nil
 	}
 
-	_, _, err := runner.executeReadWithSurface(config.Defaults(), coreservice.ReadRequest{
+	_, _, err := runner.executeReadWithSurface(config.Defaults(), nil, coreservice.ReadRequest{
 		URL:     "https://example.com",
 		Profile: "standard",
 	}, "cli")
@@ -142,7 +142,7 @@ func TestExecuteReadProvidesOperationDeadline(t *testing.T) {
 		return fakeResponse(), nil
 	}
 
-	if _, _, err := runner.executeReadWithSurface(cfg, coreservice.ReadRequest{
+	if _, _, err := runner.executeReadWithSurface(cfg, nil, coreservice.ReadRequest{
 		URL:     "https://example.com",
 		Profile: "standard",
 	}, "cli"); err != nil {

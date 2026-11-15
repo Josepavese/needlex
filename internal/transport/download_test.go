@@ -136,7 +136,7 @@ func TestFetchReceiptErrorCodes(t *testing.T) {
 		wantCode string
 	}{
 		{"invalid URL", func(out string) []string {
-			return []string{"fetch", "http://user:secret@127.0.0.1:9/file", "--out-dir", out}
+			return []string{"fetch", "http:///file", "--out-dir", out}
 		}, "invalid_url"},
 		{"invalid asset origin", func(out string) []string {
 			return []string{"fetch", site.URL, "--asset-origin", "https://cdn.example.com", "--out-dir", out}
@@ -294,4 +294,77 @@ func assertDownloadModes(t *testing.T, directory, file string) {
 	if err != nil || fileInfo.Mode().Perm() != 0o600 {
 		t.Fatalf("download file mode = %v err=%v, want 0600", fileInfo, err)
 	}
+}
+
+func TestFetchCLISessionHeadersCookiesAndURLUserinfo(t *testing.T) {
+	const secret = "Bearer session-secret"
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		basicUser, basicPass, basicOK := req.BasicAuth()
+		authorized := req.Header.Get("Authorization") == secret && strings.Contains(req.Header.Get("Cookie"), "sid=cookie-secret")
+		if basicOK && basicUser == "user" && basicPass == "pass" {
+			authorized = true
+		}
+		if !authorized {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = io.WriteString(w, "protected bytes")
+	}))
+	defer site.Close()
+
+	r := NewRunner()
+	r.storeRoot = t.TempDir()
+	out := filepath.Join(t.TempDir(), "protected")
+	result := runFetchTestCLI(t, r, site.URL+"/private", "--out-dir", out,
+		"--header", "Authorization: "+secret, "--cookie", "sid=cookie-secret")
+	if result.Primary.Status != http.StatusOK || result.Primary.URL != site.URL+"/private" {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+	assertDownloadedBytes(t, result.Primary, []byte("protected bytes"))
+
+	var stdout, stderr bytes.Buffer
+	r = NewRunner()
+	r.storeRoot = t.TempDir()
+	userinfoURL := strings.Replace(site.URL, "http://", "http://user:pass@", 1) + "/private"
+	if code := r.Run([]string{"fetch", userinfoURL, "--out-dir", filepath.Join(t.TempDir(), "userinfo")}, &stdout, &stderr); code != 0 {
+		t.Fatalf("userinfo fetch failed: %d %s", code, &stderr)
+	}
+	if strings.Contains(stdout.String(), "pass@") || strings.Contains(stdout.String(), "user:pass") {
+		t.Fatalf("credentials leaked in receipt: %s", &stdout)
+	}
+}
+
+func TestFetchMCPInlineSessionCredentials(t *testing.T) {
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Header.Get("X-API-Key") != "mcp-secret" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		_, _ = w.Write([]byte("mcp protected bytes"))
+	}))
+	defer site.Close()
+
+	r := NewRunner()
+	r.storeRoot = t.TempDir()
+	r.stdin = strings.NewReader(fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_fetch","arguments":{"url":%q,"headers":{"X-API-Key":"mcp-secret"}}}}`, site.URL))
+	var stdout, stderr bytes.Buffer
+	if code := r.Run([]string{"mcp"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("MCP failed: %d %s", code, &stderr)
+	}
+	if strings.Contains(stdout.String(), "mcp-secret") {
+		t.Fatalf("credential leaked in MCP response: %s", &stdout)
+	}
+	var response struct {
+		Result struct {
+			StructuredContent struct {
+				Download pipeline.DownloadResult
+			}
+		}
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	assertDownloadedBytes(t, response.Result.StructuredContent.Download.Primary, []byte("mcp protected bytes"))
 }

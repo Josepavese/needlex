@@ -25,6 +25,9 @@ type DownloadRequest struct {
 	Assets       bool
 	AssetOrigins []string
 	MaxBytes     int64
+	// Session carries caller-provided navigation credentials. Nil preserves the
+	// historical unauthenticated transport.
+	Session *platform.Session
 	// Egress enforces the configured network policy on the primary representation
 	// and on every linked asset. Nil keeps the historical unrestricted transport.
 	Egress *platform.Egress
@@ -126,7 +129,7 @@ func Download(ctx context.Context, request DownloadRequest, createDirectory func
 	}
 	retain := false
 	defer func() { err = errors.Join(err, directory.Close(retain)) }()
-	result, err = downloadFiles(ctx, request.Assets, target, origins, directory, remaining, request.Egress)
+	result, err = downloadFiles(ctx, request.Assets, target, origins, directory, remaining, request.Session, request.Egress)
 	if err == nil {
 		err = ctx.Err()
 	}
@@ -134,13 +137,17 @@ func Download(ctx context.Context, request DownloadRequest, createDirectory func
 	return result, err
 }
 
-func downloadFiles(ctx context.Context, withAssets bool, target *url.URL, origins map[string]bool, directory platform.DownloadDirectory, remaining int64, egress *platform.Egress) (DownloadResult, error) {
+func downloadFiles(ctx context.Context, withAssets bool, target *url.URL, origins map[string]bool, directory platform.DownloadDirectory, remaining int64, session *platform.Session, egress *platform.Egress) (DownloadResult, error) {
 	var result DownloadResult
 	var err error
 
 	result.Schema = DownloadReceiptSchemaV1
 	result.Directory = directory.Path()
-	result.Primary, err = saveDownload(ctx, newDownloadClient(nil, egress), directory, target, "", remaining)
+	client, err := newDownloadClient(session, nil, egress)
+	if err != nil {
+		return result, err
+	}
+	result.Primary, err = saveDownload(ctx, client, directory, target, "", remaining)
 	if err != nil || !withAssets {
 		return result, err
 	}
@@ -163,7 +170,10 @@ func downloadFiles(ctx context.Context, withAssets bool, target *url.URL, origin
 	}
 	result.SkippedAssetOrigins = skipped
 	remaining -= result.Primary.Bytes
-	client := newDownloadClient(origins, egress)
+	client, err = newDownloadClient(session, origins, egress)
+	if err != nil {
+		return result, err
+	}
 	for i, asset := range assets {
 		name := fmt.Sprintf("asset-%02d.%s", i+1, asset.kind)
 		file, err := saveDownload(ctx, client, directory, asset.url, name, remaining)
@@ -176,7 +186,7 @@ func downloadFiles(ctx context.Context, withAssets bool, target *url.URL, origin
 	return result, nil
 }
 
-func newDownloadClient(origins map[string]bool, egress *platform.Egress) *http.Client {
+func newDownloadClient(session *platform.Session, origins map[string]bool, egress *platform.Egress) (*http.Client, error) {
 	client := &http.Client{
 		CheckRedirect: func(request *http.Request, via []*http.Request) error {
 			if len(via) >= maxDownloadRedirects {
@@ -193,10 +203,7 @@ func newDownloadClient(origins map[string]bool, egress *platform.Egress) *http.C
 			return nil
 		},
 	}
-	if egress != nil {
-		client = egress.HTTPClient(client)
-	}
-	return client
+	return session.HTTPClient(client, egress)
 }
 
 func saveDownload(ctx context.Context, client *http.Client, directory platform.DownloadDirectory, target *url.URL, name string, limit int64) (DownloadFile, error) {
@@ -229,8 +236,12 @@ func saveDownload(ctx context.Context, client *http.Client, directory platform.D
 		}
 		return DownloadFile{}, fmt.Errorf("save response body: %w", err)
 	}
+	finalURL := response.Request.URL.String()
+	if sanitized, sanitizeErr := platform.SanitizeURL(finalURL); sanitizeErr == nil {
+		finalURL = sanitized
+	}
 	return DownloadFile{
-		URL: target.String(), FinalURL: response.Request.URL.String(), Path: path,
+		URL: target.String(), FinalURL: finalURL, Path: path,
 		ContentType: contentType, ContentEncoding: strings.Join(response.Header.Values("Content-Encoding"), ", "),
 		Bytes: size, Status: response.StatusCode, SHA256: digest,
 	}, nil

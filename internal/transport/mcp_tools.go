@@ -106,8 +106,12 @@ func (r Runner) callMCPCrawlTool(args map[string]any) (map[string]any, error) {
 	if err := applyMCPRetrievalEffort(args, &cfg); err != nil {
 		return nil, err
 	}
-	resp, artifacts, err := r.executeCrawlWithSurface(cfg, coreservice.CrawlRequest{
-		SeedURL:    stringArg(args, "seed_url"),
+	session, targetSeedURL, err := sessionFromMCPArgs(args, cfg, stringArg(args, "seed_url"))
+	if err != nil {
+		return nil, err
+	}
+	resp, artifacts, err := r.executeCrawlWithSurface(cfg, session, coreservice.CrawlRequest{
+		SeedURL:    targetSeedURL,
 		Profile:    stringArg(args, "profile"),
 		UserAgent:  stringArg(args, "user_agent"),
 		MaxPages:   intDefault(args, "max_pages", 0),
@@ -136,11 +140,15 @@ func (r Runner) callMCPQueryTool(args map[string]any) (map[string]any, error) {
 	if err := applyMCPRetrievalEffort(args, &cfg); err != nil {
 		return nil, err
 	}
-	resp, artifacts, err := r.executeQueryWithSurface(cfg, coreservice.QueryRequest{
+	session, targetSeedURL, err := sessionFromMCPArgs(args, cfg, seedURL)
+	if err != nil {
+		return nil, err
+	}
+	resp, artifacts, err := r.executeQueryWithSurface(cfg, session, coreservice.QueryRequest{
 		Goal:               stringArg(args, "goal"),
 		Assertion:          stringArg(args, "assertion"),
 		ObserveAcquisition: boolArg(args, "observe_acquisition"),
-		SeedURL:            seedURL,
+		SeedURL:            targetSeedURL,
 		Profile:            stringArg(args, "profile"),
 		UserAgent:          stringArg(args, "user_agent"),
 		DiscoveryMode:      discoveryMode,
@@ -171,8 +179,12 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 	if err := applyMCPRetrievalEffort(args, &cfg); err != nil {
 		return nil, err
 	}
-	resp, artifacts, err := r.executeReadWithSurface(cfg, coreservice.ReadRequest{
-		URL:                stringArg(args, "url"),
+	session, targetURL, err := sessionFromMCPArgs(args, cfg, stringArg(args, "url"))
+	if err != nil {
+		return nil, err
+	}
+	resp, artifacts, err := r.executeReadWithSurface(cfg, session, coreservice.ReadRequest{
+		URL:                targetURL,
 		Objective:          stringArg(args, "objective"),
 		Assertion:          stringArg(args, "assertion"),
 		ObserveAcquisition: boolArg(args, "observe_acquisition"),
@@ -243,7 +255,7 @@ func mcpCrawlTool() mcpTool {
 	return mcpTool{
 		Name:        "web_crawl",
 		Description: "Traverse linked pages starting from one seed URL. Returns one compact crawl packet (kind, summary, documents, stored_runs) with no duplicate representations.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
+		InputSchema: schemaExamples(toolSchema(withSessionToolSchema(map[string]any{
 			"seed_url":         map[string]any{"type": "string"},
 			"profile":          map[string]any{"type": "string"},
 			"user_agent":       map[string]any{"type": "string"},
@@ -252,14 +264,14 @@ func mcpCrawlTool() mcpTool {
 			"same_domain":      map[string]any{"type": "boolean"},
 			"retrieval_effort": retrievalEffortSchema(),
 			"render":           renderModeSchema(),
-		}, "seed_url"),
+		}), "seed_url"),
 			map[string]any{"seed_url": "https://example.com/docs", "same_domain": true, "max_pages": 5, "max_depth": 1, "retrieval_effort": "standard"},
 		),
 	}
 }
 
 func mcpQueryTool() mcpTool {
-	schema := toolSchema(map[string]any{
+	schema := toolSchema(withSessionToolSchema(map[string]any{
 		"goal":       map[string]any{"type": "string", "description": "Retrieval objective or question to answer."},
 		"seed_url":   map[string]any{"type": "string", "description": "Starting URL for stable use. same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist. Omit only for explicit experimental web_search."},
 		"profile":    map[string]any{"type": "string"},
@@ -274,7 +286,7 @@ func mcpQueryTool() mcpTool {
 		"retrieval_effort":    retrievalEffortSchema(),
 		"render":              renderModeSchema(),
 		"include_diagnostics": includeDiagnosticsSchema("document, web_ir, result_pack, agent_context and plan"),
-	}, "goal")
+	}), "goal")
 	schema["anyOf"] = []any{
 		map[string]any{"required": []string{"seed_url"}},
 		map[string]any{
@@ -299,7 +311,7 @@ func mcpReadTool() mcpTool {
 	return mcpTool{
 		Name:        "web_read",
 		Description: "Read one known URL and return compact proof-carrying context first. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
+		InputSchema: schemaExamples(toolSchema(withSessionToolSchema(map[string]any{
 			"url":                 map[string]any{"type": "string"},
 			"profile":             map[string]any{"type": "string"},
 			"objective":           map[string]any{"type": "string"},
@@ -309,7 +321,7 @@ func mcpReadTool() mcpTool {
 			"retrieval_effort":    retrievalEffortSchema(),
 			"render":              renderModeSchema(),
 			"include_diagnostics": includeDiagnosticsSchema("document, web_ir, result_pack and agent_context"),
-		}, "url"),
+		}), "url"),
 			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details", "retrieval_effort": "standard"},
 			map[string]any{"url": "https://example.com", "objective": "Inspect the full compiled packet", "include_diagnostics": true},
 		),

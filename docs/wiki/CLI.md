@@ -53,7 +53,7 @@ needlex fetch https://example.com --assets --asset-origin https://cdn.example.co
 needlex fetch https://example.com/archive.zip --max-bytes 134217728
 ```
 
-`fetch` accepts an absolute HTTP(S) URL without embedded credentials. It saves
+`fetch` accepts an absolute HTTP(S) URL. With a navigation session it can use caller-provided headers, cookies, URL `user:password@` Basic auth, a custom proxy and TLS client settings. It saves
 the final successful response body after HTTP redirects and returns JSON with
 absolute local paths, requested and final URLs, HTTP status, MIME type,
 content encoding, byte counts and the SHA-256 of every saved file. Binary
@@ -63,6 +63,81 @@ is removed. The request asks for identity content encoding and any encoding
 the server sends is preserved. `--config PATH` selects the JSON config that
 supplies the network policy and other acquisition settings; without it the
 default PAL config is used.
+
+## Authenticated navigation sessions
+
+`read`, `query`, `crawl` and `fetch` accept a caller-owned navigation session.
+Persistent credentials belong in one JSON session file; one-off credentials can
+be passed for the target origin with `--header` and `--cookie`.
+
+```bash
+export NEEDLEX_SESSION="$HOME/.config/needlex/session.json"
+needlex read https://api.github.com/user --json
+needlex fetch https://example.com/private/archive.zip --session ./session.json
+needlex read https://github.com/settings/profile --render required \
+  --header "Authorization: Bearer $GITHUB_TOKEN" --json
+```
+
+Example session file:
+
+```json
+{
+  "headers": [
+    {
+      "origin": "https://api.github.com",
+      "name": "Authorization",
+      "value": "env:GITHUB_TOKEN"
+    },
+    {
+      "origin": "https://api.example.com",
+      "name": "X-API-Key",
+      "value": "file:api-key.txt"
+    }
+  ],
+  "cookies": [
+    {
+      "name": "sessionid",
+      "value": "env:EXAMPLE_SESSION",
+      "domain": ".example.com",
+      "path": "/",
+      "secure": true,
+      "http_only": true
+    }
+  ],
+  "proxy": "http://127.0.0.1:8080",
+  "tls": {
+    "ca_file": "/etc/needlex/private-ca.pem",
+    "client_cert_file": "/etc/needlex/client.pem",
+    "client_key_file": "/etc/needlex/client-key.pem",
+    "insecure_skip_verify": false
+  }
+}
+```
+
+- `origin` is exactly `scheme://host[:port]`; a header is sent only to that
+  origin, never to a cross-origin redirect or asset.
+- `value` may be a literal, `env:VARIABLE` or `file:PATH` (relative to the
+  session file); use `literal:` when a literal starts with `env:` or `file:`.
+- `--session` wins over `NEEDLEX_SESSION`, which wins over `session_file` in the
+  PAL config. `--header NAME: VALUE` and `--cookie NAME=VALUE` are scoped to the
+  target origin and are intended for short-lived credentials.
+- `user:password@` in the URL is converted to a Basic authorization rule for
+  that origin and removed from receipts, traces and output.
+- `--proxy`/session `proxy` requires `network.policy=any`; under the public
+  policy the proxy cannot be inspected and the command rejects the combination.
+- TLS custom roots and client certificates apply to HTTP acquisition. The
+  browser renderer receives session cookies in its isolated context.
+
+Credentials are resolved by the caller and are never echoed in receipts,
+traces, proof records or logs. A failed HTTP authentication remains an
+`http_status` fetch failure (`401`/`403`); invalid session configuration is
+reported before the network request. Use a private (`0600`) session file and
+prefer `env:` references so secrets do not enter shell history or the repo.
+
+Current boundary: the renderer applies cookies, not per-origin request headers
+yet, and importing an existing browser profile or cookies database is not part
+of this session version. `fetch --render` is not a fetch option; use `read
+--render required` for rendered access.
 
 ### Receipt contract v1
 

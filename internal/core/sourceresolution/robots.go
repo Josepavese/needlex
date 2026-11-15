@@ -12,6 +12,7 @@ import (
 	"github.com/josepavese/needlex/internal/core/fetchpolicy"
 	"github.com/josepavese/needlex/internal/core/webirbuilder"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/proof"
 	"github.com/josepavese/needlex/internal/rendering"
 )
@@ -139,6 +140,7 @@ func (r Resolver) renderPage(ctx context.Context, recorder *proof.Recorder, req 
 		NetworkResourceMaxBytes: r.Config.Render.NetworkResourceMaxBytes,
 		NetworkMaxResources:     r.Config.Render.NetworkMaxResources,
 		NetworkMaxMessages:      r.Config.Render.NetworkMaxMessages,
+		Session:                 platform.SessionFromContext(ctx),
 	})
 	if err != nil {
 		recorder.Error(stage, "NX_JS_RENDER_FAILED", err.Error(), map[string]string{"mode": mode}, r.now().UTC())

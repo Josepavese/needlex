@@ -12,6 +12,7 @@ import (
 	"github.com/josepavese/needlex/internal/core/webdiscover"
 	"github.com/josepavese/needlex/internal/core/webirbuilder"
 	"github.com/josepavese/needlex/internal/pipeline"
+	"github.com/josepavese/needlex/internal/platform"
 	"github.com/josepavese/needlex/internal/rendering"
 )
 
@@ -101,6 +102,7 @@ func (s *Service) renderWebCandidateProbe(ctx context.Context, rawPage pipeline.
 		NetworkResourceMaxBytes: seedlessBrowserProbeResourceMaxBytes(s.cfg.Render.NetworkResourceMaxBytes),
 		NetworkMaxResources:     seedlessBrowserProbeMaxResources(s.cfg.Render.NetworkMaxResources),
 		NetworkMaxMessages:      seedlessBrowserProbeMaxMessages(s.cfg.Render.NetworkMaxMessages),
+		Session:                 platform.SessionFromContext(ctx),
 	})
 	if err != nil {
 		return pipeline.RawPage{}, pipeline.SimplifiedDOM{}, core.WebIR{}, nil, err

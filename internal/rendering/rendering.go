@@ -20,6 +20,9 @@ type Request struct {
 	NetworkResourceMaxBytes int64
 	NetworkMaxResources     int
 	NetworkMaxMessages      int
+	// Session injects caller-provided cookies into the isolated browser context.
+	// Request headers are scoped at the transport layer, not globally.
+	Session *platform.Session
 }
 
 type Page struct {

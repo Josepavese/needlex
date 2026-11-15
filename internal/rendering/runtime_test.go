@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -175,4 +176,38 @@ func TestOneShotRendererKeepsServiceConcurrencyLimit(t *testing.T) {
 		t.Fatalf("waiter bypassed service limit: %v", err)
 	}
 	<-renderer.slots
+}
+
+func TestRuntimeAppliesSessionCookiesBeforeNavigation(t *testing.T) {
+	browser := runnableBrowserOrSkip(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, `<!doctype html><p id="cookie"></p><script>document.querySelector('#cookie').textContent=document.cookie</script>`)
+	}))
+	defer server.Close()
+	target, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := platform.NewSession(platform.SessionConfig{Cookies: []platform.SessionCookie{{
+		Name: "sid", Value: "browser-cookie", Domain: target.Hostname(), Path: "/",
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.DefaultRenderConfig()
+	cfg.BrowserPath = browser
+	cfg.NetworkIdleMS = 200
+	runtime, err := NewRuntime(cfg, platform.NetworkPolicyAny)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Close() //nolint:errcheck
+	page, err := runtime.Render(context.Background(), Request{URL: server.URL, Session: session, Timeout: 10 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(page.HTML, "sid=browser-cookie") {
+		t.Fatalf("session cookie missing from rendered DOM: %s", page.HTML)
+	}
 }

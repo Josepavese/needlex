@@ -65,6 +65,8 @@ needlex fetch https://example.com/ --assets --out-dir ./page-source
 
 Both interfaces return a versioned receipt (`schema: needlex.fetch.receipt.v1`) with file paths, HTTP metadata and `sha256` for every saved file. [Raw download reference](docs/wiki/CLI.md#raw-downloads) · [Receipt schema](schemas/needlex-fetch-receipt.v1.json)
 
+For authenticated pages and private APIs, point `--session` or `NEEDLEX_SESSION` at a navigation-session file, or pass `--header`/`--cookie` for the target origin. Bearer/API-key headers, cookies, URL `user:password@`, custom proxy and TLS client settings are applied only to the caller-authorized origin and are removed on cross-origin redirects. [Navigation sessions](docs/wiki/CLI.md#authenticated-navigation-sessions)
+
 ## Shared and restricted environments
 
 By default Needle-X keeps its historical network behavior (`network.policy: any`). On a shared or untrusted host, set the optional public-only policy to keep acquisition and browser traffic on publicly routable destinations:

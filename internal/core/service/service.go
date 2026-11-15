@@ -88,7 +88,7 @@ func NewWithRenderer(cfg config.Config, client *http.Client, storeRoot string, r
 	return &Service{
 		cfg:        cfg,
 		httpClient: client,
-		acquirer:   pipeline.Acquirer{Client: acquisitionClient, Egress: egress},
+		acquirer:   pipeline.Acquirer{Client: acquisitionClient, BaseClient: client, Egress: egress},
 		reducer:    pipeline.Reducer{},
 		segmenter:  pipeline.Segmenter{},
 		renderer:   renderer,

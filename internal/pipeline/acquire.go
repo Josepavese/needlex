@@ -35,6 +35,10 @@ func EffectiveUserAgent(userAgent string, browserLike bool) string {
 
 type Acquirer struct {
 	Client *http.Client
+	// BaseClient is the unwrapped client used when an operation session must add
+	// its own proxy/TLS transport. Service owners set both fields; standalone
+	// callers may leave it nil and provide credentials through Client.
+	BaseClient *http.Client
 	// Egress enforces the configured network policy on every attempt, including
 	// redirect hops. Nil keeps the historical unrestricted transport behavior.
 	Egress *platform.Egress
@@ -52,6 +56,9 @@ type pacingState struct {
 var globalPacingState = &pacingState{lastSeen: map[string]time.Time{}}
 
 func (a Acquirer) Acquire(ctx context.Context, input AcquireInput) (RawPage, error) {
+	if input.Session == nil {
+		input.Session = platform.SessionFromContext(ctx)
+	}
 	if err := validateAcquireInput(input); err != nil {
 		return RawPage{}, err
 	}
@@ -105,7 +112,7 @@ func (a Acquirer) acquireAttempt(ctx context.Context, input AcquireInput, timeou
 	if err != nil {
 		return RawPage{}, err
 	}
-	if !supportsBrowserImpersonation(attemptInput.URL) {
+	if attemptInput.Session != nil || !supportsBrowserImpersonation(attemptInput.URL) {
 		page, err := a.acquireWithHTTP(ctx, attemptInput, profile)
 		if err == nil {
 			page.HostPacingMS = pacingDelay.Milliseconds()
@@ -177,11 +184,22 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		headers.Set("Accept", strings.TrimSpace(input.Accept))
 	}
 	client := a.Client
-	if client == nil && a.Egress != nil {
-		client = a.Egress.HTTPClient(nil)
-	}
 	if client == nil {
 		client = &http.Client{}
+	}
+	if input.Session != nil {
+		base := a.BaseClient
+		egress := a.Egress
+		if base == nil {
+			base, egress = client, nil
+		}
+		sessionClient, err := input.Session.HTTPClient(base, egress)
+		if err != nil {
+			return RawPage{}, err
+		}
+		client = sessionClient
+	} else if a.Egress != nil && a.BaseClient == nil {
+		client = a.Egress.HTTPClient(client)
 	}
 	resp, err := platform.OpenHTTPGet(reqCtx, client, input.URL, headers, a.observeFetch)
 	if err != nil {
@@ -203,9 +221,13 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		return RawPage{}, err
 	}
 
+	finalURL := resp.Request.URL.String()
+	if sanitized, sanitizeErr := platform.SanitizeURL(finalURL); sanitizeErr == nil {
+		finalURL = sanitized
+	}
 	return RawPage{
 		URL:          input.URL,
-		FinalURL:     resp.Request.URL.String(),
+		FinalURL:     finalURL,
 		StatusCode:   resp.StatusCode,
 		ContentType:  contentType,
 		Headers:      cloneHTTPHeaders(resp.Header),

@@ -18,6 +18,59 @@
             }
           ],
           "properties": {
+            "cookies": {
+              "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "domain": {
+                    "description": "Cookie domain; defaults to the target host.",
+                    "type": "string"
+                  },
+                  "http_only": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "default": "/",
+                    "type": "string"
+                  },
+                  "same_site": {
+                    "enum": [
+                      "lax",
+                      "strict",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "secure": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "headers": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Optional request headers scoped to the target origin, for example {\"Authorization\":\"Bearer ...\"}. Never echoed in output.",
+              "type": "object"
+            },
+            "insecure_tls": {
+              "description": "Explicitly disable TLS certificate verification for this operation.",
+              "type": "boolean"
+            },
             "max_depth": {
               "type": "integer"
             },
@@ -25,6 +78,10 @@
               "type": "integer"
             },
             "profile": {
+              "type": "string"
+            },
+            "proxy": {
+              "description": "Optional HTTP(S) or SOCKS5 proxy; requires network.policy=any.",
               "type": "string"
             },
             "render": {
@@ -53,6 +110,10 @@
               "type": "boolean"
             },
             "seed_url": {
+              "type": "string"
+            },
+            "session_path": {
+              "description": "Optional path to a navigation-session JSON file. Values may use env:NAME or file:PATH references; otherwise set NEEDLEX_SESSION.",
               "type": "string"
             },
             "user_agent": {
@@ -112,6 +173,48 @@
               "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
               "type": "string"
             },
+            "cookies": {
+              "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "domain": {
+                    "description": "Cookie domain; defaults to the target host.",
+                    "type": "string"
+                  },
+                  "http_only": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "default": "/",
+                    "type": "string"
+                  },
+                  "same_site": {
+                    "enum": [
+                      "lax",
+                      "strict",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "secure": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
             "discovery_mode": {
               "description": "Discovery strategy. same_site_links = follow links from the seed site. off = do not expand beyond an exact verified seed URL. web_search = EXPERIMENTAL seedless public bootstrap and must be selected explicitly when seed_url is omitted; never choose it automatically.",
               "enum": [
@@ -125,9 +228,20 @@
               "description": "Retrieval objective or question to answer.",
               "type": "string"
             },
+            "headers": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Optional request headers scoped to the target origin, for example {\"Authorization\":\"Bearer ...\"}. Never echoed in output.",
+              "type": "object"
+            },
             "include_diagnostics": {
               "default": false,
               "description": "When true, structuredContent also carries a nested diagnostics object with the full document, web_ir, result_pack, agent_context and plan. Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
+              "type": "boolean"
+            },
+            "insecure_tls": {
+              "description": "Explicitly disable TLS certificate verification for this operation.",
               "type": "boolean"
             },
             "observe_acquisition": {
@@ -136,6 +250,10 @@
               "type": "boolean"
             },
             "profile": {
+              "type": "string"
+            },
+            "proxy": {
+              "description": "Optional HTTP(S) or SOCKS5 proxy; requires network.policy=any.",
               "type": "string"
             },
             "render": {
@@ -162,6 +280,10 @@
             },
             "seed_url": {
               "description": "Starting URL for stable use. same_site_links expands from this site. When discovery_mode=off, this must be the exact canonical page and must already exist. Omit only for explicit experimental web_search.",
+              "type": "string"
+            },
+            "session_path": {
+              "description": "Optional path to a navigation-session JSON file. Values may use env:NAME or file:PATH references; otherwise set NEEDLEX_SESSION.",
               "type": "string"
             },
             "user_agent": {
@@ -199,9 +321,62 @@
               "description": "Optional explicit factual statement to assess against a semantically selected evidence unit. Requires local decision observation; reports disabled/unavailable otherwise. Advisory only: does not change content or certify truth. Omit for an ordinary read.",
               "type": "string"
             },
+            "cookies": {
+              "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "domain": {
+                    "description": "Cookie domain; defaults to the target host.",
+                    "type": "string"
+                  },
+                  "http_only": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "default": "/",
+                    "type": "string"
+                  },
+                  "same_site": {
+                    "enum": [
+                      "lax",
+                      "strict",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "secure": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "headers": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Optional request headers scoped to the target origin, for example {\"Authorization\":\"Bearer ...\"}. Never echoed in output.",
+              "type": "object"
+            },
             "include_diagnostics": {
               "default": false,
               "description": "When true, structuredContent also carries a nested diagnostics object with the full document, web_ir, result_pack and agent_context. Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
+              "type": "boolean"
+            },
+            "insecure_tls": {
+              "description": "Explicitly disable TLS certificate verification for this operation.",
               "type": "boolean"
             },
             "objective": {
@@ -213,6 +388,10 @@
               "type": "boolean"
             },
             "profile": {
+              "type": "string"
+            },
+            "proxy": {
+              "description": "Optional HTTP(S) or SOCKS5 proxy; requires network.policy=any.",
               "type": "string"
             },
             "render": {
@@ -235,6 +414,10 @@
                 "standard",
                 "exhaustive"
               ],
+              "type": "string"
+            },
+            "session_path": {
+              "description": "Optional path to a navigation-session JSON file. Values may use env:NAME or file:PATH references; otherwise set NEEDLEX_SESSION.",
               "type": "string"
             },
             "url": {
@@ -277,11 +460,72 @@
               "description": "Also download directly linked CSS and JavaScript from HTML. Only the final page origin and explicitly allowed origins are fetched.",
               "type": "boolean"
             },
+            "cookies": {
+              "description": "Optional cookies for the target host. Domain scoping is enforced by the HTTP client and the browser.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "domain": {
+                    "description": "Cookie domain; defaults to the target host.",
+                    "type": "string"
+                  },
+                  "http_only": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "default": "/",
+                    "type": "string"
+                  },
+                  "same_site": {
+                    "enum": [
+                      "lax",
+                      "strict",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "secure": {
+                    "type": "boolean"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "headers": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Optional request headers scoped to the target origin, for example {\"Authorization\":\"Bearer ...\"}. Never echoed in output.",
+              "type": "object"
+            },
+            "insecure_tls": {
+              "description": "Explicitly disable TLS certificate verification for this operation.",
+              "type": "boolean"
+            },
             "max_bytes": {
               "default": 67108864,
               "description": "Maximum total bytes for the page and all downloaded assets. A failed download discards its files.",
               "minimum": 1,
               "type": "integer"
+            },
+            "proxy": {
+              "description": "Optional HTTP(S) or SOCKS5 proxy; requires network.policy=any.",
+              "type": "string"
+            },
+            "session_path": {
+              "description": "Optional path to a navigation-session JSON file. Values may use env:NAME or file:PATH references; otherwise set NEEDLEX_SESSION.",
+              "type": "string"
             },
             "url": {
               "description": "Absolute HTTP(S) URL of the page or file.",

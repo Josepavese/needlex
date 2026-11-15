@@ -114,7 +114,7 @@ func TestQueryStateRecallAndObservationUseInjectedRuntime(t *testing.T) {
 		return fakeQueryResponse(req), nil
 	}
 	cfg := config.Defaults()
-	if _, _, err := runner.executeQueryWithSurface(cfg, coreservice.QueryRequest{
+	if _, _, err := runner.executeQueryWithSurface(cfg, nil, coreservice.QueryRequest{
 		Goal: "retention policy", SeedURL: "https://example.com", DiscoveryMode: coreservice.QueryDiscoverySameSite,
 	}, "mcp"); err != nil {
 		t.Fatal(err)

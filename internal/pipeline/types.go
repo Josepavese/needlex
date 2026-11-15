@@ -3,6 +3,8 @@ package pipeline
 import (
 	"strings"
 	"time"
+
+	"github.com/josepavese/needlex/internal/platform"
 )
 
 type AcquireInput struct {
@@ -20,6 +22,9 @@ type AcquireInput struct {
 	TimeoutRetryBackoff time.Duration
 	TimeoutRetryJitter  time.Duration
 	AllowPartial        bool
+	// Session carries caller-provided navigation credentials. Nil preserves the
+	// historical unauthenticated transport.
+	Session *platform.Session
 }
 
 type RawPage struct {

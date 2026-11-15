@@ -13,11 +13,11 @@ type crawlArtifacts struct {
 }
 
 func writeCrawlUsage(w io.Writer) {
-	writeUsage(w, "needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required]")
+	writeUsage(w, "needlex crawl <seed-url> [--json] [--json-mode compact|full] [--config path] [--profile name] [--max-pages N] [--max-depth N] [--same-domain] [--retrieval-effort minimal|light|balanced|standard|exhaustive] [--render auto|off|required] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]...")
 }
 
 func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
-	configPath, profile, userAgent, seedURL, retrievalEffort, renderMode, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, ok := parseCrawlArgs(args, stderr)
+	configPath, profile, userAgent, seedURL, retrievalEffort, renderMode, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, session, ok := parseCrawlArgs(args, stderr)
 	if !ok {
 		writeCrawlUsage(stderr)
 		return 2
@@ -34,8 +34,13 @@ func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
 	if err := applyRetrievalEffort(retrievalEffort, &cfg); err != nil {
 		return r.reportCLIErrorCode(stderr, "crawl", err, map[string]any{"retrieval_effort": retrievalEffort}, 2)
 	}
+	sessionRuntime, targetSeedURL, err := session.load(cfg, seedURL)
+	if err != nil {
+		return r.reportCLIErrorCode(stderr, "crawl", err, map[string]any{"phase": "session"}, 2)
+	}
+	seedURL = targetSeedURL
 
-	resp, artifacts, err := r.executeCrawlWithSurface(cfg, coreservice.CrawlRequest{
+	resp, artifacts, err := r.executeCrawlWithSurface(cfg, sessionRuntime, coreservice.CrawlRequest{
 		SeedURL:    seedURL,
 		Profile:    profile,
 		UserAgent:  userAgent,
@@ -59,10 +64,12 @@ func (r Runner) runCrawl(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userAgent, seedURL, retrievalEffort, renderMode, jsonMode string, maxPages, maxDepth int, sameDomain, jsonOut, ok bool) {
+func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userAgent, seedURL, retrievalEffort, renderMode, jsonMode string, maxPages, maxDepth int, sameDomain, jsonOut bool, session *sessionFlags, ok bool) {
 	fs := flag.NewFlagSet("crawl", flag.ContinueOnError)
 	fs.SetOutput(stderr)
+	session = &sessionFlags{}
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
+	session.register(fs)
 	fs.StringVar(&profile, "profile", "", "packing profile: tiny, standard, or deep")
 	fs.StringVar(&userAgent, "user-agent", "", "override HTTP user agent")
 	fs.StringVar(&retrievalEffort, "retrieval-effort", "", "retrieval effort: minimal, light, balanced, standard, or exhaustive")
@@ -73,12 +80,12 @@ func parseCrawlArgs(args []string, stderr io.Writer) (configPath, profile, userA
 	fs.BoolVar(&sameDomain, "same-domain", false, "restrict crawl to the seed domain")
 	fs.BoolVar(&jsonOut, "json", false, "emit JSON output")
 	if err := fs.Parse(normalizeArgs(fs, args)); err != nil {
-		return "", "", "", "", "", "", "", 0, 0, false, false, false
+		return "", "", "", "", "", "", "", 0, 0, false, false, nil, false
 	}
 	if fs.NArg() != 1 {
-		return "", "", "", "", "", "", "", 0, 0, false, false, false
+		return "", "", "", "", "", "", "", 0, 0, false, false, nil, false
 	}
-	return configPath, profile, userAgent, fs.Arg(0), retrievalEffort, renderMode, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, true
+	return configPath, profile, userAgent, fs.Arg(0), retrievalEffort, renderMode, jsonMode, maxPages, maxDepth, sameDomain, jsonOut, session, true
 }
 
 func renderCrawlText(w io.Writer, resp coreservice.CrawlResponse, artifacts crawlArtifacts) {

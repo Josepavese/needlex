@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	downloadUsage = "needlex fetch <url> [--config path] [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N]"
+	downloadUsage = "needlex fetch <url> [--config path] [--out-dir NEW_DIR] [--assets] [--asset-origin ORIGIN]... [--max-bytes N] [--session path] [--header NAME:VALUE]... [--cookie NAME=VALUE]..."
 	webFetchTool  = "web_fetch"
 )
 
@@ -26,7 +26,9 @@ func (r Runner) runFetch(args []string, stdout, stderr io.Writer) int {
 	}
 	var request pipeline.DownloadRequest
 	var destination, configPath string
+	var session sessionFlags
 	fs.StringVar(&configPath, "config", "", "path to JSON config file")
+	session.register(fs)
 	fs.StringVar(&destination, "out-dir", "", "new output directory (default: a new directory under NEEDLEX_HOME/downloads)")
 	fs.BoolVar(&request.Assets, "assets", false, "also download linked HTML stylesheets and scripts")
 	fs.Func("asset-origin", "allow an additional asset origin; repeat for multiple origins", func(origin string) error {
@@ -52,7 +54,13 @@ func (r Runner) runFetch(args []string, stdout, stderr io.Writer) int {
 	if !ok {
 		return 1
 	}
-	request.URL = fs.Arg(0)
+	sessionRuntime, targetURL, err := session.load(cfg, fs.Arg(0))
+	if err != nil {
+		fmt.Fprintf(stderr, "fetch: code=%s error=%v\n", pipeline.DownloadErrorCode(err), err)
+		return 1
+	}
+	request.URL = targetURL
+	request.Session = sessionRuntime
 	request.Egress = platform.NewEgress(cfg.EgressPolicy())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -101,9 +109,13 @@ func (r Runner) callMCPFetchTool(args map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
+	session, targetURL, err := sessionFromMCPArgs(args, cfg, stringArg(args, "url"))
+	if err != nil {
+		return nil, err
+	}
 	result, err := r.download(pipeline.DownloadRequest{
-		URL: stringArg(args, "url"), Assets: boolArg(args, "assets"),
-		AssetOrigins: origins, MaxBytes: int64(maxBytes),
+		URL: targetURL, Assets: boolArg(args, "assets"),
+		AssetOrigins: origins, MaxBytes: int64(maxBytes), Session: session,
 		Egress: platform.NewEgress(cfg.EgressPolicy()),
 	}, "")
 	if err != nil {
@@ -117,11 +129,11 @@ func mcpFetchTool() mcpTool {
 	return mcpTool{
 		Name:        webFetchTool,
 		Description: "Download the original HTTP response body, including binary files, to the local Needle-X downloads directory. Returns file paths and HTTP metadata. Use for exact bytes; use web_read for evidence.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
+		InputSchema: schemaExamples(toolSchema(withSessionToolSchema(map[string]any{
 			"url":           map[string]any{"type": "string", "description": "Absolute HTTP(S) URL of the page or file."},
 			"assets":        map[string]any{"type": "boolean", "default": false, "description": "Also download directly linked CSS and JavaScript from HTML. Only the final page origin and explicitly allowed origins are fetched."},
 			"asset_origins": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Extra asset origins (scheme, host and optional port), for example a trusted CDN. Requires assets=true."},
 			"max_bytes":     map[string]any{"type": "integer", "minimum": 1, "default": pipeline.DefaultDownloadMaxBytes, "description": "Maximum total bytes for the page and all downloaded assets. A failed download discards its files."},
-		}, "url"), map[string]any{"url": "https://example.com", "assets": true}),
+		}), "url"), map[string]any{"url": "https://example.com", "assets": true}),
 	}
 }

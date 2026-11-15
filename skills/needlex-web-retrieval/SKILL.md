@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.48
+version: v0.1.49
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -14,7 +14,7 @@ Needle-X must not impose or suggest a numeric candidate limit. If the agent choo
 
 A page title is optional. Use the source URL and proof references for attribution when the title is absent.
 
-Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Needle-X also renders client-rendered pages and captures textual application data from fetch/XHR, SSE, and WebSocket payloads, so dynamic pages are in scope before any external escalation. Escalate when the task depends on exact visual bytes, full-document completeness, client-side interaction, or authenticated state.
+Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Needle-X also renders client-rendered pages and captures textual application data from fetch/XHR, SSE, and WebSocket payloads, so dynamic pages are in scope before any external escalation. When the caller already owns the credentials, Needle-X can also acquire authenticated HTTP surfaces and inject session cookies into an isolated browser render. Escalate when the task depends on exact visual bytes, full-document completeness, or client-side interaction.
 
 ## Policy Compatibility
 
@@ -33,18 +33,41 @@ Use Needle-X when the task needs:
 5. reduced context before sending material to an LLM
 6. consistent evidence packets across all URLs selected by the host agent
 7. content that a page builds after load, up to the capture window and budget the runtime reports
+8. public or caller-authorized authenticated HTTP pages and APIs, using a navigation session
 
 Do not rely on Needle-X alone when the task needs:
 
 1. exact visual layout, coordinates, screenshots, or rendered styling
 2. interactive widget state: forms, canvas, maps, drag interactions, or anything requiring clicks or scrolling
-3. login-gated content, paywalled state, cart/session state, or user-specific pages
+3. login-gated content without caller-provided credentials, paywalled state, cart/session state, or user-specific pages; when the caller owns a session, pass it explicitly instead of escalating
 4. exact asset bytes when the runtime does not advertise `web_fetch`
 5. legal/compliance-grade full-document review where omitted text is unacceptable
 6. proof that a page is empty or missing when the result could be extraction loss
 7. application data the page only requests after the capture window, or an unbounded stream still open when the render stopped
 
 For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor. For rule 7, check `signals.content_source`, `network_truncated`, and `render_degraded` first, and retry once with `render: "required"` before leaving Needle-X.
+
+## Authenticated navigation
+
+When the user has authorized access and credentials are available, use a
+navigation session instead of escalating for login-gated HTTP content:
+
+- `web_read`, `web_query`, `web_crawl` and `web_fetch` accept `session_path` to a
+  session JSON file, plus inline `headers` and `cookies` for short-lived values.
+- `needlex read`, `query`, `crawl` and `fetch` accept `--session`,
+  `--header "Name: Value"` and `--cookie "name=value"`.
+- URL `user:password@` is supported and is converted to Basic auth without being
+  echoed in receipts or traces.
+- Header rules are scoped to one `scheme://host[:port]`; cookies are scoped by
+  domain. Cross-origin redirects and assets do not receive another origin's
+  credentials.
+
+Never request, invent, log or persist credentials the user did not provide. Do
+not use a session to bypass paywalls, CAPTCHA, 2FA, DRM or an authorization
+boundary. A 401/403 from an authorized request is an HTTP failure, not a signal
+to evade the control. Current render boundary: cookies are injected into the
+isolated browser context; per-origin request headers and imported browser
+profiles are not part of this session version.
 
 ## Tool Choice
 
