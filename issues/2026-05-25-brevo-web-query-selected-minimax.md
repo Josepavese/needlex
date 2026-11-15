@@ -1,8 +1,8 @@
 # Brevo web_query selected unrelated MiniMax docs
 
-Status: open; still reproducible on v0.1.52
-Last reviewed: 2026-11-15
-State: open (fresh regression evidence).
+Status: closed in v0.1.53; unrelated-entity regression fixed, seedless source precision remains a residual.
+Last reviewed: 2026-11-15 (v0.1.53)
+State: closed (fixed for the reported unrelated-family regression).
 
 Date: 2026-05-25
 
@@ -114,3 +114,26 @@ response reported `uncertainty.reasons=["ambiguous_candidate_selection"]` and
 provider observations from Bing and DuckDuckGo. This confirms that the issue is
 still open and is not obsolete; the benchmark evidence must not be promoted to
 a pass from an unrelated result.
+
+## Resolution (2026-11-15, v0.1.53)
+
+The selected MiniMax/iCloud family was caused by local memory candidates being
+trusted without semantic grounding, plus an oversized multi-sentence goal being
+sent verbatim to a public provider. Both paths were corrected:
+
+1. semantic memory recall is filtered at `semantic.similarity_threshold` before
+   it can become a memory shortcut or a seed; ungrounded local history no longer
+   bypasses public bootstrap;
+2. long seedless goals are sent to providers as a bounded contiguous excerpt
+   instead of the full goal, so the provider does not read the leading
+   "Find whether..." as the search entity.
+
+A verification run of the same goal with `web_search` and light effort returned
+`https://www.brevo.com/it/products/` with a Brevo-only candidate family. The
+former iCloud/MiniMax result did not reproduce. One later live attempt hit a
+provider `401` rate-limit response, which is a provider failure, not a
+regression of this issue.
+
+Residual: seedless discovery may still rank a Brevo marketing, login, or help
+surface instead of a CLI-specific documentation page. Seedless discovery is
+experimental and this residual is not a stable-contract or release claim.

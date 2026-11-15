@@ -120,7 +120,7 @@ func TestQueryStateKeepsMemoryPriorityAndFallsBackToCandidatesOnRecallFailure(t 
 				if recallFails {
 					return nil, errors.New("recall unavailable")
 				}
-				return []memory.Candidate{{URL: "https://memory.example/page", Score: 0.9}}, nil
+				return []memory.Candidate{{URL: "https://memory.example/page", Score: 0.9, GoalSimilarity: 0.9}}, nil
 			})
 			cfg := testConfig()
 			cfg.Memory.Enabled = true

@@ -32,8 +32,13 @@ func PrepareQueryRequestWithLocalState(state store.LocalState, req QueryRequest,
 				DomainHints:   req.DomainHints,
 				QueryVariants: append([]string{}, req.SearchQueries...),
 			}); err == nil && len(matches) > 0 {
-				req.MemoryCandidates = memoryCandidatesToDiscover(matches)
-				req.DomainHints = mergeDomainHints(req.DomainHints, domainHintsFromDiscoverCandidates(req.MemoryCandidates)...)
+				matches = slices.DeleteFunc(matches, func(match memory.Candidate) bool {
+					return match.GoalSimilarity < cfg.Semantic.SimilarityThreshold
+				})
+				if len(matches) > 0 {
+					req.MemoryCandidates = memoryCandidatesToDiscover(matches)
+					req.DomainHints = mergeDomainHints(req.DomainHints, domainHintsFromDiscoverCandidates(req.MemoryCandidates)...)
+				}
 			}
 		}
 		if matches, err := state.Candidates.Search(ctx, req.Goal, 3, semantic); err == nil && len(matches) > 0 {
@@ -103,6 +108,7 @@ func memoryCandidatesToDiscover(matches []memory.Candidate) []DiscoverCandidate 
 		if strings.TrimSpace(match.Source) != "" {
 			metadata["memory_source"] = match.Source
 		}
+		metadata["memory_goal_similarity"] = strconv.FormatFloat(match.GoalSimilarity, 'f', 4, 64)
 		if match.Distance > 0 {
 			metadata["memory_distance"] = strconv.FormatFloat(match.Distance, 'f', 4, 64)
 		}

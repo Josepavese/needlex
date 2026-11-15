@@ -274,13 +274,14 @@ func semanticFamilyCandidate(row semanticFamilyRow, vector []float32, hints []st
 	host, _ := hostPath(row.RepresentativeURL)
 	score, reasons = applyDomainAndRecencyEvidence(score, reasons, host, row.ObservedAt, hints)
 	return Candidate{
-		URL:        row.RepresentativeURL,
-		Title:      firstNonEmpty(row.RepresentativeTitle, row.SemanticSummary),
-		Host:       host,
-		Score:      score,
-		Reasons:    reasons,
-		Distance:   1 - similarity,
-		Source:     "discovery_memory_family_graph",
-		ObservedAt: parseObservedAtOrZero(row.ObservedAt),
+		URL:            row.RepresentativeURL,
+		Title:          firstNonEmpty(row.RepresentativeTitle, row.SemanticSummary),
+		Host:           host,
+		Score:          score,
+		Reasons:        reasons,
+		Distance:       1 - similarity,
+		GoalSimilarity: similarity,
+		Source:         "discovery_memory_family_graph",
+		ObservedAt:     parseObservedAtOrZero(row.ObservedAt),
 	}, true, nil
 }

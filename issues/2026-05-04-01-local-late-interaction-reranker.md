@@ -1,9 +1,9 @@
 # Issue 01: Local Late-Interaction Reranker
 
-Status: implemented as bounded dense-semantic candidate-stack reranker; benchmark gate still required for release claims
-Last reviewed: 2026-11-15 (v0.1.52)
-State: open (implementation present; benchmark gate outstanding)
-Next action: run the documented `+10` point seedless benchmark gate before making an active-release claim
+Status: closed in v0.1.53; bounded dense-semantic candidate-stack reranker retained, model-backed late-interaction promotion declined.
+Last reviewed: 2026-11-15 (v0.1.53)
+State: closed (decision recorded; the +10 benchmark gate was not met)
+Next action: none. Reopen only with deterministic benchmark evidence for the +10 gate.
 Date: 2026-05-04
 Priority: P0 if seedless quality remains the main product bottleneck
 Surface: seedless discovery, Discovery Memory ranking, MCP `web_query`
@@ -276,3 +276,15 @@ Response: title and URL are allowed only as provenance fields or weak context. T
 5. 100-case seedless pass rate improves by at least `+10` points before enabling by default.
 6. No deterministic benchmark regression.
 7. No site-specific or language-specific ranking rule is introduced.
+
+## Decision (2026-11-15, v0.1.53)
+
+The implemented bounded dense-semantic candidate-stack reranker is retained
+because it is already integrated in the web candidate pipeline, has deterministic
+tests, and has no release-blocking regression. The model-backed late-interaction
+promotion is not claimed: the documented `+10` percentage-point seedless gate was
+not established, so this release does not advertise a late-interaction quality
+gain, a new model runtime, or a new active-release contract.
+
+Reopen this issue only if a deterministic benchmark demonstrates the gate with
+the measured failure taxonomy and latency budget.

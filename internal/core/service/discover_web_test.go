@@ -1696,6 +1696,31 @@ func (p fakeDiscoveryProvider) Bootstrap(_ context.Context, _ DiscoverWebRequest
 	return out, p.BaseURL(), nil
 }
 
+func TestSemanticBootstrapQueryPortfolioKeepsShortGoalIntact(t *testing.T) {
+	got := semanticBootstrapQueryPortfolio(DiscoverWebRequest{Goal: "playwright installation"})
+	if len(got) != 1 || got[0] != "playwright installation" {
+		t.Fatalf("expected short goal to remain the only query, got %#v", got)
+	}
+}
+
+func TestSemanticBootstrapQueryPortfolioReplacesOversizedGoalWithBoundedExcerpt(t *testing.T) {
+	goal := "Find whether there are existing comprehensive Brevo command line tools or agentic MCP tools for managing Brevo campaigns contacts lists templates reports beyond the official CLI and npm packages GitHub projects MCP servers if relevant"
+	got := semanticBootstrapQueryPortfolio(DiscoverWebRequest{Goal: goal})
+	if len(got) != 1 {
+		t.Fatalf("expected one bounded query for a long goal, got %#v", got)
+	}
+	if got[0] == goal {
+		t.Fatalf("oversized goal must not be sent verbatim, got %#v", got)
+	}
+	if len(strings.Fields(got[0])) > bootstrapCompactQueryTokens {
+		t.Fatalf("compact query exceeds token bound: %q", got[0])
+	}
+	tail := strings.Join(strings.Fields(goal)[len(strings.Fields(goal))-bootstrapCompactQueryTokens:], " ")
+	if got[0] != tail {
+		t.Fatalf("expected bounded tail excerpt, got %#v", got)
+	}
+}
+
 func TestCollectWebBootstrapCandidatesUsesRoundRobinProviderPortfolio(t *testing.T) {
 	cfg := testConfig()
 	svc := newTestService(t, cfg, nil)

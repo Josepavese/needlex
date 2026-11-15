@@ -226,6 +226,31 @@ func TestPrepareQueryRequestWithLocalStateLoadsMemoryCandidates(t *testing.T) {
 	}
 }
 
+func TestPrepareQueryRequestWithLocalStateSkipsUngroundedMemoryCandidates(t *testing.T) {
+	cfg := testConfig()
+	cfg.Memory.Enabled = true
+	recall := stateRecall(func(context.Context, string, memory.SearchOptions) ([]memory.Candidate, error) {
+		return []memory.Candidate{{
+			URL:            "https://doc.rust-lang.org/cargo/reference/config.html",
+			Score:          2.4,
+			GoalSimilarity: 0.20,
+			Reasons:        []string{"semantic_goal_alignment", "local_memory_hit"},
+		}}, nil
+	})
+
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(t.TempDir()), QueryRequest{
+		Goal:          "Brevo command line tools",
+		DiscoveryMode: QueryDiscoveryWeb,
+	}, cfg, nil, recall)
+
+	if len(req.MemoryCandidates) != 0 {
+		t.Fatalf("ungrounded memory must not become a discovery shortcut: %#v", req.MemoryCandidates)
+	}
+	if len(req.DomainHints) != 0 {
+		t.Fatalf("ungrounded memory must not steer domain hints: %#v", req.DomainHints)
+	}
+}
+
 func TestPrepareQueryRequestWithLocalStateDoesNotAutoSeedOverMemoryCandidates(t *testing.T) {
 	root := t.TempDir()
 	cfg := testConfig()
@@ -303,10 +328,11 @@ func TestRunQueryDiscoveryPrefersMemoryCandidatesForSeedlessWeb(t *testing.T) {
 		Goal: "playwright installation",
 		MemoryCandidates: []DiscoverCandidate{
 			{
-				URL:    "https://playwright.dev/docs/intro",
-				Label:  "Installation",
-				Score:  2.4,
-				Reason: []string{"semantic_goal_alignment", "local_memory_hit"},
+				URL:      "https://playwright.dev/docs/intro",
+				Label:    "Installation",
+				Score:    2.4,
+				Reason:   []string{"semantic_goal_alignment", "local_memory_hit"},
+				Metadata: map[string]string{"memory_goal_similarity": "0.80"},
 			},
 		},
 	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
@@ -344,7 +370,7 @@ func TestRunQueryDiscoveryUsesMemoryFamilyRecoveryBeforeWebBootstrap(t *testing.
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "playwright installation",
 		MemoryCandidates: []DiscoverCandidate{
-			{URL: seedURL, Label: "Playwright", Score: 2.1, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+			{URL: seedURL, Label: "Playwright", Score: 2.1, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}, Metadata: map[string]string{"memory_goal_similarity": "0.80"}},
 		},
 	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
 	if err != nil {
@@ -383,8 +409,8 @@ func TestRunQueryDiscoveryTrustsProofBackedMemoryBeforePublicBootstrap(t *testin
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "playwright installation",
 		MemoryCandidates: []DiscoverCandidate{
-			{URL: "https://playwright.dev/docs/intro", Label: "Installation | Playwright", Score: 1.85, Reason: []string{"semantic_goal_alignment", "local_memory_hit", "proof_backed_page"}},
-			{URL: "https://mirror.example/playwright", Label: "Mirror", Score: 1.82, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+			{URL: "https://playwright.dev/docs/intro", Label: "Installation | Playwright", Score: 1.85, Reason: []string{"semantic_goal_alignment", "local_memory_hit", "proof_backed_page"}, Metadata: map[string]string{"memory_goal_similarity": "0.80"}},
+			{URL: "https://mirror.example/playwright", Label: "Mirror", Score: 1.82, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}, Metadata: map[string]string{"memory_goal_similarity": "0.60"}},
 		},
 	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
 	if err != nil {
@@ -395,6 +421,39 @@ func TestRunQueryDiscoveryTrustsProofBackedMemoryBeforePublicBootstrap(t *testin
 	}
 	if searchHits != 0 {
 		t.Fatalf("expected public bootstrap to be skipped, got hits=%d", searchHits)
+	}
+}
+
+func TestUngroundedMemoryDoesNotBypassPublicBootstrap(t *testing.T) {
+	searchHits := 0
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		searchHits++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, `<html><body><a class="result__a" href="https://brevo.example/cli">Brevo CLI</a></body></html>`)
+	}))
+	defer searchServer.Close()
+
+	recall := stateRecall(func(context.Context, string, memory.SearchOptions) ([]memory.Candidate, error) {
+		return []memory.Candidate{{URL: "https://doc.rust-lang.org/cargo/reference/config.html", Score: 2.4, GoalSimilarity: 0.20}}, nil
+	})
+	cfg := testConfig()
+	cfg.Memory.Enabled = true
+	req := PrepareQueryRequestWithLocalState(store.NewLocalState(t.TempDir()), QueryRequest{
+		Goal:          "Brevo command line tools",
+		DiscoveryMode: QueryDiscoveryWeb,
+	}, cfg, nil, recall)
+
+	svc := newTestService(t, testConfig(), searchServer.Client())
+	svc.SetWebDiscoverBaseURL(searchServer.URL)
+	result, err := svc.runQueryDiscovery(context.Background(), req, QueryDiscoveryWeb, QueryFingerprintEvidence{})
+	if err != nil {
+		t.Fatalf("run query discovery: %v", err)
+	}
+	if searchHits == 0 {
+		t.Fatal("expected public bootstrap for ungrounded memory")
+	}
+	if strings.HasPrefix(result.provider, "discovery_memory") || result.selected != "https://brevo.example/cli" {
+		t.Fatalf("expected public bootstrap result, got %#v", result)
 	}
 }
 
@@ -418,7 +477,7 @@ func TestRunQueryDiscoveryKeepsOverviewSeedWhenRecoveredFamilyContainsOnlyDescen
 	result, err := svc.runQueryDiscovery(context.Background(), QueryRequest{
 		Goal: "MDN JavaScript overview",
 		MemoryCandidates: []DiscoverCandidate{
-			{URL: seedURL, Label: "JavaScript | MDN", Score: 2.1, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}},
+			{URL: seedURL, Label: "JavaScript | MDN", Score: 2.1, Reason: []string{"semantic_goal_alignment", "local_memory_hit"}, Metadata: map[string]string{"memory_goal_similarity": "0.80"}},
 		},
 	}, QueryDiscoveryWeb, QueryFingerprintEvidence{})
 	if err != nil {

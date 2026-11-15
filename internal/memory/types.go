@@ -57,6 +57,7 @@ type Candidate struct {
 	ProofRef        string
 	Host            string
 	Distance        float64
+	GoalSimilarity  float64
 	Source          string
 	ObservedAt      time.Time
 	StableRatio     float64

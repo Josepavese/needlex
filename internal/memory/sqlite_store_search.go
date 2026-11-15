@@ -194,13 +194,15 @@ func topicNodeCandidate(row topicNodeRow, vector []float32, hints []string) (Can
 		reasons = append(reasons, "topic_child_coverage")
 	}
 	return Candidate{
-		URL:        row.RepresentativeURL,
-		Title:      firstNonEmpty(row.RepresentativeTitle, row.SemanticSummary),
-		Host:       row.Host,
-		Score:      score,
-		Reasons:    reasons,
-		Source:     "discovery_memory_topic",
-		ObservedAt: parseObservedAtOrZero(row.ObservedAt),
+		URL:            row.RepresentativeURL,
+		Title:          firstNonEmpty(row.RepresentativeTitle, row.SemanticSummary),
+		Host:           row.Host,
+		Score:          score,
+		Reasons:        reasons,
+		Distance:       1 - similarity,
+		GoalSimilarity: similarity,
+		Source:         "discovery_memory_topic",
+		ObservedAt:     parseObservedAtOrZero(row.ObservedAt),
 	}, true, nil
 }
 
@@ -211,6 +213,7 @@ func vectorMemoryCandidateWithSimilarity(row embeddingCandidateRow, similarity f
 	score, reasons := applyDocumentEvidence(similarity*3, []string{"semantic_goal_alignment", "local_memory_hit"}, row.memoryDocumentRow, hints, 0.08, true)
 	candidate := baseDocumentCandidate(row.memoryDocumentRow, score, reasons, firstNonEmpty(row.SourceKind, "discovery_memory"))
 	candidate.Distance = 1 - similarity
+	candidate.GoalSimilarity = similarity
 	return candidate
 }
 

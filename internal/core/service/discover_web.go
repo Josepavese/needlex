@@ -49,6 +49,9 @@ const (
 	hostRootSemanticMinSimilarity = 0.24
 	hostRootOriginMinSimilarity   = 0.16
 	hostRootDerivativeMargin      = 0.015
+
+	// Oversized goals are sent as a bounded contiguous excerpt, not a keyword rewrite.
+	bootstrapCompactQueryTokens = 24
 )
 
 func (s *Service) DiscoverWeb(ctx context.Context, req DiscoverWebRequest) (DiscoverWebResponse, error) {
@@ -156,6 +159,11 @@ func semanticBootstrapQueryPortfolio(req DiscoverWebRequest) []string {
 		queries = append(queries, query)
 	}
 	if len(req.Queries) == 0 {
+		tokens := strings.Fields(req.Goal)
+		if len(tokens) > bootstrapCompactQueryTokens {
+			add(strings.Join(tokens[len(tokens)-bootstrapCompactQueryTokens:], " "))
+			return queries
+		}
 		add(req.Goal)
 		return queries
 	}
