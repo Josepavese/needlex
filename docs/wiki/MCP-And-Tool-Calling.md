@@ -43,10 +43,10 @@ Current MCP tool set:
 
 Authenticated navigation:
 1. `web_read`, `web_query`, `web_crawl` and `web_fetch` accept `session_path`, pointing to a navigation-session JSON file.
-2. They also accept inline `headers` (an object scoped to the target origin) and `cookies` (an array scoped to the target host) for short-lived caller credentials.
-3. `browser_profile` accepts `{"path": "...", "profile": "Default"}` to import cookies from a local Chromium profile; `path` is required. Imported cookies are the baseline identity and explicit `cookies` override matching profile cookies.
+2. They also accept inline `headers` (an object scoped to the target origin) and `cookies` (an array scoped to the target host) for short-lived caller credentials. Inline cookies are host-only unless `host_only: false` is set.
+3. `browser_profile` accepts `{"path": "...", "profile": "Default"}` to import cookies from a local Chromium profile; `path` is required. Imported host-only cookies stay host-only. Imported cookies are the baseline identity and explicit `cookies` override matching profile cookies.
 4. `proxy` and `insecure_tls` are available for explicit transport overrides; `session_path` also carries custom CA and client-certificate settings. Browser proxy URLs with embedded credentials are rejected because Chromium does not apply them.
-5. Credentials are never echoed in compact packets, receipts or diagnostics. Cross-origin redirects and assets receive only rules scoped to their own origin; cookies remain domain-scoped, and the browser renderer applies the same header rules through CDP interception.
+5. Credentials are never echoed in compact packets, receipts or diagnostics. Cross-origin redirects and assets receive only rules scoped to their own origin; cookies remain domain- or host-scoped, and the browser renderer applies the same header rules through CDP interception. A rendered page seeds only cookies scoped to the requested URL, not cookies for unrelated subresources.
 6. A session file may carry `browser_profile` (a Chromium user-data or profile directory) to import cookies without copying their values into MCP arguments. Cookie values are resolved server-side and never returned.
 7. The MCP server does not read a session from `NEEDLEX_SESSION` if it is running in a different environment; pass `session_path` explicitly or set the variable in the server environment.
 

@@ -107,6 +107,7 @@ func (r Runner) runSessionLogin(args []string, stdout, stderr io.Writer) int {
 		return r.reportCLIError(stderr, "session", err, nil)
 	}
 	if len(imported.Cookies) == 0 {
+		printImportNotes(stderr, imported.Notes)
 		fmt.Fprintln(stderr, "session login: no cookies were imported; the session would not authenticate anything and was not written")
 		return 1
 	}
@@ -114,13 +115,7 @@ func (r Runner) runSessionLogin(args []string, stdout, stderr io.Writer) int {
 		return r.reportCLIError(stderr, "session", err, nil)
 	}
 	fmt.Fprintf(stdout, "Session saved: %s\nBrowser profile: %s (profile %s)\nCookies imported: %d\n", output, profile, profileName, len(imported.Cookies))
-	for index, note := range imported.Notes {
-		if index == 8 {
-			fmt.Fprintf(stdout, "Warning: %d additional skipped-cookie notes omitted\n", len(imported.Notes)-index)
-			break
-		}
-		fmt.Fprintf(stdout, "Warning: %s\n", note)
-	}
+	printImportNotes(stdout, imported.Notes)
 	fmt.Fprintf(stdout, "Next: needlex read %s --session %s\n", sanitizedSessionLoginURL(targetURL), output)
 	return 0
 }
@@ -137,10 +132,25 @@ func writeBrowserProfileSession(path, profile, profileName string) error {
 		return err
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
 		return err
 	}
-	return os.Chmod(path, 0o600)
+	if _, err := file.Write(data); err != nil {
+		file.Close() //nolint:errcheck
+		return err
+	}
+	return file.Close()
+}
+
+func printImportNotes(w io.Writer, notes []string) {
+	for index, note := range notes {
+		if index == 8 {
+			fmt.Fprintf(w, "Warning: %d additional skipped-cookie notes omitted\n", len(notes)-index)
+			return
+		}
+		fmt.Fprintf(w, "Warning: %s\n", note)
+	}
 }
 
 func sanitizedSessionLoginURL(raw string) string {

@@ -104,6 +104,7 @@ Example session file:
       "name": "sessionid",
       "value": "env:EXAMPLE_SESSION",
       "domain": ".example.com",
+      "host_only": false,
       "path": "/",
       "secure": true,
       "http_only": true
@@ -130,27 +131,34 @@ Example session file:
   session file); use `literal:` when a literal starts with `env:` or `file:`.
 - `--session` wins over `NEEDLEX_SESSION`, which wins over `session_file` in the
   PAL config. `--header NAME: VALUE` is scoped to the target origin; `--cookie
-  NAME=VALUE` is scoped to the target host/domain. Both are intended for
-  short-lived credentials.
+  NAME=VALUE` is host-only for the target host. A `cookies[]` entry defaults to
+  host-only when its domain has no leading dot and to a domain cookie when it
+  starts with `.`; `host_only` overrides that default explicitly. Both are
+  intended for short-lived credentials.
 - `user:password@` in the URL is converted to a Basic authorization rule for
   that origin and removed from receipts, traces and output.
 - `--browser-profile DIR` imports cookies from a Chromium-family profile for
   this command. `--browser-profile-name` selects the profile inside a
   user-data directory (`Default` by default). The session-file form is
-  `browser_profile` with `path` and optional `profile`. Imported cookies are
-  domain-scoped exactly like explicit cookie rules. Profile cookies form the
-  baseline identity; explicit `cookies` override a profile cookie with the same
-  name, domain and path. A profile with no readable cookies is rejected when no
+  `browser_profile` with `path` and optional `profile`. Imported cookies keep
+  their Chrome host-only or domain scope; a host-only cookie is never sent to a
+  subdomain. Profile cookies form the baseline identity; explicit `cookies`
+  override a profile cookie with the same name, domain, path and host-only
+  scope. Chrome host-only cookies stay host-only: they are not
+  sent to subdomains. A profile with no readable cookies is rejected when no
   explicit cookie or header credential is present, instead of producing a
-  session that silently cannot authenticate.
+  session that silently cannot authenticate. Rendered pages seed only the
+  cookies scoped to the target URL; cookies for unrelated subresources or
+  cross-origin redirect targets are not injected.
 - `--proxy`/session `proxy` requires `network.policy=any`; under the public
   policy the proxy cannot be inspected and the command rejects the combination.
   The browser uses the proxy for autonomous traffic when it launches its
   session-scoped context; proxy URLs with embedded credentials are rejected for
   rendered navigation because Chromium does not apply them, while HTTP
   acquisition supports them.
-- TLS custom roots and client certificates apply to HTTP acquisition.
-  `insecure_skip_verify` is also applied to the browser as an explicit
+- TLS custom roots and client certificates apply to HTTP acquisition. Relative
+  `ca_file`, `client_cert_file` and `client_key_file` values resolve against the
+  session file directory. `insecure_skip_verify` is also applied to the browser as an explicit
   certificate-error opt-in; the CLI shorthand is `--insecure`. Browser custom CA and client-certificate support is
   not provided by this version; those settings are rejected for rendered
   navigation instead of being silently ignored.
@@ -181,11 +189,14 @@ not treated as a login failure, but zero imported cookies still prevents a
 useless session file.
 It imports the profile cookies when the session is used; it never reads or
 writes the password. Use `--browser /path/to/chrome` when the configured
-renderer is a headless shell. Existing session files are never overwritten.
+renderer is a headless shell. Existing session files are never overwritten,
+and a profile already owned by a running browser (its `SingletonLock` exists)
+is rejected instead of importing stale cookies.
 
 Browser cookie import supports Chromium's plaintext cookies and the legacy
 Linux `v10`/`v11` AES-CBC format (for example Chrome started with
-`--password-store=basic`). Keychain, DPAPI, app-bound encryption and custom
+`--password-store=basic`), including the SHA-256 host prefix used by Chrome
+130+ cookie stores. Keychain, DPAPI, app-bound encryption and custom
 keyring stores are reported as skipped cookies, not guessed. Only cookies are
 imported: profile local storage, IndexedDB and service-worker state are not
 copied; use `--render required` with a live login only when the site's session

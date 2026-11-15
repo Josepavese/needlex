@@ -45,6 +45,10 @@
                     "description": "Cookie domain; defaults to the target host.",
                     "type": "string"
                   },
+                  "host_only": {
+                    "description": "Send only to the exact domain (default true; set false for a domain cookie).",
+                    "type": "boolean"
+                  },
                   "http_only": {
                     "type": "boolean"
                   },
@@ -218,6 +222,10 @@
                     "description": "Cookie domain; defaults to the target host.",
                     "type": "string"
                   },
+                  "host_only": {
+                    "description": "Send only to the exact domain (default true; set false for a domain cookie).",
+                    "type": "boolean"
+                  },
                   "http_only": {
                     "type": "boolean"
                   },
@@ -384,6 +392,10 @@
                     "description": "Cookie domain; defaults to the target host.",
                     "type": "string"
                   },
+                  "host_only": {
+                    "description": "Send only to the exact domain (default true; set false for a domain cookie).",
+                    "type": "boolean"
+                  },
                   "http_only": {
                     "type": "boolean"
                   },
@@ -540,6 +552,10 @@
                   "domain": {
                     "description": "Cookie domain; defaults to the target host.",
                     "type": "string"
+                  },
+                  "host_only": {
+                    "description": "Send only to the exact domain (default true; set false for a domain cookie).",
+                    "type": "boolean"
                   },
                   "http_only": {
                     "type": "boolean"

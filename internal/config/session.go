@@ -40,6 +40,7 @@ type sessionCookie struct {
 	Name     string `json:"name"`
 	Value    string `json:"value"`
 	Domain   string `json:"domain"`
+	HostOnly *bool  `json:"host_only,omitempty"`
 	Path     string `json:"path,omitempty"`
 	Secure   bool   `json:"secure,omitempty"`
 	HTTPOnly bool   `json:"http_only,omitempty"`
@@ -85,9 +86,16 @@ func LoadSession(path string) (platform.SessionConfig, error) {
 		return platform.SessionConfig{}, fmt.Errorf("parse session file: %w", err)
 	}
 	baseDir := filepath.Dir(path)
+	resolvePath := func(value string) string {
+		value = strings.TrimSpace(value)
+		if value == "" || filepath.IsAbs(value) {
+			return value
+		}
+		return filepath.Join(baseDir, value)
+	}
 	out := platform.SessionConfig{ProxyURL: raw.Proxy, TLS: platform.SessionTLS{
-		CAFile: raw.TLS.CAFile, ClientCertFile: raw.TLS.ClientCertFile,
-		ClientKeyFile: raw.TLS.ClientKeyFile, InsecureSkipVerify: raw.TLS.InsecureSkipVerify,
+		CAFile: resolvePath(raw.TLS.CAFile), ClientCertFile: resolvePath(raw.TLS.ClientCertFile),
+		ClientKeyFile: resolvePath(raw.TLS.ClientKeyFile), InsecureSkipVerify: raw.TLS.InsecureSkipVerify,
 	}}
 	if raw.BrowserProfile != nil {
 		profilePath := strings.TrimSpace(raw.BrowserProfile.Path)
@@ -122,8 +130,12 @@ func LoadSession(path string) (platform.SessionConfig, error) {
 		if err != nil {
 			return platform.SessionConfig{}, fmt.Errorf("session cookie %s: %w", cookie.Name, err)
 		}
+		hostOnly := !strings.HasPrefix(strings.TrimSpace(cookie.Domain), ".")
+		if cookie.HostOnly != nil {
+			hostOnly = *cookie.HostOnly
+		}
 		out.Cookies = append(out.Cookies, platform.SessionCookie{
-			Name: cookie.Name, Value: value, Domain: cookie.Domain, Path: cookie.Path,
+			Name: cookie.Name, Value: value, Domain: cookie.Domain, HostOnly: hostOnly, Path: cookie.Path,
 			Secure: cookie.Secure, HTTPOnly: cookie.HTTPOnly, SameSite: cookie.SameSite, Expires: expires,
 		})
 	}

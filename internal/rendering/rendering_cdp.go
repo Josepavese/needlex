@@ -23,7 +23,13 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 		return Page{}, err
 	}
 	healthy := false
-	defer func() { err = errors.Join(err, lease.Release(healthy)) }()
+	defer func() {
+		// Cleanup failure after a successful capture is a warning, not a reason to
+		// discard the captured page.
+		if releaseErr := lease.Release(healthy); err != nil {
+			err = errors.Join(err, releaseErr)
+		}
+	}()
 	conn, _, err := websocket.Dial(ctx, lease.Endpoint(), nil)
 	if err != nil {
 		return Page{}, fmt.Errorf("connect renderer cdp: %w", err)
@@ -97,7 +103,7 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 		}
 	}
 	if req.Session != nil {
-		if cookies := req.Session.BrowserCookies(""); len(cookies) > 0 {
+		if cookies := req.Session.BrowserCookies(req.URL); len(cookies) > 0 {
 			if _, err := cdp.command(ctx, sessionID, "Network.setCookies", map[string]any{"cookies": cookies}); err != nil {
 				return Page{}, err
 			}
@@ -124,6 +130,8 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 	finalURL, err := cdp.evaluateString(snapshotCtx, sessionID, `location.href`)
 	if err != nil || strings.TrimSpace(finalURL) == "" {
 		finalURL = req.URL
+	} else if sanitized, sanitizeErr := platform.SanitizeURL(finalURL); sanitizeErr == nil {
+		finalURL = sanitized
 	}
 	partial := int64(len([]byte(html))) > req.MaxBytes
 	if partial {

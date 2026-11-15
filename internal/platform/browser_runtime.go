@@ -198,7 +198,8 @@ func (r *browserRuntime) finishRetirement(p BrowserProcess) error {
 		err = p.Close()
 	}
 	r.mu.Lock()
-	r.err = errors.Join(r.err, err)
+	// A failed cleanup must not poison the whole runtime: the process is already
+	// detached, so the next Acquire may start a fresh one.
 	r.busy = false
 	r.notify()
 	r.mu.Unlock()

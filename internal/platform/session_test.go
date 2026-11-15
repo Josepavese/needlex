@@ -91,6 +91,77 @@ func TestSessionSeedsScopedCookies(t *testing.T) {
 	}
 }
 
+func TestSessionHostOnlyCookieDoesNotLeakToSubdomain(t *testing.T) {
+	session, err := NewSession(SessionConfig{Cookies: []SessionCookie{{
+		Name: "sid", Value: "secret", Domain: "app.example.com", HostOnly: true, Path: "/",
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cookies := session.jar.Cookies(mustParseURL(t, "https://x.app.example.com/")); len(cookies) != 0 {
+		t.Fatalf("host-only cookie leaked to subdomain: %+v", cookies)
+	}
+	if cookies := session.jar.Cookies(mustParseURL(t, "https://app.example.com/")); len(cookies) != 1 {
+		t.Fatalf("host-only cookie missing from exact host: %+v", cookies)
+	}
+	browserCookies := session.BrowserCookies("https://app.example.com/")
+	if len(browserCookies) != 1 || browserCookies[0]["url"] == nil || browserCookies[0]["domain"] != nil {
+		t.Fatalf("browser cookies=%v", browserCookies)
+	}
+}
+
+func TestBrowserCookiesStayOnTargetOrigin(t *testing.T) {
+	session, err := NewSession(SessionConfig{Cookies: []SessionCookie{
+		{Name: "target", Value: "yes", Domain: "a.example.com", HostOnly: true, Path: "/"},
+		{Name: "other", Value: "no", Domain: "b.example.com", HostOnly: true, Path: "/"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookies := session.BrowserCookies("https://a.example.com/")
+	if len(cookies) != 1 || cookies[0]["name"] != "target" {
+		t.Fatalf("browser cookies for target=%v", cookies)
+	}
+}
+
+func TestSessionRejectsPublicSuffixCookie(t *testing.T) {
+	if _, err := NewSession(SessionConfig{Cookies: []SessionCookie{{
+		Name: "sid", Value: "secret", Domain: "com", Path: "/",
+	}}}); err == nil {
+		t.Fatal("expected public suffix cookie rejection")
+	}
+}
+
+type sessionRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f sessionRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+func TestSessionPreservesCustomBaseTransport(t *testing.T) {
+	session, err := NewSession(SessionConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	called := false
+	base := &http.Client{Transport: sessionRoundTripper(func(*http.Request) (*http.Response, error) {
+		called = true
+		return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Header: http.Header{}}, nil
+	})}
+	client, err := session.HTTPClient(base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := client.Get("https://public.test/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if !called {
+		t.Fatal("custom base transport was replaced")
+	}
+}
+
 func TestSplitURLCredentialsSanitizesAndBuildsBasicAuth(t *testing.T) {
 	sanitized, rule, ok := SplitURLCredentials("https://user:pass@example.com/path?q=1#frag")
 	if !ok {

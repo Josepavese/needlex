@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/pbkdf2"
 	"crypto/sha1"
+	"crypto/sha256"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +30,7 @@ func TestImportBrowserCookiesAndUseThem(t *testing.T) {
 	if _, err := db.Exec(`CREATE TABLE cookies (host_key TEXT, name TEXT, value TEXT, encrypted_value BLOB, path TEXT, expires_utc INTEGER, is_secure INTEGER, is_httponly INTEGER, samesite INTEGER)`); err != nil {
 		t.Fatal(err)
 	}
-	encrypted := encryptTestCookie(t, "encrypted-secret")
+	encrypted := encryptTestCookieForHost(t, "example.com", "encrypted-secret")
 	if _, err := db.Exec(`INSERT INTO cookies VALUES ('.example.com','sid','plain','', '/',0,1,1,1)`); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +83,14 @@ func TestImportBrowserCookiesAndUseThem(t *testing.T) {
 	}
 }
 
-func encryptTestCookie(t *testing.T, value string) []byte {
+func encryptTestCookieForHost(t *testing.T, host, value string) []byte {
+	t.Helper()
+	sum := sha256.Sum256([]byte(host))
+	plain := append(sum[:], []byte(value)...)
+	return encryptTestPlaintext(t, plain)
+}
+
+func encryptTestPlaintext(t *testing.T, plain []byte) []byte {
 	t.Helper()
 	key, err := pbkdf2.Key(sha1.New, "peanuts", []byte("saltysalt"), 1, 16)
 	if err != nil {
@@ -92,8 +100,8 @@ func encryptTestCookie(t *testing.T, value string) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
-	padding := aes.BlockSize - len(value)%aes.BlockSize
-	plain := append([]byte(value), []byte(strings.Repeat(string(rune(padding)), padding))...)
+	padding := aes.BlockSize - len(plain)%aes.BlockSize
+	plain = append(append([]byte{}, plain...), []byte(strings.Repeat(string(rune(padding)), padding))...)
 	encrypted := make([]byte, len(plain))
 	cipher.NewCBCEncrypter(block, []byte("                ")).CryptBlocks(encrypted, plain)
 	return append([]byte("v10"), encrypted...)

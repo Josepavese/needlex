@@ -69,3 +69,41 @@ func TestSessionPathPrecedence(t *testing.T) {
 		t.Fatalf("config fallback: %q", got)
 	}
 }
+
+func TestLoadSessionResolvesTLSPathsRelativeToFile(t *testing.T) {
+	dir := t.TempDir()
+	systemCA, err := os.ReadFile("/etc/ssl/certs/ca-certificates.crt")
+	if err != nil {
+		t.Skipf("system CA bundle unavailable: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ca.pem"), systemCA, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sessionPath := filepath.Join(dir, "session.json")
+	if err := os.WriteFile(sessionPath, []byte(`{"tls":{"ca_file":"ca.pem"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadSession(sessionPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(loaded.TLS.CAFile) || filepath.Dir(loaded.TLS.CAFile) != dir {
+		t.Fatalf("ca path=%q, want absolute under %s", loaded.TLS.CAFile, dir)
+	}
+}
+
+func TestLoadSessionHostOnlyDefaultsFromDomain(t *testing.T) {
+	dir := t.TempDir()
+	sessionPath := filepath.Join(dir, "session.json")
+	content := `{"cookies":[{"name":"host","value":"v","domain":"app.example.com"},{"name":"domain","value":"v","domain":".example.com"}]}`
+	if err := os.WriteFile(sessionPath, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadSession(sessionPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Cookies[0].HostOnly || loaded.Cookies[1].HostOnly {
+		t.Fatalf("host-only defaults=%+v", loaded.Cookies)
+	}
+}

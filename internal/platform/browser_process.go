@@ -140,6 +140,9 @@ func LaunchBrowserLogin(ctx context.Context, path, profile, profileName, targetU
 	if IsHeadlessShell(path) {
 		return fmt.Errorf("%w: guided login requires a non-headless Chromium browser", ErrBrowserLaunchFailed)
 	}
+	if _, err := os.Lstat(filepath.Join(profile, "SingletonLock")); err == nil {
+		return fmt.Errorf("%w: browser profile is already in use; close the browser or remove %s if the lock is stale", ErrBrowserLaunchFailed, filepath.Join(profile, "SingletonLock"))
+	}
 	cmd := exec.CommandContext(ctx, path,
 		"--user-data-dir="+profile,
 		"--profile-directory="+profileName,

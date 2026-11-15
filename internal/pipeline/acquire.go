@@ -191,7 +191,7 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		base := a.BaseClient
 		egress := a.Egress
 		if base == nil {
-			base, egress = client, nil
+			base = client
 		}
 		sessionClient, err := input.Session.HTTPClient(base, egress)
 		if err != nil {
@@ -434,8 +434,11 @@ func shouldFallbackToHTTP(err error) bool {
 func expandedTimeout(current time.Duration) time.Duration {
 	next := current + current/2
 	maxTimeout := 12 * time.Second
-	if next > maxTimeout {
-		return maxTimeout
+	if next > maxTimeout && current < maxTimeout {
+		next = maxTimeout
+	}
+	if next < current {
+		return current
 	}
 	return next
 }

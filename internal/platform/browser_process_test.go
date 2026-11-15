@@ -2,6 +2,8 @@ package platform
 
 import (
 	"context"
+	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -93,5 +95,16 @@ func TestBrowserSessionProxyAndTLSArguments(t *testing.T) {
 	}
 	if _, err := NewBrowserRuntimeWithOptions(BrowserLimits{MaxConcurrency: 1, IdleTimeout: time.Second, MaxUses: 1}, NetworkPolicyPublic, BrowserRuntimeOptions{ProxyURL: "http://127.0.0.1:9999"}); err == nil {
 		t.Fatal("public egress accepted an uninspectable browser proxy")
+	}
+}
+
+func TestLaunchBrowserLoginRejectsProfileInUse(t *testing.T) {
+	profile := t.TempDir()
+	if err := os.WriteFile(filepath.Join(profile, "SingletonLock"), []byte("stale"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := LaunchBrowserLogin(context.Background(), "/bin/true", profile, "Default", "https://example.com/")
+	if !errors.Is(err, ErrBrowserLaunchFailed) || !strings.Contains(err.Error(), "already in use") {
+		t.Fatalf("launch error=%v, want profile-in-use launch failure", err)
 	}
 }

@@ -1,10 +1,12 @@
 package platform
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/pbkdf2"
 	"crypto/sha1"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -47,7 +49,7 @@ func ImportBrowserCookies(cfg BrowserProfileConfig) (BrowserCookieImport, error)
 		return BrowserCookieImport{}, err
 	}
 	defer os.RemoveAll(temp) //nolint:errcheck
-	for _, name := range []string{"Cookies", "Cookies-wal", "Cookies-shm"} {
+	for _, name := range []string{"Cookies", "Cookies-wal", "Cookies-shm", "Cookies-journal"} {
 		source := filepath.Join(filepath.Dir(cookiePath), name)
 		if err := copyBrowserFile(source, filepath.Join(temp, name)); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
@@ -62,7 +64,7 @@ func ImportBrowserCookies(cfg BrowserProfileConfig) (BrowserCookieImport, error)
 		return BrowserCookieImport{}, fmt.Errorf("open browser cookie store: %w", err)
 	}
 	defer db.Close() //nolint:errcheck
-	rows, err := db.Query(`SELECT host_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, samesite FROM cookies`)
+	rows, err := db.Query(`SELECT host_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, samesite FROM cookies ORDER BY host_key, name, path`)
 	if err != nil {
 		return BrowserCookieImport{}, fmt.Errorf("read browser cookies: %w", err)
 	}
@@ -85,7 +87,7 @@ func ImportBrowserCookies(cfg BrowserProfileConfig) (BrowserCookieImport, error)
 		}
 		cookieValue := string(value)
 		if cookieValue == "" && len(encrypted) > 0 {
-			decoded, err := decryptChromiumCookie(encrypted)
+			decoded, err := decryptChromiumCookie(encrypted, host)
 			if err != nil {
 				result.Notes = append(result.Notes, fmt.Sprintf("cookie %q on %s skipped: %v", name, host, err))
 				continue
@@ -96,7 +98,8 @@ func ImportBrowserCookies(cfg BrowserProfileConfig) (BrowserCookieImport, error)
 			continue
 		}
 		cookie := SessionCookie{
-			Name: name, Value: cookieValue, Domain: host, Path: path,
+			Name: name, Value: cookieValue, Domain: host,
+			HostOnly: !strings.HasPrefix(host, "."), Path: path,
 			Secure: secure, HTTPOnly: httpOnly, SameSite: chromeSameSite(fmt.Sprint(sameSite)),
 		}
 		if expires.Valid && expires.Int64 > 0 {
@@ -129,7 +132,9 @@ func browserCookiePath(cfg BrowserProfileConfig) (string, error) {
 	}
 	candidates := []string{
 		filepath.Join(path, "Cookies"),
+		filepath.Join(path, "Network", "Cookies"),
 		filepath.Join(path, profile, "Cookies"),
+		filepath.Join(path, profile, "Network", "Cookies"),
 	}
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
@@ -173,7 +178,7 @@ func chromeSameSite(value string) string {
 // used by Chromium builds that store the cookie key as "peanuts" (for example
 // Chrome with --password-store=basic). Keychain/DPAPI/app-bound formats are
 // reported as unsupported instead of producing a bogus value.
-func decryptChromiumCookie(encrypted []byte) (string, error) {
+func decryptChromiumCookie(encrypted []byte, host string) (string, error) {
 	if len(encrypted) < 3 {
 		return "", errors.New("encrypted value is too short")
 	}
@@ -200,6 +205,15 @@ func decryptChromiumCookie(encrypted []byte) (string, error) {
 	plain, err = unpadPKCS7(plain)
 	if err != nil {
 		return "", err
+	}
+	// Chrome 130+ with cookie DB version >= 24 prefixes the plaintext with
+	// SHA-256(host_key). Strip it only when it matches, so older profiles keep
+	// their literal value.
+	if len(plain) >= sha256.Size {
+		sum := sha256.Sum256([]byte(host))
+		if bytes.Equal(plain[:sha256.Size], sum[:]) {
+			plain = plain[sha256.Size:]
+		}
 	}
 	return string(plain), nil
 }

@@ -82,6 +82,32 @@ func TestAcquirerPublicPolicyAllowsValidatedDestination(t *testing.T) {
 	}
 }
 
+func TestAcquirerSessionRetainsPublicEgress(t *testing.T) {
+	var seen []string
+	var mu sync.Mutex
+	egress := pipelineEgress(t, map[string][]string{"public.test": {"93.184.216.34"}}, func(ctx context.Context, network, address string) (net.Conn, error) {
+		mu.Lock()
+		seen = append(seen, address)
+		mu.Unlock()
+		return nil, errors.New("deliberate dial stop")
+	})
+	session, err := platform.NewSession(platform.SessionConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = (Acquirer{Egress: egress}).Acquire(context.Background(), AcquireInput{
+		URL: "http://public.test/page", Timeout: 2 * time.Second, MaxBytes: 1 << 20, Profile: "standard", Session: session,
+	})
+	if err == nil {
+		t.Fatal("acquire unexpectedly succeeded")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) == 0 || seen[0] != "93.184.216.34:80" {
+		t.Fatalf("session acquire did not validate the public destination: dials=%v err=%v", seen, err)
+	}
+}
+
 func TestAcquirerReqPathDialsValidatedAddress(t *testing.T) {
 	var seen []string
 	var mu sync.Mutex

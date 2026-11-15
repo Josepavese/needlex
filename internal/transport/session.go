@@ -283,9 +283,14 @@ func mcpCookiesArg(args map[string]any, key string) ([]platform.SessionCookie, e
 		if !ok {
 			return nil, fmt.Errorf("%s[%d] must be an object", key, index)
 		}
+		domain := stringArg(object, "domain")
+		hostOnly := domain == "" || !strings.HasPrefix(domain, ".")
+		if raw, ok := object["host_only"]; ok {
+			hostOnly, _ = raw.(bool)
+		}
 		cookie := platform.SessionCookie{
 			Name: stringArg(object, "name"), Value: stringArg(object, "value"),
-			Domain: stringArg(object, "domain"), Path: stringArg(object, "path"),
+			Domain: domain, HostOnly: hostOnly, Path: stringArg(object, "path"),
 			Secure: boolArg(object, "secure"), HTTPOnly: boolArg(object, "http_only"),
 			SameSite: stringArg(object, "same_site"),
 		}
@@ -312,6 +317,7 @@ func sessionToolSchema() map[string]any {
 				"properties": map[string]any{
 					"name": map[string]any{"type": "string"}, "value": map[string]any{"type": "string"},
 					"domain":    map[string]any{"type": "string", "description": "Cookie domain; defaults to the target host."},
+					"host_only": map[string]any{"type": "boolean", "description": "Send only to the exact domain (default true; set false for a domain cookie)."},
 					"path":      map[string]any{"type": "string", "default": "/"},
 					"secure":    map[string]any{"type": "boolean"},
 					"http_only": map[string]any{"type": "boolean"},

@@ -12,24 +12,15 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
+
+	"golang.org/x/net/http/httpguts"
+	"golang.org/x/net/publicsuffix"
 )
 
 type SessionHeader struct {
 	Origin string
 	Name   string
 	Value  string
-}
-
-type SessionCookie struct {
-	Name     string
-	Value    string
-	Domain   string
-	Path     string
-	Secure   bool
-	HTTPOnly bool
-	SameSite string
-	Expires  time.Time
 }
 
 type SessionTLS struct {
@@ -77,8 +68,19 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 			return nil, fmt.Errorf("browser profile has no usable cookies%s", browserImportNotes(imported.Notes))
 		}
 		// Imported profile cookies are the baseline identity; explicit session
-		// cookies are applied last so a caller can override a stale profile value.
-		cfg.Cookies = append(imported.Cookies, cfg.Cookies...)
+		// cookies replace a profile cookie with the same name/domain/path even when
+		// the two spellings differ only in host-only/domain scope.
+		explicit := make(map[string]struct{}, len(cfg.Cookies))
+		for _, cookie := range cfg.Cookies {
+			explicit[sessionCookieKey(cookie)] = struct{}{}
+		}
+		baseline := imported.Cookies[:0]
+		for _, cookie := range imported.Cookies {
+			if _, overridden := explicit[sessionCookieKey(cookie)]; !overridden {
+				baseline = append(baseline, cookie)
+			}
+		}
+		cfg.Cookies = append(baseline, cfg.Cookies...)
 	}
 	session := &Session{managed: map[string]struct{}{}}
 	for _, header := range cfg.Headers {
@@ -87,8 +89,14 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 			return nil, fmt.Errorf("session header origin: %w", err)
 		}
 		name := http.CanonicalHeaderKey(strings.TrimSpace(header.Name))
-		if name == "" || name == "Host" {
+		if !httpguts.ValidHeaderFieldName(name) || name == "Host" {
 			return nil, fmt.Errorf("session header name %q is invalid", header.Name)
+		}
+		if name == "Cookie" || name == "Proxy-Authorization" {
+			return nil, fmt.Errorf("session header %q is reserved; use cookies or the proxy setting", name)
+		}
+		if !httpguts.ValidHeaderFieldValue(header.Value) {
+			return nil, fmt.Errorf("session header %q contains an invalid value", name)
 		}
 		if strings.ContainsAny(header.Value, "\r\n") {
 			return nil, fmt.Errorf("session header %s contains a line break", name)
@@ -96,7 +104,7 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 		session.rules = append(session.rules, sessionHeaderRule{origin: origin, name: name, value: header.Value})
 		session.managed[name] = struct{}{}
 	}
-	jar, err := cookiejar.New(nil)
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +117,13 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 		if cookie.Secure {
 			scheme = "https"
 		}
+		domain := cookie.Domain
+		if cookie.HostOnly {
+			domain = ""
+		}
 		jar.SetCookies(&url.URL{Scheme: scheme, Host: host}, []*http.Cookie{{
 			Name: cookie.Name, Value: cookie.Value, Path: sessionCookiePath(cookie.Path),
-			Domain: cookie.Domain, Secure: cookie.Secure, HttpOnly: cookie.HTTPOnly,
+			Domain: domain, Secure: cookie.Secure, HttpOnly: cookie.HTTPOnly,
 			SameSite: parseSameSite(cookie.SameSite), Expires: cookie.Expires,
 		}})
 		session.cookies = append(session.cookies, cookie)
@@ -156,24 +168,6 @@ func ValidateSessionConfig(cfg SessionConfig) error {
 	}
 	_, err := NewSession(cfg)
 	return err
-}
-
-func validateSessionCookie(cookie SessionCookie) error {
-	if strings.TrimSpace(cookie.Name) == "" || strings.ContainsAny(cookie.Name, " \t\r\n;") {
-		return errors.New("session cookie name is invalid")
-	}
-	if strings.TrimSpace(cookie.Domain) == "" {
-		return fmt.Errorf("session cookie %q needs a domain", cookie.Name)
-	}
-	if strings.ContainsAny(cookie.Value, "\r\n") {
-		return fmt.Errorf("session cookie %q contains a line break", cookie.Name)
-	}
-	switch strings.ToLower(strings.TrimSpace(cookie.SameSite)) {
-	case "", "default", "lax", "strict", "none":
-	default:
-		return fmt.Errorf("session cookie %q has an invalid SameSite", cookie.Name)
-	}
-	return nil
 }
 
 func sessionTLSConfigured(cfg SessionTLS) bool {
@@ -235,15 +229,22 @@ func (s *Session) HTTPClient(base *http.Client, egress *Egress) (*http.Client, e
 			Timeout:       base.Timeout,
 		}
 	}
-	transport := defaultHTTPTransport()
+	var transport http.RoundTripper = defaultHTTPTransport()
 	if existing, ok := client.Transport.(*http.Transport); ok && existing != nil {
 		transport = existing.Clone()
+	} else if client.Transport != nil {
+		if s.tls != nil || s.proxy != nil {
+			return nil, errors.New("session TLS and proxy settings require a base *http.Transport")
+		}
+		transport = client.Transport
 	}
-	if s.tls != nil {
-		transport.TLSClientConfig = s.tls.Clone()
-	}
-	if s.proxy != nil {
-		transport.Proxy = http.ProxyURL(s.proxy)
+	if httpTransport, ok := transport.(*http.Transport); ok {
+		if s.tls != nil {
+			httpTransport.TLSClientConfig = s.tls.Clone()
+		}
+		if s.proxy != nil {
+			httpTransport.Proxy = http.ProxyURL(s.proxy)
+		}
 	}
 	client.Transport = transport
 	if egress != nil {
@@ -359,27 +360,6 @@ func (s *Session) CookieJar() http.CookieJar {
 		return nil
 	}
 	return s.jar
-}
-
-func parseSameSite(value string) http.SameSite {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "lax":
-		return http.SameSiteLaxMode
-	case "strict":
-		return http.SameSiteStrictMode
-	case "none":
-		return http.SameSiteNoneMode
-	default:
-		return http.SameSiteDefaultMode
-	}
-}
-
-func sessionCookiePath(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" || !strings.HasPrefix(path, "/") {
-		return "/"
-	}
-	return path
 }
 
 func basicAuthToken(username, password string) string {
