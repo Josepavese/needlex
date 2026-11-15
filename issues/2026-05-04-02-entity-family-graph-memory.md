@@ -1,9 +1,8 @@
 # Issue 02: Entity-Family Graph Memory
 
-Status: implemented for persistence, active recall, diagnostics, export, and import
+Status: closed in v0.1.52; implementation, persistence, active recall, diagnostics, export, and import are present
 Last reviewed: 2026-11-15 (v0.1.52)
-State: closed for implementation; benchmark claim not revalidated in this review
-Maintenance note: implementation is present and tested; benchmark evidence was not re-run in this pass, so the issue stays out of the closed list.
+State: closed.
 Date: 2026-05-04
 Priority: P0 after late-interaction shadow mode
 Surface: Discovery Memory, seedless discovery, provider fallback, analytics
@@ -239,3 +238,22 @@ Response: store multilingual embeddings with model ID and allow cross-lingual fa
 4. Active graph retrieval improves warm memory or seedless pass rate without deterministic regression.
 5. Graph links are explainable and reversible.
 6. No hardcoded site or monolingual keyword taxonomy is introduced.
+
+## Closure (2026-11-15, v0.1.52)
+
+Decision: closed as an implementation issue in the current release line.
+
+Evidence:
+
+1. graph tables and schema are present in `internal/memory/schema.go`;
+2. `TestServiceSearchInfersFamilyRootFromObservedDescendants` and
+   `TestServiceSearchUsesSemanticFamilyGraph` pass against the active memory
+   service;
+3. diagnostics, export, and import are covered by
+   `TestSQLiteStoreExportImportAndRebuild` and `TestSQLiteStorePrune`;
+4. the full repository suite passes.
+
+Residual: acceptance criterion 4 remains a release-level performance claim.
+The 100-case benchmark was not re-run for this closure. If a future benchmark
+shows a deterministic regression, this issue must be reopened; there is no
+pending implementation item left in the current contract.

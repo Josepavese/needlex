@@ -1,9 +1,8 @@
 # Issue 05: Semantic Quorum Provider Fusion
 
-Status: implemented for provider observation metadata, health memory, and semantic cluster quorum
+Status: closed in v0.1.52; provider observation metadata, health memory, and semantic cluster quorum are present
 Last reviewed: 2026-11-15 (v0.1.52)
-State: closed for implementation; benchmark claim not revalidated in this review
-Maintenance note: implementation and unit coverage are present; benchmark evidence was not re-run in this pass, so the issue stays out of the closed list.
+State: closed.
 Date: 2026-05-04
 Priority: P1, P0 if public bootstrap volatility returns as top failure class
 Surface: seedless discovery, provider PAL, no-key acquisition resilience
@@ -262,3 +261,21 @@ Response: that is precisely why the PAL must track health, cooldowns, failure ta
 4. Active fusion improves seedless pass or runtime reliability without deterministic regression.
 5. All providers remain no-key.
 6. No provider-specific, site-specific, or lexical-primary rule is introduced.
+
+## Closure (2026-11-15, v0.1.52)
+
+Decision: closed as an implementation issue in the current release line.
+
+Evidence:
+
+1. provider observations are normalized and merged by `AnnotateProvider`;
+2. semantic cluster quorum is applied by `Apply`;
+3. `TestApplyBoostsOnlySemanticClusterWithProviderDiversity`,
+   `TestAnnotateProviderMergesThroughDiscoverySet`, and
+   `TestApplyBoostsProviderConsensusWithoutClusterID` pass;
+4. the full repository suite passes.
+
+Residual: acceptance criterion 4 remains a release-level performance claim.
+The 100-case seedless benchmark was not re-run for this closure. If a future
+benchmark shows a deterministic regression, this issue must be reopened; there
+is no pending implementation item left in the current contract.

@@ -21,23 +21,20 @@ they are old.
 3. [Local HNSW vector index](2026-05-04-04-local-hnsw-vector-index.md) — exact vector-index PAL implemented; the HNSW backend remains intentionally unshipped pending portability and recall gates.
 4. [Brevo web_query selected unrelated MiniMax docs](2026-05-25-brevo-web-query-selected-minimax.md) — still reproducible on v0.1.52; a Brevo goal selected `https://www.icloud.com.cn/find` instead of Brevo sources.
 
-## Closed for implementation, benchmark evidence not re-run
-
-1. [Entity-family graph memory](2026-05-04-02-entity-family-graph-memory.md) — persistence, active recall, diagnostics, export, and import are present; no remaining implementation action is recorded in the issue.
-2. [Semantic quorum provider fusion](2026-05-04-05-semantic-quorum-provider-fusion.md) — provider observation metadata, health memory, and semantic cluster quorum are present; no remaining implementation action is recorded in the issue.
-
-These two are not obsolete. Their implementation is closed, but the benchmark
-claim was not re-run during this documentation-maintenance pass, so they are
-kept out of the unconditional closed list above.
-
 ## Closed
 
 1. [Core embeddings runtime](2026-05-07-core-embeddings-runtime.md) — closed in v0.1.27; current CLI/MCP/install gates still exercise the embeddings-first contract.
 2. [PAL embedding cache](2026-05-08-pal-embedding-cache.md) — closed; the current runtime includes the documented cache, eviction, observability, and prune paths.
-3. [Renderer network-aware application data](2026-06-04-renderer-network-aware-application-data.md) — implemented and smoke-tested; the delivery gaps found afterwards are tracked separately.
-4. [Renderer network delivery](2026-09-17-renderer-network-delivery.md) — closed in v0.1.36; the residual risk about empty trace metadata is explicitly retained in the document.
-5. [External-agent compact output and evidence coverage](2026-10-15-external-agent-compact-output-and-evidence-coverage.md) — closed in v0.1.46.
-6. [Brevo CLI reference header-only read](2026-05-25-brevo-cli-reference-header-only-read.md) — closed as of the 2026-11-15 check against v0.1.52; the reader now returns the Markdown body instead of page chrome.
+3. [Entity-family graph memory](2026-05-04-02-entity-family-graph-memory.md) — closed in v0.1.52 with persistence, active recall, diagnostics, export, and import tests.
+4. [Semantic quorum provider fusion](2026-05-04-05-semantic-quorum-provider-fusion.md) — closed in v0.1.52 with provider observation and semantic cluster quorum tests.
+5. [Renderer network-aware application data](2026-06-04-renderer-network-aware-application-data.md) — implemented and smoke-tested; the delivery gaps found afterwards are tracked separately.
+6. [Renderer network delivery](2026-09-17-renderer-network-delivery.md) — closed in v0.1.36; the residual risk about empty trace metadata is explicitly retained in the document.
+7. [External-agent compact output and evidence coverage](2026-10-15-external-agent-compact-output-and-evidence-coverage.md) — closed in v0.1.46.
+8. [Brevo CLI reference header-only read](2026-05-25-brevo-cli-reference-header-only-read.md) — closed as of the 2026-11-15 check against v0.1.52; the reader now returns the Markdown body instead of page chrome.
+
+The two v0.1.52 closures retain their benchmark claim as release-level residual
+evidence: the implementation is closed, but a future deterministic benchmark
+regression reopens the issue.
 
 ## Historical / superseded
 
