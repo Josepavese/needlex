@@ -45,7 +45,10 @@ func TestRuntimeIsolatesStorageAndDisposesContexts(t *testing.T) {
 	defer server.Close()
 	cfg := config.DefaultRenderConfig()
 	cfg.BrowserPath = browser
-	cfg.NetworkIdleMS = 2000
+	// The fixture writes local state and registers a service worker without
+	// generating network traffic; a short idle window can snapshot the
+	// pre-script "pending" DOM on a loaded suite.
+	cfg.NetworkIdleMS = 5000
 	runtime, err := NewRuntime(cfg, platform.NetworkPolicyAny)
 	if err != nil {
 		t.Fatal(err)
