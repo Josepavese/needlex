@@ -95,6 +95,9 @@ func (r Runner) runSessionLogin(args []string, stdout, stderr io.Writer) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 24*time.Hour)
 	defer cancel()
 	if err := platform.LaunchBrowserLogin(ctx, browserPath, profile, profileName, targetURL); err != nil {
+		if errors.Is(err, platform.ErrBrowserLaunchFailed) {
+			return r.reportCLIError(stderr, "session", err, nil)
+		}
 		// A browser window closed by the user normally exits non-zero; the
 		// cookie import below is the useful result, so record but do not abort.
 		fmt.Fprintf(stderr, "session login: browser exited: %v\n", err)
@@ -111,7 +114,11 @@ func (r Runner) runSessionLogin(args []string, stdout, stderr io.Writer) int {
 		return r.reportCLIError(stderr, "session", err, nil)
 	}
 	fmt.Fprintf(stdout, "Session saved: %s\nBrowser profile: %s (profile %s)\nCookies imported: %d\n", output, profile, profileName, len(imported.Cookies))
-	for _, note := range imported.Notes {
+	for index, note := range imported.Notes {
+		if index == 8 {
+			fmt.Fprintf(stdout, "Warning: %d additional skipped-cookie notes omitted\n", len(imported.Notes)-index)
+			break
+		}
 		fmt.Fprintf(stdout, "Warning: %s\n", note)
 	}
 	fmt.Fprintf(stdout, "Next: needlex read %s --session %s\n", sanitizedSessionLoginURL(targetURL), output)

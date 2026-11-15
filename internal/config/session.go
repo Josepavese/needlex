@@ -127,8 +127,9 @@ func LoadSession(path string) (platform.SessionConfig, error) {
 			Secure: cookie.Secure, HTTPOnly: cookie.HTTPOnly, SameSite: cookie.SameSite, Expires: expires,
 		})
 	}
-	// Reuse the platform owner for all semantic validation.
-	if _, err := platform.NewSession(out); err != nil {
+	// Validate the shape here without importing browser cookies; the session is
+	// materialized once when the command actually uses it.
+	if err := platform.ValidateSessionConfig(out); err != nil {
 		return platform.SessionConfig{}, fmt.Errorf("invalid session %s: %w", filepath.Base(path), err)
 	}
 	return out, nil

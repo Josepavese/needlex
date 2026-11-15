@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -90,6 +91,9 @@ func (r Runner) callMCPPruneTool(args map[string]any) (map[string]any, error) {
 	}
 	pruneAll := boolArg(args, "all")
 	olderThanHours, _ := intArg(args, "older_than_hours")
+	if !pruneAll && olderThanHours <= 0 {
+		return nil, errors.New("web_prune requires all=true, older_than_hours>0, or embedding_cache=true")
+	}
 	report, err := store.Prune(r.storeRoot, durationHours(olderThanHours), pruneAll, timeNowUTC())
 	if err != nil {
 		return nil, err
@@ -365,12 +369,20 @@ func mcpPruneTool() mcpTool {
 	return mcpTool{
 		Name:        "web_prune",
 		Description: "Operator maintenance. Prune local traces/proofs/fingerprints/genome files, or set embedding_cache=true to dry-run/remove disposable PAL embedding cache files.",
-		InputSchema: schemaExamples(toolSchema(map[string]any{
-			"all":              map[string]any{"type": "boolean"},
-			"older_than_hours": map[string]any{"type": "integer"},
-			"embedding_cache":  map[string]any{"type": "boolean", "description": "When true, target only PAL embedding cache files under NEEDLEX_HOME/data/embeddings/cache."},
-			"dry_run":          map[string]any{"type": "boolean", "description": "When used with embedding_cache=true, report matching/reclaimable files without deleting them."},
-		}), map[string]any{"older_than_hours": 24}, map[string]any{"embedding_cache": true, "dry_run": true}),
+		InputSchema: func() map[string]any {
+			schema := toolSchema(map[string]any{
+				"all":              map[string]any{"type": "boolean"},
+				"older_than_hours": map[string]any{"type": "integer", "minimum": 1},
+				"embedding_cache":  map[string]any{"type": "boolean", "description": "When true, target only PAL embedding cache files under NEEDLEX_HOME/data/embeddings/cache."},
+				"dry_run":          map[string]any{"type": "boolean", "description": "When used with embedding_cache=true, report matching/reclaimable files without deleting them."},
+			})
+			schema["anyOf"] = []map[string]any{
+				{"required": []string{"all"}, "properties": map[string]any{"all": map[string]any{"const": true}}},
+				{"required": []string{"older_than_hours"}},
+				{"required": []string{"embedding_cache"}, "properties": map[string]any{"embedding_cache": map[string]any{"const": true}}},
+			}
+			return schemaExamples(schema, map[string]any{"older_than_hours": 24}, map[string]any{"embedding_cache": true, "dry_run": true})
+		}(),
 	}
 }
 

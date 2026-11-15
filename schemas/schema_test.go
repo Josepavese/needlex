@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/josepavese/needlex/internal/pipeline"
@@ -59,6 +60,59 @@ func TestFetchReceiptSchemaDeclaresCurrentContract(t *testing.T) {
 	for _, name := range []string{"schema", "directory", "primary"} {
 		if !required[name] {
 			t.Fatalf("schema does not require %q", name)
+		}
+	}
+}
+
+func TestResultPackSchemaDeclaresContextAlignment(t *testing.T) {
+	data, err := os.ReadFile("resultpack.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Properties struct {
+			Chunks struct {
+				Items struct {
+					Properties map[string]any `json:"properties"`
+				} `json:"items"`
+			} `json:"chunks"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := schema.Properties.Chunks.Items.Properties["context_alignment"]; !ok {
+		t.Fatal("resultpack schema does not declare context_alignment")
+	}
+}
+
+func TestSLMSchemasMatchRuntimeTasks(t *testing.T) {
+	for _, name := range []string{"slm-task.schema.json", "slm-patch.schema.json"} {
+		data, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var schema struct {
+			Properties struct {
+				Task struct {
+					Enum []string `json:"enum"`
+				} `json:"task"`
+				ModelClass struct {
+					Enum []string `json:"enum"`
+				} `json:"model_class"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(data, &schema); err != nil {
+			t.Fatal(err)
+		}
+		wantTasks := []string{"resolve_ambiguity", "query_rewrite", "endpoint_extract"}
+		if strings.Join(schema.Properties.Task.Enum, ",") != strings.Join(wantTasks, ",") {
+			t.Fatalf("%s tasks = %v, want %v", name, schema.Properties.Task.Enum, wantTasks)
+		}
+		if len(schema.Properties.ModelClass.Enum) != 0 {
+			if strings.Join(schema.Properties.ModelClass.Enum, ",") != "micro_solver" {
+				t.Fatalf("%s model classes = %v", name, schema.Properties.ModelClass.Enum)
+			}
 		}
 	}
 }

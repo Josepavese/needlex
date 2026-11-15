@@ -124,6 +124,9 @@ func browserCookiePath(cfg BrowserProfileConfig) (string, error) {
 	if profile == "" {
 		profile = "Default"
 	}
+	if profile == "." || profile == ".." || strings.ContainsAny(profile, `/\\`) {
+		return "", errors.New("browser profile name must be a single directory name")
+	}
 	candidates := []string{
 		filepath.Join(path, "Cookies"),
 		filepath.Join(path, profile, "Cookies"),
@@ -153,7 +156,9 @@ func copyBrowserFile(source, destination string) error {
 
 func chromeSameSite(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "-1", "0", "none":
+	case "-1":
+		return ""
+	case "0", "none":
 		return "none"
 	case "1", "lax":
 		return "lax"

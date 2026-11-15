@@ -72,7 +72,7 @@ If you wire Needle-X into an AI tool-calling stack:
 8. use `analytics` only for diagnostics, value reporting, or maintainer rollups
 9. use `include_diagnostics=true` only when the compact packet is insufficient; it is the explicit path to `document`, `web_ir`, `result_pack`, `agent_context`, and `plan`
 
-Use `web_fetch` for exact HTTP body bytes and optional linked CSS and JavaScript. It returns local file paths. [Raw download contract](wiki/MCP-And-Tool-Calling.md#raw-downloads)
+Use `web_fetch` for exact HTTP body bytes and optional linked stylesheets, scripts, images, fonts, media and other binary assets. It returns local file paths. [Raw download contract](wiki/MCP-And-Tool-Calling.md#raw-downloads)
 
 Needle-X does not set a candidate-count policy. Search breadth, URL selection, concurrency, and research budget belong to the host agent.
 
@@ -287,6 +287,25 @@ def run_needlex_tool(name, args):
         add(cmd, "--profile", args.get("profile"))
         if args.get("same_domain"):
             cmd.append("--same-domain")
+    elif name == "web_fetch":
+        # fetch already emits JSON; do not pass --json.
+        cmd = ["needlex", "fetch", args["url"]]
+        add(cmd, "--max-bytes", args.get("max_bytes"))
+        add(cmd, "--session", args.get("session_path"))
+        add(cmd, "--proxy", args.get("proxy"))
+        if args.get("insecure_tls"):
+            cmd.append("--insecure")
+        if args.get("assets"):
+            cmd.append("--assets")
+        for origin in args.get("asset_origins") or []:
+            cmd.extend(["--asset-origin", origin])
+        for key, value in (args.get("headers") or {}).items():
+            cmd.extend(["--header", f"{key}: {value}"])
+        for cookie in args.get("cookies") or []:
+            cmd.extend(["--cookie", f'{cookie["name"]}={cookie["value"]}'])
+        profile = args.get("browser_profile") or {}
+        add(cmd, "--browser-profile", profile.get("path"))
+        add(cmd, "--browser-profile-name", profile.get("profile"))
     elif name == "web_replay":
         cmd = ["needlex", "replay", args["trace_id"], "--json"]
     elif name == "web_diff":
@@ -295,10 +314,16 @@ def run_needlex_tool(name, args):
         proof_key = args.get("proof_id") or args.get("chunk_id") or args.get("trace_id")
         cmd = ["needlex", "proof", proof_key, "--json"]
     elif name == "web_prune":
+        if not (args.get("all") or args.get("older_than_hours") or args.get("embedding_cache")):
+            raise ValueError("web_prune requires all, older_than_hours, or embedding_cache")
         cmd = ["needlex", "prune", "--json"]
         if args.get("all"):
             cmd.append("--all")
         add(cmd, "--older-than-hours", args.get("older_than_hours"))
+        if args.get("embedding_cache"):
+            cmd.append("--embedding-cache")
+            if args.get("dry_run"):
+                cmd.append("--dry-run")
     elif name == "memory":
         action = {"rebuild_index": "rebuild-index"}.get(args["action"], args["action"])
         cmd = ["needlex", "memory", action, "--json"]
@@ -401,6 +426,25 @@ def run_needlex_tool(name, args):
         add(cmd, "--profile", args.get("profile"))
         if args.get("same_domain"):
             cmd.append("--same-domain")
+    elif name == "web_fetch":
+        # fetch already emits JSON; do not pass --json.
+        cmd = ["needlex", "fetch", args["url"]]
+        add(cmd, "--max-bytes", args.get("max_bytes"))
+        add(cmd, "--session", args.get("session_path"))
+        add(cmd, "--proxy", args.get("proxy"))
+        if args.get("insecure_tls"):
+            cmd.append("--insecure")
+        if args.get("assets"):
+            cmd.append("--assets")
+        for origin in args.get("asset_origins") or []:
+            cmd.extend(["--asset-origin", origin])
+        for key, value in (args.get("headers") or {}).items():
+            cmd.extend(["--header", f"{key}: {value}"])
+        for cookie in args.get("cookies") or []:
+            cmd.extend(["--cookie", f'{cookie["name"]}={cookie["value"]}'])
+        profile = args.get("browser_profile") or {}
+        add(cmd, "--browser-profile", profile.get("path"))
+        add(cmd, "--browser-profile-name", profile.get("profile"))
     elif name == "web_replay":
         cmd = ["needlex", "replay", args["trace_id"], "--json"]
     elif name == "web_diff":
@@ -409,10 +453,16 @@ def run_needlex_tool(name, args):
         proof_key = args.get("proof_id") or args.get("chunk_id") or args.get("trace_id")
         cmd = ["needlex", "proof", proof_key, "--json"]
     elif name == "web_prune":
+        if not (args.get("all") or args.get("older_than_hours") or args.get("embedding_cache")):
+            raise ValueError("web_prune requires all, older_than_hours, or embedding_cache")
         cmd = ["needlex", "prune", "--json"]
         if args.get("all"):
             cmd.append("--all")
         add(cmd, "--older-than-hours", args.get("older_than_hours"))
+        if args.get("embedding_cache"):
+            cmd.append("--embedding-cache")
+            if args.get("dry_run"):
+                cmd.append("--dry-run")
     elif name == "memory":
         action = {"rebuild_index": "rebuild-index"}.get(args["action"], args["action"])
         cmd = ["needlex", "memory", action, "--json"]

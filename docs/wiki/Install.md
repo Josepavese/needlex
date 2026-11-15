@@ -93,7 +93,7 @@ Run `needlex fetch --help` to see CLI options. Run a fetch against a URL you
 control and check the file at `primary.path` in the JSON output. In your MCP
 client, call `web_fetch` on the same URL and check the file at
 `structuredContent.download.primary.path`. Both surfaces support binary
-files and optional HTML-linked stylesheets and scripts.
+files and optional HTML-linked stylesheets, scripts, images, fonts, media and other binary assets.
 [CLI reference](./CLI.md#raw-downloads) · [MCP reference](./MCP-And-Tool-Calling.md#raw-downloads)
 
 ## Optional Agent Skill
@@ -109,7 +109,7 @@ Codex install helper:
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo Josepavese/needlex --path skills/needlex-web-retrieval
 ```
 
-Reconnect the MCP server or start a fresh client session after updating Needle-X so the client discovers the new tool catalog. For v0.1.45, check that it lists `web_fetch`.
+Reconnect the MCP server or start a fresh client session after updating Needle-X so the client discovers the current tool catalog, including `web_fetch`.
 
 A skill copy does not update itself. It declares the release it documents (`version: vX.Y.Z`), and two things keep it honest:
 1. the installer refreshes an existing skill copy automatically, backing up the previous one under `<codex-home>/skill-backups/` and restoring it if the refresh fails (`NEEDLEX_INSTALL_SKIP_SKILL_REFRESH=1` opts out)

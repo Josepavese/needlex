@@ -130,13 +130,15 @@ func browserProxyArgs(proxyURL string) []string {
 // the user enters credentials, and Needle-X only imports the resulting cookies.
 // --password-store=basic keeps Chromium's Linux cookie encryption on the
 // legacy v10/v11 key that the profile importer can read.
+var ErrBrowserLaunchFailed = errors.New("browser launch failed")
+
 func LaunchBrowserLogin(ctx context.Context, path, profile, profileName, targetURL string) error {
 	path, err := FindBrowserPath(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrBrowserLaunchFailed, err)
 	}
 	if IsHeadlessShell(path) {
-		return errors.New("guided login requires a non-headless Chromium browser")
+		return fmt.Errorf("%w: guided login requires a non-headless Chromium browser", ErrBrowserLaunchFailed)
 	}
 	cmd := exec.CommandContext(ctx, path,
 		"--user-data-dir="+profile,
@@ -150,7 +152,10 @@ func LaunchBrowserLogin(ctx context.Context, path, profile, profileName, targetU
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("%w: %w", ErrBrowserLaunchFailed, err)
+	}
+	return cmd.Wait()
 }
 
 func launchBrowser(ctx context.Context, path, proxyURL string) (BrowserProcess, error) {

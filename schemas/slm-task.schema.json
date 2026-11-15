@@ -18,18 +18,14 @@
       "type": "string",
       "enum": [
         "resolve_ambiguity",
-        "interpret_embedded_state",
-        "diagnose_drift",
-        "repair_evidence_graph",
-        "guard_compression"
+        "query_rewrite",
+        "endpoint_extract"
       ]
     },
     "model_class": {
       "type": "string",
       "enum": [
-        "micro_solver",
-        "structured_solver",
-        "specialist_reader"
+        "micro_solver"
       ]
     },
     "max_input_tokens": {

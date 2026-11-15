@@ -20,6 +20,11 @@ needlex
 10. `needlex logs path|stats|tail`
 11. `needlex support bundle --out DIR`
 12. `needlex doctor [--json]`
+13. `needlex fetch <url> [--assets]`
+14. `needlex session login --profile DIR --url URL --session PATH`
+15. `needlex prune (--all | --older-than-hours N | --embedding-cache)`
+16. `needlex mcp` / `needlex tool-catalog --provider openai|anthropic`
+17. `needlex version`
 
 ## Minimal Examples
 
@@ -124,22 +129,29 @@ Example session file:
 - `value` may be a literal, `env:VARIABLE` or `file:PATH` (relative to the
   session file); use `literal:` when a literal starts with `env:` or `file:`.
 - `--session` wins over `NEEDLEX_SESSION`, which wins over `session_file` in the
-  PAL config. `--header NAME: VALUE` and `--cookie NAME=VALUE` are scoped to the
-  target origin and are intended for short-lived credentials.
+  PAL config. `--header NAME: VALUE` is scoped to the target origin; `--cookie
+  NAME=VALUE` is scoped to the target host/domain. Both are intended for
+  short-lived credentials.
 - `user:password@` in the URL is converted to a Basic authorization rule for
   that origin and removed from receipts, traces and output.
 - `--browser-profile DIR` imports cookies from a Chromium-family profile for
   this command. `--browser-profile-name` selects the profile inside a
   user-data directory (`Default` by default). The session-file form is
   `browser_profile` with `path` and optional `profile`. Imported cookies are
-  domain-scoped exactly like explicit cookie rules.
+  domain-scoped exactly like explicit cookie rules. Profile cookies form the
+  baseline identity; explicit `cookies` override a profile cookie with the same
+  name, domain and path. A profile with no readable cookies is rejected when no
+  explicit cookie or header credential is present, instead of producing a
+  session that silently cannot authenticate.
 - `--proxy`/session `proxy` requires `network.policy=any`; under the public
   policy the proxy cannot be inspected and the command rejects the combination.
   The browser uses the proxy for autonomous traffic when it launches its
-  session-scoped context.
+  session-scoped context; proxy URLs with embedded credentials are rejected for
+  rendered navigation because Chromium does not apply them, while HTTP
+  acquisition supports them.
 - TLS custom roots and client certificates apply to HTTP acquisition.
   `insecure_skip_verify` is also applied to the browser as an explicit
-  certificate-error opt-in. Browser custom CA and client-certificate support is
+  certificate-error opt-in; the CLI shorthand is `--insecure`. Browser custom CA and client-certificate support is
   not provided by this version; those settings are rejected for rendered
   navigation instead of being silently ignored.
 
@@ -164,7 +176,9 @@ needlex session login \
 Needle-X launches a non-headless Chromium with that profile
 (`--password-store=basic` so its Linux cookies remain importable), waits for the
 user to close the browser, then writes a session containing only the profile
-path.
+path. A browser that cannot be started fails the command; a normal user exit is
+not treated as a login failure, but zero imported cookies still prevents a
+useless session file.
 It imports the profile cookies when the session is used; it never reads or
 writes the password. Use `--browser /path/to/chrome` when the configured
 renderer is a headless shell. Existing session files are never overwritten.
@@ -218,7 +232,7 @@ policy. Stable codes:
 
 | Code | Meaning |
 | --- | --- |
-| `invalid_url` | not an absolute HTTP(S) URL, contains credentials, or an asset redirect leaves the allowed origins |
+| `invalid_url` | not an absolute HTTP(S) URL, an asset URL or redirect contains credentials or leaves the allowed origins |
 | `invalid_arguments` | invalid flag combination or `asset_origins` value |
 | `network_denied` | the configured network policy rejected the URL, redirect, DNS answer or dial |
 | `output_directory` | the destination exists or cannot be created |
@@ -231,10 +245,7 @@ policy. Stable codes:
 MCP `web_fetch` returns the same receipt under `structuredContent.download`
 and embeds the same `code=...` in its error when the download fails.
 
-With `--assets`, Needle-X scans the saved HTML for direct stylesheet, script,
-and corresponding preload links. It resolves relative URLs using the final
-page URL and the first HTML base URL. Discovery is limited to those direct
-HTML links. The saved HTML and assets retain their original bytes. Link
+With `--assets`, Needle-X scans the saved HTML for direct stylesheets, scripts, images, fonts, media, icons, manifests, preload links and related binary references. It resolves relative URLs using the final page URL and the first HTML base URL. Discovery is limited to those direct HTML links. The saved HTML and assets retain their original bytes. Link
 scanning requires an HTML MIME type and identity content encoding.
 
 Only the final page origin and origins supplied with `--asset-origin` are

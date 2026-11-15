@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -85,5 +86,42 @@ func TestSessionLoginWritesReusableBrowserProfile(t *testing.T) {
 	}
 	if stdout.String() == "" {
 		t.Fatal("expected login summary")
+	}
+}
+
+func TestSessionLoginFailedBrowserLaunchDoesNotWriteSession(t *testing.T) {
+	profile := t.TempDir()
+	profileDir := filepath.Join(profile, "Default")
+	if err := os.MkdirAll(profileDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", filepath.Join(profileDir, "Cookies"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE cookies (host_key TEXT, name TEXT, value TEXT, encrypted_value BLOB, path TEXT, expires_utc INTEGER, is_secure INTEGER, is_httponly INTEGER, samesite INTEGER)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO cookies VALUES ('.example.com','sid','login-cookie','','/',0,1,1,1)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "session.json")
+	runner := Runner{loadConfig: config.Load, storeRoot: t.TempDir()}
+	var stdout, stderr bytes.Buffer
+	code := runner.Run([]string{
+		"session", "login",
+		"--profile", profile,
+		"--url", "https://example.com/",
+		"--browser", filepath.Join(t.TempDir(), "missing-browser"),
+		"--session", out,
+	}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("login unexpectedly succeeded: stdout=%q", stdout.String())
+	}
+	if _, err := os.Stat(out); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("session file written after failed launch: %v", err)
 	}
 }

@@ -23,9 +23,9 @@ needlex read https://ts.sdk.modelcontextprotocol.io/v2/clients/calling \
   --json > packet.json
 ```
 
-![Real Needle-X v0.1.45 terminal output. An excerpt about paginated MCP tool lists is paired with the source Markdown URL, its selector and a proof reference.](docs/assets/cli-evidence.png)
+![Historical Needle-X v0.1.45 terminal capture. An excerpt about paginated MCP tool lists is paired with the source Markdown URL, its selector and a proof reference.](docs/assets/cli-evidence.png)
 
-*Captured from a live read with v0.1.45. The terminal shows one shortened excerpt and its source and proof fields. For this page, Needle-X used the source’s published Markdown representation.* [Full-size capture](docs/assets/cli-evidence.png) · [Source page](https://ts.sdk.modelcontextprotocol.io/v2/clients/calling)
+*Historical capture from a live read with v0.1.45. The terminal shows one shortened excerpt and its source and proof fields. For this page, Needle-X used the source’s published Markdown representation.* [Full-size capture](docs/assets/cli-evidence.png) · [Source page](https://ts.sdk.modelcontextprotocol.io/v2/clients/calling)
 
 ## Use it from an agent
 
@@ -57,7 +57,7 @@ Needle-X uses multilingual dense embeddings to align page content with the objec
 
 ## Get the original bytes
 
-Use `web_fetch` or `needlex fetch` when the task needs the original HTML or a binary file. With `--assets`, the CLI also saves directly linked stylesheets and scripts from the page’s origin. Use `--asset-origin` to include a trusted CDN. The MCP equivalents are `assets` and `asset_origins`.
+Use `web_fetch` or `needlex fetch` when the task needs the original HTML or a binary file. With `--assets`, the CLI also saves directly linked stylesheets, scripts, images, fonts, media, icons, manifests and other binary assets from the page’s origin. Use `--asset-origin` to include a trusted CDN. The MCP equivalents are `assets` and `asset_origins`.
 
 ```bash
 needlex fetch https://example.com/ --assets --out-dir ./page-source
@@ -65,7 +65,7 @@ needlex fetch https://example.com/ --assets --out-dir ./page-source
 
 Both interfaces return a versioned receipt (`schema: needlex.fetch.receipt.v1`) with file paths, HTTP metadata and `sha256` for every saved file. [Raw download reference](docs/wiki/CLI.md#raw-downloads) · [Receipt schema](schemas/needlex-fetch-receipt.v1.json)
 
-For authenticated pages and private APIs, point `--session` or `NEEDLEX_SESSION` at a navigation-session file, or pass `--header`/`--cookie` for the target origin. Bearer/API-key headers, cookies, URL `user:password@`, custom proxy and TLS client settings are applied only to the caller-authorized origin and are removed on cross-origin redirects. [Navigation sessions](docs/wiki/CLI.md#authenticated-navigation-sessions)
+For authenticated pages and private APIs, point `--session` or `NEEDLEX_SESSION` at a navigation-session file, or pass `--header`/`--cookie` for the target origin. Bearer/API-key headers, cookies and URL `user:password@` credentials are scoped to their authorized origin or domain and are removed on cross-origin redirects. A custom proxy and TLS client settings apply to the whole acquisition operation, not only to the target origin. [Navigation sessions](docs/wiki/CLI.md#authenticated-navigation-sessions)
 
 ## Shared and restricted environments
 

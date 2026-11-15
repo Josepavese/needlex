@@ -73,7 +73,12 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 		if err != nil {
 			return nil, err
 		}
-		cfg.Cookies = append(cfg.Cookies, imported.Cookies...)
+		if len(imported.Cookies) == 0 && len(cfg.Cookies) == 0 && len(cfg.Headers) == 0 {
+			return nil, fmt.Errorf("browser profile has no usable cookies%s", browserImportNotes(imported.Notes))
+		}
+		// Imported profile cookies are the baseline identity; explicit session
+		// cookies are applied last so a caller can override a stale profile value.
+		cfg.Cookies = append(imported.Cookies, cfg.Cookies...)
 	}
 	session := &Session{managed: map[string]struct{}{}}
 	for _, header := range cfg.Headers {
@@ -127,6 +132,30 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 		session.tls = tlsConfig
 	}
 	return session, nil
+}
+
+func browserImportNotes(notes []string) string {
+	if len(notes) == 0 {
+		return ""
+	}
+	if len(notes) > 4 {
+		return fmt.Sprintf(": %s; and %d more", strings.Join(notes[:4], "; "), len(notes)-4)
+	}
+	return ": " + strings.Join(notes, "; ")
+}
+
+// ValidateSessionConfig validates the non-secret shape of a session without
+// importing browser cookies. LoadSession uses it so a session file with a
+// browser_profile is not read twice (once for validation, once when used).
+func ValidateSessionConfig(cfg SessionConfig) error {
+	if cfg.BrowserProfile != nil {
+		if _, err := browserCookiePath(*cfg.BrowserProfile); err != nil {
+			return err
+		}
+		cfg.BrowserProfile = nil
+	}
+	_, err := NewSession(cfg)
+	return err
 }
 
 func validateSessionCookie(cookie SessionCookie) error {
@@ -330,54 +359,6 @@ func (s *Session) CookieJar() http.CookieJar {
 		return nil
 	}
 	return s.jar
-}
-
-// BrowserCookies returns domain-matching cookies for CDP Network.setCookies.
-// The browser still enforces domain, path and Secure scoping for subresources.
-func (s *Session) BrowserCookies(rawURL string) []map[string]any {
-	if s == nil {
-		return nil
-	}
-	target, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil || target.Hostname() == "" {
-		return nil
-	}
-	host := strings.ToLower(target.Hostname())
-	out := []map[string]any{}
-	for _, cookie := range s.cookies {
-		domain := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(cookie.Domain)), ".")
-		if domain != host && !strings.HasSuffix(host, "."+domain) {
-			continue
-		}
-		value := map[string]any{
-			"name": cookie.Name, "value": cookie.Value,
-			"domain": cookie.Domain, "path": sessionCookiePath(cookie.Path),
-			"secure": cookie.Secure, "httpOnly": cookie.HTTPOnly,
-		}
-		if cookie.Expires.IsZero() {
-			value["expires"] = -1
-		} else {
-			value["expires"] = float64(cookie.Expires.Unix())
-		}
-		if sameSite := cdpSameSite(cookie.SameSite); sameSite != "" {
-			value["sameSite"] = sameSite
-		}
-		out = append(out, value)
-	}
-	return out
-}
-
-func cdpSameSite(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "lax":
-		return "Lax"
-	case "strict":
-		return "Strict"
-	case "none":
-		return "None"
-	default:
-		return ""
-	}
 }
 
 func parseSameSite(value string) http.SameSite {

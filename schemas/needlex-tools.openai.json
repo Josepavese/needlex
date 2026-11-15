@@ -701,6 +701,33 @@
         "description": "Operator maintenance. Prune local traces/proofs/fingerprints/genome files, or set embedding_cache=true to dry-run/remove disposable PAL embedding cache files.",
         "parameters": {
           "additionalProperties": false,
+          "anyOf": [
+            {
+              "properties": {
+                "all": {
+                  "const": true
+                }
+              },
+              "required": [
+                "all"
+              ]
+            },
+            {
+              "required": [
+                "older_than_hours"
+              ]
+            },
+            {
+              "properties": {
+                "embedding_cache": {
+                  "const": true
+                }
+              },
+              "required": [
+                "embedding_cache"
+              ]
+            }
+          ],
           "examples": [
             {
               "older_than_hours": 24
@@ -723,6 +750,7 @@
               "type": "boolean"
             },
             "older_than_hours": {
+              "minimum": 1,
               "type": "integer"
             }
           },

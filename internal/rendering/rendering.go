@@ -140,6 +140,9 @@ func (r chromiumRenderer) renderWithSessionBrowser(ctx context.Context, req Requ
 		if r.egress.Policy() == platform.NetworkPolicyPublic {
 			return Page{}, errors.New("session browser proxy requires network.policy=any")
 		}
+		if proxy.User != nil {
+			return Page{}, errors.New("browser proxy URL credentials are not supported; use HTTP acquisition or an unauthenticated proxy")
+		}
 		proxyURL = proxy.String()
 	}
 	insecure := false

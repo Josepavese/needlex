@@ -97,7 +97,7 @@ func (r chromiumRenderer) renderWithCDP(ctx context.Context, req Request) (page 
 		}
 	}
 	if req.Session != nil {
-		if cookies := req.Session.BrowserCookies(req.URL); len(cookies) > 0 {
+		if cookies := req.Session.BrowserCookies(""); len(cookies) > 0 {
 			if _, err := cdp.command(ctx, sessionID, "Network.setCookies", map[string]any{"cookies": cookies}); err != nil {
 				return Page{}, err
 			}

@@ -14,10 +14,8 @@
       "type": "string",
       "enum": [
         "resolve_ambiguity",
-        "interpret_embedded_state",
-        "diagnose_drift",
-        "repair_evidence_graph",
-        "guard_compression"
+        "query_rewrite",
+        "endpoint_extract"
       ]
     },
     "output_json": {

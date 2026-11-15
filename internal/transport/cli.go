@@ -262,7 +262,7 @@ func writeRootUsage(w io.Writer) {
   needlex prune (--all | --older-than-hours N | --embedding-cache) [--dry-run] [--json]
   needlex mcp [--help]
   needlex tool-catalog --provider openai|anthropic [--strict]
-  needlex session login --profile DIR --url URL [--session PATH]
+  needlex session login --profile DIR --url URL [--session PATH] [--browser PATH] [--profile-name Default] [--config PATH]
   needlex doctor [--json]
   needlex version
 

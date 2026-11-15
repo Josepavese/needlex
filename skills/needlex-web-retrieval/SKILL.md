@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.50
+version: v0.1.51
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -59,8 +59,9 @@ navigation session instead of escalating for login-gated HTTP content:
 - URL `user:password@` is supported and is converted to Basic auth without being
   echoed in receipts or traces.
 - A session may reference a Chromium `browser_profile`; its cookies are imported
-  server-side. A guided `needlex session login` writes such a session without
-  exposing the user's password to Needle-X.
+  server-side and explicit session cookies override matching profile cookies.
+  A guided `needlex session login` writes such a session without exposing the
+  user's password to Needle-X.
 - Header rules are scoped to one `scheme://host[:port]`; cookies are scoped by
   domain. Cross-origin redirects and assets do not receive another origin's
   credentials. The browser renderer applies the same request-header rules.
@@ -78,7 +79,7 @@ When the runtime advertises `web_fetch`, use it for exact HTTP response
 bodies such as original HTML, CSS, JavaScript, or binary files. The tool
 returns local file paths in a versioned receipt (`schema:
 needlex.fetch.receipt.v1`) with a `sha256` of each saved file. For a page and
-its directly linked stylesheets and scripts, set `assets: true` and add any
+its directly linked stylesheets, scripts, images, fonts, media and other binary assets, set `assets: true` and add any
 trusted CDN origins to `asset_origins`. Use `needlex fetch` from CLI when that
 command is available.
 

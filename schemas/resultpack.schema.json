@@ -54,6 +54,11 @@
               "minLength": 1
             }
           },
+          "context_alignment": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
           "score": {
             "type": "number"
           },

@@ -25,11 +25,11 @@ This distinction is intentional. Needle-X should not pretend a healthy repo base
 ## Hard Gates
 
 Current hard gates are enforced by:
-- [check_governance.sh](/home/jose/hpdev/Libraries/needlex/scripts/check_governance.sh)
-- [check_budget.sh](/home/jose/hpdev/Libraries/needlex/scripts/check_budget.sh)
-- [budget.env](/home/jose/hpdev/Libraries/needlex/governance/budget.env)
-- [workstation.env](/home/jose/hpdev/Libraries/needlex/governance/workstation.env)
-- [golangci.yml](/home/jose/hpdev/Libraries/needlex/.golangci.yml)
+- [check_governance.sh](../scripts/check_governance.sh)
+- [check_budget.sh](../scripts/check_budget.sh)
+- [budget.env](../governance/budget.env)
+- [workstation.env](../governance/workstation.env)
+- [golangci.yml](../.golangci.yml)
 
 They include:
 - full test suite
@@ -110,7 +110,7 @@ Advisory lint should never be ignored forever, but it should not be promoted to 
 
 ## Baseline Philosophy
 
-The baseline in [budget.env](/home/jose/hpdev/Libraries/needlex/governance/budget.env) is not aspirational fiction.
+The baseline in [budget.env](../governance/budget.env) is not aspirational fiction.
 
 Rules:
 1. hard limits must be above the current measured baseline unless there is immediate cleanup in the same burst
@@ -204,12 +204,12 @@ create more large hotspots.
 
 This development device is managed as a space-constrained machine: its root filesystem sits near 100% used, so free space is a few gigabytes rather than tens. That is not an accident of one afternoon; it is the operating condition local work must hold itself to.
 
-Thresholds live in [workstation.env](/home/jose/hpdev/Libraries/needlex/governance/workstation.env) and are enforced by [check_workstation_space.sh](/home/jose/hpdev/Libraries/needlex/scripts/check_workstation_space.sh) inside the governance script.
+Thresholds live in [workstation.env](../governance/workstation.env) and are enforced by [check_workstation_space.sh](../scripts/check_workstation_space.sh) inside the governance script.
 
 | Limit | Value | Consequence |
 | --- | --- | --- |
 | free space, hard floor | 3 GB | fails: builds and tests start failing on writes below it |
-| free space, warn floor | 5 GB | warns: reclaim caches before heavy work |
+| free space, warn floor | 4 GB | warns: reclaim caches before heavy work |
 | Go build cache | 3 GB | warns: reclaim with `go clean -cache` |
 | single working-tree file | 10 MB | fails: excludes `dist/`, which has its own cap |
 | `dist/` | 200 MB | fails above the cap; notices whenever it is present |
@@ -248,12 +248,12 @@ bash scripts/check_governance.sh .
 ### Governance recalibration
 
 Use:
-- [code-governance-workflow.md](/home/jose/hpdev/Libraries/needlex/.agent/workflows/code-governance-workflow.md)
+- [code-governance-workflow.md](../.agent/workflows/code-governance-workflow.md)
 
 ### Release
 
 Public release must still follow:
-- [release-workflow.md](/home/jose/hpdev/Libraries/needlex/.agent/workflows/release-workflow.md)
+- [release-workflow.md](../.agent/workflows/release-workflow.md)
 
 Releases should use the governance script rather than ad hoc subsets of checks.
 
@@ -276,9 +276,9 @@ A governance change is invalid when it only:
 Governance is part of repo memory.
 
 The durable sources are:
-- [AGENTS.md](/home/jose/hpdev/Libraries/needlex/AGENTS.md)
-- [budget.env](/home/jose/hpdev/Libraries/needlex/governance/budget.env)
-- [code-governance-workflow.md](/home/jose/hpdev/Libraries/needlex/.agent/workflows/code-governance-workflow.md)
-- [SKILL.md](/home/jose/hpdev/Libraries/needlex/.agent/skills/code-governance/SKILL.md)
+- [AGENTS.md](../AGENTS.md)
+- [budget.env](../governance/budget.env)
+- [code-governance-workflow.md](../.agent/workflows/code-governance-workflow.md)
+- [SKILL.md](../.agent/skills/code-governance/SKILL.md)
 
 This keeps governance reproducible across future contributors and future model sessions.

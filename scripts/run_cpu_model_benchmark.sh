@@ -113,7 +113,7 @@ needlex_model_benchmark_summarize_runs \
 	"$HARD_CASE_CORPUS" \
 	"$LIVE_CASES_FILE"
 
-PATH=$PATH:/home/jose/go/bin bash scripts/check_budget.sh . >/dev/null
+PATH=$PATH:$(go env GOPATH)/bin bash scripts/check_budget.sh . >/dev/null
 
 echo
 echo "Benchmark summary written to $SUMMARY_OUT"
