@@ -1,5 +1,8 @@
 # Consegna affidabile dei dati applicativi renderizzati
 
+Status: closed in v0.1.36. The residual trace-metadata risk below remains recorded, not silently retired.
+Last reviewed: 2026-11-15 (v0.1.52)
+
 ## Contesto
 
 Il 2026-06-04 il renderer CDP è stato reso network-aware: `Network.enable`, cattura di fetch/XHR, messaggi EventSource e frame WebSocket, budget `render.network_*`, evidenza testuale sintetizzata in nodi `/network/resource[N]`. Quel lavoro è entrato nella release v0.1.33 (commit `0e6f89d`).

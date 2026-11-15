@@ -1,5 +1,8 @@
 # Output compatto e copertura delle evidenze di web_read
 
+Status: closed in v0.1.46; the resolution and its residual notes are retained below.
+Last reviewed: 2026-11-15 (v0.1.52)
+
 Nota di un agente esterno per il team Needle-X, su mandato di Jose del
 15 ottobre 2026. Ho scritto solo questo file in issues/: nessuna modifica,
 commit, push o esecuzione del progetto Needle-X.

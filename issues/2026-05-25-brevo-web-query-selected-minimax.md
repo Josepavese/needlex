@@ -1,5 +1,8 @@
 # Brevo web_query selected unrelated MiniMax docs
 
+Status: open; still reproducible on v0.1.52
+Last reviewed: 2026-11-15
+
 Date: 2026-05-25
 
 ## Context
@@ -101,3 +104,12 @@ The analysis proceeded with standard web search after the Needlex result returne
 ## Evidence Summary
 
 For a Brevo-specific `web_query`, Needlex returned a selected URL, candidate URLs, domain hints, and chunk text centered on MiniMax documentation instead of Brevo-related sources.
+
+## Reproduction (2026-11-15, v0.1.52)
+
+The same goal, run with `--discovery web_search --retrieval-effort light`,
+selected `https://www.icloud.com.cn/find` instead of a Brevo source. The
+response reported `uncertainty.reasons=["ambiguous_candidate_selection"]` and
+provider observations from Bing and DuckDuckGo. This confirms that the issue is
+still open and is not obsolete; the benchmark evidence must not be promoted to
+a pass from an unrelated result.

@@ -1,6 +1,8 @@
 # Issue 05: Semantic Quorum Provider Fusion
 
 Status: implemented for provider observation metadata, health memory, and semantic cluster quorum
+Last reviewed: 2026-11-15 (v0.1.52)
+Maintenance note: implementation and unit coverage are present; benchmark evidence was not re-run in this pass, so the issue stays out of the closed list.
 Date: 2026-05-04
 Priority: P1, P0 if public bootstrap volatility returns as top failure class
 Surface: seedless discovery, provider PAL, no-key acquisition resilience

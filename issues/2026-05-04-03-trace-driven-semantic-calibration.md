@@ -1,6 +1,8 @@
 # Issue 03: Trace-Driven Semantic Calibration
 
 Status: implemented as guarded semantic feature registry and static calibrator; trace-trained artifact remains pending
+Last reviewed: 2026-11-15 (v0.1.52)
+Next action: train and validate the trace-derived artifact behind the documented holdout gate
 Date: 2026-05-04
 Priority: P1, after diagnostics and graph evidence are stable
 Surface: ranking calibration, analytics, benchmarks, regression prevention

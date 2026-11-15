@@ -1,6 +1,8 @@
 # Issue 04: Local HNSW Vector Index
 
 Status: exact vector index PAL implemented; HNSW backend intentionally not shipped until portability and recall gates pass
+Last reviewed: 2026-11-15 (v0.1.52)
+Next action: no HNSW implementation until the portability and recall gates have measured evidence
 Date: 2026-05-04
 Priority: P1 infrastructure, P0 once memory grows beyond exact-scan comfort
 Surface: Discovery Memory, graph memory, semantic candidate recall, local analytics

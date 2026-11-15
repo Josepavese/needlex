@@ -2,7 +2,10 @@
 
 ## Status
 
-Implemented in the working tree.
+Closed in v0.1.27. Last reviewed: 2026-11-15 (v0.1.52).
+
+The current CLI, MCP, installer, semantic guard, and doctor gates still exercise
+the embeddings-first contract described here.
 
 Validation evidence:
 

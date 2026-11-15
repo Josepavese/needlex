@@ -1,5 +1,8 @@
 # Brevo CLI reference read returned only page chrome
 
+Status: closed as of 2026-11-15 (v0.1.52)
+Last reviewed: 2026-11-15
+
 Date: 2026-05-25
 
 ## Context
@@ -70,3 +73,11 @@ The analysis proceeded with standard web search and direct reference-page lookup
 ## Evidence Summary
 
 The page read was reported as successful and low-uncertainty, but the extracted text was limited to navigation/header content and omitted the command reference needed for the task.
+
+## Verification (2026-11-15, v0.1.52)
+
+The same read against the installed v0.1.52 binary returned the Markdown body
+rather than page chrome: `kind=page_read`, `title=CLI reference`,
+`signals.substrate_class=agent_markdown`, and chunks containing the command
+reference. The defect is therefore closed by the current reader path; this
+maintenance pass did not change code.

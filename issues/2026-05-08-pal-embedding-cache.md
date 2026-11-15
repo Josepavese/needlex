@@ -2,7 +2,10 @@
 
 ## Status
 
-Closed in the current worktree.
+Closed in v0.1.27. Last reviewed: 2026-11-15 (v0.1.52).
+
+The current runtime still exposes the documented cache, eviction, observability,
+and prune paths.
 
 Implemented:
 
