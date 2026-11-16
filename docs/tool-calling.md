@@ -70,7 +70,7 @@ If you wire Needle-X into an AI tool-calling stack:
 6. keep `web_prune` as an operator tool, not a model-default tool; use `embedding_cache=true` only for explicit PAL embedding cache maintenance
 7. use `memory` only for advanced local semantic memory inspection or maintenance
 8. use `analytics` only for diagnostics, value reporting, or maintainer rollups
-9. use `include_diagnostics=true` only when the compact packet is insufficient; it is the explicit path to `document`, `web_ir`, `result_pack`, `agent_context`, and `plan`
+9. use `include_diagnostics=true` only when the compact packet is insufficient; it is the explicit path to `document`, `document_extraction` for PDFs, `web_ir`, `result_pack`, `agent_context`, and `plan`
 
 Use `web_fetch` for exact HTTP body bytes and optional linked stylesheets, scripts, images, fonts, media and other binary assets. It returns local file paths. [Raw download contract](wiki/MCP-And-Tool-Calling.md#raw-downloads)
 
@@ -80,14 +80,22 @@ Render mode:
 1. `render` accepts `auto`, `off`, or `required`, and applies to the final page read
 2. `auto` reads declared agent-readable sources first, then renders when the static surface is thin, client-rendered, or does not cover the objective, and captures rendered DOM plus textual application data from fetch/XHR, SSE, and received WebSocket frames
 3. `off` forbids browser rendering entirely
-4. `required` forces a browser read even for non-HTML content and fails if the rendered DOM cannot be obtained
+4. `required` forces a browser read and fails if the rendered DOM cannot be obtained; for a PDF it fails with `render_not_applicable` because there is no browser-rendered document surface
 5. render waiting is bounded by the configured render timeout and by the remaining operation deadline; a capture cut by a budget or by a stream still open is reported as truncated
 
+PDF reads:
+1. `web_read` accepts public PDFs with embedded text; there is no separate document tool
+2. the compact packet carries `document_extraction` (`needlex.document.read.v1`) with `raw_sha256`, `source_bytes`, page counts, coverage, truncation, limits and page failures
+3. chunks carry `page_start`/`page_end`; proof spans carry `page` and `/pdf/page[N]/block[M]` selectors
+4. extraction is static and local: no OCR, no system `pdftotext`, and no browser launch
+5. use `render: "off"` or omit `render`; never use `render: "required"` for a PDF
+6. deterministic document failure classes are `document_encrypted`, `document_malformed`, `document_no_text`, `document_unsupported`, `document_limit_exceeded`, and `document_timeout`
+
 Reading a rendered result:
-1. `signals.content_source` is `dom` when content comes from the rendered DOM, and `dom+network` when captured application data also contributed
+1. `signals.content_source` is `dom` when content comes from the rendered DOM, `dom+network` when captured application data also contributed, and `pdf_text` when content came from a PDF's embedded text
 2. `signals.network_truncated` means more application data exists upstream than was captured
 3. `signals.render_degraded` means the browser path failed and application data was not observed
-4. before escalating to an external browser, retry the same URL once with `render: "required"`
+4. before escalating to an external browser, retry the same URL once with `render: "required"`; do not apply that retry to a PDF
 
 `memory` and `analytics` are dispatch tools with an `action` parameter.
 They intentionally replace many narrower MCP tools to reduce provider-side tool-list context.

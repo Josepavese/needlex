@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/josepavese/needlex/internal/core"
+	"github.com/josepavese/needlex/internal/document"
 	"github.com/josepavese/needlex/internal/pipeline"
 	"github.com/josepavese/needlex/internal/proof"
 )
@@ -81,6 +83,9 @@ func validateReadRequest(req ReadRequest) error {
 
 func buildDocument(page pipeline.RawPage, title string) core.Document {
 	rawIdentity := page.HTML
+	if len(page.Body) > 0 {
+		rawIdentity = string(page.Body)
+	}
 	if strings.TrimSpace(page.NetworkText) != "" {
 		rawIdentity += "\n\n" + page.NetworkText
 	}
@@ -92,5 +97,76 @@ func buildDocument(page pipeline.RawPage, title string) core.Document {
 		FetchedAt: page.FetchedAt,
 		FetchMode: page.FetchMode,
 		RawHash:   prefixedHash("sha256", rawIdentity),
+	}
+}
+
+func (s *Service) reduceDocument(ctx context.Context, recorder *proof.Recorder, rawPage pipeline.RawPage) (pipeline.SimplifiedDOM, error) {
+	const stage = "reduce"
+	if err := recorder.StageStarted(stage, rawPage, s.now().UTC()); err != nil {
+		return pipeline.SimplifiedDOM{}, err
+	}
+	limits := pipeline.DocumentLimits{
+		MaxBytes:       s.cfg.Runtime.MaxBytes,
+		MaxPages:       s.cfg.Document.MaxPages,
+		MaxOutputChars: s.cfg.Document.MaxOutputChars,
+		TimeoutMS:      s.cfg.Document.TimeoutMS,
+	}
+	dom, err := document.Extract(ctx, rawPage, limits)
+	if err != nil {
+		recorder.Error(stage, "NX_DOCUMENT_EXTRACT_FAILED", err.Error(), map[string]string{"format": "pdf"}, s.now().UTC())
+		return pipeline.SimplifiedDOM{}, err
+	}
+	reducedChars := 0
+	for _, node := range dom.Nodes {
+		reducedChars += len(node.Text)
+	}
+	metadata := map[string]string{
+		"web_ir_version":     core.WebIRVersion,
+		"substrate_class":    dom.SubstrateClass,
+		"reduced_nodes":      fmt.Sprintf("%d", len(dom.Nodes)),
+		"reduced_chars":      fmt.Sprintf("%d", reducedChars),
+		"document_format":    "pdf",
+		"document_pages":     fmt.Sprintf("%d", dom.Document.PagesTotal),
+		"document_processed": fmt.Sprintf("%d", dom.Document.PagesProcessed),
+	}
+	if strings.TrimSpace(dom.Title) != "" {
+		metadata["title"] = dom.Title
+	}
+	if err := recorder.StageCompleted(stage, dom, len(dom.Nodes), metadata, s.now().UTC()); err != nil {
+		return pipeline.SimplifiedDOM{}, err
+	}
+	return dom, nil
+}
+
+func buildDocumentExtraction(dom pipeline.SimplifiedDOM) *core.DocumentExtraction {
+	info := dom.Document
+	if info == nil {
+		return nil
+	}
+	failures := make([]core.DocumentPageFailure, 0, len(info.PagesFailed))
+	for _, failure := range info.PagesFailed {
+		failures = append(failures, core.DocumentPageFailure{
+			Page:    failure.Page,
+			Code:    failure.Code,
+			Message: failure.Message,
+		})
+	}
+	return &core.DocumentExtraction{
+		Schema:         core.DocumentReadSchemaV1,
+		Format:         info.Format,
+		RawSHA256:      info.RawSHA256,
+		SourceBytes:    info.SourceBytes,
+		PagesTotal:     info.PagesTotal,
+		PagesProcessed: info.PagesProcessed,
+		PagesWithText:  info.PagesWithText,
+		PagesFailed:    failures,
+		Truncated:      info.Truncated,
+		Coverage:       info.Coverage,
+		Limits: core.DocumentLimits{
+			MaxBytes:       info.Limits.MaxBytes,
+			MaxPages:       info.Limits.MaxPages,
+			MaxOutputChars: info.Limits.MaxOutputChars,
+			TimeoutMS:      info.Limits.TimeoutMS,
+		},
 	}
 }

@@ -32,6 +32,8 @@ func (s Segmenter) Segment(dom SimplifiedDOM) []Segment {
 				HeadingPath: append([]string{}, targetPath...),
 				Text:        node.Text,
 				NodePaths:   []string{node.Path},
+				PageStart:   node.Page,
+				PageEnd:     node.Page,
 			})
 			continue
 		}
@@ -39,6 +41,9 @@ func (s Segmenter) Segment(dom SimplifiedDOM) []Segment {
 		current := &segments[len(segments)-1]
 		current.Text += "\n\n" + node.Text
 		current.NodePaths = append(current.NodePaths, node.Path)
+		if node.Page > 0 {
+			current.PageEnd = node.Page
+		}
 	}
 
 	return segments
@@ -58,6 +63,9 @@ func nextHeadingPath(current []string, level int, text string) []string {
 
 func canAppend(segment Segment, node SimplifiedNode, headingPath []string, limit int) bool {
 	if segment.Kind != node.Kind {
+		return false
+	}
+	if segment.PageStart > 0 && node.Page > 0 && segment.PageStart != node.Page {
 		return false
 	}
 	if strings.Join(segment.HeadingPath, "\x00") != strings.Join(headingPath, "\x00") {

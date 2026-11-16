@@ -19,6 +19,8 @@ type AgentChunk struct {
 	SourceTitle      string   `json:"source_title,omitempty"`
 	SourceSelector   string   `json:"source_selector,omitempty"`
 	ProofRef         string   `json:"proof_ref,omitempty"`
+	PageStart        int      `json:"page_start,omitempty"`
+	PageEnd          int      `json:"page_end,omitempty"`
 }
 
 type AgentCandidate struct {
@@ -65,6 +67,8 @@ func buildAgentContext(document core.Document, pack core.ResultPack, proofs []pr
 			SourceTitle:      source.Title,
 			SourceSelector:   record.Proof.SourceSpan.Selector,
 			ProofRef:         record.ID,
+			PageStart:        chunk.PageStart,
+			PageEnd:          chunk.PageEnd,
 		})
 	}
 	agentCandidates := make([]AgentCandidate, 0, len(candidates))

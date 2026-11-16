@@ -7,11 +7,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/josepavese/needlex/internal/core"
 	"github.com/josepavese/needlex/internal/pipeline"
 )
 
 func TestSchemaFilesContainValidJSON(t *testing.T) {
 	files := []string{
+		"needlex-document-read.v1.json",
 		"needlex-fetch-receipt.v1.json",
 		"needlex-tools.anthropic.json",
 		"needlex-tools.openai.json",
@@ -64,6 +66,27 @@ func TestFetchReceiptSchemaDeclaresCurrentContract(t *testing.T) {
 	}
 }
 
+func TestDocumentReadSchemaDeclaresPageAndRawContract(t *testing.T) {
+	data, err := os.ReadFile("needlex-document-read.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Properties map[string]map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if schema.Properties["schema"]["const"] != core.DocumentReadSchemaV1 {
+		t.Fatalf("schema const = %v, want %q", schema.Properties["schema"]["const"], core.DocumentReadSchemaV1)
+	}
+	for _, name := range []string{"raw_sha256", "source_bytes", "pages_total", "pages_processed", "pages_with_text", "truncated", "coverage", "limits"} {
+		if _, ok := schema.Properties[name]; !ok {
+			t.Fatalf("schema does not declare %q", name)
+		}
+	}
+}
+
 func TestResultPackSchemaDeclaresContextAlignment(t *testing.T) {
 	data, err := os.ReadFile("resultpack.schema.json")
 	if err != nil {
@@ -83,6 +106,11 @@ func TestResultPackSchemaDeclaresContextAlignment(t *testing.T) {
 	}
 	if _, ok := schema.Properties.Chunks.Items.Properties["context_alignment"]; !ok {
 		t.Fatal("resultpack schema does not declare context_alignment")
+	}
+	for _, name := range []string{"page_start", "page_end"} {
+		if _, ok := schema.Properties.Chunks.Items.Properties[name]; !ok {
+			t.Fatalf("resultpack schema does not declare %q", name)
+		}
 	}
 }
 

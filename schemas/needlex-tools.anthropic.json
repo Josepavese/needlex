@@ -337,19 +337,24 @@
     },
     {
       "name": "web_read",
-      "description": "Read one known URL and return compact proof-carrying context first. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
+      "description": "Read one known URL and return compact proof-carrying context first. HTML, text, JSON, XML and public PDFs with embedded text are supported. PDF reads add a versioned document_extraction object with raw_sha256, source_bytes, page counts, coverage, truncation and limits; chunks and proof spans carry page numbers. OCR is not supported and PDFs are never browser-rendered. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, document_extraction, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
       "input_schema": {
         "additionalProperties": false,
         "examples": [
           {
+            "url": "https://example.com",
             "objective": "Extract pricing and policy details",
-            "retrieval_effort": "standard",
-            "url": "https://example.com"
+            "retrieval_effort": "standard"
           },
           {
-            "include_diagnostics": true,
+            "url": "https://example.com/sample.pdf",
+            "objective": "Extract the title and first sentence from page one",
+            "render": "off"
+          },
+          {
+            "url": "https://example.com",
             "objective": "Inspect the full compiled packet",
-            "url": "https://example.com"
+            "include_diagnostics": true
           }
         ],
         "properties": {
@@ -430,7 +435,7 @@
           },
           "include_diagnostics": {
             "default": false,
-            "description": "When true, structuredContent also carries a nested diagnostics object with the full document, web_ir, result_pack and agent_context. Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
+            "description": "When true, structuredContent also carries a nested diagnostics object with the full document, document_extraction, web_ir, result_pack and agent_context. Default false keeps structuredContent on the compact packet plus trace_path/proof_path/fingerprint_path, so an agent never has to receive duplicate bulky payloads by default.",
             "type": "boolean"
           },
           "insecure_tls": {

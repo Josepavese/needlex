@@ -25,6 +25,7 @@ func (c Config) Validate() error {
 	errs = append(errs, validateMemory(c.Memory)...)
 	errs = append(errs, validateAgent(c.Agent)...)
 	errs = append(errs, validateRender(c.Render)...)
+	errs = append(errs, validateDocument(c.Document)...)
 	errs = append(errs, validateNetwork(c.Network)...)
 
 	if len(errs) == 0 {
@@ -38,6 +39,20 @@ func validateNetwork(network NetworkConfig) []error {
 		return []error{err}
 	}
 	return nil
+}
+
+func validateDocument(document DocumentConfig) []error {
+	errs := []error{}
+	if document.MaxPages <= 0 {
+		errs = append(errs, fmt.Errorf("document.max_pages must be > 0"))
+	}
+	if document.MaxOutputChars <= 0 {
+		errs = append(errs, fmt.Errorf("document.max_output_chars must be > 0"))
+	}
+	if document.TimeoutMS <= 0 {
+		errs = append(errs, fmt.Errorf("document.timeout_ms must be > 0"))
+	}
+	return errs
 }
 
 func validateFetch(fetch FetchConfig) []error {

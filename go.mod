@@ -5,6 +5,7 @@ go 1.27.0
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/imroc/req/v3 v3.61.0
+	github.com/ledongthuc/pdf v0.0.0-20261020125853-5e46805f718e
 	golang.org/x/net v0.59.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.59.0

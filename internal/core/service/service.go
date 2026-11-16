@@ -31,15 +31,16 @@ type ReadRequest struct {
 }
 
 type ReadResponse struct {
-	Document          core.Document       `json:"document"`
-	WebIR             core.WebIR          `json:"web_ir"`
-	ResultPack        core.ResultPack     `json:"result_pack"`
-	AgentContext      AgentContext        `json:"agent_context,omitempty"`
-	ProofRecords      []proof.ProofRecord `json:"proof_records"`
-	Trace             proof.RunTrace      `json:"trace"`
-	Replay            proof.ReplayReport  `json:"replay"`
-	acquisitionPage   *pipeline.RawPage
-	acquisitionBudget *time.Duration
+	Document           core.Document            `json:"document"`
+	DocumentExtraction *core.DocumentExtraction `json:"document_extraction,omitempty"`
+	WebIR              core.WebIR               `json:"web_ir"`
+	ResultPack         core.ResultPack          `json:"result_pack"`
+	AgentContext       AgentContext             `json:"agent_context,omitempty"`
+	ProofRecords       []proof.ProofRecord      `json:"proof_records"`
+	Trace              proof.RunTrace           `json:"trace"`
+	Replay             proof.ReplayReport       `json:"replay"`
+	acquisitionPage    *pipeline.RawPage
+	acquisitionBudget  *time.Duration
 }
 
 type Service struct {
@@ -147,20 +148,31 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 			acquisitionBudget = &remaining
 		}
 	}
-	resolver := s.sourceResolver()
-	resolutionReq := sourceResolutionRequest(req)
-	rawPage, err = resolver.ResolveAgentReadable(ctx, recorder, resolutionReq, rawPage)
-	if err != nil {
-		return ReadResponse{}, err
-	}
+	var dom pipeline.SimplifiedDOM
+	if pipeline.IsDocumentRawPage(rawPage) {
+		if strings.EqualFold(strings.TrimSpace(req.RenderMode), "required") {
+			return ReadResponse{}, fmt.Errorf("render_not_applicable: %s documents have no DOM; use render=auto or render=off", rawPage.ContentType)
+		}
+		dom, err = s.reduceDocument(ctx, recorder, rawPage)
+		if err != nil {
+			return ReadResponse{}, err
+		}
+	} else {
+		resolver := s.sourceResolver()
+		resolutionReq := sourceResolutionRequest(req)
+		rawPage, err = resolver.ResolveAgentReadable(ctx, recorder, resolutionReq, rawPage)
+		if err != nil {
+			return ReadResponse{}, err
+		}
 
-	dom, err := s.reduce(recorder, rawPage)
-	if err != nil {
-		return ReadResponse{}, err
-	}
-	rawPage, dom, err = resolver.MaybeRender(ctx, recorder, resolutionReq, rawPage, dom)
-	if err != nil {
-		return ReadResponse{}, err
+		dom, err = s.reduce(recorder, rawPage)
+		if err != nil {
+			return ReadResponse{}, err
+		}
+		rawPage, dom, err = resolver.MaybeRender(ctx, recorder, resolutionReq, rawPage, dom)
+		if err != nil {
+			return ReadResponse{}, err
+		}
 	}
 	dom = webirbuilder.EnsureMinimum(dom)
 	webIR := webirbuilder.Build(dom)
@@ -168,14 +180,14 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 		return ReadResponse{}, err
 	}
 
-	document := buildDocument(rawPage, dom.Title)
+	builtDocument := buildDocument(rawPage, dom.Title)
 
 	segments, err := s.segment(recorder, dom)
 	if err != nil {
 		return ReadResponse{}, err
 	}
 
-	resultPack, proofRecords, err := s.pack(ctx, recorder, req, document, dom, webIR, segments)
+	resultPack, proofRecords, err := s.pack(ctx, recorder, req, builtDocument, dom, webIR, segments)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -188,15 +200,16 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 	resultPack.CostReport = buildCostReport(trace, resultPack.CostReport.LanePath)
 
 	response := ReadResponse{
-		acquisitionPage:   acquisitionPage,
-		acquisitionBudget: acquisitionBudget,
-		Document:          document,
-		WebIR:             webIR,
-		ResultPack:        resultPack,
-		AgentContext:      buildAgentContext(document, resultPack, proofRecords, nil),
-		ProofRecords:      proofRecords,
-		Trace:             trace,
-		Replay:            replay,
+		acquisitionPage:    acquisitionPage,
+		acquisitionBudget:  acquisitionBudget,
+		Document:           builtDocument,
+		DocumentExtraction: buildDocumentExtraction(dom),
+		WebIR:              webIR,
+		ResultPack:         resultPack,
+		AgentContext:       buildAgentContext(builtDocument, resultPack, proofRecords, nil),
+		ProofRecords:       proofRecords,
+		Trace:              trace,
+		Replay:             replay,
 	}
 	if err := response.Validate(); err != nil {
 		return ReadResponse{}, err
@@ -207,6 +220,11 @@ func (s *Service) read(ctx context.Context, req ReadRequest) (ReadResponse, erro
 func (r ReadResponse) Validate() error {
 	if err := r.Document.Validate(); err != nil {
 		return err
+	}
+	if r.DocumentExtraction != nil {
+		if err := r.DocumentExtraction.Validate(); err != nil {
+			return err
+		}
 	}
 	if err := r.WebIR.Validate(); err != nil {
 		return err

@@ -35,6 +35,10 @@
         "char_end": {
           "type": "integer",
           "minimum": 1
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

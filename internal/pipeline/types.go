@@ -28,12 +28,16 @@ type AcquireInput struct {
 }
 
 type RawPage struct {
-	URL              string
-	FinalURL         string
-	StatusCode       int
-	ContentType      string
-	Headers          map[string][]string
-	HTML             string
+	URL         string
+	FinalURL    string
+	StatusCode  int
+	ContentType string
+	Headers     map[string][]string
+	HTML        string
+	// Body preserves the undecoded response bytes for non-HTML documents such as
+	// PDF, where the text pipeline must parse bytes instead of treating them as
+	// an HTML/text payload. HTML pages keep using HTML.
+	Body             []byte
 	Partial          bool
 	FetchMode        string
 	FetchProfile     string
@@ -56,6 +60,14 @@ func IsHTMLLikeRawPage(page RawPage) bool {
 	return contentType == "" || strings.Contains(contentType, "text/html") || strings.Contains(contentType, "application/xhtml+xml")
 }
 
+// IsDocumentRawPage reports document formats that are parsed into a page-aware
+// text surface instead of the HTML/text reducer. PDF is the only supported
+// format in the document contract v1.
+func IsDocumentRawPage(page RawPage) bool {
+	contentType := strings.ToLower(strings.TrimSpace(page.ContentType))
+	return strings.Contains(contentType, "application/pdf") || strings.Contains(contentType, "application/x-pdf")
+}
+
 type SimplifiedNode struct {
 	Path         string
 	Tag          string
@@ -63,6 +75,9 @@ type SimplifiedNode struct {
 	Text         string
 	Depth        int
 	HeadingLevel int
+	// Page is the 1-based source page for document formats. Zero means the node
+	// has no page identity (ordinary HTML/text).
+	Page int
 }
 
 type SimplifiedDOM struct {
@@ -71,6 +86,36 @@ type SimplifiedDOM struct {
 	SubstrateClass string
 	SourceKind     string
 	Nodes          []SimplifiedNode
+	Document       *DocumentInfo
+}
+
+// DocumentInfo is the internal page-aware extraction surface. It is converted
+// to core.DocumentExtraction before crossing the public service boundary.
+type DocumentInfo struct {
+	Format         string
+	RawSHA256      string
+	SourceBytes    int64
+	PagesTotal     int
+	PagesProcessed int
+	PagesWithText  int
+	PagesFailed    []DocumentPageFailure
+	Truncated      bool
+	Coverage       string
+	ExtractedChars int
+	Limits         DocumentLimits
+}
+
+type DocumentPageFailure struct {
+	Page    int
+	Code    string
+	Message string
+}
+
+type DocumentLimits struct {
+	MaxBytes       int64
+	MaxPages       int
+	MaxOutputChars int
+	TimeoutMS      int64
 }
 
 type Segment struct {
@@ -78,4 +123,6 @@ type Segment struct {
 	HeadingPath []string
 	Text        string
 	NodePaths   []string
+	PageStart   int
+	PageEnd     int
 }

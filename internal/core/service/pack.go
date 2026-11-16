@@ -175,6 +175,8 @@ func (s *Service) rankSegments(ctx context.Context, docID, objective string, web
 				Score:            score,
 				Fingerprint:      fingerprint,
 				Confidence:       confidence,
+				PageStart:        segment.PageStart,
+				PageEnd:          segment.PageEnd,
 			},
 		})
 	}

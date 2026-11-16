@@ -31,6 +31,7 @@ func Defaults() Config {
 		Memory:    defaultMemoryConfig(baseline),
 		Agent:     defaultAgentConfig(),
 		Render:    DefaultRenderConfig(),
+		Document:  defaultDocumentConfig(),
 		Network:   defaultNetworkConfig(),
 	}
 }
@@ -54,6 +55,10 @@ func defaultRuntimeConfig() RuntimeConfig {
 		MaxBytes:  4_000_000,
 		LaneMax:   3,
 	}
+}
+
+func defaultDocumentConfig() DocumentConfig {
+	return DocumentConfig{MaxPages: 100, MaxOutputChars: 200_000, TimeoutMS: 5000}
 }
 
 func defaultFetchConfig() FetchConfig {

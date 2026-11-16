@@ -249,6 +249,7 @@ func buildSourceSpan(segment pipeline.Segment, chunk core.Chunk) core.SourceSpan
 		Selector:  selector,
 		CharStart: 0,
 		CharEnd:   len(chunk.Text),
+		Page:      segment.PageStart,
 	}
 }
 

@@ -16,6 +16,13 @@ const (
 	ClassUpstreamNotFound       Class = "upstream_not_found"
 	ClassUpstreamTimeout        Class = "upstream_timeout"
 	ClassUnsupportedContentType Class = "unsupported_content_type"
+	ClassDocumentEncrypted      Class = "document_encrypted"
+	ClassDocumentMalformed      Class = "document_malformed"
+	ClassDocumentNoText         Class = "document_no_text"
+	ClassDocumentUnsupported    Class = "document_unsupported"
+	ClassDocumentLimit          Class = "document_limit_exceeded"
+	ClassDocumentTimeout        Class = "document_timeout"
+	ClassRenderNotApplicable    Class = "render_not_applicable"
 	ClassEmptyCandidates        Class = "empty_candidates"
 	ClassUnavailableUpstream    Class = "unavailable_upstream"
 	// ClassNetworkDenied marks a destination rejected by the configured egress
@@ -34,6 +41,12 @@ func Classify(err error) Class {
 	if err == nil {
 		return ClassRuntimeError
 	}
+	var classified interface{ FailureClass() string }
+	if errors.As(err, &classified) {
+		if class := Class(strings.TrimSpace(classified.FailureClass())); class.valid() {
+			return class
+		}
+	}
 	if errors.Is(err, platform.ErrEgressDenied) {
 		return ClassNetworkDenied
 	}
@@ -50,12 +63,38 @@ func Classify(err error) Class {
 		return ClassUpstreamTimeout
 	case containsAny(text, "unsupported content type"):
 		return ClassUnsupportedContentType
+	case containsAny(text, "document_encrypted", "pdf is encrypted", "encrypted pdf"):
+		return ClassDocumentEncrypted
+	case containsAny(text, "document_malformed", "malformed pdf"):
+		return ClassDocumentMalformed
+	case containsAny(text, "document_no_text"):
+		return ClassDocumentNoText
+	case containsAny(text, "document_unsupported"):
+		return ClassDocumentUnsupported
+	case containsAny(text, "document_limit_exceeded"):
+		return ClassDocumentLimit
+	case containsAny(text, "document_timeout"):
+		return ClassDocumentTimeout
+	case containsAny(text, "render_not_applicable"):
+		return ClassRenderNotApplicable
 	case containsAny(text, "empty candidates", "no candidates", "returned no candidates"):
 		return ClassEmptyCandidates
 	case containsAny(text, "provider unavailable", "not configured", "no such host", "connection refused", "connection reset"):
 		return ClassUnavailableUpstream
 	default:
 		return ClassRuntimeError
+	}
+}
+
+func (c Class) valid() bool {
+	switch c {
+	case ClassRuntimeError, ClassProviderBlocked, ClassUpstreamNotFound, ClassUpstreamTimeout,
+		ClassUnsupportedContentType, ClassDocumentEncrypted, ClassDocumentMalformed,
+		ClassDocumentNoText, ClassDocumentUnsupported, ClassDocumentLimit, ClassDocumentTimeout,
+		ClassRenderNotApplicable, ClassEmptyCandidates, ClassUnavailableUpstream, ClassNetworkDenied:
+		return true
+	default:
+		return false
 	}
 }
 

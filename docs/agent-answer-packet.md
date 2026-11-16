@@ -61,6 +61,17 @@ Campi query-specific:
 2. `selection_why`
 3. `candidates`
 
+Regola per `document_extraction`:
+1. il campo compare solo quando la sorgente e' un PDF testuale; non aggiunge rumore alle letture HTML
+2. schema stabile: `needlex.document.read.v1`
+3. `raw_sha256` e' lo SHA-256 completo dei byte ricevuti e `source_bytes` la loro dimensione
+4. `pages_total`, `pages_processed`, `pages_with_text` e `pages_failed[]` rendono conto delle pagine
+5. `truncated` e `coverage` (`complete`|`partial`|`none`) dichiarano i limiti dell'estrazione
+6. `limits` riporta i budget effettivi: byte, pagine, caratteri di output e timeout
+7. i chunk PDF hanno `page_start`/`page_end`; il proof span ha `page` e il selettore `/pdf/page[N]/block[M]`
+8. errori distinti: `document_encrypted`, `document_malformed`, `document_no_text`, `document_unsupported`, `document_limit_exceeded`, `document_timeout`; `render_not_applicable` per `render=required`
+9. nessun OCR, nessun `pdftotext` e nessun rendering browser per i PDF
+
 ## `read` Example
 
 ```json
@@ -146,6 +157,56 @@ Note:
 1. un chunk può avere come `source_url` l'endpoint applicativo invece della pagina, perché l'evidenza di rete entra nel substrate con provenance `/network/resource[N]`
 2. se la cattura è stata tagliata, `network_truncated` è `true` e l'agente deve considerare che esistono dati non materializzati
 3. se il percorso browser è fallito, `render_degraded` è `true` e `content_source` resta `dom`
+
+## `read` Example With PDF Document Extraction
+
+Un PDF testuale aggiunge `document_extraction` e conserva la provenienza per pagina:
+
+```json
+{
+  "kind": "page_read",
+  "url": "https://pdfobject.com/pdf/sample.pdf",
+  "title": "Sample PDF",
+  "document_extraction": {
+    "schema": "needlex.document.read.v1",
+    "format": "pdf",
+    "raw_sha256": "229defbb0cee6f02673a5cde290d0673e75a0dc31cec43989c8ab2a4eca7e1bb",
+    "source_bytes": 18810,
+    "pages_total": 1,
+    "pages_processed": 1,
+    "pages_with_text": 1,
+    "truncated": false,
+    "coverage": "complete",
+    "limits": {
+      "max_bytes": 4000000,
+      "max_pages": 100,
+      "max_output_chars": 200000,
+      "timeout_ms": 5000
+    }
+  },
+  "chunks": [
+    {
+      "text": "Sample PDF This is a simple PDF file. Fun fun fun.",
+      "source_url": "https://pdfobject.com/pdf/sample.pdf",
+      "source_selector": "/pdf/page[1]/block[1]",
+      "page_start": 1,
+      "page_end": 1,
+      "proof_ref": "proof_123"
+    }
+  ],
+  "signals": {
+    "confidence": 0.93,
+    "substrate_class": "pdf_text",
+    "content_source": "pdf_text"
+  }
+}
+```
+
+Note:
+1. `raw_sha256` permette di verificare i byte della sorgente indipendentemente dal packet
+2. `coverage` parziale o `truncated` impongono di non dichiarare copertura completa
+3. `render=required` su un PDF fallisce con `render_not_applicable`: usare `render=off` o omettere il parametro
+4. un PDF scansionato o solo immagine restituisce `document_no_text`; l'OCR richiede uno strumento esterno
 
 ## `query` Example
 

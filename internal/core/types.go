@@ -16,6 +16,9 @@ const (
 	ProfileTiny     = "tiny"
 	ProfileStandard = "standard"
 	ProfileDeep     = "deep"
+
+	// DocumentReadSchemaV1 versions the page-aware document read contract.
+	DocumentReadSchemaV1 = "needlex.document.read.v1"
 )
 
 type Document struct {
@@ -37,12 +40,44 @@ type Chunk struct {
 	Score            float64  `json:"score"`
 	Fingerprint      string   `json:"fingerprint"`
 	Confidence       float64  `json:"confidence"`
+	PageStart        int      `json:"page_start,omitempty"`
+	PageEnd          int      `json:"page_end,omitempty"`
 }
 
 type SourceSpan struct {
 	Selector  string `json:"selector"`
 	CharStart int    `json:"char_start"`
 	CharEnd   int    `json:"char_end"`
+	Page      int    `json:"page,omitempty"`
+}
+
+// DocumentExtraction is the versioned public summary of a page-aware document
+// read. It is additive to the existing document/result_pack surfaces.
+type DocumentExtraction struct {
+	Schema         string                `json:"schema"`
+	Format         string                `json:"format"`
+	RawSHA256      string                `json:"raw_sha256"`
+	SourceBytes    int64                 `json:"source_bytes"`
+	PagesTotal     int                   `json:"pages_total"`
+	PagesProcessed int                   `json:"pages_processed"`
+	PagesWithText  int                   `json:"pages_with_text"`
+	PagesFailed    []DocumentPageFailure `json:"pages_failed,omitempty"`
+	Truncated      bool                  `json:"truncated"`
+	Coverage       string                `json:"coverage"`
+	Limits         DocumentLimits        `json:"limits"`
+}
+
+type DocumentPageFailure struct {
+	Page    int    `json:"page"`
+	Code    string `json:"code"`
+	Message string `json:"message,omitempty"`
+}
+
+type DocumentLimits struct {
+	MaxBytes       int64 `json:"max_bytes"`
+	MaxPages       int   `json:"max_pages"`
+	MaxOutputChars int   `json:"max_output_chars"`
+	TimeoutMS      int64 `json:"timeout_ms"`
 }
 
 type ModelInvocation struct {
@@ -129,6 +164,15 @@ func (c Chunk) Validate() error {
 		validateUnitInterval("chunk.confidence", c.Confidence),
 	}
 	errs = append(errs, ValidateStringSlice("chunk.heading_path", c.HeadingPath)...)
+	if c.PageStart < 0 {
+		errs = append(errs, fmt.Errorf("chunk.page_start must be >= 0"))
+	}
+	if c.PageEnd < 0 {
+		errs = append(errs, fmt.Errorf("chunk.page_end must be >= 0"))
+	}
+	if c.PageStart > 0 && c.PageEnd < c.PageStart {
+		errs = append(errs, fmt.Errorf("chunk.page_end must be >= page_start"))
+	}
 	return errors.Join(errs...)
 }
 
@@ -141,6 +185,51 @@ func (s SourceSpan) Validate() error {
 	}
 	if s.CharEnd <= s.CharStart {
 		errs = append(errs, fmt.Errorf("proof.source_span.char_end must be > char_start"))
+	}
+	if s.Page < 0 {
+		errs = append(errs, fmt.Errorf("proof.source_span.page must be >= 0"))
+	}
+	return errors.Join(errs...)
+}
+
+func (d DocumentExtraction) Validate() error {
+	errs := []error{
+		RequireNonEmpty("document_extraction.schema", d.Schema),
+		RequireNonEmpty("document_extraction.format", d.Format),
+		RequireNonNegative("document_extraction.pages_total", d.PagesTotal),
+		RequireNonNegative("document_extraction.pages_processed", d.PagesProcessed),
+		RequireNonNegative("document_extraction.pages_with_text", d.PagesWithText),
+	}
+	if d.Schema != DocumentReadSchemaV1 {
+		errs = append(errs, fmt.Errorf("document_extraction.schema must be %q", DocumentReadSchemaV1))
+	}
+	if strings.TrimSpace(d.RawSHA256) == "" {
+		errs = append(errs, fmt.Errorf("document_extraction.raw_sha256 must not be empty"))
+	}
+	if d.SourceBytes < 0 {
+		errs = append(errs, fmt.Errorf("document_extraction.source_bytes must be >= 0"))
+	}
+	if d.PagesProcessed > d.PagesTotal {
+		errs = append(errs, fmt.Errorf("document_extraction.pages_processed must be <= pages_total"))
+	}
+	if d.PagesWithText > d.PagesProcessed {
+		errs = append(errs, fmt.Errorf("document_extraction.pages_with_text must be <= pages_processed"))
+	}
+	switch d.Coverage {
+	case "complete", "partial", "none":
+	default:
+		errs = append(errs, fmt.Errorf("document_extraction.coverage must be complete, partial, or none"))
+	}
+	for i, failure := range d.PagesFailed {
+		if failure.Page <= 0 {
+			errs = append(errs, fmt.Errorf("document_extraction.pages_failed[%d].page must be > 0", i))
+		}
+		if strings.TrimSpace(failure.Code) == "" {
+			errs = append(errs, fmt.Errorf("document_extraction.pages_failed[%d].code must not be empty", i))
+		}
+	}
+	if d.Limits.MaxBytes <= 0 || d.Limits.MaxPages <= 0 || d.Limits.MaxOutputChars <= 0 || d.Limits.TimeoutMS <= 0 {
+		errs = append(errs, fmt.Errorf("document_extraction.limits must all be > 0"))
 	}
 	return errors.Join(errs...)
 }

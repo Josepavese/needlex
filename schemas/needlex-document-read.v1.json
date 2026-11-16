@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://josepavese.github.io/needlex/schemas/needlex-document-read.v1.json",
+  "title": "NeedleXDocumentExtractionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "format",
+    "raw_sha256",
+    "source_bytes",
+    "pages_total",
+    "pages_processed",
+    "pages_with_text",
+    "truncated",
+    "coverage",
+    "limits"
+  ],
+  "properties": {
+    "schema": {
+      "const": "needlex.document.read.v1"
+    },
+    "format": {
+      "type": "string",
+      "enum": ["pdf"]
+    },
+    "raw_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pages_total": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pages_processed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pages_with_text": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pages_failed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "code"],
+        "properties": {
+          "page": {"type": "integer", "minimum": 1},
+          "code": {
+            "type": "string",
+            "enum": [
+              "document_encrypted",
+              "document_malformed",
+              "document_no_text",
+              "document_unsupported",
+              "document_limit_exceeded",
+              "document_timeout"
+            ]
+          },
+          "message": {"type": "string"}
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "coverage": {
+      "type": "string",
+      "enum": ["complete", "partial", "none"]
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_bytes", "max_pages", "max_output_chars", "timeout_ms"],
+      "properties": {
+        "max_bytes": {"type": "integer", "minimum": 1},
+        "max_pages": {"type": "integer", "minimum": 1},
+        "max_output_chars": {"type": "integer", "minimum": 1},
+        "timeout_ms": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

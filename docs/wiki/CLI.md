@@ -50,6 +50,84 @@ Seedless query is experimental and requires explicit opt-in:
 needlex query --goal "company profile" --discovery web_search --json
 ```
 
+## PDF document reads
+
+`read` extracts the embedded text of a public PDF instead of rejecting it as
+unsupported content. The same path is available through MCP `web_read`; no
+separate tool is required.
+
+```bash
+NEEDLEX_NETWORK_POLICY=public \
+needlex read https://pdfobject.com/pdf/sample.pdf \
+  --objective "Extract the title and first sentence from page one" \
+  --render off --json
+```
+
+The compact JSON packet adds a page-aware `document_extraction` object before
+`chunks`. Its stable schema is `needlex.document.read.v1`; the JSON Schema is
+[needlex-document-read.v1.json](../../schemas/needlex-document-read.v1.json).
+
+```json
+{
+  "document_extraction": {
+    "schema": "needlex.document.read.v1",
+    "format": "pdf",
+    "raw_sha256": "229defbb0cee6f02673a5cde290d0673e75a0dc31cec43989c8ab2a4eca7e1bb",
+    "source_bytes": 18810,
+    "pages_total": 1,
+    "pages_processed": 1,
+    "pages_with_text": 1,
+    "truncated": false,
+    "coverage": "complete",
+    "limits": {
+      "max_bytes": 4000000,
+      "max_pages": 100,
+      "max_output_chars": 200000,
+      "timeout_ms": 5000
+    }
+  }
+}
+```
+
+`raw_sha256` is the full SHA-256 of the received PDF bytes, so a caller can
+verify the source independently. `coverage` is `complete`, `partial` or `none`
+when pages were skipped, text was truncated, or some pages failed. When pages
+fail, `pages_failed[]` carries the `page`, stable error `code` and message.
+
+Chunks add `page_start` and `page_end`; proof records add `source_span.page` and
+use selectors of the form `/pdf/page[N]/block[M]`. The top-level `url` is the
+final URL after redirects, and the proof references in the packet remain
+verifiable with `needlex proof <proof-id> --json`.
+
+The extraction is static, local and page-aware. It does not run JavaScript,
+does not launch a browser for PDFs, does not call `pdftotext` or another system
+helper, and does not perform OCR. Scanned/image-only PDFs therefore return
+`document_no_text`; use separate OCR tooling for those files.
+
+Limits are enforced before and during extraction. `max_bytes` follows
+`runtime.max_bytes`; `max_pages`, `max_output_chars` and `timeout_ms` are the
+`document` config values and default to `100`, `200000` and `5000`. A
+truncated or partial extraction is reported in `document_extraction`, never
+silently rounded up to complete.
+
+Distinct failure classes are emitted for PDFs:
+
+| Class | Meaning |
+| --- | --- |
+| `document_encrypted` | the PDF requires a password or unsupported encryption |
+| `document_malformed` | the bytes are not a usable PDF structure |
+| `document_no_text` | the PDF opened but contains no extractable text |
+| `document_unsupported` | the PDF feature is outside the extractor's support |
+| `document_limit_exceeded` | the byte, page, output or time budget was exceeded |
+| `document_timeout` | extraction did not finish inside the deadline |
+| `render_not_applicable` | `--render required` was requested for a PDF |
+
+`render=off` and `render=auto` use the static document path. `render=required`
+is strict and fails with `render_not_applicable` for PDFs because there is no
+browser-rendered PDF surface. PDF acquisition uses the same
+`NEEDLEX_NETWORK_POLICY` and privacy constraints as HTML acquisition; the
+network policy is never relaxed for documents.
+
 ## Raw downloads
 
 ```bash

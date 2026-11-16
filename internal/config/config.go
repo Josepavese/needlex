@@ -12,6 +12,7 @@ type Config struct {
 	Memory      MemoryConfig    `json:"memory,omitempty"`
 	Agent       AgentConfig     `json:"agent,omitempty"`
 	Render      RenderConfig    `json:"render,omitempty"`
+	Document    DocumentConfig  `json:"document,omitempty"`
 	Network     NetworkConfig   `json:"network,omitempty"`
 	SessionFile string          `json:"session_file,omitempty"`
 }
@@ -27,6 +28,12 @@ type RuntimeConfig struct {
 	TimeoutMS int64 `json:"timeout_ms"`
 	MaxBytes  int64 `json:"max_bytes"`
 	LaneMax   int   `json:"lane_max"`
+}
+
+type DocumentConfig struct {
+	MaxPages       int   `json:"max_pages,omitempty"`
+	MaxOutputChars int   `json:"max_output_chars,omitempty"`
+	TimeoutMS      int64 `json:"timeout_ms,omitempty"`
 }
 
 type FetchConfig struct {

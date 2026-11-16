@@ -314,7 +314,7 @@ func mcpQueryTool() mcpTool {
 func mcpReadTool() mcpTool {
 	return mcpTool{
 		Name:        "web_read",
-		Description: "Read one known URL and return compact proof-carrying context first. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
+		Description: "Read one known URL and return compact proof-carrying context first. HTML, text, JSON, XML and public PDFs with embedded text are supported. PDF reads add a versioned document_extraction object with raw_sha256, source_bytes, page counts, coverage, truncation and limits; chunks and proof spans carry page numbers. OCR is not supported and PDFs are never browser-rendered. Default output is the compact packet plus trace_path/proof_path/fingerprint_path; set include_diagnostics=true to also receive the full document, document_extraction, web_ir, result_pack and agent_context. Successful reads preserve proof, trace, local reuse evidence, and analytics metadata.",
 		InputSchema: schemaExamples(toolSchema(withSessionToolSchema(map[string]any{
 			"url":                 map[string]any{"type": "string"},
 			"profile":             map[string]any{"type": "string"},
@@ -324,9 +324,10 @@ func mcpReadTool() mcpTool {
 			"user_agent":          map[string]any{"type": "string"},
 			"retrieval_effort":    retrievalEffortSchema(),
 			"render":              renderModeSchema(),
-			"include_diagnostics": includeDiagnosticsSchema("document, web_ir, result_pack and agent_context"),
+			"include_diagnostics": includeDiagnosticsSchema("document, document_extraction, web_ir, result_pack and agent_context"),
 		}), "url"),
 			map[string]any{"url": "https://example.com", "objective": "Extract pricing and policy details", "retrieval_effort": "standard"},
+			map[string]any{"url": "https://example.com/sample.pdf", "objective": "Extract the title and first sentence from page one", "render": "off"},
 			map[string]any{"url": "https://example.com", "objective": "Inspect the full compiled packet", "include_diagnostics": true},
 		),
 	}

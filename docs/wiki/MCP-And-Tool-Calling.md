@@ -107,7 +107,7 @@ Retrieval effort:
 Compact-first output rule:
 1. `content.text` exposes the compact packet first
 2. `structuredContent` is the same compact packet by default, plus only `trace_path`, `proof_path`, and `fingerprint_path`
-3. full diagnostics are explicit opt-in: `include_diagnostics: true` on `web_read` or `web_query` adds a nested `diagnostics` object with `document`, `web_ir`, `result_pack`, `agent_context` (and `plan` for `web_query`); the default response never duplicates those payloads
+3. full diagnostics are explicit opt-in: `include_diagnostics: true` on `web_read` or `web_query` adds a nested `diagnostics` object with `document`, `document_extraction` when the source is a PDF, `web_ir`, `result_pack`, `agent_context` (and `plan` for `web_query`); the default response never duplicates those payloads
 4. `web_crawl` returns one compact crawl shape (`kind`, `summary`, `documents`, `stored_runs`) without a duplicate `compact` copy
 5. agents should default to the compact packet before opening diagnostics
 6. the `analytics` dispatcher follows the same compact-first rule: headline numbers first, richer rollups in structured payloads
@@ -118,6 +118,18 @@ Evidence coverage rule:
 3. limited coverage also adds an uncertainty reason (`title_only_extraction`, `thin_extraction`, or `no_extraction`) and raises `uncertainty.level`
 4. `analytics.proof_backed` means proof references exist for the delivered chunks; it is provenance, not answer adequacy
 5. treat a present `evidence` field as a signal to read a broader source or request diagnostics, not as a normal packet annotation
+
+PDF document rule:
+1. `web_read` accepts public PDFs with embedded text; there is no separate document tool and no new MCP tool name
+2. the compact packet carries `document_extraction` (`schema: "needlex.document.read.v1"`) with `raw_sha256`, `source_bytes`, `pages_total`, `pages_processed`, `pages_with_text`, `truncated`, `coverage`, `limits`, and `pages_failed[]` when applicable
+3. compact chunks carry `page_start`/`page_end`; proof source spans carry `page` and use `/pdf/page[N]/block[M]` selectors; the top-level `url` is the final URL
+4. `raw_sha256` is the full SHA-256 of the received PDF bytes; `limits` states the exact byte, page, output-character and timeout budgets that applied
+5. extraction is static and page-aware: no JavaScript, no browser launch for PDFs, no system `pdftotext`, and no OCR; image-only PDFs return `document_no_text`
+6. `render="required"` is strict and fails with `render_not_applicable` for PDFs; omit `render` or use `render="off"` for PDFs
+7. PDFs use the same `NEEDLEX_NETWORK_POLICY` and privacy rules as HTML; the policy is never relaxed for document reads
+8. distinct document failure classes are `document_encrypted`, `document_malformed`, `document_no_text`, `document_unsupported`, `document_limit_exceeded`, and `document_timeout`; do not retry a deterministic failure as if it were a transient network error
+9. a truncated or partial extraction is reported through `truncated`/`coverage`/`pages_processed`; never infer completeness from a present text chunk alone
+10. inspect full `document` and `document_extraction` only with `include_diagnostics: true`; the compact packet is the normal answer surface
 
 Tool scope rule:
 1. `web_extract` is intentionally not added yet

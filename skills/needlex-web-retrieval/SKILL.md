@@ -1,6 +1,6 @@
 ---
 name: needlex-web-retrieval
-version: v0.1.53
+version: v0.1.54
 description: Use Needle-X to compile known web URLs into compact proof-backed context after an AI agent obtains candidate URLs with its own search tool. Trigger this skill when a task involves reading one or more URLs, extracting token-efficient evidence, comparing candidate sources, same-site exploration from a verified seed, or deciding whether Needle-X is appropriate instead of a browser, raw fetcher, or full DOM/screenshot tool.
 ---
 
@@ -14,7 +14,7 @@ Needle-X must not impose or suggest a numeric candidate limit. If the agent choo
 
 A page title is optional. Use the source URL and proof references for attribution when the title is absent.
 
-Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Needle-X also renders client-rendered pages and captures textual application data from fetch/XHR, SSE, and WebSocket payloads, so dynamic pages are in scope before any external escalation. When the caller already owns the credentials, Needle-X can also acquire authenticated HTTP surfaces and inject session cookies into an isolated browser render. Escalate when the task depends on exact visual bytes, full-document completeness, or client-side interaction.
+Use Needle-X first when the value is compact semantic evidence, proof-backed snippets, and low-token context for agent reasoning. Needle-X also reads public PDFs with embedded text and reports page-aware proof, coverage, limits and a full SHA-256 of the received bytes. It renders client-rendered pages and captures textual application data from fetch/XHR, SSE, and WebSocket payloads, so dynamic pages are in scope before any external escalation. When the caller already owns the credentials, Needle-X can also acquire authenticated HTTP surfaces and inject session cookies into an isolated browser render. Escalate when the task depends on exact visual bytes, full-document completeness, or client-side interaction.
 
 ## Policy Compatibility
 
@@ -34,6 +34,7 @@ Use Needle-X when the task needs:
 6. consistent evidence packets across all URLs selected by the host agent
 7. content that a page builds after load, up to the capture window and budget the runtime reports
 8. public or caller-authorized authenticated HTTP pages and APIs, using a navigation session
+9. public PDFs with embedded text when page-level evidence or a verifiable source hash is needed
 
 Do not rely on Needle-X alone when the task needs:
 
@@ -45,7 +46,7 @@ Do not rely on Needle-X alone when the task needs:
 6. proof that a page is empty or missing when the result could be extraction loss
 7. application data the page only requests after the capture window, or an unbounded stream still open when the render stopped
 
-For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, PDF parser, screenshot tool, or domain-specific extractor. For rule 7, check `signals.content_source`, `network_truncated`, and `render_degraded` first, and retry once with `render: "required"` before leaving Needle-X.
+For those cases, keep the URL found by the host agent and escalate from Needle-X to a browser, direct download, raw HTTP fetch, OCR/PDF parser, screenshot tool, or domain-specific extractor. PDFs with embedded text are already handled by `read`/`web_read`; escalate scanned or image-only PDFs to OCR because Needle-X does not perform OCR. For rule 7, check `signals.content_source`, `network_truncated`, and `render_degraded` first, and retry once with `render: "required"` before leaving Needle-X.
 
 ## Authenticated navigation
 
@@ -85,7 +86,7 @@ command is available.
 
 Prefer MCP tools when available:
 
-1. `web_read`: primary tool; read one known URL and return compact proof-backed context. Its default response is the compact packet plus trace/proof/fingerprint paths; set `include_diagnostics: true` only when you need the full document, Web IR, result pack and agent context.
+1. `web_read`: primary tool; read one known URL and return compact proof-backed context. HTML, text, JSON, XML and public PDFs with embedded text are supported. PDF reads add `document_extraction` (schema `needlex.document.read.v1`) with `raw_sha256`, `source_bytes`, page counts, coverage, truncation and limits; chunks carry `page_start`/`page_end` and proof spans carry `page`. Its default response is the compact packet plus trace/proof/fingerprint paths; set `include_diagnostics: true` only when you need the full document, document_extraction, Web IR, result pack and agent context.
 2. `web_query`: route within a known site or documentation family only when a verified `seed_url` is supplied. Same compact default as `web_read`; `include_diagnostics: true` adds `plan` and the full diagnostics object.
 3. `web_crawl`: traverse bounded same-domain links from a seed URL.
 4. `web_proof`: inspect saved proof or trace records when evidence must be audited.
@@ -96,6 +97,7 @@ Use CLI fallback when MCP is unavailable:
 
 ```bash
 needlex read https://example.com --json
+needlex read https://example.com/sample.pdf --objective "Extract page evidence" --render off --json
 needlex fetch https://example.com --assets --out-dir ./page-source
 needlex query https://example.com --goal "pricing" --json
 needlex crawl https://example.com --max-pages 10 --json
@@ -108,7 +110,8 @@ needlex analytics stats
 2. Known docs URL: use `web_read` on the official page, answer from cited chunks, and keep proof/trace IDs when the answer is implementation-sensitive.
 3. Latest release/changelog: search with the host agent's current-information tool, then use `web_read` on every selected release or changelog URL before answering.
 4. Same-site docs routing: use `web_query` with `seed_url` and `discovery_mode="same_site_links"` to find a specific concept inside a known documentation family.
-5. Layout/table/assets needed: use Needle-X to compact the page first, then use `web_fetch` for original HTTP bytes when available, or browser/PDF/image tooling for rendered layout.
+5. Layout/table/assets needed: use Needle-X to compact the page first, then use `web_fetch` for original HTTP bytes when available, or browser/image/OCR tooling for rendered layout.
+6. PDF with embedded text: use `web_read` and answer from page-tagged chunks and proof spans. Check `document_extraction.truncated`/`coverage` before claiming full coverage. Do not pass `render: "required"` for a PDF; that strict mode returns `render_not_applicable`. For an image-only PDF, escalate to OCR tooling instead of retrying Needle-X.
 
 ## Query Strategy
 
@@ -143,6 +146,7 @@ Treat the compact result as the front door, not the whole truth. Check:
 6. `signals.content_source` when the page loads content dynamically
 7. `trace_id` when debugging or auditing
 8. `evidence` when present: limited extraction coverage
+9. `document_extraction` when present: PDF page counts, coverage, truncation, limits and `raw_sha256`; chunks carry `page_start`/`page_end` and proof spans carry `page`
 
 `signals.content_source` reports where the compiled content came from:
 
@@ -151,6 +155,7 @@ Treat the compact result as the front door, not the whole truth. Check:
 3. `dom+network`: the page was rendered and application data captured from fetch, XHR, SSE, or WebSocket payloads also contributed content
 4. `signals.network_truncated`: captured application data was cut by budget or a stream was still open, so more data exists upstream
 5. `signals.render_degraded`: the browser path failed and only a DOM dump was available, so application data was not captured
+6. `pdf_text`: the content came from a PDF's embedded text, not HTML or a rendered DOM
 
 `evidence` appears only when the delivered chunks cannot stand in for the page body: `{"coverage":"title_only"|"thin"|"none","reason":"..."}`. It also raises `uncertainty.level`. Treat it as extraction insufficiency and escalate or read the source directly instead of answering from the title. `analytics.proof_backed` only says proof references exist; it is provenance, not answer adequacy.
 
@@ -177,8 +182,10 @@ Escalate beyond Needle-X when:
 4. proof references are absent for a claim that needs verification
 5. `uncertainty` is high or the extracted evidence does not support the task
 6. a failed retrieval is a 404, block, timeout, or unsupported content type and another fetch method could reasonably recover
+7. a PDF reports `document_no_text` and the task needs its image content; that is an OCR/escalation case, not a retry case
+8. a PDF reports `document_encrypted`, `document_malformed`, `document_unsupported`, or `document_limit_exceeded`; retrying the same deterministic input is not useful, report the class or use an authorized alternative
 
-Before leaving Needle-X for rule 2 or 3, retry the same URL once with `render: "required"`. That forces browser rendering with application-data capture and fails loudly when the rendered DOM cannot be obtained. Only escalate to an external browser path if the forced render still misses the data or reports `network_truncated` for the field you need.
+Before leaving Needle-X for rule 2 or 3, retry the same URL once with `render: "required"`. That forces browser rendering with application-data capture and fails loudly when the rendered DOM cannot be obtained. Only escalate to an external browser path if the forced render still misses the data or reports `network_truncated` for the field you need. Never use `render: "required"` for a PDF: it returns `render_not_applicable`; use the PDF's `document_extraction` diagnostics and escalate to OCR only when the PDF has no embedded text.
 
 When escalating, state why:
 

@@ -18,6 +18,8 @@ import (
 	"golang.org/x/net/html"
 )
 
+var errResponseTooLarge = errors.New("response exceeds max bytes budget")
+
 const (
 	defaultUserAgent        = "needle-x/0.1"
 	defaultBrowserUserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0 Safari/537.36"
@@ -216,9 +218,17 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		return RawPage{}, fmt.Errorf("unsupported content type %q", contentType)
 	}
 
-	htmlBody, partial, err := readBounded(resp.Body, input.MaxBytes, input.AllowPartial)
+	body, partial, err := readBoundedBytes(resp.Body, input.MaxBytes, input.AllowPartial)
 	if err != nil {
-		return RawPage{}, err
+		return RawPage{}, documentAcquireError(contentType, err)
+	}
+	if partial && isDocumentContentType(contentType) {
+		return RawPage{}, fmt.Errorf("document_limit_exceeded: response exceeds max bytes budget")
+	}
+	htmlBody := string(body)
+	var documentBody []byte
+	if isDocumentContentType(contentType) {
+		documentBody = body
 	}
 
 	finalURL := resp.Request.URL.String()
@@ -232,6 +242,7 @@ func (a Acquirer) acquireWithHTTP(ctx context.Context, input AcquireInput, profi
 		ContentType:  contentType,
 		Headers:      cloneHTTPHeaders(resp.Header),
 		HTML:         htmlBody,
+		Body:         documentBody,
 		Partial:      partial,
 		FetchMode:    "http",
 		FetchProfile: profile,
@@ -286,7 +297,10 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 	defer resp.Body.Close() //nolint:errcheck
 	body, partial, err := readBoundedBytes(resp.Body, input.MaxBytes, input.AllowPartial)
 	if err != nil {
-		return RawPage{}, fmt.Errorf("read body: %w", err)
+		return RawPage{}, documentAcquireError(contentType, fmt.Errorf("read body: %w", err))
+	}
+	if partial && isDocumentContentType(contentType) {
+		return RawPage{}, fmt.Errorf("document_limit_exceeded: response exceeds max bytes budget")
 	}
 
 	finalURL := input.URL
@@ -297,6 +311,10 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		finalURL = resp.Request.URL.String()
 	}
 
+	var documentBody []byte
+	if isDocumentContentType(contentType) {
+		documentBody = body
+	}
 	return RawPage{
 		URL:          input.URL,
 		FinalURL:     finalURL,
@@ -304,6 +322,7 @@ func (a Acquirer) acquireWithReq(ctx context.Context, input AcquireInput, profil
 		ContentType:  contentType,
 		Headers:      cloneHTTPHeaders(resp.Response.Header),
 		HTML:         string(body),
+		Body:         documentBody,
 		Partial:      partial,
 		FetchMode:    "req",
 		FetchProfile: profile,
@@ -508,15 +527,21 @@ func isAllowedContentType(contentType string) bool {
 		strings.Contains(contentType, "+xml") ||
 		strings.Contains(contentType, "text/yaml") ||
 		strings.Contains(contentType, "text/xml") ||
-		strings.Contains(contentType, "image/svg+xml")
+		strings.Contains(contentType, "image/svg+xml") ||
+		strings.Contains(contentType, "application/pdf") ||
+		strings.Contains(contentType, "application/x-pdf")
 }
 
-func readBounded(body io.Reader, maxBytes int64, allowPartial bool) (string, bool, error) {
-	data, partial, err := readBoundedBytes(body, maxBytes, allowPartial)
-	if err != nil {
-		return "", false, err
+func isDocumentContentType(contentType string) bool {
+	contentType = strings.ToLower(contentType)
+	return strings.Contains(contentType, "application/pdf") || strings.Contains(contentType, "application/x-pdf")
+}
+
+func documentAcquireError(contentType string, err error) error {
+	if isDocumentContentType(contentType) && errors.Is(err, errResponseTooLarge) {
+		return fmt.Errorf("document_limit_exceeded: %w", err)
 	}
-	return string(data), partial, nil
+	return err
 }
 
 func readBoundedBytes(body io.Reader, maxBytes int64, allowPartial bool) ([]byte, bool, error) {
@@ -529,7 +554,7 @@ func readBoundedBytes(body io.Reader, maxBytes int64, allowPartial bool) ([]byte
 		if allowPartial {
 			return data[:int(maxBytes)], true, nil
 		}
-		return nil, false, fmt.Errorf("response exceeds max bytes budget")
+		return nil, false, errResponseTooLarge
 	}
 	return data, false, nil
 }

@@ -18,7 +18,11 @@
     },
     "profile": {
       "type": "string",
-      "enum": ["tiny", "standard", "deep"]
+      "enum": [
+        "tiny",
+        "standard",
+        "deep"
+      ]
     },
     "chunks": {
       "type": "array",
@@ -70,6 +74,14 @@
             "type": "number",
             "minimum": 0,
             "maximum": 1
+          },
+          "page_start": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_end": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       }
