@@ -115,5 +115,5 @@ Shipped in v0.1.54 with:
 1. `schemas/needlex-document-read.v1.json`
 2. updated CLI/MCP/packet/skill documentation
 3. regenerated `THIRD_PARTY_NOTICES.txt`
-4. governance budget measured at 40,336 runtime lines, 33 files over 300 lines,
+4. governance budget measured at 40,339 runtime lines, 33 files over 300 lines,
    23 over 350, six direct dependencies and a 6,894-line service package.
