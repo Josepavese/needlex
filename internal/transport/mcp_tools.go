@@ -208,6 +208,9 @@ func (r Runner) callMCPReadTool(args map[string]any) (map[string]any, error) {
 			"result_pack":   resp.ResultPack,
 			"agent_context": resp.AgentContext,
 		}
+		if resp.DocumentExtraction != nil {
+			diagnostics["document_extraction"] = resp.DocumentExtraction
+		}
 	}
 	return mcpCompactResult(compact, artifacts, diagnostics), nil
 }

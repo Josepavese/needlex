@@ -107,7 +107,7 @@ Retrieval effort:
 Compact-first output rule:
 1. `content.text` exposes the compact packet first
 2. `structuredContent` is the same compact packet by default, plus only `trace_path`, `proof_path`, and `fingerprint_path`
-3. full diagnostics are explicit opt-in: `include_diagnostics: true` on `web_read` or `web_query` adds a nested `diagnostics` object with `document`, `document_extraction` when the source is a PDF, `web_ir`, `result_pack`, `agent_context` (and `plan` for `web_query`); the default response never duplicates those payloads
+3. full diagnostics are explicit opt-in: `include_diagnostics: true` on `web_read` or `web_query` adds a nested `diagnostics` object with `document`, `web_ir`, `result_pack`, `agent_context` (and `plan` for `web_query`); a `web_read` of a PDF also adds `document_extraction`; the default response never duplicates those payloads
 4. `web_crawl` returns one compact crawl shape (`kind`, `summary`, `documents`, `stored_runs`) without a duplicate `compact` copy
 5. agents should default to the compact packet before opening diagnostics
 6. the `analytics` dispatcher follows the same compact-first rule: headline numbers first, richer rollups in structured payloads

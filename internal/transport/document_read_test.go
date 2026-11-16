@@ -79,4 +79,17 @@ func TestCLIAndMCPReadPDFCarryDocumentContract(t *testing.T) {
 	if _, ok := structured["document_extraction"].(map[string]any); !ok {
 		t.Fatalf("MCP compact output missing document extraction: %#v", structured)
 	}
+
+	result, err = runner.callMCPReadTool(map[string]any{"url": "https://example.com/sample.pdf", "include_diagnostics": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	structured = result["structuredContent"].(map[string]any)
+	diagnostics, ok := structured["diagnostics"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing diagnostics: %#v", structured)
+	}
+	if diagnostics["document_extraction"] == nil {
+		t.Fatalf("MCP diagnostics missing document extraction: %#v", diagnostics)
+	}
 }
